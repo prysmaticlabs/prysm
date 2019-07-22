@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -23,7 +24,7 @@ var activeCountCache = cache.NewActiveCountCache()
 //    Check if ``validator`` is active.
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
-func IsActiveValidator(validator *pb.Validator, epoch uint64) bool {
+func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
 	return validator.ActivationEpoch <= epoch &&
 		epoch < validator.ExitEpoch
 }
@@ -40,7 +41,7 @@ func IsActiveValidator(validator *pb.Validator, epoch uint64) bool {
 //        validator.activation_epoch <= epoch < validator.withdrawable_epoch and
 //        validator.slashed is False
 // 		)
-func IsSlashableValidator(validator *pb.Validator, epoch uint64) bool {
+func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 	active := validator.ActivationEpoch <= epoch
 	beforeWithdrawable := epoch < validator.WithdrawableEpoch
 	return beforeWithdrawable && active && !validator.Slashed

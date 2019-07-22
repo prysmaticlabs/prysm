@@ -4,7 +4,7 @@ package ethereum.eth.v1alpha1;
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha;eth";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
 // The Ethereum 2.0 beacon block.
 message BeaconBlock {
@@ -87,7 +87,7 @@ message AttesterSlashing {
 message Deposit {
     message Data {
         // 48 byte BLS public key of the validator.
-        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
 
         // A 32 byte hash of the withdrawal address public key.
         bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
@@ -120,10 +120,10 @@ message VoluntaryExit {
 // A beacon chain transfer is a ETH currency transfer between two validators.
 message Transfer {
     // Validator index of the sender.
-    uint64 sender_index = 1;
+    uint64 sender_index = 1 [(gogoproto.moretags) = "spec-name:\"sender\""];
 
     // Validator index of the recipient.
-    uint64 recipient_index = 2;
+    uint64 recipient_index = 2 [(gogoproto.moretags) = "spec-name:\"recipient\""];
 
     // Amount in gwei sent to the recipient.
     uint64 amount = 3;
@@ -135,7 +135,7 @@ message Transfer {
     uint64 slot = 5;
 
     // 48 byte sender's withdrawal public key.
-    bytes sender_withdrawal_public_key = 6 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    bytes sender_withdrawal_public_key = 6 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
 
     // 96 byte signature from the sender's withdrawal key.
     bytes signature = 7 [(gogoproto.moretags) = "ssz-size:\"96\""];

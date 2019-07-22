@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,9 +31,9 @@ func TestEpochCommitteeCount_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		vals := make([]*pb.Validator, test.validatorCount)
+		vals := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
-			vals[i] = &pb.Validator{
+			vals[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
@@ -59,9 +60,9 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 		TargetCommitteeSize: 2,
 	}
 	params.OverrideBeaconConfig(testConfig)
-	vals := make([]*pb.Validator, validatorCount)
+	vals := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(vals); i++ {
-		vals[i] = &pb.Validator{
+		vals[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -93,9 +94,9 @@ func TestShardDelta_Ok(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		vals := make([]*pb.Validator, test.validatorCount)
+		vals := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(vals); i++ {
-			vals[i] = &pb.Validator{
+			vals[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
@@ -117,10 +118,10 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*pb.Validator, validatorCount)
+	validators := make([]*ethpb.Validator, validatorCount)
 
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -177,9 +178,9 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*pb.Validator, validatorCount)
+	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -224,9 +225,9 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	committeeSize := uint64(16)
-	validators := make([]*pb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -237,7 +238,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	attestationData := &pb.AttestationData{}
+	attestationData := &ethpb.AttestationData{}
 
 	tests := []struct {
 		attestationSlot uint64
@@ -268,10 +269,10 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
-		attestationData.Crosslink = &pb.Crosslink{
+		attestationData.Crosslink = &ethpb.Crosslink{
 			Shard: tt.attestationSlot,
 		}
-		attestationData.Target = &pb.Checkpoint{Epoch: 0}
+		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -294,9 +295,9 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	ClearAllCaches()
 
-	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -306,7 +307,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &pb.AttestationData{Crosslink: &pb.Crosslink{}, Target: &pb.Checkpoint{}}
+	attestationData := &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{}, Target: &ethpb.Checkpoint{}}
 
 	indices, err := AttestingIndices(state, attestationData, bitfield.NewBitlist(128))
 	if err != nil {
@@ -345,9 +346,9 @@ func TestVerifyBitfield_OK(t *testing.T) {
 
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -425,9 +426,9 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 func TestCommitteeAssignment_EveryValidatorShouldPropose(t *testing.T) {
 	// Initialize 64 validators with 64 slots per epoch. Every validator
 	// in the epoch should be a proposer.
-	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -483,9 +484,9 @@ func TestShardDelta_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		validators := make([]*pb.Validator, test.validatorCount)
+		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
-			validators[i] = &pb.Validator{
+			validators[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
@@ -525,9 +526,9 @@ func TestEpochStartShard_AccurateShard(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		validators := make([]*pb.Validator, test.validatorCount)
+		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
-			validators[i] = &pb.Validator{
+			validators[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}
@@ -556,7 +557,7 @@ func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		vs := make([]*pb.Validator, test.validatorCount)
+		vs := make([]*ethpb.Validator, test.validatorCount)
 		// Build validator list with the following ratio:
 		// 10% activated in epoch 0
 		// 20% activated in epoch 1
@@ -577,7 +578,7 @@ func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 				activationEpoch = 3
 			}
 
-			vs[i-1] = &pb.Validator{
+			vs[i-1] = &ethpb.Validator{
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				ActivationEpoch: activationEpoch,
 			}
@@ -602,10 +603,10 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 		activeRoots[i] = []byte{'A'}
@@ -618,69 +619,69 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	}
 
 	tests := []struct {
-		attestation         *pb.Attestation
+		attestation         *ethpb.Attestation
 		stateSlot           uint64
 		errorExists         bool
 		verificationFailure bool
 	}{
 		{
-			attestation: &pb.Attestation{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x05},
-				Data: &pb.AttestationData{
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard: 5,
 					},
-					Target: &pb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
 		},
 		{
 
-			attestation: &pb.Attestation{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				Data: &pb.AttestationData{
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard: 10,
 					},
-					Target: &pb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
 		},
 		{
-			attestation: &pb.Attestation{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				Data: &pb.AttestationData{
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard: 20,
 					},
-					Target: &pb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
 		},
 		{
-			attestation: &pb.Attestation{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
-				Data: &pb.AttestationData{
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard: 5,
 					},
-					Target: &pb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:   5,
 			errorExists: true,
 		},
 		{
-			attestation: &pb.Attestation{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
-				Data: &pb.AttestationData{
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard: 20,
 					},
-					Target: &pb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
@@ -719,10 +720,10 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*pb.Validator, validatorCount)
+	validators := make([]*ethpb.Validator, validatorCount)
 	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 		activeRoots[i] = []byte{'A'}
@@ -743,12 +744,12 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 
 func TestCompressValidator(t *testing.T) {
 	tests := []struct {
-		validator *pb.Validator
+		validator *ethpb.Validator
 		idx       uint64
 		want      uint64
 	}{
 		{
-			validator: &pb.Validator{
+			validator: &ethpb.Validator{
 				EffectiveBalance: 32e9,
 				Slashed:          true,
 			},
@@ -756,7 +757,7 @@ func TestCompressValidator(t *testing.T) {
 			want: 8421408, // (128 << 16) + (1 << 15) + (32e9 / (2**0 * 10**9))
 		},
 		{
-			validator: &pb.Validator{
+			validator: &ethpb.Validator{
 				EffectiveBalance: 32e9,
 				Slashed:          false,
 			},
@@ -764,7 +765,7 @@ func TestCompressValidator(t *testing.T) {
 			want: 8388640, // (128 << 16) + (0 << 15) + (32e9 / (2**0 * 10**9))
 		},
 		{
-			validator: &pb.Validator{
+			validator: &ethpb.Validator{
 				EffectiveBalance: 33e9,
 				Slashed:          false,
 			},
@@ -772,7 +773,7 @@ func TestCompressValidator(t *testing.T) {
 			want: 8388641, // (128 << 16) + (0 << 15) + (33e9 / (2**0 * 10**9))
 		},
 		{
-			validator: &pb.Validator{
+			validator: &ethpb.Validator{
 				EffectiveBalance: 33e9,
 				Slashed:          false,
 			},
@@ -797,9 +798,9 @@ func TestCompressValidator(t *testing.T) {
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	ClearShuffledValidatorCache()
-	validators := make([]*pb.Validator, 300000)
+	validators := make([]*ethpb.Validator, 300000)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -836,9 +837,9 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 
 func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	ClearShuffledValidatorCache()
-	validators := make([]*pb.Validator, 3000000)
+	validators := make([]*ethpb.Validator, 3000000)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -875,9 +876,9 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 
 func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	ClearShuffledValidatorCache()
-	validators := make([]*pb.Validator, 128000)
+	validators := make([]*ethpb.Validator, 128000)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -915,9 +916,9 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 
 func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	ClearShuffledValidatorCache()
-	validators := make([]*pb.Validator, 1000000)
+	validators := make([]*ethpb.Validator, 1000000)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -955,9 +956,9 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 
 func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	ClearShuffledValidatorCache()
-	validators := make([]*pb.Validator, 4000000)
+	validators := make([]*ethpb.Validator, 4000000)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}

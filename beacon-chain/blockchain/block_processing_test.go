@@ -17,6 +17,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -35,7 +36,7 @@ func init() {
 	params.OverrideBeaconConfig(c)
 }
 
-func initBlockStateRoot(t *testing.T, block *pb.BeaconBlock, chainService *ChainService) {
+func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
@@ -74,7 +75,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentBlock := &pb.BeaconBlock{
+	parentBlock := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
 
@@ -87,11 +88,11 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatalf("Unable to save block %v", err)
 	}
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       2,
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
@@ -124,7 +125,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -153,11 +154,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       slot,
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositCount: uint64(len(deposits)),
 				DepositRoot:  []byte("a"),
 				BlockHash:    []byte("b"),
@@ -210,7 +211,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -231,12 +232,12 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	beaconState, err = state.ProcessSlots(ctx, beaconState, beaconState.Slot+3)
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		StateRoot:  []byte{},
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
@@ -284,7 +285,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -304,19 +305,19 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot,
 		StateRoot:  []byte{},
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: []byte{},
-			Attestations: []*pb.Attestation{{
-				Data: &pb.AttestationData{
-					Target: &pb.Checkpoint{Epoch: 5},
+			Attestations: []*ethpb.Attestation{{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{Epoch: 5},
 				},
 			}},
 		},
@@ -370,7 +371,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -395,11 +396,11 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	goodStateBlock := &pb.BeaconBlock{
+	goodStateBlock := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot,
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data:     &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
 	}
@@ -434,7 +435,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -459,12 +460,12 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	invalidStateBlock := &pb.BeaconBlock{
+	invalidStateBlock := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot,
 		StateRoot:  []byte{'b', 'a', 'd', ' ', 'h', 'a', 's', 'h'},
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data:     &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
 	}
@@ -500,7 +501,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -532,7 +533,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pendingDeposits := []*pb.Deposit{
+	pendingDeposits := []*ethpb.Deposit{
 		createPreChainStartDeposit([]byte{'F'}),
 	}
 	pendingDepositsData := make([][]byte, len(pendingDeposits))
@@ -564,12 +565,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot:       currentSlot + 1,
 		StateRoot:  stateRoot[:],
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
@@ -618,9 +619,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < len(beaconState.Validators); i++ {
-		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].Pubkey)
-		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
-			Data: &pb.AttestationData{
+		pubKey := bytesutil.ToBytes48(beaconState.Validators[i].PublicKey)
+		attsService.InsertAttestationIntoStore(pubKey, &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: blockRoot[:],
 			}},
 		)
@@ -685,7 +686,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -716,12 +717,12 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// Top chain slots (see graph)
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
-		block := &pb.BeaconBlock{
+		block := &ethpb.BeaconBlock{
 			Slot:       genesisSlot + slot,
 			StateRoot:  stateRoot[:],
 			ParentRoot: parentRoot[:],
-			Body: &pb.BeaconBlockBody{
-				Eth1Data:     &pb.Eth1Data{},
+			Body: &ethpb.BeaconBlockBody{
+				Eth1Data:     &ethpb.Eth1Data{},
 				RandaoReveal: randaoReveal,
 			},
 		}
@@ -773,12 +774,12 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	// Then we receive the block `f` from slot 6
-	blockF := &pb.BeaconBlock{
+	blockF := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + 6,
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data:     &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
 	}
@@ -814,12 +815,12 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	// Then we apply block `g` from slot 7
-	blockG := &pb.BeaconBlock{
+	blockG := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + 7,
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data:     &pb.Eth1Data{},
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
 	}
@@ -856,12 +857,12 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
-	beaconState.LatestBlockHeader = &pb.BeaconBlockHeader{
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	block := &pb.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		ParentRoot: []byte{'a'},
 	}
 
@@ -883,7 +884,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}
 
-	beaconState.Eth1Data = &pb.Eth1Data{
+	beaconState.Eth1Data = &ethpb.Eth1Data{
 		DepositRoot: []byte{2},
 		BlockHash:   []byte{3},
 	}
@@ -897,22 +898,22 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block2 := &pb.BeaconBlock{
+	block2 := &ethpb.BeaconBlock{
 		Slot:       currentSlot,
 		StateRoot:  stateRoot[:],
 		ParentRoot: parentRoot[:],
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
 			RandaoReveal: randaoReveal,
-			Attestations: []*pb.Attestation{{
+			Attestations: []*ethpb.Attestation{{
 				AggregationBits: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				Data: &pb.AttestationData{
-					Source: &pb.Checkpoint{Root: parentRoot[:]},
-					Crosslink: &pb.Crosslink{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{Root: parentRoot[:]},
+					Crosslink: &ethpb.Crosslink{
 						Shard: 960,
 					},
 				},
@@ -931,12 +932,12 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	epoch := uint64(2)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
-		validators = append(validators, &pb.Validator{
-			Pubkey: pubKeyBuf,
+		validators = append(validators, &ethpb.Validator{
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -951,7 +952,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		t.Fatalf("Could not delete validator idx: %v", err)
 	}
 	wantedIdx := uint64(1)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -960,7 +961,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	}
 
 	wantedIdx = uint64(2)
-	if chainService.beaconDB.HasValidator(validators[wantedIdx].Pubkey) {
+	if chainService.beaconDB.HasValidator(validators[wantedIdx].PublicKey) {
 		t.Errorf("Validator index %d should have been deleted", wantedIdx)
 	}
 	if v.ExitedValFromEpoch(epoch) != nil {
@@ -973,12 +974,12 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
-		validators = append(validators, &pb.Validator{
-			Pubkey: pubKeyBuf,
+		validators = append(validators, &ethpb.Validator{
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -991,7 +992,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -1011,12 +1012,12 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 
 	// Tried to insert 5 active indices to DB with only 3 validators in state
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
-	var validators []*pb.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
-		validators = append(validators, &pb.Validator{
-			Pubkey: pubKeyBuf,
+		validators = append(validators, &ethpb.Validator{
+			PublicKey: pubKeyBuf,
 		})
 	}
 	state := &pb.BeaconState{
@@ -1029,7 +1030,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}

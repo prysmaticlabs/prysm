@@ -3,11 +3,17 @@ syntax = "proto3";
 package testing;
 
 import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message TestMessage {
   string foo = 1;
+  string bar = 2 [(gogoproto.moretags) = "fizz:\"buzz\" spec-name:\"baz\""];
 }
 
+message TestNestedMessage {
+  string fuzz = 1;
+  TestMessage msg = 2;
+}
 
 // Used in shared/p2p/feed_example_test.go
 message Puzzle {

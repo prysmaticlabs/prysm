@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -361,14 +362,14 @@ func (vs *ValidatorServer) validatorStatus(
 
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	activationEpoch := params.BeaconConfig().FarFutureEpoch
-	var validatorInState *pbp2p.Validator
+	var validatorInState *ethpb.Validator
 	var validatorIndex uint64
 	for idx, val := range beaconState.Validators {
 		if ctx.Err() != nil {
 			return nil
 		}
 
-		if bytes.Equal(val.Pubkey, pubKey) {
+		if bytes.Equal(val.PublicKey, pubKey) {
 			if helpers.IsActiveValidator(val, currEpoch) {
 				activationEpoch = val.ActivationEpoch
 			}
@@ -455,7 +456,7 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 	pubkeys := make(map[[96]byte]bool)
 	deposits := vs.powChainService.ChainStartDeposits()
 	for _, dep := range deposits {
-		pubkeys[bytesutil.ToBytes96(dep.Data.Pubkey)] = true
+		pubkeys[bytesutil.ToBytes96(dep.Data.PublicKey)] = true
 	}
 	return pubkeys
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -171,7 +172,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !bytes.Equal(newState.Eth1Data.DepositRoot, eth1Data.DepositRoot) {
 		t.Error("Eth1Data DepositRoot was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1Data{}) {
+	if !reflect.DeepEqual(newState.Eth1DataVotes, []*ethpb.Eth1Data{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
@@ -179,11 +180,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	state1, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
-	state2, err := state.GenesisBeaconState(deposits, 0, &pb.Eth1Data{})
+	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}

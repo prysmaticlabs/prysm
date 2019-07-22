@@ -15,8 +15,8 @@ func TestHeightHeightFn_OK(t *testing.T) {
 		Height: height,
 		Hash:   hash,
 		Target: &pb.AttestationTarget{
-			Slot:      height,
-			BlockRoot: hash,
+			Slot:            height,
+			BeaconBlockRoot: hash,
 		},
 	}
 
@@ -25,7 +25,7 @@ func TestHeightHeightFn_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	strHeightKey := string(aInfo.Target.BlockRoot) + strconv.Itoa(int(aInfo.Target.Slot))
+	strHeightKey := string(aInfo.Target.BeaconBlockRoot) + strconv.Itoa(int(aInfo.Target.Slot))
 	if key != strHeightKey {
 		t.Errorf("Incorrect hash key: %s, expected %s", key, strHeightKey)
 	}
@@ -47,8 +47,8 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 		Height: height,
 		Hash:   hash,
 		Target: &pb.AttestationTarget{
-			Slot:      height,
-			BlockRoot: hash,
+			Slot:            height,
+			BeaconBlockRoot: hash,
 		},
 	}
 

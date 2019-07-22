@@ -162,6 +162,7 @@ filegroup(
 
 http_archive(
     name = "com_github_bazelbuild_buildtools",
+    sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
@@ -204,7 +205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "e0e450364c42117b8e372c7157821c18dad900a4",
+    commit = "16d4b0a834f2b17cdc19e3b63e967f15bf91fb1b",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1236,8 +1237,10 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "0ff49de124c6f76f8494e194af75bde0f1a49a29",  # v1.1.6
+    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
     importpath = "github.com/json-iterator/go",
+    remote = "https://github.com/prestonvanloon/go",
+    vcs = "git",
 )
 
 go_repository(

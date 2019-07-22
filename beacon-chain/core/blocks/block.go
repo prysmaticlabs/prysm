@@ -8,19 +8,19 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var clock utils.Clock = &utils.RealClock{}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
+func NewGenesisBlock(stateRoot []byte) *ethpb.BeaconBlock {
 	zeroHash := params.BeaconConfig().ZeroHash[:]
-	genBlock := &pb.BeaconBlock{
+	genBlock := &ethpb.BeaconBlock{
 		ParentRoot: zeroHash,
 		StateRoot:  stateRoot,
-		Body:       &pb.BeaconBlockBody{},
+		Body:       &ethpb.BeaconBlockBody{},
 		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
 	return genBlock
@@ -28,8 +28,8 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 
 // BlockFromHeader manufactures a block from its header. It contains all its fields,
 // except for the block body.
-func BlockFromHeader(header *pb.BeaconBlockHeader) *pb.BeaconBlock {
-	return &pb.BeaconBlock{
+func BlockFromHeader(header *ethpb.BeaconBlockHeader) *ethpb.BeaconBlock {
+	return &ethpb.BeaconBlock{
 		StateRoot:  header.StateRoot,
 		Slot:       header.Slot,
 		Signature:  header.Signature,
@@ -38,8 +38,8 @@ func BlockFromHeader(header *pb.BeaconBlockHeader) *pb.BeaconBlock {
 }
 
 // HeaderFromBlock extracts the block header from a block.
-func HeaderFromBlock(block *pb.BeaconBlock) (*pb.BeaconBlockHeader, error) {
-	header := &pb.BeaconBlockHeader{
+func HeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+	header := &ethpb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		Signature:  block.Signature,

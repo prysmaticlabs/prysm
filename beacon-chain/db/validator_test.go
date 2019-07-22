@@ -8,6 +8,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -125,7 +126,7 @@ func TestHasAnyValidator(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Validators: []*pb.Validator{},
+		Validators: []*ethpb.Validator{},
 	}
 
 	has, err := db.HasAnyValidators(beaconState, append(knownPubKeys, unknownPubKeys...))

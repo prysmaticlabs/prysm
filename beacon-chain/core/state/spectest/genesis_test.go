@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestGenesisInitializationMinimal(t *testing.T) {
@@ -27,7 +27,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 	}
 
 	s := &GenesisInitializationTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
@@ -35,11 +35,15 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 			deposits := tt.Deposits
-			dataLeaves := make([]*pb.DepositData, len(deposits))
+			dataLeaves := make([]*ethpb.Deposit_Data, len(deposits))
 			for i := range deposits {
 				dataLeaves[i] = deposits[i].Data
 			}
@@ -47,7 +51,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			eth1Data := &pb.Eth1Data{
+			eth1Data := &ethpb.Eth1Data{
 				DepositRoot:  depositRoot[:],
 				DepositCount: uint64(len(deposits)),
 				BlockHash:    tt.Eth1BlockHash,
@@ -76,7 +80,7 @@ func TestGenesisValidityMinimal(t *testing.T) {
 	}
 
 	s := &GensisValidityTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 

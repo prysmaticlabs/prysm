@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -59,31 +60,31 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
 func (ms *mockChainService) AdvanceState(
-	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
+	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{
-		FinalizedCheckpoint: &pb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}, nil
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
 	ctx context.Context,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) error {
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
-func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -91,7 +92,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := beaconDB.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, nil); err != nil {
+	if err := beaconDB.InitializeState(context.Background(), unixTime, []*ethpb.Deposit{}, nil); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := beaconDB.HeadState(ctx)
@@ -126,10 +127,10 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
-	batchedBlocks := make([]*pb.BeaconBlock, batchSize)
+	batchedBlocks := make([]*ethpb.BeaconBlock, batchSize)
 
 	for i := 1; i <= batchSize; i++ {
-		batchedBlocks[i-1] = &pb.BeaconBlock{
+		batchedBlocks[i-1] = &ethpb.BeaconBlock{
 			Slot: uint64(i),
 		}
 	}
@@ -179,7 +180,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		if i == 4 || i == 6 || i == 13 || i == 17 {
 			continue
 		}
-		block := &pb.BeaconBlock{
+		block := &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: parentHash,
 		}
@@ -210,7 +211,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
 	}, p2p.Message{
-		Data: &pb.BeaconBlock{},
+		Data: &ethpb.BeaconBlock{},
 	})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
