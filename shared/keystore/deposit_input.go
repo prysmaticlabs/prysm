@@ -1,10 +1,9 @@
 package keystore
 
 import (
-	"bytes"
-
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -15,25 +14,27 @@ import (
 // Spec details about general deposit workflow:
 //   To submit a deposit:
 //
-//   - Pack the validator's initialization parameters into deposit_input, a DepositInput SSZ object.
-//   - Set deposit_input.proof_of_possession = EMPTY_SIGNATURE.
-//   - Let proof_of_possession be the result of bls_sign of the hash_tree_root(deposit_input) with domain=DOMAIN_DEPOSIT.
-//   - Set deposit_input.proof_of_possession = proof_of_possession.
-//   - Let amount be the amount in Gwei to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_DEPOSIT_AMOUNT.
-//   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing deposit along with serialize(deposit_input) as the singular bytes input along with a deposit amount in Gwei.
+//   - Pack the validator's initialization parameters into deposit_data, a DepositData SSZ object.
+//   - Let amount be the amount in Gwei to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
+//   - Set deposit_data.amount = amount.
+//   - Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
+//   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
-// See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error) {
-	di := &pb.DepositInput{
-		Pubkey:                      depositKey.PublicKey.Marshal(),
-		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
+// See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
+func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*pb.DepositData, error) {
+	di := &pb.DepositData{
+		Pubkey:                depositKey.PublicKey.Marshal(),
+		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
+		Amount:                amountInGwei,
 	}
 
-	buf := new(bytes.Buffer)
-	if err := ssz.Encode(buf, di); err != nil {
+	sr, err := ssz.SigningRoot(di)
+	if err != nil {
 		return nil, err
 	}
-	di.ProofOfPossession = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
+
+	domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+	di.Signature = depositKey.SecretKey.Sign(sr[:], domain).Marshal()
 
 	return di, nil
 }
@@ -47,5 +48,5 @@ func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error)
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(withdrawalKey *Key) []byte {
 	h := Keccak256(withdrawalKey.PublicKey.Marshal())
-	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h...)[:32]
+	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[0:]...)[:32]
 }

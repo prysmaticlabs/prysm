@@ -8,8 +8,11 @@ import (
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//   def slot_to_epoch(slot: SlotNumber) -> Epoch:
-//    return slot // SLOTS_PER_EPOCH
+//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//    """
+//    Return the epoch number of ``slot``.
+//    """
+//    return Epoch(slot // SLOTS_PER_EPOCH)
 func SlotToEpoch(slot uint64) uint64 {
 	return slot / params.BeaconConfig().SlotsPerEpoch
 }
@@ -18,26 +21,32 @@ func SlotToEpoch(slot uint64) uint64 {
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
-//   def get_current_epoch(state: BeaconState) -> Epoch:
-//    return slot_to_epoch(state.slot)
+//  def get_current_epoch(state: BeaconState) -> Epoch:
+//    """
+//    Return the current epoch.
+//    """
+//    return compute_epoch_of_slot(state.slot)
 func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
 }
 
 // PrevEpoch returns the previous epoch number calculated from
-// the slot number stored in beacon state. It also checks for
+// the slot number stored in beacon state. It alswo checks for
 // underflow condition.
 //
-// def get_previous_epoch(state: BeaconState) -> Epoch:
+// Spec pseudocode definition:
+//  def get_previous_epoch(state: BeaconState) -> Epoch:
 //    """`
-//    Return the previous epoch of the given ``state``.
+//    Return the previous epoch (unless the current epoch is ``GENESIS_EPOCH``).
 //    """
-//    return max(get_current_epoch(state) - 1, GENESIS_EPOCH)
+//    current_epoch = get_current_epoch(state)
+//    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
 func PrevEpoch(state *pb.BeaconState) uint64 {
-	if CurrentEpoch(state) > params.BeaconConfig().GenesisEpoch {
-		return CurrentEpoch(state) - 1
+	currentEpoch := CurrentEpoch(state)
+	if currentEpoch == 0 {
+		return 0
 	}
-	return params.BeaconConfig().GenesisEpoch
+	return currentEpoch - 1
 }
 
 // NextEpoch returns the next epoch number calculated form
@@ -50,8 +59,11 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 // current epoch.
 //
 // Spec pseudocode definition:
-//   def get_epoch_start_slot(epoch: Epoch) -> SlotNumber:
-//    return epoch * SLOTS_PER_EPOCH
+//  def compute_start_slot_of_epoch(epoch: Epoch) -> Slot:
+//    """
+//    Return the start slot of ``epoch``.
+//    """
+//    return Slot(epoch * SLOTS_PER_EPOCH
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().SlotsPerEpoch
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
@@ -13,7 +14,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	c := cache.NewAttestationCache()
 
-	req := &pb.AttestationDataRequest{
+	req := &pb.AttestationRequest{
 		Shard: 0,
 		Slot:  1,
 	}
@@ -31,8 +32,8 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	res := &pb.AttestationDataResponse{
-		HeadSlot: 5,
+	res := &pbp2p.AttestationData{
+		Target: &pbp2p.Checkpoint{Epoch: 5},
 	}
 
 	if err = c.Put(ctx, req, res); err != nil {

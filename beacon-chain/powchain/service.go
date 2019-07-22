@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -31,10 +33,6 @@ var (
 	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_valid_deposits_received",
 		Help: "The number of valid deposits received in the deposit contract",
-	})
-	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_chainstart_logs",
-		Help: "The number of chainstart logs received from the deposit contract",
 	})
 	blockNumberGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "powchain_block_number",
@@ -88,14 +86,18 @@ type Web3Service struct {
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.MerkleTrie
-	chainStartDeposits      [][]byte
+	chainStartDeposits      []*pb.Deposit
 	chainStarted            bool
-	chainStartETH1Data      *pb.Eth1Data
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
+	chainStartETH1Data      *pb.Eth1Data
+	activeValidatorCount    uint64
+	depositedPubkeys        map[[48]byte]uint64
+	eth2GenesisTime         uint64
+	processingLock          sync.RWMutex
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -127,7 +129,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{{}}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
@@ -149,11 +151,12 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
-		chainStartDeposits:      [][]byte{},
+		chainStartDeposits:      make([]*pb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &pb.Eth1Data{},
+		depositedPubkeys:        make(map[[48]byte]uint64),
 	}, nil
 }
 
@@ -185,13 +188,20 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
-func (w *Web3Service) ChainStartDeposits() [][]byte {
+func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 	return w.chainStartDeposits
 }
 
 // ChainStartETH1Data returns the eth1 data at chainstart.
 func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
 	return w.chainStartETH1Data
+}
+
+// HasChainStarted returns whether the deposits from
+// the deposit contract received so far are valid enough
+// to kick start the beacon chain.
+func (w *Web3Service) HasChainStarted() bool {
+	return w.chainStarted
 }
 
 // Status is service health checks. Return nil or error.
@@ -241,10 +251,27 @@ func (w *Web3Service) Client() Client {
 	return w.client
 }
 
+// AreAllDepositsProcessed determines if all the logs from the deposit contract
+// are processed.
+func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
+	w.processingLock.RLock()
+	defer w.processingLock.RUnlock()
+	countByte, err := w.depositContractCaller.GetDepositCount(&bind.CallOpts{})
+	if err != nil {
+		return false, fmt.Errorf("could not get deposit count %v", err)
+	}
+	count := bytesutil.FromBytes8(countByte)
+	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
+	if count != uint64(len(deposits)) {
+		return false, nil
+	}
+	return true, nil
+}
+
 // initDataFromContract calls the deposit contract and finds the deposit count
 // and deposit root.
 func (w *Web3Service) initDataFromContract() error {
-	root, err := w.depositContractCaller.GetDepositRoot(&bind.CallOpts{})
+	root, err := w.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}

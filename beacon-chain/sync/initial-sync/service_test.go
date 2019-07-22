@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -63,10 +63,12 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) ApplyBlockStateTransition(
-	ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState,
+func (ms *mockChainService) AdvanceState(
+	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+	return &pb.BeaconState{
+		FinalizedCheckpoint: &pb.Checkpoint{},
+	}, nil
 }
 
 func (ms *mockChainService) VerifyBlockValidity(
@@ -98,7 +100,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		log.Errorf("unable to marshal the beacon state: %v", err)
+		t.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
@@ -128,7 +130,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	for i := 1; i <= batchSize; i++ {
 		batchedBlocks[i-1] = &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot + uint64(i),
+			Slot: uint64(i),
 		}
 	}
 	// edge case: handle out of order block list. Specifically with the highest
@@ -145,7 +147,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	chainHead := &pb.ChainHeadResponse{}
 
 	ss.processBatchedBlocks(msg, chainHead)
-
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
@@ -163,11 +164,11 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
-	blks, err := ss.db.BlocksBySlot(ctx, params.BeaconConfig().GenesisSlot)
+	blks, err := ss.db.BlocksBySlot(ctx, 0)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
 	}
-	h, err := hashutil.HashBeaconBlock(blks[0])
+	h, err := ssz.SigningRoot(blks[0])
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -179,8 +180,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			continue
 		}
 		block := &pb.BeaconBlock{
-			Slot:             params.BeaconConfig().GenesisSlot + uint64(i),
-			ParentRootHash32: parentHash,
+			Slot:       uint64(i),
+			ParentRoot: parentHash,
 		}
 
 		chainHead := &pb.ChainHeadResponse{}
@@ -193,7 +194,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			t.Fatalf("Block unable to be saved %v", err)
 		}
 
-		hash, err := hashutil.HashBeaconBlock(block)
+		hash, err := ssz.SigningRoot(block)
 		if err != nil {
 			t.Fatalf("Could not hash block %v", err)
 		}

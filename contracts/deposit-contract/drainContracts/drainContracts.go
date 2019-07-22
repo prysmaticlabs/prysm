@@ -174,8 +174,15 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 	log.Print("Looking up contracts")
 	addresses := make(map[common.Address]bool)
 
-	depositEventSignature := []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
-	depositTopicHash := crypto.Keccak256Hash(depositEventSignature)
+	// Hash of deposit log signature
+	// DepositEvent: event({
+	//    pubkey: bytes[48],
+	//    withdrawal_credentials: bytes[32],
+	//    amount: bytes[8],
+	//    signature: bytes[96],
+	//    index: bytes[8],
+	// })
+	depositTopicHash := common.HexToHash("0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5")
 	fmt.Println(depositTopicHash.Hex())
 
 	query := ethereum.FilterQuery{
@@ -183,7 +190,7 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 		Topics: [][]common.Hash{
 			{depositTopicHash},
 		},
-		FromBlock: big.NewInt(400000), // Contracts before this may not have drain().
+		FromBlock: big.NewInt(800000), // Contracts before this may not have drain().
 	}
 
 	logs, err := client.FilterLogs(context.Background(), query)

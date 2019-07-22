@@ -5,7 +5,6 @@ import (
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var _ = Validator(&fakeValidator{})
@@ -48,7 +47,7 @@ func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 
 func (fv *fakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
 	fv.CanonicalHeadSlotCalled = true
-	return params.BeaconConfig().GenesisSlot, nil
+	return 0, nil
 }
 
 func (fv *fakeValidator) SlotDeadline(_ uint64) time.Time {

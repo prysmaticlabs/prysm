@@ -265,28 +265,28 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.Web3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	powClient := ethclient.NewClient(rpcClient)
-
 	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 
+	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.Web3ProviderFlag.Name))
+	if err != nil {
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+	}
+	powClient := ethclient.NewClient(rpcClient)
+
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        cliCtx.GlobalString(utils.Web3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
-		Client:          powClient,
+		Client:          httpClient,
 		Reader:          powClient,
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
 		BlockFetcher:    httpClient,
-		ContractBackend: powClient,
+		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)

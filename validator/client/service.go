@@ -73,7 +73,8 @@ func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
 		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
-		pubkeys = append(pubkeys, v.keys[i].PublicKey.Marshal())
+		pubkey := v.keys[i].PublicKey.Marshal()
+		pubkeys = append(pubkeys, pubkey)
 	}
 
 	var dialOpt grpc.DialOption
@@ -103,6 +104,7 @@ func (v *ValidatorService) Start() {
 		keys:                 v.keys,
 		pubkeys:              pubkeys,
 		logValidatorBalances: v.logValidatorBalances,
+		prevBalance:          make(map[[48]byte]uint64),
 	}
 	go run(v.ctx, v.validator)
 }

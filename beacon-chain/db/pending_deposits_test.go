@@ -12,7 +12,7 @@ import (
 
 func TestInsertPendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
-	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111))
+	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111), 100, [32]byte{})
 
 	if len(db.pendingDeposits) != 1 {
 		t.Error("Deposit not inserted")
@@ -21,7 +21,7 @@ func TestInsertPendingDeposit_OK(t *testing.T) {
 
 func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.InsertPendingDeposit(context.Background(), nil /*deposit*/, nil /*blockNum*/)
+	db.InsertPendingDeposit(context.Background(), nil /*deposit*/, nil /*blockNum*/, 0, [32]byte{})
 
 	if len(db.pendingDeposits) > 0 {
 		t.Error("Unexpected deposit insertion")
@@ -30,22 +30,22 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
-	depToRemove := &pb.Deposit{MerkleTreeIndex: 1}
-	otherDep := &pb.Deposit{MerkleTreeIndex: 5}
-	db.pendingDeposits = []*depositContainer{
-		{deposit: depToRemove},
-		{deposit: otherDep},
+	depToRemove := &pb.Deposit{Proof: [][]byte{[]byte("A")}}
+	otherDep := &pb.Deposit{Proof: [][]byte{[]byte("B")}}
+	db.pendingDeposits = []*DepositContainer{
+		{Deposit: depToRemove, Index: 1},
+		{Deposit: otherDep, Index: 5},
 	}
 	db.RemovePendingDeposit(context.Background(), depToRemove)
 
-	if len(db.pendingDeposits) != 1 || !proto.Equal(db.pendingDeposits[0].deposit, otherDep) {
+	if len(db.pendingDeposits) != 1 || !proto.Equal(db.pendingDeposits[0].Deposit, otherDep) {
 		t.Error("Failed to remove deposit")
 	}
 }
 
 func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.pendingDeposits = []*depositContainer{{deposit: &pb.Deposit{}}}
+	db.pendingDeposits = []*DepositContainer{{Deposit: &pb.Deposit{}}}
 	db.RemovePendingDeposit(context.Background(), nil /*deposit*/)
 	if len(db.pendingDeposits) != 1 {
 		t.Errorf("Deposit unexpectedly removed")
@@ -54,8 +54,8 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	db := BeaconDB{}
-	dep := &pb.Deposit{MerkleTreeIndex: 123}
-	db.InsertPendingDeposit(context.Background(), dep, big.NewInt(111))
+	dep := &pb.Deposit{Proof: [][]byte{[]byte("A")}}
+	db.InsertPendingDeposit(context.Background(), dep, big.NewInt(111), 100, [32]byte{})
 	db.RemovePendingDeposit(context.Background(), dep)
 	if len(db.pendingDeposits) != 0 {
 		t.Error("Failed to insert & delete a pending deposit")
@@ -65,16 +65,16 @@ func TestPendingDeposit_RoundTrip(t *testing.T) {
 func TestPendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*depositContainer{
-		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+	db.pendingDeposits = []*DepositContainer{
+		{Block: big.NewInt(2), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("A")}}},
+		{Block: big.NewInt(4), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("B")}}},
+		{Block: big.NewInt(6), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
 	expected := []*pb.Deposit{
-		{MerkleTreeIndex: 2},
-		{MerkleTreeIndex: 4},
+		{Proof: [][]byte{[]byte("A")}},
+		{Proof: [][]byte{[]byte("B")}},
 	}
 
 	if !reflect.DeepEqual(deposits, expected) {
@@ -90,23 +90,23 @@ func TestPendingDeposits_OK(t *testing.T) {
 func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*depositContainer{
-		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
-		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	db.pendingDeposits = []*DepositContainer{
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 0)
-	expected := []*depositContainer{
-		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
-		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	expected := []*DepositContainer{
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
@@ -117,40 +117,40 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 func TestPrunePendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
-	db.pendingDeposits = []*depositContainer{
-		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
-		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	db.pendingDeposits = []*DepositContainer{
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 6)
-	expected := []*depositContainer{
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
-		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	expected := []*DepositContainer{
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {
 		t.Errorf("Unexpected deposits. got=%+v want=%+v", db.pendingDeposits, expected)
 	}
 
-	db.pendingDeposits = []*depositContainer{
-		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
-		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	db.pendingDeposits = []*DepositContainer{
+		{Block: big.NewInt(2), Index: 2},
+		{Block: big.NewInt(4), Index: 4},
+		{Block: big.NewInt(6), Index: 6},
+		{Block: big.NewInt(8), Index: 8},
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	db.PrunePendingDeposits(context.Background(), 10)
-	expected = []*depositContainer{
-		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
-		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	expected = []*DepositContainer{
+		{Block: big.NewInt(10), Index: 10},
+		{Block: big.NewInt(12), Index: 12},
 	}
 
 	if !reflect.DeepEqual(db.pendingDeposits, expected) {

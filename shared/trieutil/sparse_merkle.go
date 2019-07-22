@@ -12,8 +12,42 @@ import (
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
+	treeDepth     int
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
+}
+
+// NewTrie returns a new merkle trie filled with zerohashes to use.
+func NewTrie(depth int) (*MerkleTrie, error) {
+	var zeroBytes [32]byte
+	items := [][]byte{zeroBytes[:]}
+	return GenerateTrieFromItems(items, depth)
+}
+
+// InsertIntoTrie inserts an item(deposit hash) into the trie.
+func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
+	// Only insert new items which follow directly after the last
+	// added element
+	if index > len(m.originalItems) {
+		return errors.New("invalid index to be inserting")
+	}
+	if index == len(m.originalItems) {
+		m.originalItems = append(m.originalItems, item)
+		return m.updateTrie()
+	}
+
+	m.originalItems[index] = item
+	return m.updateTrie()
+}
+
+// Regenerates the trie with the item list.
+func (m *MerkleTrie) updateTrie() error {
+	trie, err := GenerateTrieFromItems(m.originalItems, m.treeDepth)
+	if err != nil {
+		return err
+	}
+	m.branches = trie.branches
+	return nil
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -21,17 +55,11 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
-	leaves := make([][]byte, len(items))
+	leaves := items
 	emptyNodes := generateEmptyNodes(depth)
-	// We then construct the leaves of the trie by hashing every
-	// value in the items slice.
-	for i, val := range items {
-		h := hashutil.Hash(val)
-		leaves[i] = h[:]
-	}
 	// Append the leaves to the branches.
 	branches := [][][]byte{leaves}
-	for i := 0; i < depth-1; i++ {
+	for i := 0; i < depth; i++ {
 		if len(branches[i])%2 == 1 {
 			branches[i] = append(branches[i], emptyNodes[i])
 		}
@@ -42,13 +70,12 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	for i, j := 0, len(branches)-1; i < j; i, j = i+1, j-1 {
 		branches[i], branches[j] = branches[j], branches[i]
 	}
-	return &MerkleTrie{branches: branches, originalItems: items}, nil
+	return &MerkleTrie{branches: branches, originalItems: items, treeDepth: depth}, nil
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
-	leaf := hashutil.Hash(item)
-	node := leaf[:]
+	node := item
 	branchIndices := BranchIndices(merkleIndex, len(proof))
 	for i := 0; i < len(proof); i++ {
 		if branchIndices[i]%2 == 0 {
@@ -73,7 +100,22 @@ func BranchIndices(merkleIndex int, depth int) []int {
 	return indices
 }
 
-// Root of the Merkle trie.
+// HashTreeRoot of the Merkle trie as defined in the deposit contract.
+//  Spec Definition:
+//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
+func (m *MerkleTrie) HashTreeRoot() [32]byte {
+	var zeroBytes [32]byte
+	depositCount := uint64(len(m.originalItems))
+	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
+		// Accounting for empty tries
+		depositCount = 0
+	}
+	newNode := append(m.branches[0][0], bytesutil.Bytes8(depositCount)...)
+	newNode = append(newNode, zeroBytes[:24]...)
+	return hashutil.Hash(newNode)
+}
+
+// Root returns the root node of the deposit trie
 func (m *MerkleTrie) Root() [32]byte {
 	return bytesutil.ToBytes32(m.branches[0][0])
 }
@@ -134,8 +176,12 @@ func hashLayer(layer [][]byte) [][]byte {
 // as padding along the way if an odd number of leaves are originally provided.
 func generateEmptyNodes(depth int) [][]byte {
 	nodes := make([][]byte, depth)
-	for i := 0; i < depth; i++ {
-		nodes[i] = parentHash([]byte{}, []byte{})
+	var zeroBytes, prevNode [32]byte
+	nodes[0] = zeroBytes[:]
+	for i := 1; i < depth; i++ {
+		hashedNode := parentHash(prevNode[:], prevNode[:])
+		nodes[i] = hashedNode
+		prevNode = bytesutil.ToBytes32(hashedNode)
 	}
 	return nodes
 }
