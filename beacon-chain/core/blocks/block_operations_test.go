@@ -597,7 +597,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Errorf("Could not generate random private key: %v", err)
 	}
 
-	header1 := &pb.BeaconBlockHeader{
+	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
 		StateRoot: []byte("A"),
 	}
@@ -607,7 +607,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
 
-	header2 := &pb.BeaconBlockHeader{
+	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
 		StateRoot: []byte("B"),
 	}
@@ -617,7 +617,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
 
-	slashings := []*pb.ProposerSlashing{
+	slashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
 			Header_1:      header1,
@@ -625,10 +625,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	beaconState.Validators[1].Pubkey = privKey.PublicKey().Marshal()[:]
+	beaconState.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
 
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
 	}
@@ -1845,12 +1845,12 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	transfer := &pb.Transfer{
-		Sender:    0,
-		Recipient: 1,
-		Fee:       params.BeaconConfig().MinDepositAmount,
-		Amount:    params.BeaconConfig().MinDepositAmount,
-		Slot:      state.Slot,
+	transfer := &ethpb.Transfer{
+		SenderIndex:    0,
+		RecipientIndex: 1,
+		Fee:            params.BeaconConfig().MinDepositAmount,
+		Amount:         params.BeaconConfig().MinDepositAmount,
+		Slot:           state.Slot,
 	}
 
 	priv, err := bls.RandKey(rand.Reader)
@@ -1858,8 +1858,8 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	pubKey := priv.PublicKey().Marshal()[:]
-	transfer.Pubkey = pubKey
-	state.Validators[transfer.Sender].Pubkey = pubKey
+	transfer.SenderWithdrawalPublicKey = pubKey
+	state.Validators[transfer.SenderIndex].PublicKey = pubKey
 	signingRoot, err := ssz.SigningRoot(transfer)
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
