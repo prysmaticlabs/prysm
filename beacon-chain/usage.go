@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -73,15 +74,15 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
-			NoCustomConfigFlag,
-			DepositContractFlag,
-			Web3ProviderFlag,
-			RPCPort,
-			CertFlag,
-			KeyFlag,
-			EnableDBCleanup,
-			GRPCGatewayPort,
-			HTTPWeb3ProviderFlag,
+			flags.NoCustomConfigFlag,
+			flags.DepositContractFlag,
+			flags.Web3ProviderFlag,
+			flags.RPCPort,
+			flags.CertFlag,
+			flags.KeyFlag,
+			flags.EnableDBCleanup,
+			flags.GRPCGatewayPort,
+			flags.HTTPWeb3ProviderFlag,
 		},
 	},
 	{
