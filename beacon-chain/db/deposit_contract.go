@@ -19,7 +19,7 @@ func (db *BeaconDB) DepositContractAddress(ctx context.Context) ([]byte, error) 
 	defer span.End()
 
 	var addr []byte
-	err := db.update(func(tx *bolt.Tx) error {
+	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		addr = chainInfo.Get(depositContractAddressKey)
 		return nil
