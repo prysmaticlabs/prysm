@@ -3656,7 +3656,7 @@ func (m *ProposeResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -5864,7 +5864,7 @@ func (m *BlockTreeResponse_TreeNode) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockRoot", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
