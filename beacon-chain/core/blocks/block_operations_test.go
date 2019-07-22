@@ -469,7 +469,6 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -501,10 +500,8 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	}
 	want := "expected slashing headers to differ"
 	if _, err := blocks.ProcessProposerSlashings(
-
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -551,7 +548,6 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -576,39 +572,68 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	slashings := []*ethpb.ProposerSlashing{
-		{
-			ProposerIndex: 1,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot:      0,
-				Signature: []byte("A"),
-			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot:      0,
-				Signature: []byte("B"),
-			},
-		},
-	}
 	currentSlot := uint64(0)
 	beaconState := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             currentSlot,
-		Balances:         validatorBalances,
+		Validators: validators,
+		Slot:       currentSlot,
+		Balances:   validatorBalances,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
 		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
+
+	domain := helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainBeaconProposer,
+	)
+	privKey, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("Could not generate random private key: %v", err)
+	}
+
+	header1 := &ethpb.BeaconBlockHeader{
+		Slot:      0,
+		StateRoot: []byte("A"),
+	}
+	signingRoot, err := ssz.SigningRoot(header1)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+
+	header2 := &ethpb.BeaconBlockHeader{
+		Slot:      0,
+		StateRoot: []byte("B"),
+	}
+	signingRoot, err = ssz.SigningRoot(header2)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+
+	slashings := []*ethpb.ProposerSlashing{
+		{
+			ProposerIndex: 1,
+			Header_1:      header1,
+			Header_2:      header2,
+		},
+	}
+
+	beaconState.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
+
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
 	}
 
-	newState, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-		false,
-	)
+	newState, err := blocks.ProcessProposerSlashings(beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -1683,7 +1708,6 @@ func TestProcessBeaconTransfers_NotEnoughSenderIndexBalance(t *testing.T) {
 	if _, err := blocks.ProcessTransfers(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1725,7 +1749,6 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	if _, err := blocks.ProcessTransfers(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1744,7 +1767,6 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	if _, err := blocks.ProcessTransfers(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1763,7 +1785,6 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	if _, err := blocks.ProcessTransfers(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1787,7 +1808,6 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 	if _, err := blocks.ProcessTransfers(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1813,40 +1833,53 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             0,
-		Balances:         validatorBalances,
+		Validators: validators,
+		Slot:       0,
+		Balances:   validatorBalances,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	transfers := []*ethpb.Transfer{
-		{
-			SenderIndex:               0,
-			RecipientIndex:            1,
-			Fee:                       params.BeaconConfig().MinDepositAmount,
-			Amount:                    params.BeaconConfig().MinDepositAmount,
-			Slot:                      state.Slot,
-			SenderWithdrawalPublicKey: []byte("A"),
-		},
+
+	transfer := &ethpb.Transfer{
+		SenderIndex:    0,
+		RecipientIndex: 1,
+		Fee:            params.BeaconConfig().MinDepositAmount,
+		Amount:         params.BeaconConfig().MinDepositAmount,
+		Slot:           state.Slot,
 	}
+
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := priv.PublicKey().Marshal()[:]
+	transfer.SenderWithdrawalPublicKey = pubKey
+	state.Validators[transfer.SenderIndex].PublicKey = pubKey
+	signingRoot, err := ssz.SigningRoot(transfer)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	epoch := helpers.CurrentEpoch(state)
+	dt := helpers.Domain(state, epoch, params.BeaconConfig().DomainTransfer)
+	transferSig := priv.Sign(signingRoot[:], dt)
+	transfer.Signature = transferSig.Marshal()[:]
+
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
-			Transfers: transfers,
+			Transfers: []*ethpb.Transfer{transfer},
 		},
 	}
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
-	pubKey := []byte("A")
 	hashed := hashutil.Hash(pubKey)
-
 	buf = append(buf, hashed[:][1:]...)
 	state.Validators[0].WithdrawalCredentials = buf
 	state.Validators[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
-	newState, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-		false,
-	)
+	newState, err := blocks.ProcessTransfers(state, block.Body)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
