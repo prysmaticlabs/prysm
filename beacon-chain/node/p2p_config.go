@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -29,7 +30,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	contractAddress := ctx.String("deposit-contract")
+	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
 		contractAddress, err = fetchDepositContract()
