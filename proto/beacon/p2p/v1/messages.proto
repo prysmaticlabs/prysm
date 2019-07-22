@@ -78,6 +78,7 @@ message BeaconStateRequest {
 
 message BeaconStateResponse {
   BeaconState finalized_state = 1;
+  BeaconBlock finalized_block = 2;
 }
 
 message AttestationAnnounce {

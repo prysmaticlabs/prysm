@@ -310,12 +310,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Error("could not get finalized block")
 		return err
 	}
-	finalRoot, _ := ssz.SigningRoot(finalizedBlk)
-	blkRoot, _ := ssz.SigningRoot(fState.LatestBlockHeader)
 
-	if blkRoot != finalRoot {
-		log.Error("header and block not equal in finalized state")
-	}
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
 		log.WithFields(logrus.Fields{
 			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),
@@ -329,6 +324,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	defer sentState.Inc()
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
+		FinalizedBlock: finalizedBlk,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
