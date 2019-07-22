@@ -1206,7 +1206,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_inf_v0",
-    commit = "d2d2541c53f18d2a059457998ce2876cc8e67cbf",
+    commit = "d2d2541c53f18d2a059457998ce2876cc8e67cbf",  # v0.9.1
     importpath = "gopkg.in/inf.v0",
 )
 
