@@ -3,9 +3,9 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "9245b0549e88e356cd6a25bf79f97aa19332083890b7ac6481a2affb6ada9752",
-    strip_prefix = "bazel-skylib-0.9.0",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.9.0.tar.gz",
+    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
+    strip_prefix = "bazel-skylib-0.8.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
 )
 
 http_archive(
@@ -52,16 +52,16 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "9aec6881eb524b3388e2482e2c8565ce8026e2a3",
-    # Update this after https://github.com/graknlabs/bazel-distribution/pull/169 is merged.
-    remote = "https://github.com/prestonvanloon/bazel-distribution",
+    commit = "db638bd2c5f8c2c55403fb41ba9e19c880907ded",
+    remote = "https://github.com/graknlabs/bazel-distribution",
+    shallow_since = "1563544980 +0300",
 )
 
 # Override default import in rules_go with special patch until
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
     name = "com_github_gogo_protobuf",
-    commit = "dadb625850898f31a8e40e83492f4a7132e520a2",  # v1.2.1, as of 2019-03-03
+    commit = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",  # v1.2.1, as of 2019-03-03
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
@@ -178,7 +178,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "9857d636fd7814ab432669bf94d5aac7a1d1ffb2",
+    commit = "09745575a923640154bcf307fba8aedff47f240a",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
