@@ -193,6 +193,7 @@ func (s *Service) Start() {
 		powChainService:    s.powChainService,
 	}
 	nodeServer := &NodeServer{
+		beaconDB:       s.beaconDB,
 		serviceFetcher: s.grpcServer,
 		syncChecker:    s.syncService,
 	}

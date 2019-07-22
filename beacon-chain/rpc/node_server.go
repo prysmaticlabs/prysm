@@ -3,8 +3,10 @@ package rpc
 import (
 	"context"
 	"sort"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -21,6 +23,7 @@ type serviceInfoFetcher interface {
 type NodeServer struct {
 	syncChecker    sync.SyncChecker
 	serviceFetcher serviceInfoFetcher
+	beaconDB       *db.BeaconDB
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -32,7 +35,26 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	return nil, nil
+	beaconState, err := ns.beaconDB.FinalizedState()
+	if err != nil {
+		// TODO: return grpc Error.
+		return nil, err
+	}
+	address, err := ns.beaconDB.DepositContractAddress(ctx)
+	if err != nil {
+		// TODO: return grpc Error.
+		return nil, err
+	}
+	genesisTimestamp := time.Unix(int64(beaconState.GenesisTime), 0)
+	genesisProtoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
+	if err != nil {
+		// TODO: return grpc Error.
+		return nil, err
+	}
+	return &ethpb.Genesis{
+		DepositContractAddress: address,
+		GenesisTime:            genesisProtoTimestamp,
+	}, nil
 }
 
 // GetVersion checks the version information of the beacon node.
