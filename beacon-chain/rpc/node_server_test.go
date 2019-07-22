@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/reflection"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -16,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type mockSyncChecker struct {
