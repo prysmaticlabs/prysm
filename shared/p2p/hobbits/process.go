@@ -115,19 +115,20 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	log.Trace("processing GOSSIP message")
+	log.Println("processing GOSSIP message") // TODO delete
 
-	header := GossipHeader{}
+	header := new(GossipHeader)
 
 	err := bson.Unmarshal(message.Header, header)
 	if err != nil {
 		return errors.Wrap(err, "error unmarshaling gossip message header")
 	}
 
-	if h.received(header) {
+	if h.received(*header) {
 		return errors.New("GOSSIP message is duplicate, aborting process")
 	}
 
-	topic := h.parseTopic(header)
+	topic := h.parseTopic(*header)
 
 	var function func(HobbitsMessage, GossipHeader)
 
@@ -135,12 +136,13 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	case "BLOCK":
 		function = h.gossipBlock
 	case "ATTESTATION":
+		log.Println("an attestation was received, processing...") // TODO delete
 		function = h.gossipAttestation
 	default:
 		return errors.New("message topic unsupported")
 	}
 
-	function(message, header)
+	function(message, *header)
 
 	return nil
 }
@@ -166,6 +168,7 @@ func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
 		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message")
 	}
 
+	log.Println("methodID has been parsed from header") // TODO delete
 	return RPCMethod(unmarshaledHeader.MethodID), nil
 }
 

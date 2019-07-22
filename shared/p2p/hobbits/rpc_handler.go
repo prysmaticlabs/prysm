@@ -108,7 +108,6 @@ func (h *HobbitsNode) sendHello(id peer.ID, message HobbitsMessage) error {
 
 	err = h.Server.SendMessage(h.PeerConns[id], encoding.Message(responseMessage))
 	if err != nil {
-		log.Trace("error sending a HELLO back") // TODO delete
 		return errors.Wrap(err, "error sending HELLO")
 	}
 
@@ -131,7 +130,6 @@ func (h *HobbitsNode) rpcHello() Hello {
 
 	finalizedState, err := h.DB.FinalizedState()
 	if err != nil {
-		finalizedState = nil // TODO: testing purposes, remove
 		log.Printf("error getting FinalizedState data from db: %s", err.Error())
 	} else {
 		response.LatestFinalizedEpoch = finalizedState.Slot / 64 // finalized epoch

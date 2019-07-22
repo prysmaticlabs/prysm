@@ -81,7 +81,7 @@ func (h *HobbitsNode) Listen() error {
 		if err != nil {
 			log.Println("closing conn and deleting peer") // TODO delete
 			log.Error(err)
-			_ = conn.Close()
+			//_ = conn.Close()
 			delete(h.PeerConns, id)
 			return
 		}
@@ -129,12 +129,16 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) {
 		Body: []byte{},
 	}
 
+	log.Println("message to propagate built") // TODO delete
+
 	for _, peer := range h.PeerConns {
 		err := h.Server.SendMessage(peer, encoding.Message(message))
 		if err != nil {
 			log.Trace("error broadcasting: ")
 		}
 	}
+
+	log.Println("finished broadcasting to static peers") // TODO delete
 }
 
 // Send builds and sends a message to a Hobbits peer

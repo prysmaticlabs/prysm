@@ -1,17 +1,22 @@
 package hobbits
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/context"
+	ttl "github.com/ReneKroon/ttlcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/renaynay/go-hobbits/encoding"
+	"github.com/renaynay/go-hobbits/tcp"
 	"gopkg.in/mgo.v2/bson"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestHobbitsNode_Listen(t *testing.T) {
@@ -29,6 +34,11 @@ func TestHobbitsNode_Listen(t *testing.T) {
 	}
 
 	hobNode := Hobbits("127.0.0.1", 0, []string{}, fakeDB)
+
+	cache := ttl.NewCache()
+	cache.Set(string(make([]byte, 32)), true)
+
+	hobNode.MessageStore = cache
 
 	go func() {
 		hobNode.Listen()
@@ -57,7 +67,7 @@ func TestHobbitsNode_Listen(t *testing.T) {
 
 	marshBody, err := bson.Marshal(responseBody)
 	if err != nil {
-		t.Errorf("error bson marshaling response boyd")
+		t.Errorf("error bson marshaling response body")
 	}
 
 	responseHeader := RPCHeader{
@@ -78,7 +88,7 @@ func TestHobbitsNode_Listen(t *testing.T) {
 
 	toSend := encoding.Marshal(encoding.Message(msg))
 
-	_, err = conn.Write([]byte(toSend))
+	_, err = conn.Write(toSend)
 	if err != nil {
 		t.Error("could not write to the TCP server: ", err)
 	}
@@ -88,59 +98,69 @@ func TestHobbitsNode_Listen(t *testing.T) {
 	select {}
 }
 
-//func TestHobbitsNode_Broadcast(t *testing.T) {
-//	db, err := db.NewDB("go/src/renaynay/db")
-//	if err != nil {
-//		t.Errorf("can't construct new DB")baz
-//	}
-//
-//	hobNode := Hobbits("127.0.0.1", 0, []string{}, db)
-//
-//	go func() {
-//		hobNode.Listen()
-//	}()
-//
-//	time.Sleep(3000000000)
-//
-//	for {
-//		if hobNode.Server.Addr() != nil {
-//			break
-//		}
-//
-//		time.Sleep(1)
-//	}
-//
-//	conn, err := net.Dial("tcp", hobNode.Server.Addr().String())
-//	if err != nil {
-//		t.Error("could not connect to TCP server: ", err)
-//	}
-//
-//	header := GossipHeader{
-//		MethodID: 0,
-//		Topic: "ATTESTATION",
-//		Timestamp: uint64(time.Now().Unix()),
-//		MessageHash: [32]byte{},
-//		Hash: [32]byte{},
-//	}
-//
-//	marshHeader, := bson.Marshal(header)
-//
-//
-//	msg := HobbitsMessage{
-//		Version:  CurrentHobbits,
-//		Protocol: encoding.RPC,
-//		Header:   marshHeader,
-//		Body:     marshBody,
-//	}
-//
-//	toSend := encoding.Marshal(encoding.Message(msg))
-//
-//	_, err = conn.Write([]byte(toSend))
-//	if err != nil {
-//		t.Error("could not write to the TCP server: ", err)
-//	}
-//
-//	fmt.Println("writing...")
-//
-//	select {}
-//}
+func TestHobbitsNode_Broadcast(t *testing.T) {
+	db, err := db.NewDB("go/src/renaynay/db")
+	if err != nil {
+		t.Errorf("can't construct new DB")
+	}
+
+	server := tcp.NewServer("127.0.0.1", 0)
+
+	ch := make(chan HobbitsMessage)
+
+	go func() {
+
+		server.Listen(func(conn net.Conn, message encoding.Message) {
+			fmt.Println("msg")
+
+			ch <- HobbitsMessage(message)
+		})
+	}()
+
+	for {
+		if server.Addr() != nil {
+			break
+		}
+
+		time.Sleep(1)
+	}
+
+	hobNode := Hobbits("127.0.0.1", 0, []string{server.Addr().String()}, db)
+
+	hobNode.Start()
+
+	for {
+		if len(hobNode.PeerConns) == 0 {
+			continue
+		}
+
+		break
+	}
+
+	header := GossipHeader{
+		MethodID: 0,
+		Topic: "ATTESTATION",
+		Timestamp: uint64(time.Now().Unix()),
+		MessageHash: [32]byte{240, 2, 6, 253, 232, 158},
+		Hash: [32]byte{},
+	}
+
+	attestation := &pb.AttestationAnnounce{
+		Hash: header.Hash[:],
+	}
+
+	hobNode.Broadcast(context.WithValue(context.Background(), "message_hash", header.MessageHash), attestation)
+
+	read := <- ch
+
+	buf := new(GossipHeader)
+
+	err = bson.Unmarshal(read.Header, buf)
+	if err != nil {
+		t.Errorf("error unmarshaling read header: %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(header.Hash, buf.Hash) {
+		t.Error("Broadcast did not propagate the expected message, unsuccessful")
+	}
+}
