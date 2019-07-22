@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"fmt"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -40,9 +39,6 @@ func runDepositTest(t *testing.T, filename string) {
 				// TODO(#2857): uncompressed signature format is not supported
 				t.Skip("Uncompressed BLS signature format is not supported")
 			}
-
-			fmt.Printf("%#v\n", tt.Deposit.Proof)
-			fmt.Printf("%#v\n", tt.Deposit.Data)
 
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
 			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true)
