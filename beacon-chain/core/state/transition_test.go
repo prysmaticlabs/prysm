@@ -144,19 +144,44 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+
+	proposerIdx := uint64(3)
+
+	domain := helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainBeaconProposer,
+	)
+
+	header1 := &ethpb.BeaconBlockHeader{
+		Slot:      1,
+		StateRoot: []byte("A"),
+	}
+	signingRoot, err := ssz.SigningRoot(header1)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
+	header2 := &ethpb.BeaconBlockHeader{
+		Slot:      1,
+		StateRoot: []byte("B"),
+	}
+	signingRoot, err = ssz.SigningRoot(header2)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 3,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("A"),
-			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("B"),
-			},
+			ProposerIndex: proposerIdx,
+			Header_1:      header1,
+			Header_2:      header2,
 		},
 	}
+	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
@@ -352,7 +377,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, false)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, true)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -368,19 +393,44 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+
+	proposerIdx := uint64(3)
+
+	domain := helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainBeaconProposer,
+	)
+
+	header1 := &ethpb.BeaconBlockHeader{
+		Slot:      1,
+		StateRoot: []byte("A"),
+	}
+	signingRoot, err := ssz.SigningRoot(header1)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
+	header2 := &ethpb.BeaconBlockHeader{
+		Slot:      1,
+		StateRoot: []byte("B"),
+	}
+	signingRoot, err = ssz.SigningRoot(header2)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 3,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("A"),
-			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot:      1,
-				Signature: []byte("B"),
-			},
+			ProposerIndex: proposerIdx,
+			Header_1:      header1,
+			Header_2:      header2,
 		},
 	}
+	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
