@@ -39,7 +39,7 @@ func runTransferTest(t *testing.T, filename string) {
 
 			body := &ethpb.BeaconBlockBody{Transfers: []*ethpb.Transfer{tt.Transfer}}
 
-			postState, err := blocks.ProcessTransfers(tt.Pre, body, true)
+			postState, err := blocks.ProcessTransfers(tt.Pre, body)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {
