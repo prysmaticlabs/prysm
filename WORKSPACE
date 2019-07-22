@@ -1212,7 +1212,7 @@ go_repository(
 
 go_repository(
     name = "com_github_davecgh_go_spew",
-    commit = "d8f796af33cc11cb798c1aaeb27a4ebc5099927d",
+    commit = "8991bc29aa16c548c550c7ff78260e27b9ab7c73",  # v1.1.1
     importpath = "github.com/davecgh/go-spew",
 )
 
