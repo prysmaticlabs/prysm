@@ -71,7 +71,7 @@ func ExecuteStateTransition(
 	return state, nil
 }
 
-// ExecuteStateTransitionNoValidateStateRoot defines the procedure for a state transition function.
+// ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
 // This does not validate state root, The use case of such is for state root calculation, the proposer
 // should first run state transition on an unsigned block containing a stub for the state root and signature.
 //
@@ -86,7 +86,7 @@ func ExecuteStateTransition(
 //    process_block(state, block)
 //    # Return post-state
 //    return state
-func ExecuteStateTransitionNoValidateStateRoot(
+func ExecuteStateTransitionNoVerify(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
