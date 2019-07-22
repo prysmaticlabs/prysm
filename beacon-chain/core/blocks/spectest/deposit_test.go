@@ -1,6 +1,7 @@
 package spectest
 
 import (
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -40,8 +41,11 @@ func runDepositTest(t *testing.T, filename string) {
 				t.Skip("Uncompressed BLS signature format is not supported")
 			}
 
+			fmt.Printf("%#v\n", tt.Deposit.Proof)
+			fmt.Printf("%#v\n", tt.Deposit.Data)
+
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
-			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true, true)
+			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {
