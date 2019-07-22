@@ -169,9 +169,9 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 		return fmt.Errorf("failed to save block: %v", err)
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            block.Slot,
-		BeaconBlockRoot: blockRoot[:],
-		ParentRoot:      block.ParentRoot,
+		Slot:       block.Slot,
+		BlockRoot:  blockRoot[:],
+		ParentRoot: block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
@@ -217,9 +217,6 @@ func (c *ChainService) AdvanceState(
 		ctx,
 		beaconState,
 		block,
-		&state.TransitionConfig{
-			VerifySignatures: false, // We disable signature verification for now.
-		},
 	)
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}
