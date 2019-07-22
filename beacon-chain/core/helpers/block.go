@@ -24,7 +24,7 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	return state.BlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
 }
 
-// BeaconBlockRoot returns the block root stored in the BeaconState for epoch start slot.
+// BlockRoot returns the block root stored in the BeaconState for epoch start slot.
 //
 // Spec pseudocode definition:
 //  def get_block_root(state: BeaconState, epoch: Epoch) -> Hash:
