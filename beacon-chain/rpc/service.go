@@ -190,10 +190,15 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 	}
+	nodeServer := &NodeServer{
+		s:           s.grpcServer,
+		syncService: s.syncService,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

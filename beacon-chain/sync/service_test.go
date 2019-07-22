@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+var _ = SyncChecker(&Service{})
+
 func NotSyncQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
 		ResponseBufferSize: 100,
