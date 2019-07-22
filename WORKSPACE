@@ -1145,7 +1145,7 @@ go_ssz_dependencies()
 
 go_repository(
     name = "com_github_burntsushi_toml",
-    commit = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005",
+    commit = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005",  # v0.3.1
     importpath = "github.com/BurntSushi/toml",
 )
 
