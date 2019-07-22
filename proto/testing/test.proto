@@ -3,9 +3,11 @@ syntax = "proto3";
 package testing;
 
 import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message TestMessage {
   string foo = 1;
+  string bar = 2 [(gogoproto.moretags) = "fizz:\"buzz\" spec-name:\"baz\""];
 }
 
 

@@ -307,7 +307,7 @@ func runTestCases(t *testing.T, s *sszspectest.SszMainnetTest) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(root[:], testCase.Transfer.Root) {
-				t.Errorf("Expected trasnfer root %#x, received %#x", testCase.Transfer.Root, root[:])
+				t.Errorf("Expected transfer root %#x, received %#x", testCase.Transfer.Root, root[:])
 			}
 			root, err = ssz.SigningRoot(p)
 			if err != nil {

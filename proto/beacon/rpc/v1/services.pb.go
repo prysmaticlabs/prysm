@@ -7,15 +7,16 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
+	io "io"
+	math "math"
+
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	_ "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options"
 	_ "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1264,13 +1265,13 @@ func (m *BlockTreeResponse) GetTree() []*BlockTreeResponse_TreeNode {
 }
 
 type BlockTreeResponse_TreeNode struct {
-	Block                *ethpb.BeaconBlock `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
-	BlockRoot            []byte             `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
-	ParticipatedVotes    uint64             `protobuf:"varint,3,opt,name=participated_votes,json=participatedVotes,proto3" json:"participated_votes,omitempty"`
-	TotalVotes           uint64             `protobuf:"varint,4,opt,name=total_votes,json=totalVotes,proto3" json:"total_votes,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_unrecognized     []byte             `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
+	Block                *v1alpha1.BeaconBlock `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	BlockRoot            []byte                `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
+	ParticipatedVotes    uint64                `protobuf:"varint,3,opt,name=participated_votes,json=participatedVotes,proto3" json:"participated_votes,omitempty"`
+	TotalVotes           uint64                `protobuf:"varint,4,opt,name=total_votes,json=totalVotes,proto3" json:"total_votes,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *BlockTreeResponse_TreeNode) Reset()         { *m = BlockTreeResponse_TreeNode{} }
@@ -1306,7 +1307,7 @@ func (m *BlockTreeResponse_TreeNode) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BlockTreeResponse_TreeNode proto.InternalMessageInfo
 
-func (m *BlockTreeResponse_TreeNode) GetBlock() *ethpb.BeaconBlock {
+func (m *BlockTreeResponse_TreeNode) GetBlock() *v1alpha1.BeaconBlock {
 	if m != nil {
 		return m.Block
 	}
@@ -1553,7 +1554,7 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BeaconServiceClient interface {
 	WaitForChainStart(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (BeaconService_WaitForChainStartClient, error)
-	CanonicalHead(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ethpb.BeaconBlock, error)
+	CanonicalHead(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.BeaconBlock, error)
 	BlockTree(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*BlockTreeResponse, error)
 	BlockTreeBySlots(ctx context.Context, in *TreeBlockSlotRequest, opts ...grpc.CallOption) (*BlockTreeResponse, error)
 }
@@ -1598,8 +1599,8 @@ func (x *beaconServiceWaitForChainStartClient) Recv() (*ChainStartResponse, erro
 	return m, nil
 }
 
-func (c *beaconServiceClient) CanonicalHead(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ethpb.BeaconBlock, error) {
-	out := new(ethpb.BeaconBlock)
+func (c *beaconServiceClient) CanonicalHead(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
+	out := new(v1alpha1.BeaconBlock)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/CanonicalHead", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1628,7 +1629,7 @@ func (c *beaconServiceClient) BlockTreeBySlots(ctx context.Context, in *TreeBloc
 // BeaconServiceServer is the server API for BeaconService service.
 type BeaconServiceServer interface {
 	WaitForChainStart(*types.Empty, BeaconService_WaitForChainStartServer) error
-	CanonicalHead(context.Context, *types.Empty) (*ethpb.BeaconBlock, error)
+	CanonicalHead(context.Context, *types.Empty) (*v1alpha1.BeaconBlock, error)
 	BlockTree(context.Context, *types.Empty) (*BlockTreeResponse, error)
 	BlockTreeBySlots(context.Context, *TreeBlockSlotRequest) (*BlockTreeResponse, error)
 }
@@ -1743,8 +1744,8 @@ var _BeaconService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AttesterServiceClient interface {
-	RequestAttestation(ctx context.Context, in *AttestationRequest, opts ...grpc.CallOption) (*ethpb.AttestationData, error)
-	SubmitAttestation(ctx context.Context, in *ethpb.Attestation, opts ...grpc.CallOption) (*AttestResponse, error)
+	RequestAttestation(ctx context.Context, in *AttestationRequest, opts ...grpc.CallOption) (*v1alpha1.AttestationData, error)
+	SubmitAttestation(ctx context.Context, in *v1alpha1.Attestation, opts ...grpc.CallOption) (*AttestResponse, error)
 }
 
 type attesterServiceClient struct {
@@ -1755,8 +1756,8 @@ func NewAttesterServiceClient(cc *grpc.ClientConn) AttesterServiceClient {
 	return &attesterServiceClient{cc}
 }
 
-func (c *attesterServiceClient) RequestAttestation(ctx context.Context, in *AttestationRequest, opts ...grpc.CallOption) (*ethpb.AttestationData, error) {
-	out := new(ethpb.AttestationData)
+func (c *attesterServiceClient) RequestAttestation(ctx context.Context, in *AttestationRequest, opts ...grpc.CallOption) (*v1alpha1.AttestationData, error) {
+	out := new(v1alpha1.AttestationData)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.AttesterService/RequestAttestation", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1764,7 +1765,7 @@ func (c *attesterServiceClient) RequestAttestation(ctx context.Context, in *Atte
 	return out, nil
 }
 
-func (c *attesterServiceClient) SubmitAttestation(ctx context.Context, in *ethpb.Attestation, opts ...grpc.CallOption) (*AttestResponse, error) {
+func (c *attesterServiceClient) SubmitAttestation(ctx context.Context, in *v1alpha1.Attestation, opts ...grpc.CallOption) (*AttestResponse, error) {
 	out := new(AttestResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.AttesterService/SubmitAttestation", in, out, opts...)
 	if err != nil {
@@ -1775,8 +1776,8 @@ func (c *attesterServiceClient) SubmitAttestation(ctx context.Context, in *ethpb
 
 // AttesterServiceServer is the server API for AttesterService service.
 type AttesterServiceServer interface {
-	RequestAttestation(context.Context, *AttestationRequest) (*ethpb.AttestationData, error)
-	SubmitAttestation(context.Context, *ethpb.Attestation) (*AttestResponse, error)
+	RequestAttestation(context.Context, *AttestationRequest) (*v1alpha1.AttestationData, error)
+	SubmitAttestation(context.Context, *v1alpha1.Attestation) (*AttestResponse, error)
 }
 
 func RegisterAttesterServiceServer(s *grpc.Server, srv AttesterServiceServer) {
@@ -1802,7 +1803,7 @@ func _AttesterService_RequestAttestation_Handler(srv interface{}, ctx context.Co
 }
 
 func _AttesterService_SubmitAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ethpb.Attestation)
+	in := new(v1alpha1.Attestation)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1814,7 +1815,7 @@ func _AttesterService_SubmitAttestation_Handler(srv interface{}, ctx context.Con
 		FullMethod: "/ethereum.beacon.rpc.v1.AttesterService/SubmitAttestation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AttesterServiceServer).SubmitAttestation(ctx, req.(*ethpb.Attestation))
+		return srv.(AttesterServiceServer).SubmitAttestation(ctx, req.(*v1alpha1.Attestation))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1840,8 +1841,8 @@ var _AttesterService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ProposerServiceClient interface {
-	RequestBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*ethpb.BeaconBlock, error)
-	ProposeBlock(ctx context.Context, in *ethpb.BeaconBlock, opts ...grpc.CallOption) (*ProposeResponse, error)
+	RequestBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*v1alpha1.BeaconBlock, error)
+	ProposeBlock(ctx context.Context, in *v1alpha1.BeaconBlock, opts ...grpc.CallOption) (*ProposeResponse, error)
 }
 
 type proposerServiceClient struct {
@@ -1852,8 +1853,8 @@ func NewProposerServiceClient(cc *grpc.ClientConn) ProposerServiceClient {
 	return &proposerServiceClient{cc}
 }
 
-func (c *proposerServiceClient) RequestBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*ethpb.BeaconBlock, error) {
-	out := new(ethpb.BeaconBlock)
+func (c *proposerServiceClient) RequestBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
+	out := new(v1alpha1.BeaconBlock)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ProposerService/RequestBlock", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1861,7 +1862,7 @@ func (c *proposerServiceClient) RequestBlock(ctx context.Context, in *BlockReque
 	return out, nil
 }
 
-func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *ethpb.BeaconBlock, opts ...grpc.CallOption) (*ProposeResponse, error) {
+func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *v1alpha1.BeaconBlock, opts ...grpc.CallOption) (*ProposeResponse, error) {
 	out := new(ProposeResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock", in, out, opts...)
 	if err != nil {
@@ -1872,8 +1873,8 @@ func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *ethpb.Beac
 
 // ProposerServiceServer is the server API for ProposerService service.
 type ProposerServiceServer interface {
-	RequestBlock(context.Context, *BlockRequest) (*ethpb.BeaconBlock, error)
-	ProposeBlock(context.Context, *ethpb.BeaconBlock) (*ProposeResponse, error)
+	RequestBlock(context.Context, *BlockRequest) (*v1alpha1.BeaconBlock, error)
+	ProposeBlock(context.Context, *v1alpha1.BeaconBlock) (*ProposeResponse, error)
 }
 
 func RegisterProposerServiceServer(s *grpc.Server, srv ProposerServiceServer) {
@@ -1899,7 +1900,7 @@ func _ProposerService_RequestBlock_Handler(srv interface{}, ctx context.Context,
 }
 
 func _ProposerService_ProposeBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ethpb.BeaconBlock)
+	in := new(v1alpha1.BeaconBlock)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1911,7 +1912,7 @@ func _ProposerService_ProposeBlock_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProposerServiceServer).ProposeBlock(ctx, req.(*ethpb.BeaconBlock))
+		return srv.(ProposerServiceServer).ProposeBlock(ctx, req.(*v1alpha1.BeaconBlock))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5855,7 +5856,7 @@ func (m *BlockTreeResponse_TreeNode) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Block == nil {
-				m.Block = &ethpb.BeaconBlock{}
+				m.Block = &v1alpha1.BeaconBlock{}
 			}
 			if err := m.Block.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

@@ -1,11 +1,16 @@
 package testutil
 
 import (
-	"bytes"
-	"encoding/json"
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/json-iterator/go"
 )
+
+var json = jsoniter.Config{
+	EscapeHTML:             true,
+	SortMapKeys:            true,
+	ValidateJsonRawMessage: true,
+	TagKey:                 "spec-name",
+}.Froze()
 
 // ConvertToPb converts some JSON compatible struct to given protobuf.
 func ConvertToPb(i interface{}, p proto.Message) error {
@@ -13,7 +18,7 @@ func ConvertToPb(i interface{}, p proto.Message) error {
 	if err != nil {
 		return err
 	}
-	err = jsonpb.Unmarshal(bytes.NewReader(b), p)
+	err = json.Unmarshal(b, p)
 	if err != nil {
 		return err
 	}

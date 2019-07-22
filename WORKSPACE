@@ -108,7 +108,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains()
+go_register_toolchains(nogo = "@//:nogo")
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
@@ -162,6 +162,7 @@ filegroup(
 
 http_archive(
     name = "com_github_bazelbuild_buildtools",
+    sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
@@ -204,7 +205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "1bfb5030b6221eaffcc34da9db975711789ff0b6",
+    commit = "e0e450364c42117b8e372c7157821c18dad900a4",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 

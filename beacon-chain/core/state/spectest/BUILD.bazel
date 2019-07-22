@@ -11,7 +11,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:v1alpha1_go_proto",
     ],
 )
 
@@ -30,7 +30,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:v1alpha1_go_proto",
         "//shared/params:go_default_library",
         "//shared/params/spectest:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",

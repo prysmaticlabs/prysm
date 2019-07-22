@@ -7,7 +7,7 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha;eth";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
 // Beacon node validator API
 //
@@ -118,7 +118,7 @@ message AttestationDataRequest {
 // An Ethereum 2.0 validator.
 message Validator {
     // 96 byte BLS public key used for the validator's activities.
-    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
 
     // 32 byte hash of the withdrawal destination public key.
     bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
