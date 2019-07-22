@@ -130,7 +130,7 @@ func (ss *Service) Syncing() bool {
 	if err != nil {
 		return false
 	}
-	isSynced := querierSynced && ss.InitialSync.NodeIsSynced
+	isSynced := querierSynced && ss.InitialSync.NodeIsSynced()
 	return !isSynced
 }
 

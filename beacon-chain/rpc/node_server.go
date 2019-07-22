@@ -11,19 +11,28 @@ import (
 	"google.golang.org/grpc"
 )
 
+type serviceInfoFetcher interface {
+	GetServiceInfo() map[string]grpc.ServiceInfo
+}
+
 // NodeServer defines a server implementation of the gRPC Node service,
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type NodeServer struct {
-	syncChecker sync.SyncChecker
-	s           *grpc.Server
+	syncChecker    sync.SyncChecker
+	serviceFetcher serviceInfoFetcher
 }
 
 // GetSyncStatus checks the current network sync status of the node.
 func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
 	return &ethpb.SyncStatus{
-		Syncing: ns.syncService.Syncing(),
+		Syncing: ns.syncChecker.Syncing(),
 	}, nil
+}
+
+// GetGenesis fetches genesis chain information of Ethereum 2.0
+func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
+	return nil, nil
 }
 
 // GetVersion checks the version information of the beacon node.
@@ -39,7 +48,7 @@ func (ns *NodeServer) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.V
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
 func (ns *NodeServer) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
-	serviceInfo := ns.s.GetServiceInfo()
+	serviceInfo := ns.serviceFetcher.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {
 		serviceNames = append(serviceNames, svc)
