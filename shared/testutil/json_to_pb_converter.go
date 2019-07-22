@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/json-iterator/go"
 )
@@ -23,4 +24,12 @@ func ConvertToPb(i interface{}, p proto.Message) error {
 		return err
 	}
 	return nil
+}
+
+func UnmarshalYaml(y []byte, dest interface{}) error {
+	j, err := yaml.YAMLToJSON(y)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(j, dest)
 }

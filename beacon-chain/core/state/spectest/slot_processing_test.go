@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -24,7 +24,7 @@ func TestSlotProcessingMainnet(t *testing.T) {
 	}
 
 	s := &SanitySlotsTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 

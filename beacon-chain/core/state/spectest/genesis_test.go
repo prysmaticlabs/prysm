@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestGenesisInitializationMinimal(t *testing.T) {
@@ -27,7 +27,7 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 	}
 
 	s := &GenesisInitializationTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
@@ -76,7 +76,7 @@ func TestGenesisValidityMinimal(t *testing.T) {
 	}
 
 	s := &GensisValidityTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
