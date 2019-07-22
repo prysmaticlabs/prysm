@@ -39,7 +39,7 @@ func runProposerSlashingTest(t *testing.T, filename string) {
 
 			body := &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{tt.ProposerSlashing}}
 
-			postState, err := blocks.ProcessProposerSlashings(tt.Pre, body, true)
+			postState, err := blocks.ProcessProposerSlashings(tt.Pre, body)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {
