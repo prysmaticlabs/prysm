@@ -1869,9 +1869,9 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 	transferSig := priv.Sign(signingRoot[:], dt)
 	transfer.Signature = transferSig.Marshal()[:]
 
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Transfers: []*pb.Transfer{transfer},
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			Transfers: []*ethpb.Transfer{transfer},
 		},
 	}
 	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}

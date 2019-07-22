@@ -153,7 +153,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		params.BeaconConfig().DomainBeaconProposer,
 	)
 
-	header1 := &pb.BeaconBlockHeader{
+	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
 		StateRoot: []byte("A"),
 	}
@@ -163,7 +163,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
-	header2 := &pb.BeaconBlockHeader{
+	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
 		StateRoot: []byte("B"),
 	}
@@ -173,16 +173,16 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
-	proposerSlashings := []*pb.ProposerSlashing{
+	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: proposerIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].Pubkey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
 
-	attesterSlashings := []*pb.AttesterSlashing{
+	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
@@ -402,7 +402,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		params.BeaconConfig().DomainBeaconProposer,
 	)
 
-	header1 := &pb.BeaconBlockHeader{
+	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
 		StateRoot: []byte("A"),
 	}
@@ -412,7 +412,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
-	header2 := &pb.BeaconBlockHeader{
+	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
 		StateRoot: []byte("B"),
 	}
@@ -422,16 +422,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
-	proposerSlashings := []*pb.ProposerSlashing{
+	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: proposerIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].Pubkey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
 
-	attesterSlashings := []*pb.AttesterSlashing{
+	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
