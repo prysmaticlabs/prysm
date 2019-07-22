@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -12,7 +12,7 @@ func TestBeaconDB_HasExit(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	d := &pb.VoluntaryExit{
+	d := &ethpb.VoluntaryExit{
 		Epoch: 100,
 	}
 	hash, err := hashutil.HashProto(d)

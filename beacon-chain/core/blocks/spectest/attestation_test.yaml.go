@@ -3,7 +3,10 @@
 
 package spectest
 
-import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import (
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+)
 
 type AttestationTest struct {
 	Title         string   `json:"title"`
@@ -14,10 +17,10 @@ type AttestationTest struct {
 	Runner        string   `json:"runner"`
 	Handler       string   `json:"handler"`
 	TestCases     []struct {
-		Description string          `json:"description"`
-		Pre         *pb.BeaconState `json:"pre"`
-		Attestation *pb.Attestation `json:"attestation"`
-		Post        *pb.BeaconState `json:"post"`
-		BlsSetting  uint64          `json:"bls_setting,omitempty"`
+		Description string             `json:"description"`
+		Pre         *pb.BeaconState    `json:"pre"`
+		Attestation *ethpb.Attestation `json:"attestation"`
+		Post        *pb.BeaconState    `json:"post"`
+		BlsSetting  uint64             `json:"bls_setting,omitempty"`
 	} `json:"test_cases"`
 }

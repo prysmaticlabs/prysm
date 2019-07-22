@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -192,7 +193,7 @@ func (rs *RegularSync) run() {
 	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
 	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
 	announceAttestationSub := rs.p2p.Subscribe(&pb.AttestationAnnounce{}, rs.announceAttestationBuf)
-	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
+	exitSub := rs.p2p.Subscribe(&ethpb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
 
@@ -461,7 +462,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
 	defer span.End()
 	recExit.Inc()
-	exit := msg.Data.(*pb.VoluntaryExit)
+	exit := msg.Data.(*ethpb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)
@@ -610,7 +611,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 
 // respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
 // the return should look like (finalizedBlock... headBlock].
-func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*ethpb.BeaconBlock, error) {
 	// if head block was the same as the finalized block.
 	if bytes.Equal(headRoot, finalizedRoot) {
 		return nil, nil
@@ -624,7 +625,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
 	}
 
-	bList := []*pb.BeaconBlock{b}
+	bList := []*ethpb.BeaconBlock{b}
 	parentRoot := b.ParentRoot
 	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
@@ -639,7 +640,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		}
 
 		// Prepend parent to the beginning of the list.
-		bList = append([]*pb.BeaconBlock{b}, bList...)
+		bList = append([]*ethpb.BeaconBlock{b}, bList...)
 
 		parentRoot = b.ParentRoot
 	}

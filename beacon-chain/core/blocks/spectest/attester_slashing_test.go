@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -21,7 +21,7 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 	}
 
 	test := &BlockOperationTest{}
-	if err := yaml.Unmarshal(file, test); err != nil {
+	if err := testutil.UnmarshalYaml(file, test); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
@@ -29,11 +29,15 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 		t.Fatal(err)
 	}
 
+	if len(test.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 
-			body := &pb.BeaconBlockBody{AttesterSlashings: []*pb.AttesterSlashing{tt.AttesterSlashing}}
+			body := &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{tt.AttesterSlashing}}
 
 			postState, err := blocks.ProcessAttesterSlashings(tt.Pre, body, true)
 			// Note: This doesn't test anything worthwhile. It essentially tests

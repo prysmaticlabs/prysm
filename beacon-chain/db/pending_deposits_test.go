@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestInsertPendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
-	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111), 100, [32]byte{})
+	db.InsertPendingDeposit(context.Background(), &ethpb.Deposit{}, big.NewInt(111), 100, [32]byte{})
 
 	if len(db.pendingDeposits) != 1 {
 		t.Error("Deposit not inserted")
@@ -30,8 +30,8 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
-	depToRemove := &pb.Deposit{Proof: [][]byte{[]byte("A")}}
-	otherDep := &pb.Deposit{Proof: [][]byte{[]byte("B")}}
+	depToRemove := &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}
+	otherDep := &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}
 	db.pendingDeposits = []*DepositContainer{
 		{Deposit: depToRemove, Index: 1},
 		{Deposit: otherDep, Index: 5},
@@ -45,7 +45,7 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 
 func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.pendingDeposits = []*DepositContainer{{Deposit: &pb.Deposit{}}}
+	db.pendingDeposits = []*DepositContainer{{Deposit: &ethpb.Deposit{}}}
 	db.RemovePendingDeposit(context.Background(), nil /*deposit*/)
 	if len(db.pendingDeposits) != 1 {
 		t.Errorf("Deposit unexpectedly removed")
@@ -54,7 +54,7 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	db := BeaconDB{}
-	dep := &pb.Deposit{Proof: [][]byte{[]byte("A")}}
+	dep := &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}
 	db.InsertPendingDeposit(context.Background(), dep, big.NewInt(111), 100, [32]byte{})
 	db.RemovePendingDeposit(context.Background(), dep)
 	if len(db.pendingDeposits) != 0 {
@@ -66,13 +66,13 @@ func TestPendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
 	db.pendingDeposits = []*DepositContainer{
-		{Block: big.NewInt(2), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("A")}}},
-		{Block: big.NewInt(4), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("B")}}},
-		{Block: big.NewInt(6), Deposit: &pb.Deposit{Proof: [][]byte{[]byte("c")}}},
+		{Block: big.NewInt(2), Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
+		{Block: big.NewInt(4), Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
+		{Block: big.NewInt(6), Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
-	expected := []*pb.Deposit{
+	expected := []*ethpb.Deposit{
 		{Proof: [][]byte{[]byte("A")}},
 		{Proof: [][]byte{[]byte("B")}},
 	}

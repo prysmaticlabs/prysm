@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -16,7 +16,7 @@ import (
 // See comments in: https://github.com/prysmaticlabs/prysm/pull/2828
 func TestBlockHeaderSigningRoot(t *testing.T) {
 	tests := []struct {
-		header1      *pb.BeaconBlockHeader
+		header1      *ethpb.BeaconBlockHeader
 		header2      sszspectest.MainnetBlockHeader
 		expectedRoot [32]byte
 	}{
@@ -29,7 +29,7 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 			//	body_root = Bytes32(bytes.fromhex('0221fd9ca547ba21c5f8df076c7f1b824aeaa208253c63e0ba6c4f6d669d4a5b')),
 			//	signature = Bytes96(bytes.fromhex('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000')),
 			//)
-			header1: &pb.BeaconBlockHeader{
+			header1: &ethpb.BeaconBlockHeader{
 				StateRoot: hexDecodeOrDie(t, "03f33c7c997b39605f1fff2b5fa4db1405b193bb9611206cc50afb460960fd6f"),
 				BodyRoot:  hexDecodeOrDie(t, "0221fd9ca547ba21c5f8df076c7f1b824aeaa208253c63e0ba6c4f6d669d4a5b"),
 			},
@@ -48,7 +48,7 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 			//    serialized: '0x33244e45caf545c5f9b2785de53069d4ad16cc0ec729afe9f879e391433ec120bb15b5082a486705737d1c6ff6e2edf7f0627bf55381e6b08f6c2c56ed8d1895ae47a782dc09382eaffff5006c34a3a2bf7f18b7860675f002187ea809f708fa8f44c424321bcd1c17d25044259a0ccd99d1b45eeec4e084e5fb0fef98d5805001b248feb555b947ecf6842b9ad546f98f63ef89117575d73223e9fb9ee8143857b6fcc79600fffed1966cea46f7524236cd1e83531aef906cb8b4c296d50695bb83efa84075d309'
 			//    root: '0x6ae0bafe59ff0bab856c3f26c392dfca9c32d395b0ceccdddf0bee95120facd9'
 			//    signing_root: '0xa7b0199ee4cd6b9d764ca93ee285fb98313ddd4994c52b5d64dd75a3c4b2b85a'
-			header1: &pb.BeaconBlockHeader{
+			header1: &ethpb.BeaconBlockHeader{
 				Slot:       14215038047959786547,
 				ParentRoot: hexDecodeOrDie(t, "f9b2785de53069d4ad16cc0ec729afe9f879e391433ec120bb15b5082a486705"),
 				StateRoot:  hexDecodeOrDie(t, "737d1c6ff6e2edf7f0627bf55381e6b08f6c2c56ed8d1895ae47a782dc09382e"),

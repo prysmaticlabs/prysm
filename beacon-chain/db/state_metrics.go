@@ -62,7 +62,7 @@ func reportStateMetrics(state *pb.BeaconState) {
 	// Validator balances
 	for i, bal := range state.Balances {
 		validatorBalancesGauge.WithLabelValues(
-			"0x" + hex.EncodeToString(state.Validators[i].Pubkey), // Validator
+			"0x" + hex.EncodeToString(state.Validators[i].PublicKey), // Validator
 		).Set(float64(bal))
 	}
 

@@ -4,6 +4,8 @@ package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
 import "proto/beacon/p2p/v1/types.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/attestation.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-swagger/options/annotations.proto";
 
@@ -39,7 +41,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 
 service BeaconService {
   rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
-  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
+  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
   rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
     option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
       summary: "Fetches block tree since last finalized block.";
@@ -52,13 +54,13 @@ service BeaconService {
 }
 
 service AttesterService {
-  rpc RequestAttestation(AttestationRequest) returns (ethereum.beacon.p2p.v1.AttestationData);
-  rpc SubmitAttestation(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
+  rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
+  rpc SubmitAttestation(ethereum.eth.v1alpha1.Attestation) returns (AttestResponse);
 }
 
 service ProposerService {
-  rpc RequestBlock(BlockRequest) returns (ethereum.beacon.p2p.v1.BeaconBlock);
-  rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
+  rpc RequestBlock(BlockRequest) returns (ethereum.eth.v1alpha1.BeaconBlock);
+  rpc ProposeBlock(ethereum.eth.v1alpha1.BeaconBlock) returns (ProposeResponse);
 }
 
 service ValidatorService {
@@ -181,7 +183,7 @@ message DomainResponse {
 message BlockTreeResponse {
   repeated TreeNode tree = 1;
   message TreeNode {
-    ethereum.beacon.p2p.v1.BeaconBlock block = 1;
+    ethereum.eth.v1alpha1.BeaconBlock block = 1;
     bytes block_root = 2;
     uint64 participated_votes = 3;
     uint64 total_votes = 4;

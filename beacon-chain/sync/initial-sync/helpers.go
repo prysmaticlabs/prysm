@@ -8,7 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -16,7 +16,7 @@ import (
 
 const noMsgData = "message contains no data"
 
-func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
+func (s *InitialSync) checkBlockValidity(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
 	beaconState, err := s.db.HeadState(ctx)

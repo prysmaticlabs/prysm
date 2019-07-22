@@ -11,8 +11,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -308,7 +308,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Slot: 0}, nil)
+	).Return(&ethpb.BeaconBlock{Slot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)

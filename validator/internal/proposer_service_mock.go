@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 )
 
@@ -38,14 +38,14 @@ func (m *MockProposerServiceClient) EXPECT() *MockProposerServiceClientMockRecor
 }
 
 // ProposeBlock mocks base method
-func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.ProposeResponse, error) {
+func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1alpha1.BeaconBlock, arg2 ...grpc.CallOption) (*v1.ProposeResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ProposeBlock", varargs...)
-	ret0, _ := ret[0].(*v10.ProposeResponse)
+	ret0, _ := ret[0].(*v1.ProposeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,14 +58,14 @@ func (mr *MockProposerServiceClientMockRecorder) ProposeBlock(arg0, arg1 interfa
 }
 
 // RequestBlock mocks base method
-func (m *MockProposerServiceClient) RequestBlock(arg0 context.Context, arg1 *v10.BlockRequest, arg2 ...grpc.CallOption) (*v1.BeaconBlock, error) {
+func (m *MockProposerServiceClient) RequestBlock(arg0 context.Context, arg1 *v1.BlockRequest, arg2 ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "RequestBlock", varargs...)
-	ret0, _ := ret[0].(*v1.BeaconBlock)
+	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

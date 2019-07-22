@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -95,7 +95,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Body: &pbp2p.BeaconBlockBody{}}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -104,7 +104,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
@@ -123,7 +123,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&pbp2p.BeaconBlock{Body: &pbp2p.BeaconBlockBody{}}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -132,7 +132,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))

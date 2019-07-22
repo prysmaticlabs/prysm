@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -23,7 +24,7 @@ func init() {
 }
 
 type mockOperationService struct {
-	pendingAttestations []*pb.Attestation
+	pendingAttestations []*ethpb.Attestation
 }
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
@@ -38,19 +39,19 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
-func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *pb.Attestation) (bool, error) {
+func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *ethpb.Attestation) (bool, error) {
 	return true, nil
 }
 
-func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.Attestation, error) {
+func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*ethpb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
-	return []*pb.Attestation{
+	return []*ethpb.Attestation{
 		{
 			AggregationBits: []byte{0xC0},
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
 					DataRoot: params.BeaconConfig().ZeroHash[:],
 				},
@@ -58,8 +59,8 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 		},
 		{
 			AggregationBits: []byte{0xC1},
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
 					DataRoot: params.BeaconConfig().ZeroHash[:],
 				},
@@ -67,8 +68,8 @@ func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*pb.At
 		},
 		{
 			AggregationBits: []byte{0xC2},
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard:    params.BeaconConfig().SlotsPerEpoch,
 					DataRoot: params.BeaconConfig().ZeroHash[:],
 				},
@@ -90,11 +91,11 @@ func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
@@ -102,7 +103,7 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+func (m *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
 
 }
 

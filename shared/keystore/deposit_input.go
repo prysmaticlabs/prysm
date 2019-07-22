@@ -2,7 +2,7 @@ package keystore
 
 import (
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -14,16 +14,16 @@ import (
 // Spec details about general deposit workflow:
 //   To submit a deposit:
 //
-//   - Pack the validator's initialization parameters into deposit_data, a DepositData SSZ object.
+//   - Pack the validator's initialization parameters into deposit_data, a Deposit_Data SSZ object.
 //   - Let amount be the amount in Gwei to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
 //   - Set deposit_data.amount = amount.
 //   - Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*pb.DepositData, error) {
-	di := &pb.DepositData{
-		Pubkey:                depositKey.PublicKey.Marshal(),
+func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*ethpb.Deposit_Data, error) {
+	di := &ethpb.Deposit_Data{
+		PublicKey:             depositKey.PublicKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}

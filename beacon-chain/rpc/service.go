@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,8 +44,8 @@ type chainService interface {
 }
 
 type operationService interface {
-	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
-	IsAttCanonical(ctx context.Context, att *pbp2p.Attestation) (bool, error)
+	PendingAttestations(ctx context.Context) ([]*ethpb.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -61,8 +62,8 @@ type powChainService interface {
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDepositHashes() ([][]byte, error)
-	ChainStartDeposits() []*pbp2p.Deposit
-	ChainStartETH1Data() *pbp2p.Eth1Data
+	ChainStartDeposits() []*ethpb.Deposit
+	ChainStartETH1Data() *ethpb.Eth1Data
 }
 
 type syncService interface {
@@ -84,7 +85,7 @@ type Service struct {
 	withKey             string
 	grpcServer          *grpc.Server
 	canonicalStateChan  chan *pbp2p.BeaconState
-	incomingAttestation chan *pbp2p.Attestation
+	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
 	p2p                 p2p.Broadcaster
 }
@@ -119,7 +120,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 

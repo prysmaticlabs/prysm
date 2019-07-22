@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -28,7 +29,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 		{a: 64, b: true},
 	}
 	for _, test := range tests {
-		validator := &pb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
+		validator := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
 		if IsActiveValidator(validator, test.a) != test.b {
 			t.Errorf("IsActiveValidator(%d) = %v, want = %v",
 				test.a, IsActiveValidator(validator, test.a), test.b)
@@ -41,7 +42,7 @@ func TestIsSlashableValidator_Active(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	activeValidator := &pb.Validator{
+	activeValidator := &ethpb.Validator{
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 
@@ -56,7 +57,7 @@ func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	beforeWithdrawableValidator := &pb.Validator{
+	beforeWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 5,
 	}
 
@@ -71,7 +72,7 @@ func TestIsSlashableValidator_Inactive(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	inactiveValidator := &pb.Validator{
+	inactiveValidator := &ethpb.Validator{
 		ActivationEpoch:   5,
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
@@ -87,7 +88,7 @@ func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	afterWithdrawableValidator := &pb.Validator{
+	afterWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 3,
 	}
 
@@ -101,7 +102,7 @@ func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
-	slashedValidator := &pb.Validator{
+	slashedValidator := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 		WithdrawableEpoch: 1,
@@ -118,7 +119,7 @@ func TestIsSlashableValidator_Slashed(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	slashedValidator2 := &pb.Validator{
+	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -135,7 +136,7 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	slashedValidator2 := &pb.Validator{
+	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ActivationEpoch:   4,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -155,9 +156,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -247,9 +248,9 @@ func TestChurnLimit_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		ClearAllCaches()
-		validators := make([]*pb.Validator, test.validatorCount)
+		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
-			validators[i] = &pb.Validator{
+			validators[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
 		}

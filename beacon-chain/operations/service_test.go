@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -68,7 +69,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	exit := &pb.VoluntaryExit{Epoch: 100}
+	exit := &ethpb.VoluntaryExit{Epoch: 100}
 	if err := service.HandleValidatorExits(context.Background(), exit); err != nil {
 		t.Error(err)
 	}
@@ -86,10 +87,10 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		P2P:      broadcaster,
 	})
 
-	attestation := &pb.Attestation{
+	attestation := &ethpb.Attestation{
 		AggregationBits: []byte{'A'},
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 100,
 			}}}
 	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
@@ -106,15 +107,15 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
 	// The 1st retrieval is set at slot 64.
-	origAttestations := make([]*pb.Attestation, 140)
+	origAttestations := make([]*ethpb.Attestation, 140)
 	for i := 0; i < len(origAttestations); i++ {
-		origAttestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		origAttestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -123,7 +124,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 64,
-		CurrentCrosslinks: []*pb.Crosslink{{
+		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
@@ -150,16 +151,16 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for slots 0 to 139.
-	origAttestations := make([]*pb.Attestation, 140)
+	origAttestations := make([]*ethpb.Attestation, 140)
 	shardDiff := uint64(192)
 	for i := 0; i < len(origAttestations); i++ {
-		origAttestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		origAttestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i) - shardDiff,
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
@@ -170,7 +171,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200,
-		CurrentCrosslinks: []*pb.Crosslink{{
+		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 2,
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
@@ -199,15 +200,15 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	attestations := make([]*pb.Attestation, 10)
+	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
-		attestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		attestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -216,7 +217,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	}
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
-		CurrentCrosslinks: []*pb.Crosslink{{
+		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
@@ -245,15 +246,15 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	attestations := make([]*pb.Attestation, 10)
+	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
-		attestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		attestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -263,7 +264,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 
 	if err := db.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
-		CurrentCrosslinks: []*pb.Crosslink{{
+		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
@@ -275,8 +276,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 			len(attestations), len(atts))
 	}
 
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
@@ -299,7 +300,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
+	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +311,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRoot: r1[:]}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
 	canonical, err := s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)
@@ -319,7 +320,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Error("Attestation should be canonical")
 	}
 
-	cb2 := &pb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
+	cb2 := &ethpb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
 	if err := s.beaconDB.SaveBlock(cb2); err != nil {
 		t.Fatal(err)
 	}
@@ -340,7 +341,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
-	canonical, err := s.IsAttCanonical(context.Background(), &pb.Attestation{Data: &pb.AttestationData{}})
+	canonical, err := s.IsAttCanonical(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +349,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Error("Attestation shouldn't be canonical")
 	}
 
-	cb1 := &pb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
+	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
 	if err := s.beaconDB.SaveBlock(cb1); err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +357,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1 := &pb.Attestation{Data: &pb.AttestationData{BeaconBlockRoot: r1[:]}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
 	canonical, err = s.IsAttCanonical(context.Background(), att1)
 	if err != nil {
 		t.Fatal(err)

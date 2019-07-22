@@ -10,8 +10,8 @@ import (
 
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
 )
 
@@ -39,10 +39,10 @@ func (m *MockBeaconServiceServer) EXPECT() *MockBeaconServiceServerMockRecorder 
 }
 
 // BlockTree mocks base method
-func (m *MockBeaconServiceServer) BlockTree(arg0 context.Context, arg1 *types.Empty) (*v10.BlockTreeResponse, error) {
+func (m *MockBeaconServiceServer) BlockTree(arg0 context.Context, arg1 *types.Empty) (*v1.BlockTreeResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlockTree", arg0, arg1)
-	ret0, _ := ret[0].(*v10.BlockTreeResponse)
+	ret0, _ := ret[0].(*v1.BlockTreeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -54,10 +54,10 @@ func (mr *MockBeaconServiceServerMockRecorder) BlockTree(arg0, arg1 interface{})
 }
 
 // BlockTreeBySlots mocks base method
-func (m *MockBeaconServiceServer) BlockTreeBySlots(arg0 context.Context, arg1 *v10.TreeBlockSlotRequest) (*v10.BlockTreeResponse, error) {
+func (m *MockBeaconServiceServer) BlockTreeBySlots(arg0 context.Context, arg1 *v1.TreeBlockSlotRequest) (*v1.BlockTreeResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlockTreeBySlots", arg0, arg1)
-	ret0, _ := ret[0].(*v10.BlockTreeResponse)
+	ret0, _ := ret[0].(*v1.BlockTreeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -69,10 +69,10 @@ func (mr *MockBeaconServiceServerMockRecorder) BlockTreeBySlots(arg0, arg1 inter
 }
 
 // CanonicalHead mocks base method
-func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *types.Empty) (*v1.BeaconBlock, error) {
+func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *types.Empty) (*v1alpha1.BeaconBlock, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CanonicalHead", arg0, arg1)
-	ret0, _ := ret[0].(*v1.BeaconBlock)
+	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -84,7 +84,7 @@ func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interfac
 }
 
 // WaitForChainStart mocks base method
-func (m *MockBeaconServiceServer) WaitForChainStart(arg0 *types.Empty, arg1 v10.BeaconService_WaitForChainStartServer) error {
+func (m *MockBeaconServiceServer) WaitForChainStart(arg0 *types.Empty, arg1 v1.BeaconService_WaitForChainStartServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForChainStart", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -149,7 +149,7 @@ func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) RecvMsg(arg0 in
 }
 
 // Send mocks base method
-func (m *MockBeaconService_WaitForChainStartServer) Send(arg0 *v10.ChainStartResponse) error {
+func (m *MockBeaconService_WaitForChainStartServer) Send(arg0 *v1.ChainStartResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
