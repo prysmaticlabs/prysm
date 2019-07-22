@@ -66,6 +66,10 @@ func runJustificationAndFinalizationTests(t *testing.T, filename string) {
 		t.Fatal(err)
 	}
 
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			preState := &pb.BeaconState{}

@@ -1237,8 +1237,10 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "27518f6661eba504be5a7a9a9f6d9460d892ade3",
+    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
     importpath = "github.com/json-iterator/go",
+    remote = "https://github.com/prestonvanloon/go",
+    vcs = "git",
 )
 
 go_repository(

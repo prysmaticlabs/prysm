@@ -32,6 +32,10 @@ func TestSlotProcessingMainnet(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			postState, err := state.ProcessSlots(context.Background(), tt.Pre, tt.Pre.Slot+tt.Slots)

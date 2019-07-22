@@ -44,6 +44,10 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 		t.Fatalf("Could not set config: %v", err)
 	}
 
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			ctx := context.Background()

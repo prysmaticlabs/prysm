@@ -32,6 +32,10 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 		t.Fatal(err)
 	}
 
+	if len(test.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
