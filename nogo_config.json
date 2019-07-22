@@ -1,7 +1,8 @@
 {
   "unsafeptr": {
     "exclude_files": {
-      "external/*": "Unsafe third party code"
+      "external/*": "Unsafe third party code",
+      "**/watcher_fsevents_cgo\\.go": "Third party code"
     }
   },
   "unreachable": {
@@ -17,7 +18,8 @@
   },
   "nilness": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/*": "Third party code",
+      "**/_cgo_gotypes\\.go": "Third party code"
     }
   },
   "stdmethods": {
