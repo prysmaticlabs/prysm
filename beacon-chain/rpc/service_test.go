@@ -135,6 +135,10 @@ func (ms *mockSyncService) Status() error {
 	return nil
 }
 
+func (ms *mockSyncService) Syncing() bool {
+	return false
+}
+
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
