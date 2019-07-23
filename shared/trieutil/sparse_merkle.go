@@ -75,9 +75,11 @@ func (m *MerkleTrie) Root() [32]byte {
 }
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
-func (m *MerkleTrie) MerkleProof(merkleIndex uint) ([][]byte, error) {
-	if merkleIndex > m.depth {
-		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", m.depth, merkleIndex)
+func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
+	merkleIndex := uint(index)
+	leaves := m.branches[0]
+	if index >= len(leaves) {
+		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", len(leaves), index)
 	}
 	proof := make([][]byte, m.depth)
 	for i := uint(0); i < m.depth; i++ {
