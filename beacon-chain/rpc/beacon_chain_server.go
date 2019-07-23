@@ -72,3 +72,20 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	}
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
+
+// GetValidators retrieves the active validators with an optional historical epoch flag to
+// to retrieve validator set in time.
+//
+// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
+// this is blocked by DB refactor.
+func (bs *BeaconChainServer) GetValidators(
+	ctx context.Context,
+	req *ethpb.GetValidatorsRequest) (*ethpb.Validators, error) {
+
+	validators, err := bs.beaconDB.Validators(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
+	}
+
+	return &ethpb.Validators{Validators: validators}, nil
+}

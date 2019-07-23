@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -105,5 +106,38 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	wanted := fmt.Sprintf("validator index %d >= balance list %d", count, len(balances))
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_GetValidators(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 100
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
+	}
+
+	if err := db.SaveState(
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators}); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	got, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(validators, got.Validators) {
+		t.Fatal("Incorrect validator set respond")
 	}
 }
