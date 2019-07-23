@@ -24,6 +24,7 @@ func init() {
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
 	treeDepth     int
+	depth         uint
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
@@ -211,12 +212,30 @@ func partition(layer [][]byte) [][][]byte {
 func NewSparseTrie(items [][]byte, depth int) *MerkleTrie {
 	layers := calcTreeFromLeaves(items, depth)
 	return &MerkleTrie{
-		branches: layers,
+		branches:      layers,
+		originalItems: items,
+		depth:         uint(depth),
 	}
 }
 
 func (s *MerkleTrie) NewRoot() [32]byte {
 	return bytesutil.ToBytes32(s.branches[len(s.branches)-1][0])
+}
+
+func (s *MerkleTrie) NewProof(merkleIndex uint) ([][]byte, error) {
+	if merkleIndex < 0 || merkleIndex > s.depth {
+		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", s.treeDepth, merkleIndex)
+	}
+	proof := make([][]byte, s.depth)
+	for i := uint(0); i < s.depth; i++ {
+		subIndex := (merkleIndex / (1 << i)) ^ 1
+		if subIndex < uint(len(s.branches[i])) {
+			proof[i] = s.branches[i][subIndex]
+		} else {
+			proof[i] = zeroHashes[i]
+		}
+	}
+	return proof, nil
 }
 
 func calcTreeFromLeaves(leaves [][]byte, depth int) [][][]byte {

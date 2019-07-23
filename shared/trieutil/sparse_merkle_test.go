@@ -159,6 +159,48 @@ func BenchmarkFastTrieFromItems(b *testing.B) {
 	}
 }
 
+func BenchmarkGenerateProof(b *testing.B) {
+	b.StopTimer()
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	normalTrie, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := normalTrie.MerkleProof(3); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+func BenchmarkFastGenerateProof(b *testing.B) {
+	b.StopTimer()
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	fastTrie := NewSparseTrie(items, 32)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := fastTrie.NewProof(3); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),
