@@ -147,7 +147,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	}
 
 	if !strings.Contains(err.Error(), pubKeyErr) {
-		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", want, err.Error())
+		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
 
 }
@@ -193,7 +193,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	}
 
 	if !strings.Contains(err.Error(), pubKeyErr) {
-		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", want, err.Error())
+		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
 
 }
