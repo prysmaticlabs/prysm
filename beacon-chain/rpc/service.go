@@ -197,11 +197,15 @@ func (s *Service) Start() {
 		server:      s.grpcServer,
 		syncChecker: s.syncService,
 	}
+	beaconChainServer := &BeaconChainServer{
+		beaconDB: s.beaconDB,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

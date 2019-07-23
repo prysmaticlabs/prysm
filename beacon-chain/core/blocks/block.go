@@ -7,12 +7,9 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var clock utils.Clock = &utils.RealClock{}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *ethpb.BeaconBlock {

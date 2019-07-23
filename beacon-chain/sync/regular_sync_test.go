@@ -182,7 +182,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +656,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
