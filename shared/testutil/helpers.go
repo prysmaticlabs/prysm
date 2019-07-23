@@ -60,23 +60,11 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 			Data: depositData,
 		}
 
-		hashedDeposit, err := hashutil.DepositHash(deposit.Data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := trie.InsertIntoTrie(hashedDeposit[:], i); err != nil {
-			t.Fatal(err)
-		}
-		proof, err := trie.MerkleProof(i)
-		if err != nil {
-			t.Fatalf("Could not generate proof: %v", err)
-		}
-		deposit.Proof = proof
-
 		deposits = append(deposits, deposit)
 	}
 
-	return deposits[0:numDeposits], privKeys[0:numDeposits]
+	d, _ := GenerateDepositProof(t, deposits[0:numDeposits])
+	return d, privKeys[0:numDeposits]
 }
 
 // GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.

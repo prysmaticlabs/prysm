@@ -2,6 +2,7 @@ package powchain
 
 import (
 	"context"
+	"crypto/rand"
 	"strings"
 	"testing"
 
@@ -190,7 +191,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		t.Fatal("No errors, when an error was expected")
 	}
 
-	want := "could not convert bytes to signature"
+	want := "could not deserialize validator public key"
 
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", want, err.Error())
@@ -258,27 +259,28 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 1)
-	deposits[0].Data.Amount = params.BeaconConfig().EffectiveBalanceIncrement // incomplete deposit
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
+			WithdrawalCredentials: []byte("testing"),
+		},
+	}
 
-	signedRoot, err := ssz.SigningRoot(deposits[0].Data)
+	sk, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig := keys[0].Sign(signedRoot[:], bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
-	deposits[0].Data.Signature = sig.Marshal()
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
+	deposit.Data.PublicKey = sk.PublicKey().Marshal()
+	signedRoot, err := ssz.SigningRoot(deposit.Data)
 	if err != nil {
-		t.Fatalf("Could not hash deposit %v", err)
+		t.Fatal(err)
 	}
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		log.Error(err)
-	}
+	sig := sk.Sign(signedRoot[:], bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
+	deposit.Data.Signature = sig.Marshal()
 
-	root := trie.Root()
+	_, root := testutil.GenerateDepositProof(t, []*ethpb.Deposit{deposit})
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -288,7 +290,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
-		if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
+		if err := web3Service.processDeposit(eth1Data, deposit); err != nil {
 			t.Fatalf("Could not process deposit %v", err)
 		}
 
@@ -312,23 +314,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	}
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 10)
-
-	var leaves [][]byte
-	for _, dep := range deposits {
-		leaf, err := hashutil.DepositHash(dep.Data)
-		if err != nil {
-			t.Fatalf("Could not hash deposit %v", err)
-		}
-
-		leaves = append(leaves, leaf[:])
-	}
-
-	trie, err := trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		log.Error(err)
-	}
-
-	root := trie.Root()
+	deposits, root := testutil.GenerateDepositProof(t, deposits)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: uint64(len(deposits)),
