@@ -10,7 +10,7 @@ message Attestation {
     // A bitfield representation of validator indices that have voted exactly
     // the same vote and have been aggregated into this attestation.
     // Spec type: Bitlist[N]
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"attestation.aggregation_bits.max\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     AttestationData data = 2;
 
