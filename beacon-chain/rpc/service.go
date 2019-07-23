@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -68,6 +69,7 @@ type powChainService interface {
 
 type syncService interface {
 	Status() error
+	sync.Checker
 }
 
 // Service defining an RPC server for a beacon node.
@@ -190,10 +192,16 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 	}
+	nodeServer := &NodeServer{
+		beaconDB:    s.beaconDB,
+		server:      s.grpcServer,
+		syncChecker: s.syncService,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
