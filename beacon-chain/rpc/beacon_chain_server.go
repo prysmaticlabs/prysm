@@ -41,7 +41,7 @@ func (bs *BeaconChainServer) ListAttestations(
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *BeaconChainServer) AttestationPool(ctx context.Context, _ *ptypes.Empty) (*ethpb.AttestationPoolResponse, error) {
 	return &ethpb.AttestationPoolResponse{
-		pool: bs.pool.PooledAttestations(),
+		Attestations: bs.pool.PooledAttestations(),
 	}, nil
 }
 
