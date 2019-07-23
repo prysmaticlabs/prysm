@@ -482,13 +482,22 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-	attestations := []*ethpb.Attestation{blockAtt}
-	exits := []*ethpb.VoluntaryExit{
-		{
-			ValidatorIndex: 10,
-			Epoch:          0,
-		},
+
+	exit := &ethpb.VoluntaryExit{
+		ValidatorIndex: 10,
+		Epoch:          0,
 	}
+	signingRoot, err = ssz.SigningRoot(exit)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	domain = helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainVoluntaryExit,
+	)
+	exit.Signature = privKeys[exit.ValidatorIndex].Sign(signingRoot[:], domain).Marshal()[:]
+
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		t.Fatal(err)
@@ -500,8 +509,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			RandaoReveal:      []byte{},
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			VoluntaryExits:    exits,
+			Attestations:      []*ethpb.Attestation{blockAtt},
+			VoluntaryExits:    []*ethpb.VoluntaryExit{exit},
 			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte{2},
 				BlockHash:   []byte{3},
@@ -535,10 +544,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Error("Expected validator at index 1 to be slashed, received false")
 	}
 
-	received := beaconState.Validators[exits[0].ValidatorIndex].ExitEpoch
+	received := beaconState.Validators[exit.ValidatorIndex].ExitEpoch
 	wanted := params.BeaconConfig().FarFutureEpoch
 	if received == wanted {
-		t.Errorf("Expected validator at index %d to be exiting, did not expect: %d", exits[0].ValidatorIndex, wanted)
+		t.Errorf("Expected validator at index %d to be exiting, did not expect: %d", exit.ValidatorIndex, wanted)
 	}
 }
 

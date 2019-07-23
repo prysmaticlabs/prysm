@@ -930,13 +930,12 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
+		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
@@ -947,7 +946,7 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySignatures bool) error {
+func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
@@ -974,11 +973,9 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySi
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	if verifySignatures {
-		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-		if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-			return fmt.Errorf("could not verify voluntary exit signature: %v", err)
-		}
+	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
+		return fmt.Errorf("could not verify voluntary exit signature: %v", err)
 	}
 	return nil
 }

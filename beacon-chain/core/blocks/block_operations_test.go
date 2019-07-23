@@ -1521,7 +1521,6 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	if _, err := blocks.ProcessVoluntaryExits(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1551,10 +1550,8 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	want := "expected current epoch >= exit epoch"
 
 	if _, err := blocks.ProcessVoluntaryExits(
-
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1584,39 +1581,40 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 
 	want := "validator has not been active long enough to exit"
 	if _, err := blocks.ProcessVoluntaryExits(
-
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
-	exits := []*ethpb.VoluntaryExit{
-		{
-			ValidatorIndex: 0,
-			Epoch:          0,
-		},
+	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().ShardCount, true)
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Error(err)
 	}
-	registry := []*ethpb.Validator{
-		{
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch: 0,
-		},
+	committeePeriod := (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+	state.Slot = (params.BeaconConfig().SlotsPerEpoch * 5) + committeePeriod
+
+	exit := &ethpb.VoluntaryExit{
+		ValidatorIndex: 0,
+		Epoch:          0,
 	}
-	state := &pb.BeaconState{
-		Validators: registry,
-		Slot:       params.BeaconConfig().SlotsPerEpoch * 5,
+	signingRoot, err := ssz.SigningRoot(exit)
+	if err != nil {
+		t.Error(err)
 	}
-	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+	domain := helpers.Domain(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	sig := privKeys[exit.ValidatorIndex].Sign(signingRoot[:], domain)
+	exit.Signature = sig.Marshal()
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
-			VoluntaryExits: exits,
+			VoluntaryExits: []*ethpb.VoluntaryExit{exit},
 		},
 	}
-	newState, err := blocks.ProcessVoluntaryExits(state, block.Body, false)
+	newState, err := blocks.ProcessVoluntaryExits(state, block.Body)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
