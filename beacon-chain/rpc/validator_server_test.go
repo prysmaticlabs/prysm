@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"math/big"
 	"os"
 	"path"
@@ -14,6 +12,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
