@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -14,6 +15,55 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
+}
+
+// ListAttestations retrieves attestations by block root, slot, or epoch.
+//
+// The server may return an empty list when no attestations match the given
+// filter criteria. This RPC should not return NOT_FOUND. Only one filter
+// criteria should be used.
+func (bs *BeaconChainServer) ListAttestations(
+	ctx context.Context, req *ethpb.ListAttestationsRequest,
+) (*ethpb.ListAttestationsResponse, error) {
+	return nil, nil
+}
+
+// ListPendingAttestations retrieves pending attestations.
+//
+// The server returns a list of attestations that have been seen but not
+// yet processed. Pending attestations eventually expire as the slot
+// advances, so an attestation missing from this request does not imply
+// that it was included in a block. The attestation may have expired.
+// Refer to the ethereum 2.0 specification for more details on how
+// attestations are processed and when they are no longer valid.
+// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestation
+func (bs *BeaconChainServer) ListPendingAttestations(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ListPendingAttestationsResponse, error) {
+	return nil, nil
+}
+
+// ListBlocks retrieves blocks by root, slot, or epoch.
+//
+// The server may return multiple blocks in the case that a slot or epoch is
+// provided as the filter criteria. The server may return an empty list when
+// no blocks in their database match the filter criteria. This RPC should
+// not return NOT_FOUND. Only one filter criteria should be used.
+func (bs *BeaconChainServer) ListBlocks(
+	ctx context.Context, req *ethpb.ListBlocksRequest,
+) (*ethpb.ListBlocksResponse, error) {
+	return nil, nil
+}
+
+// GetChainHead retrieves information about the head of the beacon chain from
+// the view of the beacon chain node.
+//
+// This includes the head block slot and root as well as information about
+// the most recent finalized and justified slots
+func (bs *BeaconChainServer) GetChainHead(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ChainHead, error) {
+	return nil, nil
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
