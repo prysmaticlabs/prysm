@@ -168,7 +168,7 @@ message ListBlocksResponse {
 // Information about the head of the beacon chain.
 message ChainHead {
     // 32 byte merkle tree root of the canonical head block in the beacon node.
-    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes block_root = 1;
 
     // Slot of the head block.
     uint64 block_slot = 2;
@@ -177,28 +177,28 @@ message ChainHead {
     uint64 finalized_slot = 3;
     
     // Most recent 32 byte finalized block root.
-    bytes finalized_block_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes finalized_block_root = 4;
 
     // Most recent justified slot.
     uint64 justified_slot = 5;
 
     // Most recent 32 byte justified block root.
-    bytes justified_block_root = 6 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes justified_block_root = 6;
 
     // Previous justified slot.
     uint64 previous_justified_slot = 7;
 
     // Previous 32 byte justified block root.
-    bytes previous_justified_block_root = 8 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes previous_justified_block_root = 8;
 }
 
 message GetValidatorBalancesRequest {
     // Retrieve validator balance at the given epoch.
     uint64 epoch = 1;
 
-    // Validator 48 byte BLS public keys to filter validators for the given
+    // Validator 96 byte BLS public keys to filter validators for the given
     // epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 2;
         
     // Validator indices to filter validators for the given epoch.
     repeated uint64 indices = 3;
@@ -206,8 +206,8 @@ message GetValidatorBalancesRequest {
 
 message ValidatorBalances {
     message Balance {
-        // Validator's 48 byte BLS public key. 
-        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+        // Validator's 96 byte BLS public key. 
+        bytes public_key = 1;
 
         // Validator's index in the validator set.
         uint64 index = 2;
@@ -229,6 +229,15 @@ message GetValidatorsRequest {
         // Optional criteria to retrieve the genesis set of validators.
         bool genesis = 2;
     }
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 3;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 4;
 }
 
 message Validators {
@@ -238,8 +247,15 @@ message Validators {
     uint64 epoch = 1;
 
     repeated Validator validators = 2;
-}
 
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 3;
+
+    // Total count of Validators matching the request filter.
+    int32 total_size = 4;
+}
 
 message GetValidatorActiveSetChangesRequest {
     uint64 epoch = 1;
@@ -250,16 +266,16 @@ message ActiveSetChanges {
     // set. 
     uint64 epoch = 1;
 
-    // 48 byte validator public keys that have been activated in this epoch.
-    repeated bytes activated_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    // 96 byte validator public keys that have been activated in this epoch.
+    repeated bytes activated_public_keys = 2;
 
-    // 48 byte validator public keys that have been voluntarily exited in this
+    // 96 byte validator public keys that have been voluntarily exited in this
     // epoch.
-    repeated bytes exited_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes exited_public_keys = 3;
 
-    // 48 byte validator public keys that have been involuntarily ejected in 
+    // 96 byte validator public keys that have been involuntarily ejected in 
     // this epoch.
-    repeated bytes ejected_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes ejected_public_keys = 4;
 }
 
 message ValidatorQueue {
@@ -267,24 +283,33 @@ message ValidatorQueue {
     // validator set.
     uint64 churn_limit = 1;
 
-    // Ordered list of 48 byte public keys awaiting activation. 0th index is the
+    // Ordered list of 96 byte public keys awaiting activation. 0th index is the
     // next key to be processed.
-    repeated bytes activation_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes activation_public_keys = 2;
 
     // Ordered list of public keys awaiting exit. 0th index is the next key to
     // be processed.
-    repeated bytes exit_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes exit_public_keys = 3;
 }
 
 message ListValidatorAssignmentsRequest {
     // Retrieve the validator assignments at the given epoch.
     uint64 epoch = 1;
 
-    // 48 byte validator public keys to filter assignments for the given epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    // 96 byte validator public keys to filter assignments for the given epoch.
+    repeated bytes public_keys = 2;
         
     // Validator indicies to filter assignments for the given epoch.
     repeated uint64 indices = 3;
+
+    // The maximum number of ValidatorAssignments to return in the response.
+    // This field is optional.
+    int32 page_size = 4;
+
+    // A pagination token returned from a previous call to `ListValidatorAssignments`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 5;
 }
 
 message ValidatorAssignments {
@@ -308,14 +333,22 @@ message ValidatorAssignments {
         // assignment time.
         bool proposer = 4;
 
-        // 48 byte BLS public key 
-        bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];
+        // 96 byte BLS public key 
+        bytes public_key = 5;
     }
 
     // The epoch for which this set of validator assignments is valid.
     uint64 epoch = 1;
 
     repeated CommitteeAssignment assignments = 2;
+
+    // A pagination token returned from a previous call to `ListValidatorAssignmentsRequest`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string next_page_token = 3;
+
+    // Total count of CommitteeAssignments matching the request filter.
+    int32 total_size = 4;
 }
 
 message GetValidatorParticipationRequest {
@@ -342,5 +375,5 @@ message ValidatorParticipation {
 }
 
 message AttestationPoolResponse {
-    repeated Attestation attestations = 1;
+  repeated Attestation attestations = 1;
 }

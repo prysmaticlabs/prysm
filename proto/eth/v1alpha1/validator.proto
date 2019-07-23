@@ -46,7 +46,7 @@ service BeaconNodeValidator {
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
     // be included in the beacon chain. The beacon node is expected to validate and process the
     // beacon block into its state.
-    rpc ProposeBlock(BeaconBlock) returns (google.protobuf.Empty) {
+    rpc ProposeBlock(BlockRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
         };
@@ -78,14 +78,14 @@ message DutiesRequest {
     // Epoch at which validators should perform their duties.
     uint64 epoch = 1;
     // Array of byte encoded BLS public keys.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 2;
 }
 
 message DutiesResponse {
     repeated Duty duties = 1;
     message Duty {
-        // 48 byte BLS public key for the validator who's assigned to perform the following duty.
-        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+        // 96 byte BLS public key for the validator who's assigned to perform the following duty.
+        bytes public_key = 1;
         // Slot at which a validator must attest.
         uint64 attestation_slot = 2;
         // Shard at which a validator must attest.
@@ -102,7 +102,7 @@ message BlockRequest {
     // Slot for which the block should be proposed.
     uint64 slot = 1;
     // Validator's 32 byte randao reveal secret of the current epoch.
-    bytes randao_reveal = 2 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    bytes randao_reveal = 2;
 }
 
 message AttestationDataRequest {
@@ -115,13 +115,14 @@ message AttestationDataRequest {
     uint64 shard = 3;
 }
 
+
 // An Ethereum 2.0 validator.
 message Validator {
     // 96 byte BLS public key used for the validator's activities.
-    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
+    bytes public_key = 1;
 
     // 32 byte hash of the withdrawal destination public key.
-    bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes withdrawal_credentials = 2;
 
     // The validators current effective balance in gwei.
     uint64 effective_balance = 3;
