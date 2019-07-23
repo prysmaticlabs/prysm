@@ -30,13 +30,9 @@ type MerkleTrie struct {
 
 // NewTrie returns a new merkle trie filled with zerohashes to use.
 func NewTrie(depth int) (*MerkleTrie, error) {
-	items := [][]byte{make([]byte, 32)}
-	layers := calcTreeFromLeaves(items, depth)
-	return &MerkleTrie{
-		branches:      layers,
-		originalItems: items,
-		depth:         uint(depth),
-	}, nil
+	var zeroBytes [32]byte
+	items := [][]byte{zeroBytes[:]}
+	return GenerateTrieFromItems(items, depth)
 }
 
 // InsertIntoTrie inserts an item(deposit hash) into the trie.
@@ -80,7 +76,7 @@ func (m *MerkleTrie) Root() [32]byte {
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
 func (m *MerkleTrie) MerkleProof(merkleIndex uint) ([][]byte, error) {
-	if merkleIndex < 0 || merkleIndex > m.depth {
+	if merkleIndex > m.depth {
 		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", m.depth, merkleIndex)
 	}
 	proof := make([][]byte, m.depth)
@@ -105,7 +101,7 @@ func (m *MerkleTrie) HashTreeRoot() [32]byte {
 		// Accounting for empty tries
 		depositCount = 0
 	}
-	newNode := append(m.branches[0][0], bytesutil.Bytes8(depositCount)...)
+	newNode := append(m.branches[len(m.branches)-1][0], bytesutil.Bytes8(depositCount)...)
 	newNode = append(newNode, zeroBytes[:24]...)
 	return hashutil.Hash(newNode)
 }

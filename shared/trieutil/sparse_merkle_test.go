@@ -13,7 +13,7 @@ import (
 )
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
-	indices := BranchIndices(1024, 3 /* depth */)
+	indices := branchIndices(1024, 3 /* depth */)
 	expected := []int{1024, 512, 256}
 	for i := 0; i < len(indices); i++ {
 		if expected[i] != indices[i] {
@@ -36,14 +36,9 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 				[]byte{},
 			},
 		},
+		depth: 4,
 	}
-	if _, err := m.MerkleProof(-1); err == nil {
-		t.Error("Expected out of range failure, received nil", err)
-	}
-	if _, err := m.MerkleProof(2); err == nil {
-		t.Error("Expected out of range failure, received nil", err)
-	}
-	if _, err := m.MerkleProof(0); err == nil {
+	if _, err := m.MerkleProof(6); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
 }
@@ -107,47 +102,6 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	}
 }
 
-func TestEqualRoot(t *testing.T) {
-	items := [][]byte{
-		[]byte("A"),
-		[]byte("BB"),
-		[]byte("CCC"),
-		[]byte("DDDD"),
-		[]byte("EEEEE"),
-		[]byte("FFFFFF"),
-		[]byte("GGGGGGG"),
-	}
-	normalTrie, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
-	sparseTrie := NewSparseTrie(items, 32)
-	if normalTrie.Root() != sparseTrie.NewRoot() {
-		t.Errorf("Normal %#x, sparse %#x", normalTrie.Root(), sparseTrie.Root())
-	}
-}
-
-func TestFastVerify(t *testing.T) {
-	items := [][]byte{
-		[]byte("A"),
-		[]byte("BB"),
-		[]byte("CCC"),
-		[]byte("DDDD"),
-		[]byte("EEEEE"),
-		[]byte("FFFFFF"),
-		[]byte("GGGGGGG"),
-	}
-	sparseTrie := NewSparseTrie(items, 32)
-	proof, err := sparseTrie.NewProof(3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := sparseTrie.NewRoot()
-	if !VerifyMerkleProof(root[:], items[3], 3, proof) {
-		t.Error("did not verify")
-	}
-}
-
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),
@@ -162,21 +116,6 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		if _, err := GenerateTrieFromItems(items, 32); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
-	}
-}
-
-func BenchmarkFastTrieFromItems(b *testing.B) {
-	items := [][]byte{
-		[]byte("A"),
-		[]byte("BB"),
-		[]byte("CCC"),
-		[]byte("DDDD"),
-		[]byte("EEEEE"),
-		[]byte("FFFFFF"),
-		[]byte("GGGGGGG"),
-	}
-	for i := 0; i < b.N; i++ {
-		calcTreeFromLeaves(items, 32)
 	}
 }
 
@@ -202,27 +141,9 @@ func BenchmarkGenerateProof(b *testing.B) {
 		}
 	}
 }
-func BenchmarkFastGenerateProof(b *testing.B) {
-	b.StopTimer()
-	items := [][]byte{
-		[]byte("A"),
-		[]byte("BB"),
-		[]byte("CCC"),
-		[]byte("DDDD"),
-		[]byte("EEEEE"),
-		[]byte("FFFFFF"),
-		[]byte("GGGGGGG"),
-	}
-	fastTrie := NewSparseTrie(items, 32)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		if _, err := fastTrie.NewProof(3); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 func BenchmarkVerifyMerkleBranch(b *testing.B) {
+	b.StopTimer()
 	items := [][]byte{
 		[]byte("A"),
 		[]byte("BB"),
@@ -240,8 +161,10 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not generate Merkle proof: %v", err)
 	}
+	root := m.Root()
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if ok := VerifyMerkleProof(m.branches[0][0], items[2], 2, proof); !ok {
+		if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
 			b.Error("Merkle proof did not verify")
 		}
 	}
@@ -310,7 +233,6 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
 		}
 	}
-
 }
 
 func TestDepositTrieRoot_Fail(t *testing.T) {
@@ -380,5 +302,4 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
 		}
 	}
-
 }
