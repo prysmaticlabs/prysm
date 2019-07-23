@@ -49,8 +49,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 			t.Fatalf("could not generate random key: %v", err)
 		}
 		privKeys = append(privKeys, priv)
-		pubkey := priv.PublicKey().Marshal()
-		depositData.PublicKey = pubkey
+		depositData.PublicKey = priv.PublicKey().Marshal()
 		domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 		root, err := ssz.SigningRoot(depositData)
 		if err != nil {
@@ -68,7 +67,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 		if err := trie.InsertIntoTrie(hashedDeposit[:], i); err != nil {
 			t.Fatal(err)
 		}
-		proof, err := trie.MerkleProof(int(i))
+		proof, err := trie.MerkleProof(i)
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
