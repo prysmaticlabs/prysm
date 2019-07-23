@@ -20,14 +20,14 @@ type BeaconChainServer struct {
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
 // a specific epoch in time.
 //
-// TODO(3045): Implement balances for a specific epoch. Current implementation returns latest balances,
-// this is blocked by DB refactor
+// TODO(#3045): Implement balances for a specific epoch. Current implementation returns latest balances,
+// this is blocked by DB refactor.
 func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
-	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in respond.
+	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
 	balances, err := bs.beaconDB.Balances(ctx)
 	if err != nil {
@@ -35,7 +35,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	}
 	validators, err := bs.beaconDB.Validators(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator registries: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
 
 	for _, pubKey := range req.PublicKeys {
