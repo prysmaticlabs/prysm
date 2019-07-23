@@ -210,6 +210,11 @@ func (t *LLRB) InsertNoReplace(item Item) (error) {
 	return nil
 }
 
+
+func (t *LLRB) AddMultipleItems(items ...Item)  {
+
+}
+
 func (t *LLRB) insertNoReplace(h *Node, item Item) *Node {
 	if h == nil {
 		return newNode(item)

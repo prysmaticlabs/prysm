@@ -15,24 +15,29 @@ func NewActiveIndicesTree() *ActiveIndicesTree {
 }
 
 type index uint64
-// https://github.com/seppestas/data-structure-bench/blob/master/llrb/llrb.go
-// https://github.com/kubernetes/client-go/blob/master/tools/cache/fifo.go
  func (i index) Less(than Item) bool {
 	 return i < than.(index)
 }
 
 
-// type indices []index
-// func (idxs indices) Less(than Item) bool {
-// 	for _, i := range idxs {
-// 		return i < than.(index)
-// 	}
-// }
+//InsertNoReplaceActiveIndicesTree inserts items in Left-Leaning Red-Black (LLRB) tree
+//  If an element has the same order, both elements remain in the tree.
+func (t *ActiveIndicesTree) InsertNoReplaceActiveIndicesTree(activeIndices []uint64) (error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	for _, i := range activeIndices {
+		if err := t.tree.InsertNoReplace(index(i)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 
 
-//analogue AddActiveIndicesList
-func (t *ActiveIndicesTree) InsertActiveIndicesTree(activeIndices []uint64) (error) {
+// InsertReplaceActiveIndicesTree inserts items into Left-Leaning Red-Black (LLRB) tree. If an 
+// element has the same order, it is removed from the tree.
+func (t *ActiveIndicesTree) InsertReplaceActiveIndicesTree(activeIndices []uint64) (error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for _, i := range activeIndices {
@@ -43,7 +48,8 @@ func (t *ActiveIndicesTree) InsertActiveIndicesTree(activeIndices []uint64) (err
 	return nil
 }
 
-//analogue ActiveIndicesInEpoch
+
+//RetrieveActiveIndicesTree retrieves all items from a Left-Leaning Red-Black (LLRB) tree and returns them
 func (t *ActiveIndicesTree) RetrieveActiveIndicesTree() ([]index, error)  {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
