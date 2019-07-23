@@ -57,7 +57,6 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	}
 
 	for _, index := range req.Indices {
-
 		if int(index) >= len(balances) {
 			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
 				index, len(balances))
@@ -71,6 +70,5 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			})
 		}
 	}
-
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
