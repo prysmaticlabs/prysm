@@ -353,6 +353,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 func TestValidatorStatus_Active(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
@@ -747,6 +748,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
