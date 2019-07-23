@@ -4,10 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // BeaconChainServer defines a server implementation of the gRPC Beacon Chain service,
@@ -46,7 +46,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -59,7 +59,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -88,14 +88,28 @@ func (bs *BeaconChainServer) GetValidators(
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
 
-	pageSize := int(req.PageSize)
+	// Return the entire validator list if option PageToken is not specified.
+	if req.PageToken == "" {
+		return &ethpb.Validators{
+			Validators:    validators,
+			TotalSize:     int32(len(validators)),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
 
 	start, err := strconv.Atoi(req.PageToken)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get page token: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
 	}
+
+	if start >= len(validators) {
+		return nil, status.Errorf(codes.InvalidArgument, "page token %d >= validator list %d",
+			start, len(validators))
+	}
+
+	pageSize := int(req.PageSize)
 	end := start + pageSize
-	nextPage := end + 1
+	nextPage := end
 	if end > len(validators) {
 		end = len(validators)
 		pageSize = end - start
@@ -103,9 +117,9 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 
 	res := &ethpb.Validators{
-			Validators: validators[start:end],
-			TotalSize: int32(pageSize),
-			NextPageToken: string(nextPage),
-		}
+		Validators:    validators[start:end],
+		TotalSize:     int32(pageSize),
+		NextPageToken: strconv.Itoa(nextPage),
+	}
 	return res, nil
 }
