@@ -214,7 +214,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 1)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
-	deposits[0].Data.Signature = sig.Marshal()
+	deposits[0].Data.Signature = sig.Marshal()[:]
 
 	leaf, err := hashutil.DepositHash(deposits[0].Data)
 	if err != nil {
