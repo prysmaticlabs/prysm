@@ -87,5 +87,17 @@ func (bs *BeaconChainServer) GetValidators(
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
 
-	return &ethpb.Validators{Validators: validators}, nil
+	pageSize := int(req.PageSize)
+
+	for i := 0; i < len(validators); i+=pageSize {
+
+		v := validators[i:i+pageSize]
+
+		res := &ethpb.Validators{
+			Validators: v,
+			TotalSize: req.PageSize,
+			NextPageToken: string(i+1),
+		}
+
+	}
 }
