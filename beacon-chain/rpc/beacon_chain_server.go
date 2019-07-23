@@ -132,7 +132,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context, req *ethpb.GetValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
@@ -142,14 +142,14 @@ func (bs *BeaconChainServer) GetValidators(
 func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *BeaconChainServer) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch.
@@ -159,7 +159,7 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch.
@@ -169,5 +169,5 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
