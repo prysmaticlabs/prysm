@@ -175,29 +175,34 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
-					{PublicKey: []byte{1}},
-					{PublicKey: []byte{2}},
-					{PublicKey: []byte{3}}},
-				NextPageToken: strconv.Itoa(4),
-				TotalSize:     3}},
-		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(50), PageSize: 6},
+					{PublicKey: []byte{3}},
+					{PublicKey: []byte{4}},
+					{PublicKey: []byte{5}}},
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{50}},
 					{PublicKey: []byte{51}},
 					{PublicKey: []byte{52}},
 					{PublicKey: []byte{53}},
-					{PublicKey: []byte{54}},
-					{PublicKey: []byte{55}}},
-				NextPageToken: strconv.Itoa(56),
-				TotalSize:     6}},
-		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(98), PageSize: 999},
+					{PublicKey: []byte{54}}},
+				NextPageToken: strconv.Itoa(11),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
-					{PublicKey: []byte{98}},
 					{PublicKey: []byte{99}}},
-				NextPageToken: strconv.Itoa(0),
-				TotalSize:     2}},
+				NextPageToken: strconv.Itoa(34),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.GetValidatorsRequest{PageSize: 2},
+			res: &ethpb.Validators{
+				Validators: []*ethpb.Validator{
+					{PublicKey: []byte{0}},
+					{PublicKey: []byte{1}}},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(count)}},
 	}
 	for _, test := range tests {
 		res, err := bs.GetValidators(context.Background(), test.req)
@@ -205,6 +210,7 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
+			t.Log(res)
 			t.Error("Incorrect respond of validators")
 		}
 	}
@@ -215,19 +221,17 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	count := 1
-	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
 			t.Fatal(err)
 		}
-		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
 	}
 
 	if err := db.SaveState(
 		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances}); err != nil {
+		&pbp2p.BeaconState{Validators: validators}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -235,8 +239,8 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1)}
-	wanted := fmt.Sprintf("page token %d >= validator list %d", count, len(balances))
+	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	wanted := fmt.Sprintf("page start %d >= validator list %d", req.PageSize, len(validators))
 	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}

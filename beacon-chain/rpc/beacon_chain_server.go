@@ -137,39 +137,43 @@ func (bs *BeaconChainServer) GetValidators(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
+	totalSize := len(validators)
 
-	// Return the entire validator list if option PageToken is not specified.
-	if req.PageToken == "" {
+	// Return the entire validator list if options PageToken and PageSize are not specified.
+	if req.PageToken == "" && req.PageSize == 0 {
 		return &ethpb.Validators{
 			Validators:    validators,
-			TotalSize:     int32(len(validators)),
+			TotalSize:     int32(totalSize),
 			NextPageToken: strconv.Itoa(0),
 		}, nil
 	}
 
-	start, err := strconv.Atoi(req.PageToken)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
-	}
-
-	if start >= len(validators) {
-		return nil, status.Errorf(codes.InvalidArgument, "page token %d >= validator list %d",
-			start, len(validators))
-	}
-
+	pageToken := 0
 	pageSize := int(req.PageSize)
+	if req.PageToken != "" {
+		pageToken, err = strconv.Atoi(req.PageToken)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
+		}
+	}
+
+	// Start page can not be greater than validator size.
+	start := pageToken * pageSize
+	if start >= totalSize {
+		return nil, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
+			start, totalSize)
+	}
+
+	// End page can not go out of bound.
 	end := start + pageSize
-	nextPage := end
-	if end > len(validators) {
-		end = len(validators)
-		pageSize = end - start
-		nextPage = 0
+	if end > totalSize {
+		end = totalSize
 	}
 
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
-		TotalSize:     int32(pageSize),
-		NextPageToken: strconv.Itoa(nextPage),
+		TotalSize:     int32(totalSize),
+		NextPageToken: strconv.Itoa(pageToken + 1),
 	}
 	return res, nil
 }
