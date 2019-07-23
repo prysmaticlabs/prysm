@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -114,8 +113,8 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := utils.SplitOffset(validatorCount, totalCommittees, index)
-	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
+	start := SplitOffset(validatorCount, totalCommittees, index)
+	end := SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
@@ -129,7 +128,7 @@ func ComputeCommittee(
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new shard index.
 	shuffledIndices := make([]uint64, end-start)
 	for i := start; i < end; i++ {
-		permutedIndex, err := utils.ShuffledIndex(i, validatorCount, seed)
+		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
 		if err != nil {
 			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
 		}
