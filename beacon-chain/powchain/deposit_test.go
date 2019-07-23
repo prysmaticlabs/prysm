@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+const pubKeyErr = "could not deserialize validator public key"
+
 func TestProcessDeposit_OK(t *testing.T) {
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
@@ -144,10 +146,8 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		t.Fatal("No errors, when an error was expected")
 	}
 
-	want := "could not deserialize validator public key"
-
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", want, err.Error())
+	if !strings.Contains(err.Error(), pubKeyErr) {
+		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
 
 }
@@ -192,10 +192,8 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		t.Fatal("No errors, when an error was expected")
 	}
 
-	want := "could not deserialize validator public key"
-
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", want, err.Error())
+	if !strings.Contains(err.Error(), pubKeyErr) {
+		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
 
 }
