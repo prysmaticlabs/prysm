@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -78,6 +79,7 @@ type Service struct {
 	cancel              context.CancelFunc
 	beaconDB            *db.BeaconDB
 	chainService        chainService
+	attsService         attestation.Pool
 	powChainService     powChainService
 	operationService    operationService
 	syncService         syncService
@@ -94,15 +96,16 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port             string
-	CertFlag         string
-	KeyFlag          string
-	BeaconDB         *db.BeaconDB
-	ChainService     chainService
-	POWChainService  powChainService
-	OperationService operationService
-	SyncService      syncService
-	Broadcaster      p2p.Broadcaster
+	Port               string
+	CertFlag           string
+	KeyFlag            string
+	BeaconDB           *db.BeaconDB
+	AttestationService attestation.Pool
+	ChainService       chainService
+	POWChainService    powChainService
+	OperationService   operationService
+	SyncService        syncService
+	Broadcaster        p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -114,6 +117,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		cancel:              cancel,
 		beaconDB:            cfg.BeaconDB,
 		p2p:                 cfg.Broadcaster,
+		attsService:         cfg.AttestationService,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
 		operationService:    cfg.OperationService,
@@ -197,10 +201,15 @@ func (s *Service) Start() {
 		server:      s.grpcServer,
 		syncChecker: s.syncService,
 	}
+	beaconChainServer := &BeaconChainServer{
+		beaconDB: s.beaconDB,
+		pool:     s.attsService,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 
 	// Register reflection service on gRPC server.

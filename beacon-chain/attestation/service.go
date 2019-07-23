@@ -20,6 +20,12 @@ import (
 
 var log = logrus.WithField("prefix", "attestation")
 
+// Pool defines a struct which can retrieve attestations from an
+// in-memory pool directly.
+type Pool interface {
+	PooledAttestations() []*ethpb.Attestation
+}
+
 // TargetHandler provides an interface for fetching latest attestation targets
 // and updating attestations in batches.
 type TargetHandler interface {
@@ -85,6 +91,12 @@ func (a *Service) Stop() error {
 // TODO(#1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
+}
+
+// PooledAttestations returns a list of attestations currently
+// maintained in the in-memory pool.
+func (a *Service) PooledAttestations() []*ethpb.Attestation {
+	return a.pooledAttestations
 }
 
 // IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.

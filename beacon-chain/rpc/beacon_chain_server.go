@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -15,6 +16,7 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
+	pool     attestation.Pool
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
@@ -74,6 +76,17 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
 
+// AttestationPool retrieves attestations from an in-memory pool within the beacon node.
+//
+// The server returns a list of attestations that have been seen but not
+// yet processed. Pool attestations eventually expire as the slot
+// advances, so an attestation missing from this request does not imply
+// that it was included in a block. The attestation may have expired.
+// Refer to the ethereum 2.0 specification for more details on how
+// attestations are processed and when they are no longer valid.
+// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *BeaconChainServer) AttestationPool(ctx context.Context, _ *ptypes.Empty) (*ethpb.AttestationPoolResponse, error) {
-	return nil, nil
+	return &ethpb.AttestationPoolResponse{
+		pool: bs.pool.PooledAttestations(),
+	}, nil
 }
