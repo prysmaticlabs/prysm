@@ -15,7 +15,6 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
