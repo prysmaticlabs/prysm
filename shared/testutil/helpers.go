@@ -2,7 +2,7 @@ package testutil
 
 import (
 	"crypto/rand"
-	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -13,51 +13,58 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+var lock sync.Mutex
+
+// Caches
+var deposits []*ethpb.Deposit
+var privKeys []*bls.SecretKey
+var trie *trieutil.MerkleTrie
+
 // SetupInitialDeposits prepares the entered amount of deposits
 // and secret keys.
-func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) ([]*ethpb.Deposit, []*bls.SecretKey) {
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*ethpb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		pubkey := []byte{}
-		var sig [96]byte
+func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	var err error
+
+	// Populate trie cache, if not initialized yet.
+	if trie == nil {
+		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Extend caches as needed.
+	for i := len(deposits); uint64(len(deposits)) < numDeposits; i++ {
 		var withdrawalCreds [32]byte
 		copy(withdrawalCreds[:], []byte("testing"))
 		depositData := &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: withdrawalCreds[:],
 		}
-		if generateKeys {
-			priv, err := bls.RandKey(rand.Reader)
-			if err != nil {
-				t.Fatalf("could not generate random key: %v", err)
-			}
-			privKeys[i] = priv
-			pubkey = priv.PublicKey().Marshal()
-			depositData.PublicKey = pubkey
-			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
-			root, err := ssz.SigningRoot(depositData)
-			if err != nil {
-				t.Fatalf("could not get signing root of deposit data %v", err)
-			}
-			marshalledSig := priv.Sign(root[:], domain).Marshal()
-			copy(sig[:], marshalledSig)
-			depositData.Signature = sig[:]
-		} else {
-			privKeys = []*bls.SecretKey{}
-			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
-			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
-			copy(sig[:], []byte("testing"))
-			depositData.PublicKey = pubkey
-			depositData.Signature = sig[:]
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatalf("could not generate random key: %v", err)
 		}
-
-		deposits[i] = &ethpb.Deposit{
+		privKeys = append(privKeys, priv)
+		depositData.PublicKey = priv.PublicKey().Marshal()[:]
+		domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+		root, err := ssz.SigningRoot(depositData)
+		if err != nil {
+			t.Fatalf("could not get signing root of deposit data %v", err)
+		}
+		depositData.Signature = priv.Sign(root[:], domain).Marshal()
+		deposit := &ethpb.Deposit{
 			Data: depositData,
 		}
+
+		deposits = append(deposits, deposit)
 	}
-	deposits, _ = GenerateDepositProof(t, deposits)
-	return deposits, privKeys
+
+	d, _ := GenerateDepositProof(t, deposits[0:numDeposits])
+	return d, privKeys[0:numDeposits]
 }
 
 // GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.
@@ -91,9 +98,17 @@ func GenerateDepositProof(t testing.TB, deposits []*ethpb.Deposit) ([]*ethpb.Dep
 func GenerateEth1Data(t testing.TB, deposits []*ethpb.Deposit) *ethpb.Eth1Data {
 	_, root := GenerateDepositProof(t, deposits)
 	eth1Data := &ethpb.Eth1Data{
-		BlockHash:   root[:],
-		DepositRoot: root[:],
+		BlockHash:    root[:],
+		DepositRoot:  root[:],
+		DepositCount: uint64(len(deposits)),
 	}
 
 	return eth1Data
+}
+
+// ResetCache clears out the old trie, private keys and deposits.
+func ResetCache() {
+	trie = nil
+	privKeys = []*bls.SecretKey{}
+	deposits = []*ethpb.Deposit{}
 }

@@ -26,6 +26,7 @@ func init() {
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
+	testutil.ResetCache()
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -45,7 +46,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -65,6 +66,9 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+	if len(logs) == 0 {
+		t.Fatal("no logs")
 	}
 
 	web3Service.ProcessLog(logs[0])
@@ -255,7 +259,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -322,7 +326,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart), true)
+	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart))
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number

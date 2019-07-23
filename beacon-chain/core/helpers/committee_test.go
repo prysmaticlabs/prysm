@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -153,8 +152,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start := utils.SplitOffset(validatorCount, committeeCount, shard)
-	end := utils.SplitOffset(validatorCount, committeeCount, shard+1)
+	start := SplitOffset(validatorCount, committeeCount, shard)
+	end := SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee5) {
 		t.Error("committee has different shuffled indices")
@@ -166,8 +165,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start = utils.SplitOffset(validatorCount, committeeCount, shard)
-	end = utils.SplitOffset(validatorCount, committeeCount, shard+1)
+	start = SplitOffset(validatorCount, committeeCount, shard)
+	end = SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee9) {
 		t.Error("committee has different shuffled indices")
