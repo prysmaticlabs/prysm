@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -87,17 +88,16 @@ func (bs *BeaconChainServer) GetValidators(
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
 
+	i, err := strconv.Atoi(req.PageToken)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get page token: %v", err)
+	}
+
 	pageSize := int(req.PageSize)
-
-	for i := 0; i < len(validators); i+=pageSize {
-
-		v := validators[i:i+pageSize]
-
-		res := &ethpb.Validators{
-			Validators: v,
+	res := &ethpb.Validators{
+			Validators: validators[i:i+pageSize],
 			TotalSize: req.PageSize,
 			NextPageToken: string(i+1),
 		}
-
-	}
+	return res, nil
 }
