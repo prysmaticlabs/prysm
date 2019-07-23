@@ -28,7 +28,7 @@ func (bs *BeaconChainServer) ListAttestations(
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-// ListPendingAttestations retrieves pending attestations.
+// AttestationPool retrieves pending attestations.
 //
 // The server returns a list of attestations that have been seen but not
 // yet processed. Pending attestations eventually expire as the slot
@@ -37,9 +37,9 @@ func (bs *BeaconChainServer) ListAttestations(
 // Refer to the ethereum 2.0 specification for more details on how
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestation
-func (bs *BeaconChainServer) ListPendingAttestations(
+func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
-) (*ethpb.ListPendingAttestationsResponse, error) {
+) (*ethpb.AttestationPoolResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
