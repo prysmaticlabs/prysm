@@ -25,7 +25,7 @@ type BeaconChainServer struct {
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListPendingAttestations retrieves pending attestations.
@@ -40,7 +40,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) ListPendingAttestations(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ListPendingAttestationsResponse, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListBlocks retrieves blocks by root, slot, or epoch.
@@ -52,7 +52,7 @@ func (bs *BeaconChainServer) ListPendingAttestations(
 func (bs *BeaconChainServer) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from
@@ -63,7 +63,7 @@ func (bs *BeaconChainServer) ListBlocks(
 func (bs *BeaconChainServer) GetChainHead(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ChainHead, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
@@ -130,7 +130,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context, req *ethpb.GetValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
@@ -140,14 +140,14 @@ func (bs *BeaconChainServer) GetValidators(
 func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *BeaconChainServer) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch.
@@ -157,7 +157,7 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch.
@@ -167,5 +167,5 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
