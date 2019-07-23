@@ -141,7 +141,6 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
@@ -179,12 +178,10 @@ func ProcessBlockHeader(
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
-	if verifySignatures {
-		currentEpoch := helpers.CurrentEpoch(beaconState)
-		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-		if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
-			return nil, fmt.Errorf("could not verify block signature: %v", err)
-		}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
+		return nil, fmt.Errorf("could not verify block signature: %v", err)
 	}
 	return beaconState, nil
 }

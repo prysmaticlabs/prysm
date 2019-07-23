@@ -38,7 +38,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +68,20 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 			Eth1Data:     eth1Data,
 		},
 	}
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	beaconState.Slot--
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Error(err)
+	}
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
+	block.Signature = sig.Marshal()[:]
+
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig())
 	if err != nil {
 		t.Error(err)
@@ -131,6 +145,18 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Error(err)
+	}
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
+	block.Signature = sig.Marshal()[:]
+
 	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -145,7 +171,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	proposerIdx := uint64(3)
+	proposerSlashIdx := uint64(3)
 
 	domain := helpers.Domain(
 		beaconState,
@@ -161,7 +187,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
@@ -171,16 +197,16 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
+			ProposerIndex: proposerSlashIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
@@ -249,6 +275,17 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Deposits: make([]*ethpb.Deposit, 0),
 		},
 	}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	signingRoot, err = ssz.SigningRoot(block)
+	if err != nil {
+		t.Error(err)
+	}
+	domain = helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
+	block.Signature = sig.Marshal()[:]
 	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -394,7 +431,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	proposerIdx := uint64(3)
+	proposerSlashIdx := uint64(3)
 
 	domain := helpers.Domain(
 		beaconState,
@@ -410,7 +447,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
@@ -420,16 +457,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
+			ProposerIndex: proposerSlashIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
@@ -502,6 +539,19 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
+		{
+			Shard:      0,
+			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
+		},
+	}
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       beaconState.Slot,
@@ -517,20 +567,21 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			},
 		},
 	}
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: helpers.SlotToEpoch(beaconState.Slot),
-		},
-	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	signingRoot, err = ssz.SigningRoot(block)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain = helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
+	block.Signature = sig.Marshal()[:]
+
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig())
 	if err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
