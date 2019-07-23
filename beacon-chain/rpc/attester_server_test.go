@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -30,7 +31,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		beaconDB:         db,
 		cache:            cache.NewAttestationCache(),
 	}
-	head := &pbp2p.BeaconBlock{
+	head := &ethpb.BeaconBlock{
 		Slot:       999,
 		ParentRoot: []byte{'a'},
 	}
@@ -42,9 +43,9 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pbp2p.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		}
@@ -61,15 +62,15 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := &pbp2p.Attestation{
-		Data: &pbp2p.AttestationData{
+	req := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Crosslink: &pbp2p.Crosslink{
+			Crosslink: &ethpb.Crosslink{
 				Shard:    935,
 				DataRoot: []byte{'a'},
 			},
-			Source: &pbp2p.Checkpoint{},
-			Target: &pbp2p.Checkpoint{},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 	if _, err := attesterServer.SubmitAttestation(context.Background(), req); err != nil {
@@ -82,13 +83,13 @@ func TestRequestAttestation_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	block := &pbp2p.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
-	targetBlock := &pbp2p.BeaconBlock{
+	targetBlock := &ethpb.BeaconBlock{
 		Slot: 1 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	justifiedBlock := &pbp2p.BeaconBlock{
+	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
 	blockRoot, err := ssz.SigningRoot(block)
@@ -107,17 +108,17 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
 		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
-		CurrentCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
 			},
 		},
-		PreviousCrosslinks: []*pbp2p.Crosslink{
+		PreviousCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		},
@@ -162,16 +163,16 @@ func TestRequestAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedInfo := &pbp2p.AttestationData{
+	expectedInfo := &ethpb.AttestationData{
 		BeaconBlockRoot: blockRoot[:],
-		Source: &pbp2p.Checkpoint{
+		Source: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		},
-		Target: &pbp2p.Checkpoint{
+		Target: &ethpb.Checkpoint{
 			Epoch: 3,
 		},
-		Crosslink: &pbp2p.Crosslink{
+		Crosslink: &ethpb.Crosslink{
 			EndEpoch:   3,
 			ParentRoot: crosslinkRoot[:],
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
@@ -200,13 +201,13 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
-	block := &pbp2p.BeaconBlock{
+	block := &ethpb.BeaconBlock{
 		Slot: 10000,
 	}
-	epochBoundaryBlock := &pbp2p.BeaconBlock{
+	epochBoundaryBlock := &ethpb.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000)),
 	}
-	justifiedBlock := &pbp2p.BeaconBlock{
+	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
 	blockRoot, err := ssz.SigningRoot(block)
@@ -224,17 +225,17 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
 		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
-		PreviousCrosslinks: []*pbp2p.Crosslink{
+		PreviousCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentCrosslinks: []*pbp2p.Crosslink{
+		CurrentCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
 			},
 		},
-		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
@@ -279,16 +280,16 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedInfo := &pbp2p.AttestationData{
+	expectedInfo := &ethpb.AttestationData{
 		BeaconBlockRoot: blockRoot[:],
-		Source: &pbp2p.Checkpoint{
+		Source: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
-		Target: &pbp2p.Checkpoint{
+		Target: &ethpb.Checkpoint{
 			Epoch: 156,
 		},
-		Crosslink: &pbp2p.Crosslink{
+		Crosslink: &ethpb.Crosslink{
 			ParentRoot: crosslinkRoot[:],
 			EndEpoch:   params.BeaconConfig().SlotsPerEpoch,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
@@ -311,8 +312,8 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		Slot:  2,
 	}
 
-	res := &pbp2p.AttestationData{
-		Target: &pbp2p.Checkpoint{Epoch: 55},
+	res := &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
 	if err := server.cache.MarkInProgress(req); err != nil {

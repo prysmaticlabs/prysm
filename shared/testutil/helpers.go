@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,15 +15,15 @@ import (
 
 // SetupInitialDeposits prepares the entered amount of deposits
 // and secret keys.
-func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) ([]*pb.Deposit, []*bls.SecretKey) {
+func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) ([]*ethpb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
+	deposits := make([]*ethpb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		pubkey := []byte{}
 		var sig [96]byte
 		var withdrawalCreds [32]byte
 		copy(withdrawalCreds[:], []byte("testing"))
-		depositData := &pb.DepositData{
+		depositData := &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().MaxEffectiveBalance,
 			WithdrawalCredentials: withdrawalCreds[:],
 		}
@@ -34,7 +34,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			}
 			privKeys[i] = priv
 			pubkey = priv.PublicKey().Marshal()
-			depositData.Pubkey = pubkey
+			depositData.PublicKey = pubkey
 			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
@@ -48,11 +48,11 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 			pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 			copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
 			copy(sig[:], []byte("testing"))
-			depositData.Pubkey = pubkey
+			depositData.PublicKey = pubkey
 			depositData.Signature = sig[:]
 		}
 
-		deposits[i] = &pb.Deposit{
+		deposits[i] = &ethpb.Deposit{
 			Data: depositData,
 		}
 	}
@@ -61,7 +61,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64, generateKeys bool) (
 }
 
 // GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.
-func GenerateDepositProof(t testing.TB, deposits []*pb.Deposit) ([]*pb.Deposit, [32]byte) {
+func GenerateDepositProof(t testing.TB, deposits []*ethpb.Deposit) ([]*ethpb.Deposit, [32]byte) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := hashutil.DepositHash(deposits[i].Data)
@@ -88,9 +88,9 @@ func GenerateDepositProof(t testing.TB, deposits []*pb.Deposit) ([]*pb.Deposit, 
 }
 
 // GenerateEth1Data takes an array of deposits and generates the deposit trie for them.
-func GenerateEth1Data(t testing.TB, deposits []*pb.Deposit) *pb.Eth1Data {
+func GenerateEth1Data(t testing.TB, deposits []*ethpb.Deposit) *ethpb.Eth1Data {
 	_, root := GenerateDepositProof(t, deposits)
-	eth1Data := &pb.Eth1Data{
+	eth1Data := &ethpb.Eth1Data{
 		BlockHash:   root[:],
 		DepositRoot: root[:],
 	}

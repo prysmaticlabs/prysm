@@ -9,7 +9,7 @@ go_proto_library(
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/common:common_go_proto",
+        "//proto/eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
@@ -29,7 +29,7 @@ proto_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/common:common_proto",
+        "//proto/eth/v1alpha1:v1alpha1_proto",
         "@com_google_protobuf//:timestamp_proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],

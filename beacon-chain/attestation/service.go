@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -23,12 +24,12 @@ var log = logrus.WithField("prefix", "attestation")
 // and updating attestations in batches.
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
-	BatchUpdateLatestAttestation(ctx context.Context, atts []*pb.Attestation) error
+	BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error
 }
 
 type attestationStore struct {
 	sync.RWMutex
-	m map[[48]byte]*pb.Attestation
+	m map[[48]byte]*ethpb.Attestation
 }
 
 // Service represents a service that handles the internal
@@ -38,11 +39,11 @@ type Service struct {
 	cancel       context.CancelFunc
 	beaconDB     *db.BeaconDB
 	incomingFeed *event.Feed
-	incomingChan chan *pb.Attestation
+	incomingChan chan *ethpb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
 	store              attestationStore
-	pooledAttestations []*pb.Attestation
+	pooledAttestations []*ethpb.Attestation
 	poolLimit          int
 }
 
@@ -60,9 +61,9 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		cancel:             cancel,
 		beaconDB:           cfg.BeaconDB,
 		incomingFeed:       new(event.Feed),
-		incomingChan:       make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		store:              attestationStore{m: make(map[[48]byte]*pb.Attestation)},
-		pooledAttestations: make([]*pb.Attestation, 0, 1),
+		incomingChan:       make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		store:              attestationStore{m: make(map[[48]byte]*ethpb.Attestation)},
+		pooledAttestations: make([]*ethpb.Attestation, 0, 1),
 		poolLimit:          1,
 	}
 }
@@ -105,7 +106,7 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 	}
 	validator := beaconState.Validators[index]
 
-	pubKey := bytesutil.ToBytes48(validator.Pubkey)
+	pubKey := bytesutil.ToBytes48(validator.PublicKey)
 	a.store.RLock()
 	defer a.store.RUnlock()
 	if _, exists := a.store.m[pubKey]; !exists {
@@ -142,7 +143,7 @@ func (a *Service) attestationPool() {
 }
 
 func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
-	attestation := msg.(*pb.Attestation)
+	attestation := msg.(*ethpb.Attestation)
 	a.pooledAttestations = append(a.pooledAttestations, attestation)
 	if len(a.pooledAttestations) > a.poolLimit {
 		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
@@ -168,7 +169,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 			a.poolLimit++
 		}
 		attestationPoolLimit.Set(float64(a.poolLimit))
-		a.pooledAttestations = make([]*pb.Attestation, 0, a.poolLimit)
+		a.pooledAttestations = make([]*ethpb.Attestation, 0, a.poolLimit)
 	}
 	attestationPoolSize.Set(float64(len(a.pooledAttestations)))
 	return nil
@@ -178,7 +179,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 // the attesters who submitted this attestation with the higher slot number
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
-func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
+func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *ethpb.Attestation) error {
 	totalAttestationSeen.Inc()
 
 	// Potential improvement, instead of getting the state,
@@ -192,7 +193,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 // BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
 // if they are valid.
-func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*pb.Attestation) error {
+func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*ethpb.Attestation) error {
 
 	if attestations == nil {
 		return nil
@@ -215,13 +216,13 @@ func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations
 // InsertAttestationIntoStore locks the store, inserts the attestation, then
 // unlocks the store again. This method may be used by external services
 // in testing to populate the attestation store.
-func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestation) {
+func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *ethpb.Attestation) {
 	a.store.Lock()
 	defer a.store.Unlock()
 	a.store.m[pubkey] = att
 }
 
-func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb.Attestation) error {
+func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *ethpb.Attestation) error {
 	totalAttestationSeen.Inc()
 
 	committee, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), attestation.Data.Crosslink.Shard)
@@ -261,7 +262,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *pb
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
-		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].Pubkey)
+		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].PublicKey)
 		newAttestationSlot := slot
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()

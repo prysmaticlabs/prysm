@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,7 +34,7 @@ type ProposerServer struct {
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
-func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*pbp2p.BeaconBlock, error) {
+func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 
 	// Retrieve the parent block as the current head of the canonical chain
 	parent, err := ps.beaconDB.ChainHead()
@@ -70,20 +71,20 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 
 	emptySig := make([]byte, 96)
 
-	blk := &pbp2p.BeaconBlock{
+	blk := &ethpb.BeaconBlock{
 		Slot:       req.Slot,
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot,
-		Body: &pbp2p.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:     eth1Data,
 			Deposits:     deposits,
 			Attestations: attestations,
 			RandaoReveal: req.RandaoReveal,
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
-			Transfers:         []*pbp2p.Transfer{},
-			ProposerSlashings: []*pbp2p.ProposerSlashing{},
-			AttesterSlashings: []*pbp2p.AttesterSlashing{},
-			VoluntaryExits:    []*pbp2p.VoluntaryExit{},
+			Transfers:         []*ethpb.Transfer{},
+			ProposerSlashings: []*ethpb.ProposerSlashing{},
+			AttesterSlashings: []*ethpb.AttesterSlashing{},
+			VoluntaryExits:    []*ethpb.VoluntaryExit{},
 			Graffiti:          []byte{},
 		},
 		Signature: emptySig,
@@ -101,7 +102,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
+func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -132,7 +133,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // proposed blocks when performing their responsibility. If desired, callers can choose to filter pending
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
-func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*pbp2p.Attestation, error) {
+func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
@@ -149,7 +150,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		}
 	}
 
-	var attsReadyForInclusion []*pbp2p.Attestation
+	var attsReadyForInclusion []*ethpb.Attestation
 	for _, att := range atts {
 		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
 		if err != nil {
@@ -161,7 +162,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		}
 	}
 
-	validAtts := make([]*pbp2p.Attestation, 0, len(attsReadyForInclusion))
+	validAtts := make([]*ethpb.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
 		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
 		if err != nil {
@@ -207,7 +208,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 //  - Determine the most recent eth1 block before that timestamp.
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
-func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*pbp2p.Eth1Data, error) {
+func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	eth1VotingPeriodStartTime := ps.powChainService.ETH2GenesisTime()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
@@ -222,7 +223,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*pbp2p.Eth
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.BeaconBlock) ([]byte, error) {
+func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
@@ -250,7 +251,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *pbp2p.Bea
 // this eth1data has enough support to be considered for deposits inclusion. If current vote has
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
-func (ps *ProposerServer) deposits(ctx context.Context, currentVote *pbp2p.Eth1Data) ([]*pbp2p.Deposit, error) {
+func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	bNum := ps.powChainService.LatestBlockHeight()
 	if bNum == nil {
 		return nil, errors.New("latest PoW block number is unknown")
@@ -326,7 +327,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *pbp2p.Eth1D
 		}
 	}
 	// Limit the return of pending deposits to not be more than max deposits allowed in block.
-	var pendingDeposits []*pbp2p.Deposit
+	var pendingDeposits []*ethpb.Deposit
 	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
@@ -337,7 +338,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *pbp2p.Eth1D
 // default into returning the latest deposit root and the block
 // hash of eth1 block hash that is FOLLOW_DISTANCE back from its
 // latest block.
-func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*pbp2p.Eth1Data, error) {
+func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := ps.powChainService.BlockHashByHeight(ctx, ancestorHeight)
@@ -349,7 +350,7 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 	if depositsTillHeight == 0 {
 		return ps.powChainService.ChainStartETH1Data(), nil
 	}
-	return &pbp2p.Eth1Data{
+	return &ethpb.Eth1Data{
 		DepositRoot:  depositRoot[:],
 		BlockHash:    blockHash[:],
 		DepositCount: depositsTillHeight,

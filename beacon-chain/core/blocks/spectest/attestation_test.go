@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -26,7 +26,7 @@ func runAttestationTest(t *testing.T, filename string) {
 	}
 
 	test := &AttestationTest{}
-	if err := yaml.Unmarshal(file, test); err != nil {
+	if err := testutil.UnmarshalYaml(file, test); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
@@ -34,11 +34,15 @@ func runAttestationTest(t *testing.T, filename string) {
 		t.Fatal(err)
 	}
 
+	if len(test.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
 	for _, tt := range test.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
-			body := &pb.BeaconBlockBody{
-				Attestations: []*pb.Attestation{
+			body := &ethpb.BeaconBlockBody{
+				Attestations: []*ethpb.Attestation{
 					tt.Attestation,
 				},
 			}

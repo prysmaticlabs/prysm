@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -15,13 +15,13 @@ import (
 // processDeposit is a copy of the core function of the same name which includes some optimizations
 // and removes the requirement to pass in beacon state. This is for determining genesis validators.
 func (w *Web3Service) processDeposit(
-	eth1Data *pb.Eth1Data,
-	deposit *pb.Deposit,
+	eth1Data *ethpb.Eth1Data,
+	deposit *ethpb.Deposit,
 ) error {
 	if err := verifyDeposit(eth1Data, deposit); err != nil {
-		return fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.Pubkey), err)
+		return fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 	}
-	pubKey := bytesutil.ToBytes48(deposit.Data.Pubkey)
+	pubKey := bytesutil.ToBytes48(deposit.Data.PublicKey)
 	amount := deposit.Data.Amount
 	currBal, ok := w.depositedPubkeys[pubKey]
 	if !ok {
@@ -60,7 +60,7 @@ func (w *Web3Service) processDeposit(
 	return nil
 }
 
-func verifyDeposit(eth1Data *pb.Eth1Data, deposit *pb.Deposit) error {
+func verifyDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := eth1Data.DepositRoot
 	leaf, err := hashutil.DepositHash(deposit.Data)

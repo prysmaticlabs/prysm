@@ -5,7 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	})
 )
 
-func reportVoteMetrics(index uint64, block *pb.BeaconBlock) {
+func reportVoteMetrics(index uint64, block *ethpb.BeaconBlock) {
 	// Don't update vote metrics if the incoming block is nil.
 	if block == nil {
 		return

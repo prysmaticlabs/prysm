@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -34,8 +35,8 @@ var (
 	})
 )
 
-func createBlock(enc []byte) (*pb.BeaconBlock, error) {
-	protoBlock := &pb.BeaconBlock{}
+func createBlock(enc []byte) (*ethpb.BeaconBlock, error) {
+	protoBlock := &ethpb.BeaconBlock{}
 	err := proto.Unmarshal(enc, protoBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
@@ -45,7 +46,7 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 
 // Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) Block(root [32]byte) (*ethpb.BeaconBlock, error) {
 	db.blocksLock.RLock()
 
 	// Return block from cache if it exists
@@ -55,7 +56,7 @@ func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 		return db.blocks[root], nil
 	}
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 
@@ -130,7 +131,7 @@ func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 }
 
 // SaveBlock accepts a block and writes it to disk.
-func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
+func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
@@ -167,7 +168,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 }
 
 // DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
-func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
+func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
@@ -192,7 +193,7 @@ func (db *BeaconDB) DeleteBlock(block *pb.BeaconBlock) error {
 }
 
 // SaveJustifiedBlock saves the last justified block from canonical chain to DB.
-func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
+func (db *BeaconDB) SaveJustifiedBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		enc, err := proto.Marshal(block)
 		if err != nil {
@@ -204,7 +205,7 @@ func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
 }
 
 // SaveFinalizedBlock saves the last finalized block from canonical chain to DB.
-func (db *BeaconDB) SaveFinalizedBlock(block *pb.BeaconBlock) error {
+func (db *BeaconDB) SaveFinalizedBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		enc, err := proto.Marshal(block)
 		if err != nil {
@@ -216,8 +217,8 @@ func (db *BeaconDB) SaveFinalizedBlock(block *pb.BeaconBlock) error {
 }
 
 // JustifiedBlock retrieves the justified block from the db.
-func (db *BeaconDB) JustifiedBlock() (*pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
+func (db *BeaconDB) JustifiedBlock() (*ethpb.BeaconBlock, error) {
+	var block *ethpb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		encBlock := chainInfo.Get(justifiedBlockLookupKey)
@@ -233,8 +234,8 @@ func (db *BeaconDB) JustifiedBlock() (*pb.BeaconBlock, error) {
 }
 
 // FinalizedBlock retrieves the finalized block from the db.
-func (db *BeaconDB) FinalizedBlock() (*pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
+func (db *BeaconDB) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	var block *ethpb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		encBlock := chainInfo.Get(finalizedBlockLookupKey)
@@ -250,8 +251,8 @@ func (db *BeaconDB) FinalizedBlock() (*pb.BeaconBlock, error) {
 }
 
 // ChainHead returns the head of the main chain.
-func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
+func (db *BeaconDB) ChainHead() (*ethpb.BeaconBlock, error) {
+	var block *ethpb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		blockBkt := tx.Bucket(blockBucket)
@@ -281,7 +282,7 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new state is optional.
-func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
 	defer span.End()
 
@@ -330,12 +331,12 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, 
 }
 
 // CanonicalBlockBySlot accepts a slot number and returns the corresponding canonical block.
-func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*ethpb.BeaconBlock, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.CanonicalBlockBySlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-	var block *pb.BeaconBlock
+	var block *ethpb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -353,7 +354,7 @@ func (db *BeaconDB) CanonicalBlockBySlot(ctx context.Context, slot uint64) (*pb.
 
 // BlocksBySlot accepts a slot number and returns the corresponding blocks in the db.
 // Returns empty list if no blocks were recorded for the given slot.
-func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.BeaconBlock, error) {
+func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*ethpb.BeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -361,7 +362,7 @@ func (db *BeaconDB) BlocksBySlot(ctx context.Context, slot uint64) ([]*pb.Beacon
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-	blocks := []*pb.BeaconBlock{}
+	blocks := []*ethpb.BeaconBlock{}
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -393,6 +394,6 @@ func (db *BeaconDB) HighestBlockSlot() uint64 {
 func (db *BeaconDB) ClearBlockCache() {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
-	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
+	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 	blockCacheSize.Set(float64(len(db.blocks)))
 }

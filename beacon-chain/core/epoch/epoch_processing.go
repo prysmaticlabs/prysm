@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -185,7 +186,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(1, true)
 	}
 
@@ -196,7 +197,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
 				prevEpoch, err)
 		}
-		state.CurrentJustifiedCheckpoint = &pb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(0, true)
 	}
 
@@ -471,7 +472,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Reset ETH1 data votes.
 	if (state.Slot+1)%params.BeaconConfig().SlotsPerEth1VotingPeriod == 0 {
-		state.Eth1DataVotes = nil
+		state.Eth1DataVotes = []*ethpb.Eth1Data{}
 	}
 
 	// Update effective balances with hysteresis.
@@ -595,7 +596,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 //    ), default=Crosslink())
 //    winning_attestations = [a for a in attestations if a.data.crosslink == winning_crosslink]
 //    return winning_crosslink, get_unslashed_attesting_indices(state, winning_attestations)
-func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Crosslink, []uint64, error) {
+func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
@@ -608,7 +609,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 			shardAtts = append(shardAtts, att)
 		}
 	}
-	var candidateCrosslinks []*pb.Crosslink
+	var candidateCrosslinks []*ethpb.Crosslink
 	// Filter out shard crosslinks with correct current or previous crosslink data.
 	for _, a := range shardAtts {
 		stateCrosslink := state.CurrentCrosslinks[shard]
@@ -628,14 +629,14 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*pb.Cr
 	}
 
 	if len(candidateCrosslinks) == 0 {
-		return &pb.Crosslink{
+		return &ethpb.Crosslink{
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 			ParentRoot: params.BeaconConfig().ZeroHash[:],
 		}, nil, nil
 	}
 	var crosslinkAtts []*pb.PendingAttestation
 	var winnerBalance uint64
-	var winnerCrosslink *pb.Crosslink
+	var winnerCrosslink *ethpb.Crosslink
 	// Out of the existing shard crosslinks, pick the one that has the
 	// most balance staked.
 	crosslinkAtts = attsForCrosslink(candidateCrosslinks[0], shardAtts)
@@ -945,7 +946,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 }
 
 // attsForCrosslink returns the attestations of the input crosslink.
-func attsForCrosslink(crosslink *pb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
+func attsForCrosslink(crosslink *ethpb.Crosslink, atts []*pb.PendingAttestation) []*pb.PendingAttestation {
 	var crosslinkAtts []*pb.PendingAttestation
 	for _, a := range atts {
 		if proto.Equal(a.Data.Crosslink, crosslink) {

@@ -3,7 +3,10 @@
 
 package spectest
 
-import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import (
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+)
 
 type BlockOperationTest struct {
 	Title         string   `json:"title"`
@@ -14,15 +17,15 @@ type BlockOperationTest struct {
 	Runner        string   `json:"runner"`
 	Handler       string   `json:"handler"`
 	TestCases     []struct {
-		BlsSetting       uint64               `json:"bls_setting,omitempty"`
-		Description      string               `json:"description"`
-		Pre              *pb.BeaconState      `json:"pre"`
-		VoluntaryExit    *pb.VoluntaryExit    `json:"voluntary_exit"`
-		ProposerSlashing *pb.ProposerSlashing `json:"proposer_slashing"`
-		AttesterSlashing *pb.AttesterSlashing `json:"attester_slashing"`
-		Deposit          *pb.Deposit          `json:"deposit"`
-		Transfer         *pb.Transfer         `json:"transfer"`
-		Block            *pb.BeaconBlock      `json:"block"`
-		Post             *pb.BeaconState      `json:"post"`
+		BlsSetting       uint64                  `json:"bls_setting,omitempty"`
+		Description      string                  `json:"description"`
+		Pre              *pb.BeaconState         `json:"pre"`
+		VoluntaryExit    *ethpb.VoluntaryExit    `json:"voluntary_exit"`
+		ProposerSlashing *ethpb.ProposerSlashing `json:"proposer_slashing"`
+		AttesterSlashing *ethpb.AttesterSlashing `json:"attester_slashing"`
+		Deposit          *ethpb.Deposit          `json:"deposit"`
+		Transfer         *ethpb.Transfer         `json:"transfer"`
+		Block            *ethpb.BeaconBlock      `json:"block"`
+		Post             *pb.BeaconState         `json:"post"`
 	} `json:"test_cases"`
 }

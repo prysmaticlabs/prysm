@@ -5,12 +5,12 @@ import (
 	"reflect"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestCountVote_OK(t *testing.T) {
 	vm := EmptyVoteHierarchyMap()
-	ed := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
+	ed := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
 	vm, err := CountVote(vm, ed, big.NewInt(0))
 	if err != nil {
 		t.Fatal("fail to add deposit to map")
@@ -27,8 +27,8 @@ func TestCountVote_OK(t *testing.T) {
 
 func TestCountVote_ByVoteCount(t *testing.T) {
 	vm := EmptyVoteHierarchyMap()
-	ed1 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
-	ed2 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
+	ed1 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
+	ed2 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
 
 	vm, err := CountVote(vm, ed1, big.NewInt(0))
 	if err != nil {
@@ -53,8 +53,8 @@ func TestCountVote_ByVoteCount(t *testing.T) {
 
 func TestCountVote_PreferVoteCountToHeight(t *testing.T) {
 	vm := EmptyVoteHierarchyMap()
-	ed1 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
-	ed2 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
+	ed1 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
+	ed2 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
 
 	vm, err := CountVote(vm, ed1, big.NewInt(10))
 	if err != nil {
@@ -79,8 +79,8 @@ func TestCountVote_PreferVoteCountToHeight(t *testing.T) {
 
 func TestCountVote_BreakTiesByHeight(t *testing.T) {
 	vm := EmptyVoteHierarchyMap()
-	ed1 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
-	ed2 := &pb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
+	ed1 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 100, BlockHash: []byte{10}}
+	ed2 := &ethpb.Eth1Data{DepositRoot: []byte{1}, DepositCount: 101, BlockHash: []byte{10}}
 	vm, err := CountVote(vm, ed1, big.NewInt(10))
 	if err != nil {
 		t.Fatal("fail to add deposit to map")

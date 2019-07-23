@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -17,7 +17,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 	SafelyHandleMessage(nil, func(_ context.Context, _ proto.Message) error {
 		panic("bad!")
 		return nil
-	}, &pb.BeaconBlock{})
+	}, &ethpb.BeaconBlock{})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
 }

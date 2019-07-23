@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -24,7 +24,7 @@ func setupDB(t testing.TB) *BeaconDB {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 	db, err := NewDB(path)
-	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
+	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)

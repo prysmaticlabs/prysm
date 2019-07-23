@@ -5,17 +5,18 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestValidatorIndexMap_OK(t *testing.T) {
 	state := &pb.BeaconState{
-		Validators: []*pb.Validator{
+		Validators: []*ethpb.Validator{
 			{
-				Pubkey: []byte("zero"),
+				PublicKey: []byte("zero"),
 			},
 			{
-				Pubkey: []byte("one"),
+				PublicKey: []byte("one"),
 			},
 		},
 	}

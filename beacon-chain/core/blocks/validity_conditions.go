@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -16,7 +17,7 @@ import (
 func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	HasBlock func(hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
 	genesisTime time.Time) error {

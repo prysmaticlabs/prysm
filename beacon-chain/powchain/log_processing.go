@@ -11,7 +11,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -86,9 +86,9 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	validData := true
-	depositData := &pb.DepositData{
+	depositData := &ethpb.Deposit_Data{
 		Amount:                bytesutil.FromBytes8(amount),
-		Pubkey:                pubkey,
+		PublicKey:             pubkey,
 		Signature:             signature,
 		WithdrawalCredentials: withdrawalCredentials,
 	}
@@ -110,14 +110,14 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		return
 	}
 
-	deposit := &pb.Deposit{
+	deposit := &ethpb.Deposit{
 		Data:  depositData,
 		Proof: proof,
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
-		var pubkey = fmt.Sprintf("#%x", depositData.Pubkey)
+		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
 		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
@@ -132,7 +132,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
 		root := w.depositTrie.Root()
-		eth1Data := &pb.Eth1Data{
+		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(w.chainStartDeposits)),
 		}
@@ -145,7 +145,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
-			"publicKey":       fmt.Sprintf("%#x", depositData.Pubkey),
+			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
@@ -189,7 +189,7 @@ func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]by
 
 	w.depositTrie = sparseMerkleTrie
 	root := sparseMerkleTrie.Root()
-	w.chainStartETH1Data = &pb.Eth1Data{
+	w.chainStartETH1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(w.chainStartDeposits)),
 		DepositRoot:  root[:],
 		BlockHash:    eth1BlockHash[:],

@@ -3,6 +3,9 @@ syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
 import "proto/beacon/p2p/v1/types.proto";
+import "proto/eth/v1alpha1/attestation.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/validator.proto";
 import "google/protobuf/timestamp.proto";
 
 enum Topic {
@@ -43,8 +46,8 @@ message BeaconBlockRequestBySlotNumber {
 }
 
 message BeaconBlockResponse {
-  BeaconBlock block = 1;
-  Attestation attestation = 2;
+  ethereum.eth.v1alpha1.BeaconBlock block = 1;
+  ethereum.eth.v1alpha1.Attestation attestation = 2;
 }
 
 message BatchedBeaconBlockRequest {
@@ -55,7 +58,7 @@ message BatchedBeaconBlockRequest {
 }
 
 message BatchedBeaconBlockResponse {
-  repeated BeaconBlock batched_blocks = 1;
+  repeated ethereum.eth.v1alpha1.BeaconBlock batched_blocks = 1;
 }
 
 message ChainHeadRequest {}
@@ -90,7 +93,7 @@ message AttestationRequest {
 
 message AttestationResponse {
   bytes hash = 1;
-  Attestation attestation = 2;
+  ethereum.eth.v1alpha1.Attestation attestation = 2;
 }
 
 message FinalizedStateAnnounce {
@@ -109,7 +112,7 @@ message ProposerSlashingRequest {
 
 message ProposerSlashingResponse {
   bytes hash = 1;
-  ProposerSlashing proposer_slashing = 2;
+  ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 2;
 }
 
 message AttesterSlashingAnnounce {
@@ -122,7 +125,7 @@ message AttesterSlashingRequest {
 
 message AttesterSlashingResponse {
   bytes hash = 1;
-  AttesterSlashing Attester_slashing = 2;
+  ethereum.eth.v1alpha1.AttesterSlashing Attester_slashing = 2;
 }
 
 message DepositAnnounce {
@@ -135,7 +138,7 @@ message DepositRequest {
 
 message DepositResponse {
   bytes hash = 1;
-  Deposit deposit = 2;
+  ethereum.eth.v1alpha1.Deposit deposit = 2;
 }
 
 message ExitAnnounce {
@@ -148,7 +151,7 @@ message ExitRequest {
 
 message ExitResponse {
   bytes hash = 1;
-  VoluntaryExit voluntary_exit = 2;
+  ethereum.eth.v1alpha1.VoluntaryExit voluntary_exit = 2;
 }
 
 message Handshake {
