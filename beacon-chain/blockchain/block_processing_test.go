@@ -19,10 +19,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -66,7 +64,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -114,7 +112,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -200,7 +198,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -274,7 +272,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -359,7 +357,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -423,7 +421,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -490,7 +488,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -533,30 +531,28 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pendingDeposits := []*ethpb.Deposit{
-		createPreChainStartDeposit([]byte{'F'}),
-	}
-	pendingDepositsData := make([][]byte, len(pendingDeposits))
-	for i, pd := range pendingDeposits {
-		h, err := hashutil.DepositHash(pd.Data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pendingDepositsData[i] = h[:]
-	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(pendingDepositsData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate deposit trie: %v", err)
-	}
+	pendingDeposits := make([]*ethpb.Deposit, 1)
 	for i := range pendingDeposits {
-		proof, err := depositTrie.MerkleProof(0)
-		if err != nil {
-			t.Fatalf("Could not generate proof: %v", err)
+		var withdrawalCreds [32]byte
+		copy(withdrawalCreds[:], []byte("testing"))
+		depositData := &ethpb.Deposit_Data{
+			Amount:                params.BeaconConfig().MaxEffectiveBalance,
+			WithdrawalCredentials: withdrawalCreds[:],
 		}
-		pendingDeposits[i].Proof = proof
+		depositData.PublicKey = privKeys[0].PublicKey().Marshal()
+		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+		root, err := ssz.SigningRoot(depositData)
+		if err != nil {
+			t.Fatalf("could not get signing root of deposit data %v", err)
+		}
+		depositData.Signature = privKeys[0].Sign(root[:], domain).Marshal()
+		deposit := &ethpb.Deposit{
+			Data: depositData,
+		}
+		pendingDeposits[i] = deposit
 	}
-	depositRoot := depositTrie.Root()
-	beaconState.Eth1Data.DepositRoot = depositRoot[:]
+	pendingDeposits, root := testutil.GenerateDepositProof(t, pendingDeposits)
+	beaconState.Eth1Data.DepositRoot = root[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
@@ -578,6 +574,18 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits:     pendingDeposits,
 		},
 	}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	dt := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], dt)
+	block.Signature = blockSig.Marshal()[:]
 
 	beaconState.Slot--
 
@@ -674,7 +682,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -843,7 +851,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
