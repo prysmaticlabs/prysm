@@ -127,6 +127,27 @@ func TestEqualRoot(t *testing.T) {
 	}
 }
 
+func TestFastVerify(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	sparseTrie := NewSparseTrie(items, 32)
+	proof, err := sparseTrie.NewProof(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := sparseTrie.NewRoot()
+	if !VerifyMerkleProof(root[:], items[3], 3, proof) {
+		t.Error("did not verify")
+	}
+}
+
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),
