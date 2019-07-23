@@ -148,8 +148,8 @@ func (bs *BeaconChainServer) GetValidators(
 		}, nil
 	}
 
-	pageToken := 0
 	pageSize := int(req.PageSize)
+	pageToken := 0
 	if req.PageToken != "" {
 		pageToken, err = strconv.Atoi(req.PageToken)
 		if err != nil {
