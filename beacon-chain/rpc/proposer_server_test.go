@@ -23,6 +23,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -35,7 +40,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -70,7 +75,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	mockChain := &mockChainService{}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -123,6 +128,10 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+
 	ctx := context.Background()
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
@@ -206,6 +215,9 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	// Edge case: current slot is at the end of an epoch. The pending attestation
@@ -787,7 +799,7 @@ func TestEth1Data(t *testing.T) {
 	ps := &ProposerServer{
 		powChainService: &mockPOWChainService{
 			blockNumberByHeight: map[uint64]*big.Int{
-				55296: big.NewInt(4096),
+				60000: big.NewInt(4096),
 			},
 			hashesByHeight: map[int][]byte{
 				3072: []byte("3072"),
