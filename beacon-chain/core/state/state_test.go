@@ -203,7 +203,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	helpers.ClearAllCaches()
-	s, err := state.GenesisBeaconState(nil, 0, nil)
+	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -221,5 +221,13 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
+	}
+}
+
+func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
+	helpers.ClearAllCaches()
+	_, err := state.GenesisBeaconState(nil, 0, nil)
+	if err == nil || err.Error() != "no eth1data provided for genesis state" {
+		t.Errorf("Did not receive eth1data error with nil eth1data, got %v", err)
 	}
 }
