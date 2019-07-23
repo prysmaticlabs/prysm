@@ -785,7 +785,6 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 func ProcessDeposits(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
