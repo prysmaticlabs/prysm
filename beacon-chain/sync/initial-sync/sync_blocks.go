@@ -58,6 +58,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainH
 	sort.Slice(batchedBlocks, func(i, j int) bool {
 		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
 	})
+
 	for _, block := range batchedBlocks {
 		if err := s.processBlock(ctx, block, chainHead); err != nil {
 			return err
@@ -114,7 +115,13 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	state, err := s.db.HeadState(ctx)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
+	parentBlock, err := s.db.Block(parentRoot)
+	if err != nil {
+		return err
+	}
+
+	state, err := s.db.HistoricalStateFromSlot(ctx, parentBlock.Slot, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -131,6 +138,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
+	log.Errorf("block slot %d, state slot %d", block.Slot, state.Slot)
 	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
 		return fmt.Errorf("could not apply block state transition: %v", err)

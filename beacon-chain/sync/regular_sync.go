@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 var (
@@ -649,6 +651,51 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		bList = append([]*pb.BeaconBlock{b}, bList...)
 
 		parentRoot = b.ParentRoot
+	}
+	fState, _ := rs.db.FinalizedState()
+	for i := 0; i < len(bList); i++ {
+		log.Errorf("Start Block Slot %d, state slot %d", bList[i].Slot, fState.Slot)
+		log.Errorf("Start fState current %v", len(fState.CurrentEpochAttestations))
+		//aState := proto.Clone(fState).(*pb.BeaconState)
+
+		fState, err = state.ExecuteStateTransition(rs.ctx, fState, bList[i], state.DefaultConfig())
+		if err != nil {
+			log.Error(err)
+			root, err := ssz.SigningRoot(bList[i])
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			fState, err = rs.db.HistoricalStateFromSlot(rs.ctx, bList[i].Slot, root)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			continue
+		}
+		/*
+			aState, err = rs.chainService.AdvanceState(ctx, aState, bList[i])
+			diff, _ := messagediff.PrettyDiff(fState, aState)
+			if len(diff) != 0 {
+				log.Error("Advance state and core state transition differ: ", diff)
+			} */
+		root, err := ssz.SigningRoot(bList[i])
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		nState, err := rs.db.HistoricalStateFromSlot(rs.ctx, bList[i].Slot, root)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		diff, _ := messagediff.PrettyDiff(fState, nState)
+		if len(diff) != 0 {
+			log.Error(diff)
+		}
+		log.Errorf("End Block Slot %d, state slot %d", bList[i].Slot, nState.Slot)
+		log.Errorf("End nState currentEpoch %v, fState current %v", len(nState.CurrentEpochAttestations), len(fState.CurrentEpochAttestations))
+
 	}
 	return bList, nil
 }
