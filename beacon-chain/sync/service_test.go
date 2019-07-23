@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-var _ = SyncChecker(&Service{})
+var _ = Checker(&Service{})
 
 func NotSyncQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{

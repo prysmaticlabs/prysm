@@ -13,9 +13,9 @@ import (
 
 var slog = logrus.WithField("prefix", "sync")
 
-// SyncChecker defines a struct which can verify whether a node is currently
+// Checker defines a struct which can verify whether a node is currently
 // synchronizing a chain with the rest of peers in the network.
-type SyncChecker interface {
+type Checker interface {
 	Syncing() bool
 }
 

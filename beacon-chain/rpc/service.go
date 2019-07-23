@@ -69,7 +69,7 @@ type powChainService interface {
 
 type syncService interface {
 	Status() error
-	sync.SyncChecker
+	sync.Checker
 }
 
 // Service defining an RPC server for a beacon node.

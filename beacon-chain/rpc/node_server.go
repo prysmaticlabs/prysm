@@ -19,7 +19,7 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type NodeServer struct {
-	syncChecker sync.SyncChecker
+	syncChecker sync.Checker
 	server      *grpc.Server
 	beaconDB    *db.BeaconDB
 }
