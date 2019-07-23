@@ -209,7 +209,6 @@ func (s *Service) Start() {
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
-	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 

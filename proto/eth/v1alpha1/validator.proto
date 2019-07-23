@@ -115,7 +115,6 @@ message AttestationDataRequest {
     uint64 shard = 3;
 }
 
-
 // An Ethereum 2.0 validator.
 message Validator {
     // 96 byte BLS public key used for the validator's activities.
