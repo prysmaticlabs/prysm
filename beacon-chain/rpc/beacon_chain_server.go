@@ -59,7 +59,7 @@ func (bs *BeaconChainServer) ListBlocks(
 // the view of the beacon chain node.
 //
 // This includes the head block slot and root as well as information about
-// the most recent finalized and justified slots
+// the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ChainHead, error) {
@@ -121,4 +121,51 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	}
 	return &ethpb.ValidatorBalances{Balances: res}, nil
+}
+
+// GetValidators retrieves the current list of active validators.
+//
+// The request may include an optional historical epoch to retrieve a
+// specific validator set in time.
+func (bs *BeaconChainServer) GetValidators(
+	ctx context.Context, req *ethpb.GetValidatorsRequest,
+) (*ethpb.Validators, error) {
+	return nil, nil
+}
+
+// GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
+//
+// This data includes any activations, voluntary exits, and involuntary
+// ejections.
+func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
+	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
+) (*ethpb.ActiveSetChanges, error) {
+	return nil, nil
+}
+
+// GetValidatorQueue retrieves the current validator queue information.
+func (bs *BeaconChainServer) GetValidatorQueue(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ValidatorQueue, error) {
+	return nil, nil
+}
+
+// ListValidatorAssignments retrieves the validator assignments for a given epoch.
+//
+// This request may specify optional validator indices or public keys to
+// filter validator assignments.
+func (bs *BeaconChainServer) ListValidatorAssignments(
+	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
+) (*ethpb.ValidatorAssignments, error) {
+	return nil, nil
+}
+
+// GetValidatorParticipation retrieves the validator participation information for a given epoch.
+//
+// This method returns information about the global participation of
+// validator attestations.
+func (bs *BeaconChainServer) GetValidatorParticipation(
+	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
+) (*ethpb.ValidatorParticipation, error) {
+	return nil, nil
 }
