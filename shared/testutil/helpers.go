@@ -98,9 +98,17 @@ func GenerateDepositProof(t testing.TB, deposits []*ethpb.Deposit) ([]*ethpb.Dep
 func GenerateEth1Data(t testing.TB, deposits []*ethpb.Deposit) *ethpb.Eth1Data {
 	_, root := GenerateDepositProof(t, deposits)
 	eth1Data := &ethpb.Eth1Data{
-		BlockHash:   root[:],
-		DepositRoot: root[:],
+		BlockHash:    root[:],
+		DepositRoot:  root[:],
+		DepositCount: uint64(len(deposits)),
 	}
 
 	return eth1Data
+}
+
+// ResetCache clears out the old trie, private keys and deposits.
+func ResetCache() {
+	trie = nil
+	privKeys = []*bls.SecretKey{}
+	deposits = []*ethpb.Deposit{}
 }

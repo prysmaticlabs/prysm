@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -200,6 +201,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
+	helpers.ClearAllCaches()
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
@@ -211,27 +213,12 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	testutil.ResetCache()
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 1)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
 	deposits[0].Data.Signature = sig.Marshal()[:]
-
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
-	if err != nil {
-		t.Fatalf("Could not hash deposit %v", err)
-	}
-
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		log.Error(err)
-	}
-
-	root := trie.Root()
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: 1,
-		DepositRoot:  root[:],
-	}
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
 
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
@@ -312,6 +299,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	testutil.ResetCache()
 
 	deposits, keys := testutil.SetupInitialDeposits(t, 10)
 	deposits, root := testutil.GenerateDepositProof(t, deposits)
