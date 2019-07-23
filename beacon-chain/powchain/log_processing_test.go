@@ -45,7 +45,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -255,7 +255,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -322,7 +322,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart), true)
+	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart))
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number

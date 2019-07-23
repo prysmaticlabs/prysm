@@ -185,7 +185,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	depositRoot := trie.Root()
 	state.Eth1Data.DepositRoot = depositRoot[:]
 	for i, deposit := range deposits {
-		state, err = b.ProcessDeposit(state, deposit, validatorMap, false)
+		state, err = b.ProcessDeposit(state, deposit, validatorMap)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
 		}

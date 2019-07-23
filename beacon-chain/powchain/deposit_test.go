@@ -29,7 +29,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 
 	leaf, err := hashutil.DepositHash(deposits[0].Data)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 
 	leaf, err := hashutil.DepositHash(deposits[0].Data)
 	if err != nil {
@@ -117,7 +117,8 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := hashutil.DepositHash(deposits[0].Data)
 	if err != nil {
@@ -162,7 +163,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
@@ -210,7 +211,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, keys := testutil.SetupInitialDeposits(t, 1)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
 	deposits[0].Data.Signature = sig.Marshal()
 
@@ -257,7 +258,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 1, true)
+	deposits, keys := testutil.SetupInitialDeposits(t, 1)
 	deposits[0].Data.Amount = params.BeaconConfig().EffectiveBalanceIncrement // incomplete deposit
 
 	signedRoot, err := ssz.SigningRoot(deposits[0].Data)
@@ -310,7 +311,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	deposits, keys := testutil.SetupInitialDeposits(t, 10, true)
+	deposits, keys := testutil.SetupInitialDeposits(t, 10)
 
 	var leaves [][]byte
 	for _, dep := range deposits {
