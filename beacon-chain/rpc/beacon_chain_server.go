@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -71,4 +72,8 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	}
 	return &ethpb.ValidatorBalances{Balances: res}, nil
+}
+
+func (bs *BeaconChainServer) AttestationPool(ctx context.Context, _ *ptypes.Empty) (*ethpb.AttestationPoolResponse, error) {
+	return nil, nil
 }
