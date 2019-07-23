@@ -301,7 +301,6 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog(t *testing.T) {
-	t.Skip("Stuck waiting for chan event") // TODO: Fix before merge.
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	if err != nil {
