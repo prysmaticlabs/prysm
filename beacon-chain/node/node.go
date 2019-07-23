@@ -361,6 +361,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var attestationService *attestation.Service
+	if err := b.services.FetchService(&attestationService); err != nil {
+		return err
+	}
+
 	var syncService *rbcsync.Service
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
@@ -370,15 +375,16 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		BeaconDB:         b.db,
-		Broadcaster:      p2pService,
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
-		SyncService:      syncService,
+		Port:               port,
+		CertFlag:           cert,
+		KeyFlag:            key,
+		BeaconDB:           b.db,
+		Broadcaster:        p2pService,
+		AttestationService: attestationService,
+		ChainService:       chainService,
+		OperationService:   operationService,
+		POWChainService:    web3Service,
+		SyncService:        syncService,
 	})
 
 	return b.services.RegisterService(rpcService)
