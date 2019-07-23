@@ -27,7 +27,7 @@ func TestInitializeState_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 10)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestFinalizeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 20, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 20)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -100,7 +100,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(b, 10, false)
+	deposits, _ := testutil.SetupInitialDeposits(b, 10)
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}

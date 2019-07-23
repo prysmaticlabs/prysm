@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -15,6 +16,55 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
+}
+
+// ListAttestations retrieves attestations by block root, slot, or epoch.
+//
+// The server may return an empty list when no attestations match the given
+// filter criteria. This RPC should not return NOT_FOUND. Only one filter
+// criteria should be used.
+func (bs *BeaconChainServer) ListAttestations(
+	ctx context.Context, req *ethpb.ListAttestationsRequest,
+) (*ethpb.ListAttestationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// ListPendingAttestations retrieves pending attestations.
+//
+// The server returns a list of attestations that have been seen but not
+// yet processed. Pending attestations eventually expire as the slot
+// advances, so an attestation missing from this request does not imply
+// that it was included in a block. The attestation may have expired.
+// Refer to the ethereum 2.0 specification for more details on how
+// attestations are processed and when they are no longer valid.
+// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestation
+func (bs *BeaconChainServer) ListPendingAttestations(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ListPendingAttestationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// ListBlocks retrieves blocks by root, slot, or epoch.
+//
+// The server may return multiple blocks in the case that a slot or epoch is
+// provided as the filter criteria. The server may return an empty list when
+// no blocks in their database match the filter criteria. This RPC should
+// not return NOT_FOUND. Only one filter criteria should be used.
+func (bs *BeaconChainServer) ListBlocks(
+	ctx context.Context, req *ethpb.ListBlocksRequest,
+) (*ethpb.ListBlocksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// GetChainHead retrieves information about the head of the beacon chain from
+// the view of the beacon chain node.
+//
+// This includes the head block slot and root as well as information about
+// the most recent finalized and justified slots.
+func (bs *BeaconChainServer) GetChainHead(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ChainHead, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
@@ -74,7 +124,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
 
-// GetValidators retrieves the active validators with an optional historical epoch flag to
+// GetValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
 //
 // TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
@@ -122,4 +172,41 @@ func (bs *BeaconChainServer) GetValidators(
 		NextPageToken: strconv.Itoa(nextPage),
 	}
 	return res, nil
+}
+
+// GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
+//
+// This data includes any activations, voluntary exits, and involuntary
+// ejections.
+func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
+	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
+) (*ethpb.ActiveSetChanges, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// GetValidatorQueue retrieves the current validator queue information.
+func (bs *BeaconChainServer) GetValidatorQueue(
+	ctx context.Context, _ *ptypes.Empty,
+) (*ethpb.ValidatorQueue, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// ListValidatorAssignments retrieves the validator assignments for a given epoch.
+//
+// This request may specify optional validator indices or public keys to
+// filter validator assignments.
+func (bs *BeaconChainServer) ListValidatorAssignments(
+	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
+) (*ethpb.ValidatorAssignments, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// GetValidatorParticipation retrieves the validator participation information for a given epoch.
+//
+// This method returns information about the global participation of
+// validator attestations.
+func (bs *BeaconChainServer) GetValidatorParticipation(
+	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
+) (*ethpb.ValidatorParticipation, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
