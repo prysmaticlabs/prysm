@@ -107,6 +107,26 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	}
 }
 
+func TestEqualRoot(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	normalTrie, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	sparseTrie := NewSparseTrie(items, 32)
+	if normalTrie.Root() != sparseTrie.NewRoot() {
+		t.Errorf("Normal %#x, sparse %#x", normalTrie.Root(), sparseTrie.Root())
+	}
+}
+
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),
@@ -121,6 +141,21 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		if _, err := GenerateTrieFromItems(items, 32); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
+	}
+}
+
+func BenchmarkFastTrieFromItems(b *testing.B) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	for i := 0; i < b.N; i++ {
+		calcTreeFromLeaves(items, 32)
 	}
 }
 

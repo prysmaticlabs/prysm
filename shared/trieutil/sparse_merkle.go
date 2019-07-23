@@ -9,6 +9,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+var zeroHashes = make([][]byte, 100)
+
+func init() {
+	zeroHashes[0] = make([]byte, 32)
+	for i := 1; i < 100; i++ {
+		leaf := append(zeroHashes[i-1], zeroHashes[i-1]...)
+		result := hashutil.Hash(leaf)
+		zeroHashes[i] = result[:]
+	}
+}
+
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
@@ -195,4 +206,32 @@ func partition(layer [][]byte) [][][]byte {
 		chunks = append(chunks, layer[i:i+size])
 	}
 	return chunks
+}
+
+func NewSparseTrie(items [][]byte, depth int) *MerkleTrie {
+	layers := calcTreeFromLeaves(items, depth)
+	return &MerkleTrie{
+		branches: layers,
+	}
+}
+
+func (s *MerkleTrie) NewRoot() [32]byte {
+	return bytesutil.ToBytes32(s.branches[len(s.branches)-1][0])
+}
+
+func calcTreeFromLeaves(leaves [][]byte, depth int) [][][]byte {
+	layers := make([][][]byte, depth+1)
+	layers[0] = leaves
+	for i := 0; i < depth; i++ {
+		if len(layers[i])%2 == 1 {
+			layers[i] = append(layers[i], zeroHashes[i])
+		}
+		updatedValues := make([][]byte, 0, 0)
+		for j := 0; j < len(layers[i]); j += 2 {
+			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
+			updatedValues = append(updatedValues, concat[:])
+		}
+		layers[i+1] = updatedValues
+	}
+	return layers
 }
