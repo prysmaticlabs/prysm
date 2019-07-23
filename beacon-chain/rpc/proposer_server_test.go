@@ -23,6 +23,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -787,7 +792,7 @@ func TestEth1Data(t *testing.T) {
 	ps := &ProposerServer{
 		powChainService: &mockPOWChainService{
 			blockNumberByHeight: map[uint64]*big.Int{
-				55296: big.NewInt(4096),
+				60000: big.NewInt(4096),
 			},
 			hashesByHeight: map[int][]byte{
 				3072: []byte("3072"),
