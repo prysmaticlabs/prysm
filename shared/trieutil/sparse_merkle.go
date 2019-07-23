@@ -9,17 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-var zeroHashes = make([][]byte, 100)
-
-func init() {
-	zeroHashes[0] = make([]byte, 32)
-	for i := 1; i < 100; i++ {
-		leaf := append(zeroHashes[i-1], zeroHashes[i-1]...)
-		result := hashutil.Hash(leaf)
-		zeroHashes[i] = result[:]
-	}
-}
-
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
