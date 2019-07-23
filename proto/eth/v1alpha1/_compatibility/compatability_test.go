@@ -149,7 +149,7 @@ func TestProtoCompatability(t *testing.T) {
 		},
 		{
 			a: &pb.ListPendingAttestationsResponse{},
-			b: &upstreampb.ListPendingAttestationsResponse{},
+			b: &upstreampb.AttestationPoolResponse{},
 		},
 		// node.proto
 		{
