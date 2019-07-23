@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -25,8 +25,8 @@ import (
 )
 
 func startNode(ctx *cli.Context) error {
-	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(flags.PasswordFlag.Name)
 
 	exists, err := accounts.Exists(keystoreDirectory)
 	if err != nil {
@@ -71,8 +71,8 @@ func startNode(ctx *cli.Context) error {
 }
 
 func createValidatorAccount(ctx *cli.Context) (string, string, error) {
-	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(flags.PasswordFlag.Name)
 	if keystorePassword == "" {
 		reader := bufio.NewReader(os.Stdin)
 		logrus.Info("Create a new validator account for eth2")
@@ -120,8 +120,8 @@ func main() {
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
-						types.KeystorePathFlag,
-						types.PasswordFlag,
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
 					},
 					Action: func(ctx *cli.Context) {
 						if keystoreDir, _, err := createValidatorAccount(ctx); err != nil {
@@ -133,12 +133,12 @@ contract in order to activate the validator client`,
 		},
 	}
 	app.Flags = []cli.Flag{
-		types.NoCustomConfigFlag,
-		types.BeaconRPCProviderFlag,
-		types.CertFlag,
-		types.KeystorePathFlag,
-		types.PasswordFlag,
-		types.DisablePenaltyRewardLogFlag,
+		flags.NoCustomConfigFlag,
+		flags.BeaconRPCProviderFlag,
+		flags.CertFlag,
+		flags.KeystorePathFlag,
+		flags.PasswordFlag,
+		flags.DisablePenaltyRewardLogFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
