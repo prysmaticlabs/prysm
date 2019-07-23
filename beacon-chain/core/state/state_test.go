@@ -55,7 +55,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
 		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
 	}
-	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	depositsForChainStart := 100
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
