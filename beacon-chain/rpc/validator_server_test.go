@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -97,7 +99,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 8, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 8)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +135,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -167,7 +169,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -245,7 +247,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -350,6 +352,9 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 func TestValidatorStatus_Active(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -742,13 +747,26 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
-	pubKeys := [][]byte{{'A'}, {'B'}}
-	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+	priv1, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	priv2, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	pubKey1 := priv1.PublicKey().Marshal()[:]
+	pubKey2 := priv2.PublicKey().Marshal()[:]
+
+	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
+	if err := db.SaveValidatorIndex(pubKey2, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -758,12 +776,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKeys[0],
+				PublicKey:       pubKey1,
 			},
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKeys[1],
+				PublicKey:       pubKey2,
 			},
 		},
 	}
@@ -771,10 +789,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
-		PublicKey:             []byte{'A'},
-		Signature:             []byte("hi"),
+		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
+	signingRoot, err := ssz.SigningRoot(depData)
+	if err != nil {
+		t.Error(err)
+	}
+	domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
 
 	deposit := &ethpb.Deposit{
 		Data: depData,
@@ -784,10 +807,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
 	db.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKeys[1], 1); err != nil {
+	if err := db.SaveValidatorIndex(pubKey2, 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
@@ -798,7 +821,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		powChainService:    &mockPOWChainService{},
 	}
 	req := &pb.ValidatorActivationRequest{
-		PublicKeys: pubKeys,
+		PublicKeys: [][]byte{pubKey1, pubKey2},
 	}
 	ctrl := gomock.NewController(t)
 
@@ -808,7 +831,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
 			Statuses: []*pb.ValidatorActivationResponse_Status{
-				{PublicKey: []byte{'A'},
+				{PublicKey: pubKey1,
 					Status: &pb.ValidatorStatusResponse{
 						Status:                    pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber:    10,
@@ -816,7 +839,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 						PositionInActivationQueue: params.BeaconConfig().FarFutureEpoch,
 					},
 				},
-				{PublicKey: []byte{'B'},
+				{PublicKey: pubKey2,
 					Status: &pb.ValidatorStatusResponse{
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},

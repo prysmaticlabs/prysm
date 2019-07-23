@@ -55,14 +55,14 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
 		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
 	}
-	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	depositsForChainStart := 100
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart), false)
+	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	newState, err := state.GenesisBeaconState(
 		deposits,
@@ -179,7 +179,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
