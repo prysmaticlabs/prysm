@@ -258,7 +258,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	allDeps := ps.beaconDB.AllDeposits(ctx, bNum)
+	allDeps := ps.beaconDB.DepositCache.AllDeposits(ctx, bNum)
 	if len(allDeps) == 0 {
 		return nil, nil
 	}
@@ -287,7 +287,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
 	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
 	// so we want to avoid any possible mismatches in these lengths.
-	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	upToEth1DataDeposits := ps.beaconDB.DepositCache.AllDeposits(ctx, latestEth1DataHeight)
 	if len(upToEth1DataDeposits) != len(allDeps) {
 		return nil, nil
 	}
@@ -305,7 +305,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 
-	allPendingContainers := ps.beaconDB.PendingContainers(ctx, bNum)
+	allPendingContainers := ps.beaconDB.DepositCache.PendingContainers(ctx, bNum)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
@@ -346,7 +346,7 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	depositsTillHeight, depositRoot := ps.beaconDB.DepositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
 		return ps.powChainService.ChainStartETH1Data(), nil
 	}

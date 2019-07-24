@@ -148,7 +148,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.ProcessDepositLog(logs[0])
 	web3Service.ProcessDepositLog(logs[1])
-	pendingDeposits := web3Service.beaconDB.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.beaconDB.DepositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 2 deposit, got %+v", pendingDeposits)
 	}

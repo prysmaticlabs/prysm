@@ -326,7 +326,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -375,7 +375,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
@@ -455,7 +455,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -512,7 +512,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -569,7 +569,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -625,7 +625,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -679,7 +679,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -806,7 +806,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
 	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
@@ -899,7 +899,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
 		PublicKey:             []byte{'C'},
 		Signature:             []byte("hi"),
@@ -911,7 +911,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		Data: depData,
 	}
 	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
-	db.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
