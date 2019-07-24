@@ -8,7 +8,7 @@ go_library(
         "block_operations.go",
         "db.go",
         "deposit_contract.go",
-        "deposits.go",
+        "deposits_cache.go",
         "pending_deposits.go",
         "schema.go",
         "setup_db.go",

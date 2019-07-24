@@ -38,11 +38,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*DepositContainer
-	deposits              []*DepositContainer
-	depositsLock          sync.RWMutex
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
+	depositCache *DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -84,7 +80,9 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	depCache := NewDepositCache()
+
+	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, depositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
