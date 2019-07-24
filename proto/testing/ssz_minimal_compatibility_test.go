@@ -37,11 +37,11 @@ func TestYamlStatic_Minimal(t *testing.T) {
 		if err := yaml.Unmarshal(file, s); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		runTestCases_Minimal(t, s)
+		runTestCasesMinimal(t, s)
 	}
 }
 
-func runTestCases_Minimal(t *testing.T, s *sszspectest.SszMinimalTest) {
+func runTestCasesMinimal(t *testing.T, s *sszspectest.SszMinimalTest) {
 	for _, testCase := range s.TestCases {
 		if !testutil.IsEmpty(testCase.Attestation.Value) {
 			p := &ethpb.Attestation{}
