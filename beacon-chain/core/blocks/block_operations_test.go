@@ -11,14 +11,17 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	blsintern "github.com/phoreproject/bls"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1395,7 +1398,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
+func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
 	sk, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -1461,6 +1464,150 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	}
 	if newState.Balances[1] != 1000+50 {
 		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.Balances[1])
+	}
+}
+
+func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
+	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		dep[0],
+		stateutils.ValidatorIndexMap(beaconState),
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.Validators) != 2 {
+		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators))
+	}
+	if len(newState.Balances) != 2 {
+		t.Fatalf("Expected validator balances list to have length 2, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[1] != dep[0].Data.Amount {
+		t.Errorf(
+			"Expected state validator balances index 1 to equal %d, received %d",
+			dep[0].Data.Amount,
+			newState.Balances[1],
+		)
+	}
+}
+
+func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
+	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	dep[0].Data.Signature = make([]byte, 96)
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+	testutil.ResetCache() // Can't have an invalid signature in the cache.
+
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		dep[0],
+		stateutils.ValidatorIndexMap(beaconState),
+	)
+
+	if err != nil {
+		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
+	}
+	if newState.Eth1DepositIndex != 1 {
+		t.Errorf(
+			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
+			newState.Eth1DepositIndex,
+		)
+	}
+	if len(newState.Validators) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
+	}
+	if len(newState.Balances) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
+	}
+}
+
+func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
+	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
+	uncompressedSignature := a.SerializeBytes()
+	dep[0].Data.Signature = uncompressedSignature[:]
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
+
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		dep[0],
+		stateutils.ValidatorIndexMap(beaconState),
+	)
+
+	if err != nil {
+		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
+	}
+	if newState.Eth1DepositIndex != 1 {
+		t.Errorf(
+			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
+			newState.Eth1DepositIndex,
+		)
+	}
+	if len(newState.Validators) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
+	}
+	if len(newState.Balances) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
 	}
 }
 
