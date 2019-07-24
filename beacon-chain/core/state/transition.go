@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -57,10 +58,10 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
+	helpers.ClearStartShardCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
-
 	// Execute per slots transition.
 	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
@@ -153,6 +154,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, fmt.Errorf("could not process slot: %v", err)
 		}
 		if CanProcessEpoch(state) {
+			logrus.Info("Processing Epoch")
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
 				return nil, fmt.Errorf("could not process epoch: %v", err)
