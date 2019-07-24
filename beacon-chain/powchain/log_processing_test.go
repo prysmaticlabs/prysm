@@ -38,8 +38,10 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
-		BlockFetcher:    &goodFetcher{},
+		BeaconDB: &db.BeaconDB{
+			DepositCache: db.NewDepositCache(),
+		},
+		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -99,7 +101,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB: &db.BeaconDB{
+			DepositCache: db.NewDepositCache(),
+		},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -245,8 +249,10 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
-		BlockFetcher:    &goodFetcher{},
+		BeaconDB: &db.BeaconDB{
+			DepositCache: db.NewDepositCache(),
+		},
+		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -313,8 +319,10 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
-		BlockFetcher:    &goodFetcher{},
+		BeaconDB: &db.BeaconDB{
+			DepositCache: db.NewDepositCache(),
+		},
+		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
