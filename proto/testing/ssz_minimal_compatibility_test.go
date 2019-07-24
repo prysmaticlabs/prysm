@@ -15,7 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestYamlStatic(t *testing.T) {
+func TestYamlStatic_Minimal(t *testing.T) {
+	t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //...")
+
 	topPath := "tests/ssz_static/core/"
 	yamlFileNames := []string{
 		"ssz_minimal_random.yaml",
@@ -35,11 +37,11 @@ func TestYamlStatic(t *testing.T) {
 		if err := yaml.Unmarshal(file, s); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		runTestCases(t, s)
+		runTestCases_Minimal(t, s)
 	}
 }
 
-func runTestCases(t *testing.T, s *sszspectest.SszMinimalTest) {
+func runTestCases_Minimal(t *testing.T, s *sszspectest.SszMinimalTest) {
 	for _, testCase := range s.TestCases {
 		if !testutil.IsEmpty(testCase.Attestation.Value) {
 			p := &ethpb.Attestation{}

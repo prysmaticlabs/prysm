@@ -13,8 +13,10 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func TestSlotProcessingMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile("tests/sanity/slots/sanity_slots_mainnet.yaml")
+const slotProcessingPrefix = "tests/sanity/slots/"
+
+func runSlotProcessingTests(t *testing.T, filename string) {
+	filepath, err := bazel.Runfile(slotProcessingPrefix + filename)
 	if err != nil {
 		t.Fatal(err)
 	}
