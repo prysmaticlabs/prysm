@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -697,24 +696,20 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
 
-	copiedBit0Indices := make([]uint64, len(custodyBit0Indices))
-	copy(copiedBit0Indices, custodyBit0Indices)
-
-	sort.SliceStable(copiedBit0Indices, func(i, j int) bool {
-		return copiedBit0Indices[i] < copiedBit0Indices[j]
+	custodyBit0IndicesIsSorted := sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
 	})
-	if !reflect.DeepEqual(copiedBit0Indices, custodyBit0Indices) {
-		return fmt.Errorf("custody Bit0 indices are not sorted, wanted %v but got %v", copiedBit0Indices, custodyBit0Indices)
+
+	if !custodyBit0IndicesIsSorted {
+		return fmt.Errorf("custody Bit0 indices are not sorted, got %v", custodyBit0Indices)
 	}
 
-	copiedBit1Indices := make([]uint64, len(custodyBit1Indices))
-	copy(copiedBit1Indices, custodyBit1Indices)
-
-	sort.SliceStable(copiedBit1Indices, func(i, j int) bool {
-		return copiedBit1Indices[i] < copiedBit1Indices[j]
+	custodyBit1IndicesIsSorted := sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
+		return custodyBit1Indices[i] < custodyBit1Indices[j]
 	})
-	if len(custodyBit1Indices) > 0 && !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
-		return fmt.Errorf("custody Bit1 indices are not sorted, wanted %v but got %v", copiedBit1Indices, custodyBit1Indices)
+
+	if !custodyBit1IndicesIsSorted {
+		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
 	if verifySignatures {
