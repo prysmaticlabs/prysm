@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -29,7 +30,15 @@ type BeaconChainServer struct {
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	switch query := req.QueryFilter.(type) {
+	case *ethpb.ListAttestationsRequest_BlockRoot:
+		fmt.Println(query.BlockRoot)
+	case *ethpb.ListAttestationsRequest_Slot:
+		fmt.Println(query.Slot)
+	case *ethpb.ListAttestationsRequest_Epoch:
+		fmt.Println(query.Epoch)
+	}
+	return nil, nil
 }
 
 // AttestationPool retrieves pending attestations.
