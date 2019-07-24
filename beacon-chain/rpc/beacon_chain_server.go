@@ -2,13 +2,12 @@ package rpc
 
 import (
 	"context"
-	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -139,19 +138,12 @@ func (bs *BeaconChainServer) GetValidators(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
-	totalSize := len(validators)
 
-	// If options PageToken and PageSize are not specified, return the validator list capped at DefaultPageSize.
-	if req.PageToken == "" && req.PageSize == 0 {
-		last := len(validators)
-		if totalSize > params.BeaconConfig().DefaultPageSize {
-			last = params.BeaconConfig().DefaultPageSize
-		}
-		return &ethpb.Validators{
-			Validators:    validators[0:last],
-			TotalSize:     int32(totalSize),
-			NextPageToken: strconv.Itoa(0),
-		}, nil
+	if req.PageToken == "" {
+		req.PageToken = "0"
+	}
+	if req.PageSize == 0 {
+		req.PageSize = int32(params.BeaconConfig().DefaultPageSize)
 	}
 
 	pageSize := int(req.PageSize)
@@ -160,16 +152,14 @@ func (bs *BeaconChainServer) GetValidators(
 		pageSize = params.BeaconConfig().MaxPageSize
 	}
 
-	pageToken := 0
-	if req.PageToken != "" {
-		pageToken, err = strconv.Atoi(req.PageToken)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
-		}
+	pageToken, err := strconv.Atoi(req.PageToken)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
 	}
 
 	// Start page can not be greater than validator size.
 	start := pageToken * pageSize
+	totalSize := len(validators)
 	if start >= totalSize {
 		return nil, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
 			start, totalSize)
@@ -180,7 +170,7 @@ func (bs *BeaconChainServer) GetValidators(
 	if end > totalSize {
 		end = totalSize
 	}
-	fmt.Println(start, end)
+
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
 		TotalSize:     int32(totalSize),
