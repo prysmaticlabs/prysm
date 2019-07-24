@@ -30,11 +30,6 @@ func (m *mockPool) PooledAttestations() []*ethpb.Attestation {
 				BeaconBlockRoot: []byte("2"),
 			},
 		},
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("3"),
-			},
-		},
 	}
 }
 

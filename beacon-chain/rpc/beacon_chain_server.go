@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -32,11 +31,11 @@ func (bs *BeaconChainServer) ListAttestations(
 ) (*ethpb.ListAttestationsResponse, error) {
 	switch query := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
-		fmt.Println(query.BlockRoot)
+		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
-		fmt.Println(query.Slot)
+		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Epoch:
-		fmt.Println(query.Epoch)
+		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}
 	return nil, nil
 }
