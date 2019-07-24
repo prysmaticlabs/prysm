@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -95,7 +97,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -108,7 +110,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -123,14 +125,58 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	return &ethpb.ValidatorBalances{Balances: res}, nil
 }
 
-// GetValidators retrieves the current list of active validators.
+// GetValidators retrieves the current list of active validators with an optional historical epoch flag to
+// to retrieve validator set in time.
 //
-// The request may include an optional historical epoch to retrieve a
-// specific validator set in time.
+// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
+// this is blocked by DB refactor.
 func (bs *BeaconChainServer) GetValidators(
-	ctx context.Context, req *ethpb.GetValidatorsRequest,
-) (*ethpb.Validators, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	ctx context.Context,
+	req *ethpb.GetValidatorsRequest) (*ethpb.Validators, error) {
+
+	validators, err := bs.beaconDB.Validators(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
+	}
+
+	if req.PageToken == "" {
+		req.PageToken = "0"
+	}
+	if req.PageSize == 0 {
+		req.PageSize = int32(params.BeaconConfig().DefaultPageSize)
+	}
+
+	pageSize := int(req.PageSize)
+	// Input page size can't be greater than MaxPageSize.
+	if pageSize > params.BeaconConfig().MaxPageSize {
+		pageSize = params.BeaconConfig().MaxPageSize
+	}
+
+	pageToken, err := strconv.Atoi(req.PageToken)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
+	}
+
+	// Start page can not be greater than validator size.
+	start := pageToken * pageSize
+	totalSize := len(validators)
+	if start >= totalSize {
+		return nil, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
+			start, totalSize)
+	}
+
+	// End page can not go out of bound.
+	end := start + pageSize
+	if end > totalSize {
+		end = totalSize
+	}
+
+	res := &ethpb.Validators{
+		Validators:    validators[start:end],
+		TotalSize:     int32(totalSize),
+		NextPageToken: strconv.Itoa(pageToken + 1),
+	}
+	return res, nil
 }
 
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
