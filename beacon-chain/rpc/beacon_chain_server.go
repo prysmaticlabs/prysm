@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -138,43 +139,17 @@ func (bs *BeaconChainServer) GetValidators(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
+	validatorCount := len(validators)
 
-	if req.PageToken == "" {
-		req.PageToken = "0"
-	}
-	if req.PageSize == 0 {
-		req.PageSize = int32(params.BeaconConfig().DefaultPageSize)
-	}
-
-	pageSize := int(req.PageSize)
-	// Input page size can't be greater than MaxPageSize.
-	if pageSize > params.BeaconConfig().MaxPageSize {
-		pageSize = params.BeaconConfig().MaxPageSize
-	}
-
-	pageToken, err := strconv.Atoi(req.PageToken)
+	start, end, nextToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
-	}
-
-	// Start page can not be greater than validator size.
-	start := pageToken * pageSize
-	totalSize := len(validators)
-	if start >= totalSize {
-		return nil, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
-			start, totalSize)
-	}
-
-	// End page can not go out of bound.
-	end := start + pageSize
-	if end > totalSize {
-		end = totalSize
+		return nil, err
 	}
 
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
-		TotalSize:     int32(totalSize),
-		NextPageToken: strconv.Itoa(pageToken + 1),
+		TotalSize:     int32(validatorCount),
+		NextPageToken: strconv.Itoa(nextToken),
 	}
 	return res, nil
 }
@@ -196,14 +171,77 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-// ListValidatorAssignments retrieves the validator assignments for a given epoch.
+// ListValidatorAssignments retrieves the validator assignments for a given epoch,
+// optional validator indices or public keys may be included to filter validator assignments.
 //
-// This request may specify optional validator indices or public keys to
-// filter validator assignments.
+// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
+// this is blocked by DB refactor.
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+
+	e := req.Epoch
+	s, err := bs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
+	}
+
+	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
+	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
+
+	for _, pubKey := range req.PublicKeys {
+		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		filtered[index] = true
+
+		if int(index) >= len(s.Validators) {
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+				index, len(s.Validators))
+		}
+
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		}
+
+		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           pubKey,
+		})
+	}
+
+	for _, index := range req.Indices {
+		if int(index) >= len(s.Validators) {
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+				index, len(s.Validators))
+		}
+
+		if !filtered[index] {
+			committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
+
+			res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+				CrosslinkCommittees: committee,
+				Shard:               shard,
+				Slot:                slot,
+				Proposer:            isProposer,
+				PublicKey:           s.Validators[index].PublicKey,
+			})
+		}
+	}
+
+	if len(res) > 0 {
+
+	}
+
+	return nil, nil
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch.
@@ -214,4 +252,41 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+// startAndEndPage is a pagination wrapper, it takes in the requested page token, size, total size,
+// and returns start, end page and the next token.
+func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, int, error) {
+	if pageToken == "" {
+		pageToken = "0"
+	}
+	if pageSize == 0 {
+		pageSize = params.BeaconConfig().DefaultPageSize
+	}
+
+	// Input page size can't be greater than MaxPageSize.
+	if pageSize > params.BeaconConfig().MaxPageSize {
+		pageSize = params.BeaconConfig().MaxPageSize
+	}
+
+	token, err := strconv.Atoi(pageToken)
+	if err != nil {
+		return 0, 0, 0, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
+	}
+
+	// Start page can not be greater than validator size.
+	start := token * pageSize
+	if start >= totalSize {
+		return 0, 0, 0, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
+			start, totalSize)
+	}
+
+	// End page can not go out of bound.
+	end := start + pageSize
+	if end > totalSize {
+		end = totalSize
+	}
+
+	token++
+	return start, end, token, nil
 }
