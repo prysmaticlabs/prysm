@@ -6,12 +6,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"io/ioutil"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	blsintern "github.com/phoreproject/bls"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -1396,7 +1398,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
+func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
 	sk, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -1465,200 +1467,79 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	}
 }
 
-func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
-	// Same test settings as in TestProcessDeposit_PublicKeyDoesNotExist, except that we add an explicit invalid
-	// signature and test the signature validity this time.
+func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
+	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+
 	registry := []*ethpb.Validator{
 		{
-			PublicKey:             []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			PublicKey:             []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
-	balances := []uint64{1000, 1000}
+	balances := []uint64{0}
 	beaconState := &pb.BeaconState{
-		Balances: balances,
-		Fork: &pb.Fork{
-			Epoch:          0,
-			CurrentVersion: []byte{0, 0, 0, 0},
-		},
 		Validators: registry,
-		Eth1Data: &ethpb.Eth1Data{},
-	}
-
-	deposit := &ethpb.Deposit{
-		Proof: [][]byte{{}},
-		Data: &ethpb.Deposit_Data{
-			PublicKey:             []byte{7, 8, 9},
-			WithdrawalCredentials: []byte{1},
-			Amount:                uint64(2000),
-			Signature:             make([]byte, 96),
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	}
-
 	newState, err := blocks.ProcessDeposit(
 		beaconState,
-		deposit,
-		stateutils.ValidatorIndexMap(beaconState),
-	)
-
-	if err != nil {
-		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
-	}
-	if newState.Eth1DepositIndex != 1 {
-		t.Errorf(
-			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
-			newState.Eth1DepositIndex,
-		)
-	}
-	if len(newState.Validators) != 2 {
-		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators))
-	}
-	if len(newState.Balances) != 2 {
-		t.Errorf("Expected validator balances list to have length 2, received: %v", len(newState.Balances))
-	}
-}
-
-func TestProcessDeposit_PublicKeyDoesNotExist_ValidSignature(t *testing.T) {
-	// Same test settings as in TestProcessDeposit_PublicKeyDoesNotExist but with a valid signature and signature test
-	// on.
-	//
-	// The key pair was obtained by using the private key (in bytes) 1, 2, 3, ..., 32
-	// An example for computing the pair and the signature using the bls library:
-	//   key, _ := bls.SecretKeyFromBytes([]byte{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,
-	//                                           27,28,29,30,31,32})
-	//   pubBytes := key.PublicKey().Marshal()
-	//	 deposit.Data.PublicKey = pubBytes
-	//   root, _ := ssz.SigningRoot(deposit.Data)
-	//   sig := key.Sign(root[:], domain)
-	//   sigBytes := sig.Marshal()
-	//   fmt.Printf("%#v\n", pubBytes)
-	//   fmt.Printf("%#v", sigBytes)
-	registry := []*ethpb.Validator{
-		{
-			PublicKey:             []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			PublicKey:             []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
-		},
-	}
-	balances := []uint64{1000, 1000}
-	beaconState := &pb.BeaconState{
-		Balances: balances,
-		Fork: &pb.Fork{
-			Epoch:          0,
-			CurrentVersion: []byte{0, 0, 0, 0},
-		},
-		Validators: registry,
-		Eth1Data: &ethpb.Eth1Data{},
-	}
-
-	deposit := &ethpb.Deposit{
-		Proof: [][]byte{{}},
-		Data: &ethpb.Deposit_Data{
-			PublicKey: []byte{0x96, 0xa2, 0xb, 0xb9, 0x48, 0x5f, 0xf6, 0xd8, 0x95, 0x9, 0x55, 0xa6, 0x29,
-				0xe8, 0x4, 0x3a, 0x43, 0x77, 0x59, 0x68, 0xac, 0x13, 0x3e, 0xb7, 0xb1, 0x9c, 0x5f, 0x3, 0x89, 0xa2,
-				0x25, 0x36, 0x76, 0xab, 0xdd, 0x6c, 0x86, 0xc7, 0xb6, 0x8d, 0x38, 0xa1, 0xb7, 0xf6, 0xaf, 0x86, 0x50,
-				0xe7},
-			WithdrawalCredentials: []byte{1},
-			Amount:                uint64(2000),
-			Signature: []byte{0xb6, 0xa0, 0x39, 0x7d, 0x37, 0xa9, 0xed, 0x30, 0xd5, 0xc3, 0x9b, 0x3b, 0xb3, 0x7, 0x62,
-				0xa0, 0xf4, 0xbc, 0xfc, 0x4b, 0x98, 0x79, 0x6e, 0x10, 0x8, 0x85, 0xd0, 0x6a, 0xae, 0xe6, 0x87, 0x60,
-				0x71, 0x32, 0xde, 0x2d, 0xcc, 0xa2, 0x2c, 0x52, 0x2a, 0xc, 0xb2, 0xc0, 0xa4, 0xf8, 0x89, 0xe4, 0x11,
-				0x23, 0x18, 0x37, 0xfd, 0xd, 0x35, 0x99, 0x2a, 0x8f, 0xb, 0xe8, 0xc8, 0x36, 0x8a, 0x6c, 0x6f, 0x1a,
-				0x27, 0xe, 0xd1, 0xea, 0x6d, 0x5b, 0x45, 0x8, 0xce, 0xf9, 0x67, 0x9, 0xc9, 0x91, 0xdf, 0xff, 0x31, 0x87,
-				0x37, 0x20, 0x85, 0x82, 0x76, 0x92, 0xea, 0x3c, 0xf0, 0x71, 0x9e, 0x43},
-		},
-	}
-
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		deposit,
+		dep[0],
 		stateutils.ValidatorIndexMap(beaconState),
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if len(newState.Balances) != 3 {
-		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.Balances))
+	if len(newState.Validators) != 2 {
+		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators))
 	}
-	if newState.Balances[2] != 2000 {
-		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.Balances[2])
+	if len(newState.Balances) != 2 {
+		t.Fatalf("Expected validator balances list to have length 2, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[1] != dep[0].Data.Amount {
+		t.Errorf(
+			"Expected state validator balances index 1 to equal %d, received %d",
+			dep[0].Data.Amount,
+			newState.Balances[1],
+		)
 	}
 }
 
-func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
-	// Same test settings as in TestProcessDeposit_PublicKeyDoesNotExist but with a valid signature and signature test
-	// on.
-	//
-	// The key pair was obtained by using the private key (in bytes) 1, 2, 3, ..., 32
-	// An example for computing the pair and the signature using the bls library:
-	//   key, _ := bls.SecretKeyFromBytes([]byte{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,
-	//                                           27,28,29,30,31,32})
-	//   pubBytes := key.PublicKey().Marshal()
-	//   deposit.Data.PublicKey = pubBytes
-	//   root, _ := ssz.SigningRoot(deposit.Data)
-	//   sig := key.Sign(root[:], domain)
-	//   b := bytesutil.ToBytes96(sig.Marshal())
-	//	 a, _ := blsintern.DecompressG2(b)
-	//	 SigDecompressedBytes := a.SerializeBytes()
-	//   fmt.Printf("%#v\n", pubBytes)
-	//	 fmt.Printf("%#v", SigDecompressedBytes[:])
+func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
+	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	dep[0].Data.Signature = make([]byte, 96)
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+	testutil.ResetCache() // Can't have an invalid signature in the cache.
+
 	registry := []*ethpb.Validator{
 		{
-			PublicKey:             []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
-		},
-		{
-			PublicKey:             []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
 		},
 	}
-	balances := []uint64{1000, 1000}
+	balances := []uint64{0}
 	beaconState := &pb.BeaconState{
-		Balances: balances,
-		Fork: &pb.Fork{
-			Epoch:          0,
-			CurrentVersion: []byte{0, 0, 0, 0},
-		},
 		Validators: registry,
-		Eth1Data: &ethpb.Eth1Data{},
-	}
-
-	deposit := &ethpb.Deposit{
-		Proof: [][]byte{{}},
-		Data: &ethpb.Deposit_Data{
-			PublicKey: []byte{0x96, 0xa2, 0xb, 0xb9, 0x48, 0x5f, 0xf6, 0xd8, 0x95, 0x9, 0x55, 0xa6, 0x29,
-				0xe8, 0x4, 0x3a, 0x43, 0x77, 0x59, 0x68, 0xac, 0x13, 0x3e, 0xb7, 0xb1, 0x9c, 0x5f, 0x3, 0x89, 0xa2,
-				0x25, 0x36, 0x76, 0xab, 0xdd, 0x6c, 0x86, 0xc7, 0xb6, 0x8d, 0x38, 0xa1, 0xb7, 0xf6, 0xaf, 0x86, 0x50,
-				0xe7},
-			WithdrawalCredentials: []byte{1},
-			Amount:                uint64(2000),
-			Signature: []byte{0x11, 0x23, 0x18, 0x37, 0xfd, 0xd, 0x35, 0x99, 0x2a, 0x8f, 0xb, 0xe8, 0xc8, 0x36, 0x8a,
-				0x6c, 0x6f, 0x1a, 0x27, 0xe, 0xd1, 0xea, 0x6d, 0x5b, 0x45, 0x8, 0xce, 0xf9, 0x67, 0x9, 0xc9, 0x91, 0xdf,
-				0xff, 0x31, 0x87, 0x37, 0x20, 0x85, 0x82, 0x76, 0x92, 0xea, 0x3c, 0xf0, 0x71, 0x9e, 0x43, 0x16, 0xa0,
-				0x39, 0x7d, 0x37, 0xa9, 0xed, 0x30, 0xd5, 0xc3, 0x9b, 0x3b, 0xb3, 0x7, 0x62, 0xa0, 0xf4, 0xbc, 0xfc,
-				0x4b, 0x98, 0x79, 0x6e, 0x10, 0x8, 0x85, 0xd0, 0x6a, 0xae, 0xe6, 0x87, 0x60, 0x71, 0x32, 0xde, 0x2d,
-				0xcc, 0xa2, 0x2c, 0x52, 0x2a, 0xc, 0xb2, 0xc0, 0xa4, 0xf8, 0x89, 0xe4, 0x8, 0x36, 0xd4, 0x83, 0xf3,
-				0xb3, 0x94, 0xed, 0x70, 0x4b, 0x88, 0x0, 0x42, 0x64, 0x22, 0xfb, 0x78, 0x37, 0x2b, 0x6, 0xdb, 0xe6,
-				0xd4, 0x2e, 0x97, 0x5b, 0x18, 0xbe, 0xf6, 0x16, 0x21, 0x6, 0xd5, 0xd1, 0x46, 0x31, 0x6e, 0xb5, 0xfc,
-				0xc2, 0x1c, 0xe, 0xa7, 0xd2, 0x32, 0x73, 0x67, 0x87, 0x19, 0x31, 0x7e, 0xe9, 0x99, 0xde, 0x6d, 0xdb,
-				0xf3, 0x8d, 0x2d, 0x43, 0x27, 0x75, 0x7a, 0x47, 0xff, 0x8, 0xf0, 0x1e, 0x86, 0x4d, 0xa6, 0xff, 0x5a,
-				0x41, 0x6f, 0x9a, 0x88, 0x4, 0x34, 0xe9, 0x63, 0xda, 0x9e, 0x37, 0x5d, 0x42, 0xb, 0x24, 0x13, 0x3c,
-				0xc0, 0x80, 0x90, 0xd9, 0x7f, 0x5f},
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	}
-
 	newState, err := blocks.ProcessDeposit(
 		beaconState,
-		deposit,
+		dep[0],
 		stateutils.ValidatorIndexMap(beaconState),
 	)
+
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
@@ -1668,11 +1549,65 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 			newState.Eth1DepositIndex,
 		)
 	}
-	if len(newState.Validators) != 2 {
-		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators))
+	if len(newState.Validators) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
 	}
-	if len(newState.Balances) != 2 {
-		t.Errorf("Expected validator balances list to have length 2, received: %v", len(newState.Balances))
+	if len(newState.Balances) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
+	}
+}
+
+func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
+	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
+	dep, _ := testutil.SetupInitialDeposits(t, 1)
+	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
+	uncompressedSignature := a.SerializeBytes()
+	dep[0].Data.Signature = uncompressedSignature[:]
+	eth1Data := testutil.GenerateEth1Data(t, dep)
+	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
+
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	newState, err := blocks.ProcessDeposit(
+		beaconState,
+		dep[0],
+		stateutils.ValidatorIndexMap(beaconState),
+	)
+
+	if err != nil {
+		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
+	}
+	if newState.Eth1DepositIndex != 1 {
+		t.Errorf(
+			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
+			newState.Eth1DepositIndex,
+		)
+	}
+	if len(newState.Validators) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
+	}
+	if len(newState.Balances) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
+	}
+	if newState.Balances[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
 	}
 }
 
