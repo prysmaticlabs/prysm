@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -38,7 +39,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	DepositCache *DepositCache
+	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -80,7 +81,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	depCache := NewDepositCache()
+	depCache := depositcache.NewDepositCache()
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)

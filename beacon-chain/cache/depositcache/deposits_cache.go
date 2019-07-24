@@ -1,4 +1,4 @@
-package db
+package depositcache
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -57,7 +57,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"block":        blockNum,
 			"deposit":      d,
 			"index":        index,

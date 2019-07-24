@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -39,7 +40,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB: &db.BeaconDB{
-			DepositCache: db.NewDepositCache(),
+			DepositCache: depositcache.NewDepositCache(),
 		},
 		BlockFetcher: &goodFetcher{},
 	})
@@ -102,7 +103,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB: &db.BeaconDB{
-			DepositCache: db.NewDepositCache(),
+			DepositCache: depositcache.NewDepositCache(),
 		},
 	})
 	if err != nil {
@@ -250,7 +251,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB: &db.BeaconDB{
-			DepositCache: db.NewDepositCache(),
+			DepositCache: depositcache.NewDepositCache(),
 		},
 		BlockFetcher: &goodFetcher{},
 	})
@@ -320,7 +321,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB: &db.BeaconDB{
-			DepositCache: db.NewDepositCache(),
+			DepositCache: depositcache.NewDepositCache(),
 		},
 		BlockFetcher: &goodFetcher{},
 	})

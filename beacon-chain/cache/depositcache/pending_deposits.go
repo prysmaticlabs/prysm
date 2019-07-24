@@ -1,4 +1,4 @@
-package db
+package depositcache
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -26,7 +26,7 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"block":   blockNum,
 			"deposit": d,
 		}).Debug("Ignoring nil deposit insertion")
