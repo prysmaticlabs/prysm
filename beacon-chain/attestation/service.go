@@ -20,6 +20,12 @@ import (
 
 var log = logrus.WithField("prefix", "attestation")
 
+// Pool defines an interface for fetching the list of attestations
+// currently kept in an in-memory pool during the beacon node's runtime.
+type Pool interface {
+	PooledAttestations() []*ethpb.Attestation
+}
+
 // TargetHandler provides an interface for fetching latest attestation targets
 // and updating attestations in batches.
 type TargetHandler interface {
@@ -85,6 +91,12 @@ func (a *Service) Stop() error {
 // TODO(#1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
+}
+
+// PooledAttestations returns the list of in-memory attestations that
+// have been observed and have yet to be processed into blocks.
+func (a *Service) PooledAttestations() []*ethpb.Attestation {
+	return a.pooledAttestations
 }
 
 // IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.

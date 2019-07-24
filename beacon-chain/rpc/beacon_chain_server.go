@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,6 +18,7 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
+	pool     attestation.Pool
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
@@ -42,7 +44,9 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	return &ethpb.AttestationPoolResponse{
+		Attestations: bs.pool.PooledAttestations(),
+	}, nil
 }
 
 // ListBlocks retrieves blocks by root, slot, or epoch.

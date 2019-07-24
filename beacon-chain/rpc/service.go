@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -80,6 +81,7 @@ type Service struct {
 	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
+	attestationService  attestation.Pool
 	syncService         syncService
 	port                string
 	listener            net.Listener
@@ -94,15 +96,16 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port             string
-	CertFlag         string
-	KeyFlag          string
-	BeaconDB         *db.BeaconDB
-	ChainService     chainService
-	POWChainService  powChainService
-	OperationService operationService
-	SyncService      syncService
-	Broadcaster      p2p.Broadcaster
+	Port               string
+	CertFlag           string
+	KeyFlag            string
+	BeaconDB           *db.BeaconDB
+	AttestationService attestation.Pool
+	ChainService       chainService
+	POWChainService    powChainService
+	OperationService   operationService
+	SyncService        syncService
+	Broadcaster        p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -199,6 +202,7 @@ func (s *Service) Start() {
 	}
 	beaconChainServer := &BeaconChainServer{
 		beaconDB: s.beaconDB,
+		pool:     s.attestationService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
