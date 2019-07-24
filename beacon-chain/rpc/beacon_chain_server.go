@@ -29,7 +29,7 @@ type BeaconChainServer struct {
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	switch query := req.QueryFilter.(type) {
+	switch req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
