@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -118,16 +117,6 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
-	}
-	newBlk, _ := ps.beaconDB.Block(root)
-	diff, _ := messagediff.PrettyDiff(newBlk, blk)
-	if len(diff) != 0 {
-		log.Error("Block Diff %s", diff)
-	}
-	newState, _ := ps.beaconDB.HistoricalStateFromSlot(ctx, blk.Slot, root)
-	diff, _ = messagediff.PrettyDiff(newState, beaconState)
-	if len(diff) != 0 {
-		log.Error("state Diff %s", diff)
 	}
 
 	ps.chainService.UpdateCanonicalRoots(blk, root)

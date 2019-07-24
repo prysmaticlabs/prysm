@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -154,7 +153,6 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, fmt.Errorf("could not process slot: %v", err)
 		}
 		if CanProcessEpoch(state) {
-			logrus.Info("Processing Epoch")
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
 				return nil, fmt.Errorf("could not process epoch: %v", err)
