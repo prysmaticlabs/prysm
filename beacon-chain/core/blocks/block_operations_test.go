@@ -1557,7 +1557,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().ShardCount, true)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().ShardCount)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
