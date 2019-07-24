@@ -122,6 +122,10 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 		return err
 	}
 
+	if parentBlock == nil {
+		return fmt.Errorf("parent block with root %#x doesnt exist in the db", parentRoot)
+	}
+
 	state, err := s.db.HistoricalStateFromSlot(ctx, parentBlock.Slot, parentRoot)
 	if err != nil {
 		return err
