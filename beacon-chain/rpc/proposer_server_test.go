@@ -122,7 +122,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Error(err)
 	}
 	beaconState.Slot--
-	signingRoot, err := ssz.HashTreeRoot(req)
+	signingRoot, err := ssz.SigningRoot(req)
 	if err != nil {
 		t.Error(err)
 	}

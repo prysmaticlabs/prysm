@@ -68,19 +68,10 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 			Eth1Data:     eth1Data,
 		},
 	}
-	beaconState.Slot++
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot--
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
-	block.Signature = sig.Marshal()[:]
 
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig())
 	if err != nil {
@@ -145,17 +136,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
-	block.Signature = sig.Marshal()[:]
 
 	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
@@ -275,17 +259,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Deposits: make([]*ethpb.Deposit, 0),
 		},
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err = ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	domain = helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
-	block.Signature = sig.Marshal()[:]
 	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -569,18 +546,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err = ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain = helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	sig := privKeys[proposerIdx].Sign(signingRoot[:], domain)
-	block.Signature = sig.Marshal()[:]
 
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig())
 	if err != nil {

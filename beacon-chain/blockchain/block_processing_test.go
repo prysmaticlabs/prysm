@@ -164,19 +164,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-	beaconState.Slot++
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot--
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	block.Signature = blockSig[:]
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
@@ -187,16 +178,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
-	proposerIdx, err = helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err = ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	block.Signature = blockSig[:]
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -265,39 +250,24 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-	beaconState.Slot++
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot--
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	block.Signature = blockSig[:]
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.SigningRoot(s)
+	stateRoot, err := ssz.HashTreeRoot(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
-	proposerIdx, err = helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err = ssz.SigningRoot(block)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	block.Signature = blockSig[:]
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -447,19 +417,16 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	goodStateBlock, err = helpers.SignBlock(beaconState, goodStateBlock, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err := ssz.SigningRoot(goodStateBlock)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	goodStateBlock.Signature = blockSig[:]
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
+	goodStateBlock, err = helpers.SignBlock(beaconState, goodStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
 		t.Fatal(err)
@@ -523,17 +490,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	invalidStateBlock, err = helpers.SignBlock(beaconState, invalidStateBlock, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err := ssz.SigningRoot(invalidStateBlock)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	invalidStateBlock.Signature = blockSig[:]
 	beaconState.Slot--
 
 	_, err = chainService.ReceiveBlock(context.Background(), invalidStateBlock)
@@ -641,6 +601,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits:     pendingDeposits,
 		},
 	}
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	beaconState.Slot--
 
 	beaconState.Eth1DepositIndex = 0
@@ -653,21 +618,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
-
-	beaconState.Slot++
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = helpers.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot--
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	dt := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], dt)
-	block.Signature = blockSig.Marshal()[:]
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -803,7 +757,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 				RandaoReveal: randaoReveal,
 			},
 		}
+		block, err = helpers.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		initBlockStateRoot(t, block, chainService)
+		block, err = helpers.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		computedState, err := chainService.ReceiveBlock(ctx, block)
 		if err != nil {
 			t.Fatal(err)
@@ -865,7 +827,16 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	blockF, err = helpers.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockF, chainService)
+	blockF, err = helpers.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
@@ -901,23 +872,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
+	blockG, err = helpers.SignBlock(beaconState, blockG, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockG, chainService)
-
-	slot := beaconState.Slot
-	beaconState.Slot = genesisSlot + 7
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	blockG, err = helpers.SignBlock(beaconState, blockG, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot = slot
-	signingRoot, err := ssz.SigningRoot(blockG)
-	if err != nil {
-		t.Error(err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	blockG.Signature = blockSig[:]
 
 	computedState, err = chainService.ReceiveBlock(ctx, blockG)
 	if err != nil {
