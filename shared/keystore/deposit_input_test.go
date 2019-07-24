@@ -26,8 +26,8 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(result.Pubkey, k1.PublicKey.Marshal()) {
-		t.Errorf("Mismatched pubkeys in deposit input. Want = %x, got = %x", result.Pubkey, k1.PublicKey.Marshal())
+	if !bytes.Equal(result.PublicKey, k1.PublicKey.Marshal()) {
+		t.Errorf("Mismatched pubkeys in deposit input. Want = %x, got = %x", result.PublicKey, k1.PublicKey.Marshal())
 	}
 
 	sig, err := bls.SignatureFromBytes(result.Signature)

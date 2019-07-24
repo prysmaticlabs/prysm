@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -39,11 +40,11 @@ type Service struct {
 	cancel                     context.CancelFunc
 	beaconDB                   *db.BeaconDB
 	incomingExitFeed           *event.Feed
-	incomingValidatorExits     chan *pb.VoluntaryExit
+	incomingValidatorExits     chan *ethpb.VoluntaryExit
 	incomingAttFeed            *event.Feed
-	incomingAtt                chan *pb.Attestation
+	incomingAtt                chan *ethpb.Attestation
 	incomingProcessedBlockFeed *event.Feed
-	incomingProcessedBlock     chan *pb.BeaconBlock
+	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	p2p                        p2p.Broadcaster
 	error                      error
 }
@@ -63,11 +64,11 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		cancel:                     cancel,
 		beaconDB:                   cfg.BeaconDB,
 		incomingExitFeed:           new(event.Feed),
-		incomingValidatorExits:     make(chan *pb.VoluntaryExit, params.BeaconConfig().DefaultBufferSize),
+		incomingValidatorExits:     make(chan *ethpb.VoluntaryExit, params.BeaconConfig().DefaultBufferSize),
 		incomingAttFeed:            new(event.Feed),
-		incomingAtt:                make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		incomingAtt:                make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingProcessedBlockFeed: new(event.Feed),
-		incomingProcessedBlock:     make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
+		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		p2p:                        cfg.P2P,
 	}
 }
@@ -116,8 +117,8 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
 // deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations(ctx context.Context) ([]*pb.Attestation, error) {
-	var attestations []*pb.Attestation
+func (s *Service) PendingAttestations(ctx context.Context) ([]*ethpb.Attestation, error) {
+	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
@@ -188,7 +189,7 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	ctx, span := trace.StartSpan(ctx, "operations.HandleValidatorExits")
 	defer span.End()
 
-	exit := message.(*pb.VoluntaryExit)
+	exit := message.(*ethpb.VoluntaryExit)
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		return err
@@ -205,7 +206,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestations")
 	defer span.End()
 
-	attestation := message.(*pb.Attestation)
+	attestation := message.(*ethpb.Attestation)
 	hash, err := hashutil.HashProto(attestation)
 	if err != nil {
 		return err
@@ -224,7 +225,7 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 //	1.) retrieve the voted block
 //	2.) retrieve the canonical block by using voted block's slot number
 //	3.) return true if voted block root and the canonical block root are the same
-func (s *Service) IsAttCanonical(ctx context.Context, att *pb.Attestation) (bool, error) {
+func (s *Service) IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error) {
 	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 	if err != nil {
 		return false, fmt.Errorf("could not hash block: %v", err)
@@ -279,7 +280,7 @@ func (s *Service) removeOperations() {
 }
 
 func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message) error {
-	block := message.(*pb.BeaconBlock)
+	block := message.(*ethpb.BeaconBlock)
 	// Removes the pending attestations received from processed block body in DB.
 	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
 		return fmt.Errorf("could not remove processed attestations from DB: %v", err)
@@ -288,7 +289,7 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 }
 
 // removePendingAttestations removes a list of attestations from DB.
-func (s *Service) removePendingAttestations(attestations []*pb.Attestation) error {
+func (s *Service) removePendingAttestations(attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
 		hash, err := hashutil.HashProto(attestation)
 		if err != nil {

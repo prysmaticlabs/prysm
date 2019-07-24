@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -107,7 +108,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
-	attestation := &pbp2p.Attestation{
+	attestation := &ethpb.Attestation{
 		Data:            data,
 		CustodyBits:     custodyBitfield,
 		AggregationBits: aggregationBitfield,

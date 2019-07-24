@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
@@ -22,17 +23,17 @@ import (
 // directly receives a new block from other services and applies the full processing pipeline.
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
-	UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte)
+	UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte)
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
 // to beacon blocks and generating a new beacon state from the Ethereum 2.0 core primitives.
 type BlockProcessor interface {
-	VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error
-	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
+	VerifyBlockValidity(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error
+	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
+	CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error
 }
 
 // BlockFailedProcessingErr represents a block failing a state transition function.
@@ -51,7 +52,7 @@ func (b *BlockFailedProcessingErr) Error() string {
 // 3. Apply the block state transition function and account for skip slots.
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	c.receiveBlockLock.Lock()
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
@@ -141,7 +142,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 //   The node's local clock time is greater than or equal to state.genesis_time + block.slot * SECONDS_PER_SLOT.
 func (c *ChainService) VerifyBlockValidity(
 	ctx context.Context,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	beaconState *pb.BeaconState,
 ) error {
 	if block.Slot == 0 {
@@ -159,7 +160,7 @@ func (c *ChainService) VerifyBlockValidity(
 // SaveAndBroadcastBlock stores the block in persistent storage and then broadcasts it to
 // peers via p2p. Blocks which have already been saved are not processed again via p2p, which is why
 // the order of operations is important in this function to prevent infinite p2p loops.
-func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.BeaconBlock) error {
+func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash incoming block: %v", err)
@@ -168,9 +169,9 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 		return fmt.Errorf("failed to save block: %v", err)
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: blockRoot[:],
+		ParentRoot:      block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
@@ -186,7 +187,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 // such as attestations, exits, and deposits. We update the latest seen attestation by validator
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
-func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
@@ -209,7 +210,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 func (c *ChainService) AdvanceState(
 	ctx context.Context,
 	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	finalizedEpoch := beaconState.FinalizedCheckpoint.Epoch
 	newState, err := state.ExecuteStateTransition(
@@ -280,7 +281,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 			idxNotInState = append(idxNotInState, idx)
 			continue
 		}
-		pubKey := state.Validators[idx].Pubkey
+		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
@@ -298,7 +299,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
-		pubKey := state.Validators[idx].Pubkey
+		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}

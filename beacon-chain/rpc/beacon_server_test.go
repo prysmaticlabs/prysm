@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -76,16 +77,16 @@ func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
 
-func (f *faultyPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
-	return []*pbp2p.Deposit{}
+func (f *faultyPOWChainService) ChainStartDeposits() []*ethpb.Deposit {
+	return []*ethpb.Deposit{}
 }
 
 func (f *faultyPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, errors.New("hashing failed")
 }
 
-func (f *faultyPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
-	return &pbp2p.Eth1Data{}
+func (f *faultyPOWChainService) ChainStartETH1Data() *ethpb.Eth1Data {
+	return &ethpb.Eth1Data{}
 }
 
 type mockPOWChainService struct {
@@ -94,7 +95,7 @@ type mockPOWChainService struct {
 	hashesByHeight      map[int][]byte
 	blockTimeByHeight   map[int]uint64
 	blockNumberByHeight map[uint64]*big.Int
-	eth1Data            *pbp2p.Eth1Data
+	eth1Data            *ethpb.Eth1Data
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
@@ -152,15 +153,15 @@ func (m *mockPOWChainService) DepositRoot() [32]byte {
 	return bytesutil.ToBytes32(root)
 }
 
-func (m *mockPOWChainService) ChainStartDeposits() []*pbp2p.Deposit {
-	return []*pbp2p.Deposit{}
+func (m *mockPOWChainService) ChainStartDeposits() []*ethpb.Deposit {
+	return []*ethpb.Deposit{}
 }
 
 func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, nil
 }
 
-func (m *mockPOWChainService) ChainStartETH1Data() *pbp2p.Eth1Data {
+func (m *mockPOWChainService) ChainStartETH1Data() *ethpb.Eth1Data {
 	return m.eth1Data
 }
 
@@ -249,9 +250,9 @@ func TestBlockTree_OK(t *testing.T) {
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
 	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
-	var validators []*pbp2p.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 13; i++ {
-		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		validators = append(validators, &ethpb.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 	justifiedState := &pbp2p.BeaconState{
 		Slot:       0,
@@ -264,7 +265,7 @@ func TestBlockTree_OK(t *testing.T) {
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
-	justifiedBlock := &pbp2p.BeaconBlock{
+	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
@@ -273,7 +274,7 @@ func TestBlockTree_OK(t *testing.T) {
 	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
 
 	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
-	b1 := &pbp2p.BeaconBlock{
+	b1 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x1},
@@ -286,7 +287,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &pbp2p.BeaconBlock{
+	b2 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x2},
@@ -299,7 +300,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &pbp2p.BeaconBlock{
+	b3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 		StateRoot:  []byte{0x3},
@@ -312,7 +313,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
-	b4 := &pbp2p.BeaconBlock{
+	b4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: b1Root[:],
 		StateRoot:  []byte{0x4},
@@ -325,7 +326,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
-	b5 := &pbp2p.BeaconBlock{
+	b5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: b3Root[:],
 		StateRoot:  []byte{0x5},
@@ -341,67 +342,67 @@ func TestBlockTree_OK(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{
@@ -480,16 +481,16 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
-	justifiedBlock := &pbp2p.BeaconBlock{
+	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
 	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
-	validators := []*pbp2p.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
+	validators := []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
 	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
-	b1 := &pbp2p.BeaconBlock{
+	b1 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -501,7 +502,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &pbp2p.BeaconBlock{
+	b2 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -513,7 +514,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &pbp2p.BeaconBlock{
+	b3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -525,7 +526,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
-	b4 := &pbp2p.BeaconBlock{
+	b4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
@@ -537,7 +538,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
-	b5 := &pbp2p.BeaconBlock{
+	b5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
@@ -552,67 +553,67 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{
@@ -686,15 +687,15 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	for i := 0; i < len(justifiedState.Balances); i++ {
 		justifiedState.Balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
-	var validators []*pbp2p.Validator
+	var validators []*ethpb.Validator
 	for i := 0; i < 11; i++ {
-		validators = append(validators, &pbp2p.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance})
+		validators = append(validators, &ethpb.Validator{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance})
 	}
 	justifiedState.Validators = validators
 	if err := db.SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
-	justifiedBlock := &pbp2p.BeaconBlock{
+	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	if err := db.SaveJustifiedBlock(justifiedBlock); err != nil {
@@ -702,7 +703,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}
 	justifiedRoot, _ := ssz.SigningRoot(justifiedBlock)
 	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
-	b1 := &pbp2p.BeaconBlock{
+	b1 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -714,7 +715,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}, b1Root); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &pbp2p.BeaconBlock{
+	b2 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -726,7 +727,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}, b2Root); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &pbp2p.BeaconBlock{
+	b3 := &ethpb.BeaconBlock{
 		Slot:       3,
 		ParentRoot: justifiedRoot[:],
 	}
@@ -738,7 +739,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}, b3Root); err != nil {
 		t.Fatal(err)
 	}
-	b4 := &pbp2p.BeaconBlock{
+	b4 := &ethpb.BeaconBlock{
 		Slot:       4,
 		ParentRoot: b1Root[:],
 	}
@@ -750,7 +751,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}, b4Root); err != nil {
 		t.Fatal(err)
 	}
-	b5 := &pbp2p.BeaconBlock{
+	b5 := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: b3Root[:],
 	}
@@ -765,67 +766,67 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	attestationTargets := make(map[uint64]*pbp2p.AttestationTarget)
 	// We give block A 3 votes.
 	attestationTargets[0] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[1] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 	attestationTargets[2] = &pbp2p.AttestationTarget{
-		Slot:       b1.Slot,
-		ParentRoot: b1.ParentRoot,
-		BlockRoot:  b1Root[:],
+		Slot:            b1.Slot,
+		ParentRoot:      b1.ParentRoot,
+		BeaconBlockRoot: b1Root[:],
 	}
 
 	// We give block C 2 votes.
 	attestationTargets[3] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 	attestationTargets[4] = &pbp2p.AttestationTarget{
-		Slot:       b2.Slot,
-		ParentRoot: b2.ParentRoot,
-		BlockRoot:  b2Root[:],
+		Slot:            b2.Slot,
+		ParentRoot:      b2.ParentRoot,
+		BeaconBlockRoot: b2Root[:],
 	}
 
 	// We give block D 2 votes.
 	attestationTargets[5] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 	attestationTargets[6] = &pbp2p.AttestationTarget{
-		Slot:       b3.Slot,
-		ParentRoot: b3.ParentRoot,
-		BlockRoot:  b3Root[:],
+		Slot:            b3.Slot,
+		ParentRoot:      b3.ParentRoot,
+		BeaconBlockRoot: b3Root[:],
 	}
 
 	// We give block B 3 votes.
 	attestationTargets[7] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[8] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 	attestationTargets[9] = &pbp2p.AttestationTarget{
-		Slot:       b4.Slot,
-		ParentRoot: b4.ParentRoot,
-		BlockRoot:  b4Root[:],
+		Slot:            b4.Slot,
+		ParentRoot:      b4.ParentRoot,
+		BeaconBlockRoot: b4Root[:],
 	}
 
 	// We give block E 1 vote.
 	attestationTargets[10] = &pbp2p.AttestationTarget{
-		Slot:       b5.Slot,
-		ParentRoot: b5.ParentRoot,
-		BlockRoot:  b5Root[:],
+		Slot:            b5.Slot,
+		ParentRoot:      b5.ParentRoot,
+		BeaconBlockRoot: b5Root[:],
 	}
 
 	tree := []*pb.BlockTreeResponse_TreeNode{

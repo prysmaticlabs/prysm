@@ -15,6 +15,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
@@ -29,7 +30,7 @@ var (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InitializeState")
 	defer span.End()
 
@@ -78,7 +79,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 		}
 
 		for i, validator := range beaconState.Validators {
-			h := hashutil.Hash(validator.Pubkey)
+			h := hashutil.Hash(validator.PublicKey)
 			buf := make([]byte, binary.MaxVarintLen64)
 			n := binary.PutUvarint(buf, uint64(i))
 			if err := validatorBkt.Put(h[:], buf[:n]); err != nil {
@@ -345,7 +346,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(ctx context.Context, slot uint64, bl
 }
 
 // Validators fetches the current validator registry stored in state.
-func (db *BeaconDB) Validators(ctx context.Context) ([]*pb.Validator, error) {
+func (db *BeaconDB) Validators(ctx context.Context) ([]*ethpb.Validator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Validators")
 	defer span.End()
 
@@ -383,7 +384,7 @@ func (db *BeaconDB) Validators(ctx context.Context) ([]*pb.Validator, error) {
 }
 
 // ValidatorFromState fetches the validator with the desired index from the cached registry.
-func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.Validator, error) {
+func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*ethpb.Validator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorFromState")
 	defer span.End()
 
@@ -395,7 +396,7 @@ func (db *BeaconDB) ValidatorFromState(ctx context.Context, index uint64) (*pb.V
 		if index >= uint64(len(db.validatorRegistry)) {
 			return nil, fmt.Errorf("invalid validator index %d", index)
 		}
-		validator := proto.Clone(db.validatorRegistry[index]).(*pb.Validator)
+		validator := proto.Clone(db.validatorRegistry[index]).(*ethpb.Validator)
 		return validator, nil
 	}
 

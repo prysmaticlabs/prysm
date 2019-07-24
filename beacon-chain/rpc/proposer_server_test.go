@@ -16,11 +16,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
+
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -34,8 +40,8 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
@@ -49,7 +55,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
-	req := &pbp2p.BeaconBlock{
+	req := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: []byte("parent-hash"),
 	}
@@ -69,8 +75,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	mockChain := &mockChainService{}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
@@ -100,14 +106,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		powChainService: &mockPOWChainService{},
 	}
 
-	req := &pbp2p.BeaconBlock{
+	req := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       8,
-		Body: &pbp2p.BeaconBlockBody{
+		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,
-			Eth1Data:          &pbp2p.Eth1Data{},
+			Eth1Data:          &ethpb.Eth1Data{},
 		},
 	}
 
@@ -122,18 +128,22 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+
 	ctx := context.Background()
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pbp2p.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
-	crosslinks := make([]*pbp2p.Crosslink, params.BeaconConfig().ShardCount)
+	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &pbp2p.Crosslink{
+		crosslinks[i] = &ethpb.Crosslink{
 			StartEpoch: 1,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		}
@@ -148,9 +158,9 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		StartShard:                  100,
 		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:            make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		FinalizedCheckpoint:         &pbp2p.Checkpoint{},
-		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{},
-		CurrentJustifiedCheckpoint:  &pbp2p.Checkpoint{},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},
 	}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.PreviousCrosslinks[0])
@@ -160,14 +170,14 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{
-			pendingAttestations: []*pbp2p.Attestation{
-				{Data: &pbp2p.AttestationData{
-					Crosslink: &pbp2p.Crosslink{
+			pendingAttestations: []*ethpb.Attestation{
+				{Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
 						Shard:      beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
 						DataRoot:   params.BeaconConfig().ZeroHash[:],
 						ParentRoot: encoded[:]},
-					Source: &pbp2p.Checkpoint{},
-					Target: &pbp2p.Checkpoint{},
+					Source: &ethpb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
 				},
 					AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 					CustodyBits:     []byte{0x00, 0x00, 0x00, 0x00},
@@ -181,7 +191,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &pbp2p.BeaconBlock{
+	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
 
@@ -205,6 +215,9 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	// This test breaks if it doesnt use mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	// Edge case: current slot is at the end of an epoch. The pending attestation
@@ -214,62 +227,62 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	) - 1
 
 	expectedEpoch := uint64(100)
-	crosslink := &pbp2p.Crosslink{StartEpoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
+	crosslink := &ethpb.Crosslink{StartEpoch: 9, DataRoot: params.BeaconConfig().ZeroHash[:]}
 	encoded, err := ssz.HashTreeRoot(crosslink)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	opService := &mockOperationService{
-		pendingAttestations: []*pbp2p.Attestation{
+		pendingAttestations: []*ethpb.Attestation{
 			//Expired attestations
-			{Data: &pbp2p.AttestationData{
-				Target: &pbp2p.Checkpoint{Epoch: 10},
-				Source: &pbp2p.Checkpoint{Epoch: expectedEpoch},
+			{Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{Epoch: 10},
+				Source: &ethpb.Checkpoint{Epoch: expectedEpoch},
 
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			// Non-expired attestation with incorrect justified epoch
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch - 1},
-				Crosslink: &pbp2p.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch - 1},
+				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
 			}},
 			// Non-expired attestations with correct justified epoch
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
-			{Data: &pbp2p.AttestationData{
-				Target:    &pbp2p.Checkpoint{Epoch: 10},
-				Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+			{Data: &ethpb.AttestationData{
+				Target:    &ethpb.Checkpoint{Epoch: 10},
+				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
 		},
 	}
@@ -280,9 +293,9 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		beaconDB:         db,
 	}
 
-	validators := make([]*pbp2p.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pbp2p.Validator{
+		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
@@ -290,13 +303,13 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot + params.BeaconConfig().MinAttestationInclusionDelay,
-		CurrentJustifiedCheckpoint: &pbp2p.Checkpoint{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: expectedEpoch,
 		},
-		PreviousJustifiedCheckpoint: &pbp2p.Checkpoint{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: expectedEpoch,
 		},
-		CurrentCrosslinks: []*pbp2p.Crosslink{{
+		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 9,
 			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		}},
@@ -304,14 +317,14 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		StateRoots:        make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		BlockRoots:        make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		LatestBlockHeader: &pbp2p.BeaconBlockHeader{StateRoot: []byte{}},
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: []byte{}},
 	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
-	blk := &pbp2p.BeaconBlock{
+	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
 
@@ -335,21 +348,21 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		)
 	}
 
-	expectedAtts := []*pbp2p.Attestation{
-		{Data: &pbp2p.AttestationData{
-			Target:    &pbp2p.Checkpoint{Epoch: 10},
-			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+	expectedAtts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{
+			Target:    &ethpb.Checkpoint{Epoch: 10},
+			Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
-		{Data: &pbp2p.AttestationData{
-			Target:    &pbp2p.Checkpoint{Epoch: 10},
-			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+		{Data: &ethpb.AttestationData{
+			Target:    &ethpb.Checkpoint{Epoch: 10},
+			Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
-		{Data: &pbp2p.AttestationData{
-			Target:    &pbp2p.Checkpoint{Epoch: 10},
-			Source:    &pbp2p.Checkpoint{Epoch: expectedEpoch},
-			Crosslink: &pbp2p.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
+		{Data: &ethpb.AttestationData{
+			Target:    &ethpb.Checkpoint{Epoch: 10},
+			Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+			Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		}, AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01}},
 	}
 	if !reflect.DeepEqual(atts, expectedAtts) {
@@ -363,7 +376,7 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	}
 	ps := ProposerServer{powChainService: p}
 
-	_, err := ps.deposits(context.Background(), &pbp2p.Eth1Data{})
+	_, err := ps.deposits(context.Background(), &ethpb.Eth1Data{})
 	if err.Error() != "latest PoW block number is unknown" {
 		t.Errorf("Received unexpected error: %v", err)
 	}
@@ -382,7 +395,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
 		Eth1DepositIndex: 2,
@@ -398,18 +411,18 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		},
 		{
 			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -419,18 +432,18 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	recentDeposits := []*db.DepositContainer{
 		{
 			Index: 2,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("c"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("c"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		},
 		{
 			Index: 3,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("d"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("d"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -462,7 +475,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +485,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err = bs.deposits(ctx, &pbp2p.Eth1Data{})
+	deposits, err = bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -498,7 +511,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
 		Eth1DepositIndex: 10,
@@ -513,18 +526,18 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		},
 		{
 			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -535,9 +548,9 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	for i := 2; i < 16; i++ {
 		recentDeposits = append(recentDeposits, &db.DepositContainer{
 			Index: i,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte{byte(i)},
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte{byte(i)},
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -571,7 +584,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +612,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	d := internal.SetupDB(t)
 
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
 		Eth1DepositIndex: 2,
@@ -613,18 +626,18 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		},
 		{
 			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -635,9 +648,9 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	for i := 2; i < 22; i++ {
 		recentDeposits = append(recentDeposits, &db.DepositContainer{
 			Index: i,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte{byte(i)},
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte{byte(i)},
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -671,7 +684,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &pbp2p.Eth1Data{})
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,10 +709,10 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 	}
 	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &pbp2p.Eth1Data{
+		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
-		Eth1DataVotes: []*pbp2p.Eth1Data{},
+		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
 	if err := proposerServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -720,9 +733,9 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		{
 			Index: 0,
 			Block: big.NewInt(1000),
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -730,9 +743,9 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		{
 			Index: 1,
 			Block: big.NewInt(1200),
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -758,7 +771,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		powChainService: powChainService,
 	}
 
-	defEth1Data := &pbp2p.Eth1Data{
+	defEth1Data := &ethpb.Eth1Data{
 		DepositCount: 10,
 		BlockHash:    []byte{'t', 'e', 's', 't'},
 		DepositRoot:  []byte{'r', 'o', 'o', 't'},
@@ -786,12 +799,12 @@ func TestEth1Data(t *testing.T) {
 	ps := &ProposerServer{
 		powChainService: &mockPOWChainService{
 			blockNumberByHeight: map[uint64]*big.Int{
-				55296: big.NewInt(4096),
+				60000: big.NewInt(4096),
 			},
 			hashesByHeight: map[int][]byte{
 				3072: []byte("3072"),
 			},
-			eth1Data: &pbp2p.Eth1Data{
+			eth1Data: &ethpb.Eth1Data{
 				DepositCount: 55,
 			},
 		},
@@ -817,8 +830,8 @@ func Benchmark_Eth1Data(b *testing.B) {
 	hashesByHeight := make(map[int][]byte)
 
 	beaconState := &pbp2p.BeaconState{
-		Eth1DataVotes: []*pbp2p.Eth1Data{},
-		Eth1Data: &pbp2p.Eth1Data{
+		Eth1DataVotes: []*ethpb.Eth1Data{},
+		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("stub"),
 		},
 	}
@@ -827,18 +840,18 @@ func Benchmark_Eth1Data(b *testing.B) {
 	deposits := []*db.DepositContainer{
 		{
 			Index: 0,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("a"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		},
 		{
 			Index: 1,
-			Deposit: &pbp2p.Deposit{
-				Data: &pbp2p.DepositData{
-					Pubkey:                []byte("b"),
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -854,7 +867,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	for i := 0; i < numOfVotes; i++ {
 		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
 		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
-		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &pbp2p.Eth1Data{
+		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &ethpb.Eth1Data{
 			BlockHash:   blockhash,
 			DepositRoot: deposit,
 		})

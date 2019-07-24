@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -113,8 +113,8 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := utils.SplitOffset(validatorCount, totalCommittees, index)
-	end := utils.SplitOffset(validatorCount, totalCommittees, index+1)
+	start := SplitOffset(validatorCount, totalCommittees, index)
+	end := SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
@@ -128,7 +128,7 @@ func ComputeCommittee(
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new shard index.
 	shuffledIndices := make([]uint64, end-start)
 	for i := start; i < end; i++ {
-		permutedIndex, err := utils.ShuffledIndex(i, validatorCount, seed)
+		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
 		if err != nil {
 			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
 		}
@@ -155,7 +155,7 @@ func ComputeCommittee(
 //    """
 //    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
 //    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(state *pb.BeaconState, data *pb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
+func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
 	committee, err := CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
 		return nil, fmt.Errorf("could not get committee: %v", err)
@@ -358,7 +358,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 
 // VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
 // to the committees at that slot.
-func VerifyAttestationBitfield(bState *pb.BeaconState, att *pb.Attestation) (bool, error) {
+func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
@@ -414,7 +414,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 			for _, index := range crossComm {
 				validator := state.Validators[index]
-				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.Pubkey)
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
 
@@ -443,7 +443,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 
 			for _, index := range crossComm {
 				validator := state.Validators[index]
-				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.Pubkey)
+				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
 
@@ -462,7 +462,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 // Spec reference:
 //   # `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
 //   compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
-func compressValidator(validator *pb.Validator, idx uint64) uint64 {
+func compressValidator(validator *ethpb.Validator, idx uint64) uint64 {
 	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
 	compactIndex := idx << 16

@@ -13,6 +13,7 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -50,7 +51,7 @@ func DefaultConfig() *TransitionConfig {
 func ExecuteStateTransition(
 	ctx context.Context,
 	state *pb.BeaconState,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	if ctx.Err() != nil {
@@ -176,7 +177,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
-	block *pb.BeaconBlock,
+	block *ethpb.BeaconBlock,
 	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
@@ -230,7 +231,7 @@ func ProcessBlock(
 func ProcessOperations(
 	ctx context.Context,
 	state *pb.BeaconState,
-	body *pb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBody,
 	config *TransitionConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
@@ -252,7 +253,7 @@ func ProcessOperations(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body, config.VerifySignatures)
+	state, err := b.ProcessProposerSlashings(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block proposer slashings: %v", err)
 	}
@@ -264,7 +265,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
-	state, err = b.ProcessDeposits(state, body, config.VerifySignatures)
+	state, err = b.ProcessDeposits(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
@@ -272,7 +273,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	state, err = b.ProcessTransfers(state, body, config.VerifySignatures)
+	state, err = b.ProcessTransfers(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block transfers: %v", err)
 	}
@@ -280,7 +281,7 @@ func ProcessOperations(
 	return state, nil
 }
 
-func verifyOperationLengths(state *pb.BeaconState, body *pb.BeaconBlockBody) error {
+func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) error {
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		return fmt.Errorf(
 			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",

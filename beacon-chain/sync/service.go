@@ -13,6 +13,12 @@ import (
 
 var slog = logrus.WithField("prefix", "sync")
 
+// Checker defines a struct which can verify whether a node is currently
+// synchronizing a chain with the rest of peers in the network.
+type Checker interface {
+	Syncing() bool
+}
+
 // Service defines the main routines used in the sync service.
 type Service struct {
 	RegularSync     *RegularSync
@@ -115,6 +121,17 @@ func (ss *Service) Status() error {
 		return errors.New("not initially synced")
 	}
 	return nil
+}
+
+// Syncing verifies the sync service is fully synced with the network
+// and returns the result as a boolean.
+func (ss *Service) Syncing() bool {
+	querierSynced, err := ss.Querier.IsSynced()
+	if err != nil {
+		return false
+	}
+	isSynced := querierSynced && ss.InitialSync.NodeIsSynced()
+	return !isSynced
 }
 
 func (ss *Service) run() {

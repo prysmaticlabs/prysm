@@ -7,13 +7,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
-	indices := BranchIndices(1024, 3 /* depth */)
+	indices := branchIndices(1024, 3 /* depth */)
 	expected := []int{1024, 512, 256}
 	for i := 0; i < len(indices); i++ {
 		if expected[i] != indices[i] {
@@ -36,14 +36,9 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 				[]byte{},
 			},
 		},
+		depth: 4,
 	}
-	if _, err := m.MerkleProof(-1); err == nil {
-		t.Error("Expected out of range failure, received nil", err)
-	}
-	if _, err := m.MerkleProof(2); err == nil {
-		t.Error("Expected out of range failure, received nil", err)
-	}
-	if _, err := m.MerkleProof(0); err == nil {
+	if _, err := m.MerkleProof(6); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
 }
@@ -124,7 +119,31 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	}
 }
 
+func BenchmarkGenerateProof(b *testing.B) {
+	b.StopTimer()
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	normalTrie, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := normalTrie.MerkleProof(3); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkVerifyMerkleBranch(b *testing.B) {
+	b.StopTimer()
 	items := [][]byte{
 		[]byte("A"),
 		[]byte("BB"),
@@ -142,8 +161,10 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not generate Merkle proof: %v", err)
 	}
+	root := m.Root()
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if ok := VerifyMerkleProof(m.branches[0][0], items[2], 2, proof); !ok {
+		if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
 			b.Error("Merkle proof did not verify")
 		}
 	}
@@ -173,8 +194,8 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
@@ -184,11 +205,11 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
-		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -212,7 +233,6 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
 		}
 	}
-
 }
 
 func TestDepositTrieRoot_Fail(t *testing.T) {
@@ -239,8 +259,8 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	var withdrawalCreds [32]byte
 	var sig [96]byte
 
-	data := &pb.DepositData{
-		Pubkey:                pubkey[:],
+	data := &ethpb.Deposit_Data{
+		PublicKey:             pubkey[:],
 		Signature:             sig[:],
 		WithdrawalCredentials: withdrawalCreds[:],
 		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
@@ -250,15 +270,15 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	testAcc.TxOpts.GasLimit = 1000000
 
 	for i := 0; i < 100; i++ {
-		copy(data.Pubkey, []byte(strconv.Itoa(i)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
 		copy(data.Signature, []byte(strconv.Itoa(i)))
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.Pubkey, data.WithdrawalCredentials, data.Signature); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
-		copy(data.Pubkey, []byte(strconv.Itoa(i+10)))
+		copy(data.PublicKey, []byte(strconv.Itoa(i+10)))
 		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i+10)))
 		copy(data.Signature, []byte(strconv.Itoa(i+10)))
 
@@ -282,5 +302,4 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
 		}
 	}
-
 }

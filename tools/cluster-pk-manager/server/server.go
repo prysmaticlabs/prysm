@@ -147,7 +147,7 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(di.Pubkey, di.WithdrawalCredentials, di.Signature); err != nil {
+		if err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature); err != nil {
 			return nil, err
 		}
 		// Store in database
