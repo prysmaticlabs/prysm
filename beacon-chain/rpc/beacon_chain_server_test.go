@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
@@ -133,12 +134,13 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 		beaconDB: db,
 	}
 
-	got, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
+	received, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(validators, got.Validators) {
+	if !reflect.DeepEqual(validators, received.Validators) {
+		fmt.Println(received.Validators)
 		t.Fatal("Incorrect respond of validators")
 	}
 }
@@ -210,7 +212,6 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Log(res)
 			t.Error("Incorrect respond of validators")
 		}
 	}
@@ -243,5 +244,80 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	wanted := fmt.Sprintf("page start %d >= validator list %d", req.PageSize, len(validators))
 	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorsMaxPageSize(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 1000
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
+	}
+
+	if err := db.SaveState(
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators}); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	start := 1
+	max := params.BeaconConfig().MaxPageSize
+	exceedsMax := int32(max + 1)
+	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(start), PageSize: exceedsMax}
+	res, err := bs.GetValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := start * max
+	j := (start + 1) * max
+	if !reflect.DeepEqual(res.Validators, validators[i:j]) {
+		t.Error("Incorrect respond of validators")
+	}
+}
+
+func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 1000
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
+	}
+
+	if err := db.SaveState(
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators}); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	req := &ethpb.GetValidatorsRequest{}
+	res, err := bs.GetValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := 0
+	j := params.BeaconConfig().DefaultPageSize
+	if !reflect.DeepEqual(res.Validators, validators[i:j]) {
+		t.Error("Incorrect respond of validators")
 	}
 }

@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -141,14 +143,23 @@ func (bs *BeaconChainServer) GetValidators(
 
 	// Return the entire validator list if options PageToken and PageSize are not specified.
 	if req.PageToken == "" && req.PageSize == 0 {
+		last := len(validators)
+		if totalSize > params.BeaconConfig().DefaultPageSize {
+			last = params.BeaconConfig().DefaultPageSize
+		}
 		return &ethpb.Validators{
-			Validators:    validators,
+			Validators:    validators[0:last],
 			TotalSize:     int32(totalSize),
 			NextPageToken: strconv.Itoa(0),
 		}, nil
 	}
 
 	pageSize := int(req.PageSize)
+	// page size can't be greater than MaxPageSize
+	if pageSize > params.BeaconConfig().MaxPageSize {
+		pageSize = params.BeaconConfig().MaxPageSize
+	}
+
 	pageToken := 0
 	if req.PageToken != "" {
 		pageToken, err = strconv.Atoi(req.PageToken)
@@ -169,7 +180,7 @@ func (bs *BeaconChainServer) GetValidators(
 	if end > totalSize {
 		end = totalSize
 	}
-
+	fmt.Println(start, end)
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
 		TotalSize:     int32(totalSize),
