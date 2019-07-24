@@ -395,6 +395,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
+	helpers.ClearAllCaches()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -452,6 +453,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 }
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
+	helpers.ClearAllCaches()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
