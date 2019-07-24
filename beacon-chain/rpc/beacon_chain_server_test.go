@@ -9,11 +9,48 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+type mockPool struct{}
+
+func (m *mockPool) PooledAttestations() []*ethpb.Attestation {
+	return []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("1"),
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("2"),
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("3"),
+			},
+		},
+	}
+}
+
+func TestBeaconChainServer_AttestationPool(t *testing.T) {
+	bs := &BeaconChainServer{
+		pool: &mockPool{},
+	}
+	res, err := bs.AttestationPool(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := bs.pool.PooledAttestations()
+	if !reflect.DeepEqual(res.Attestations, want) {
+		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
+	}
+}
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	db := internal.SetupDB(t)
