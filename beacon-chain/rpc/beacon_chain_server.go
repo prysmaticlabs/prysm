@@ -141,7 +141,7 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 	totalSize := len(validators)
 
-	// Return the entire validator list if options PageToken and PageSize are not specified.
+	// If options PageToken and PageSize are not specified, return the validator list capped at DefaultPageSize.
 	if req.PageToken == "" && req.PageSize == 0 {
 		last := len(validators)
 		if totalSize > params.BeaconConfig().DefaultPageSize {
@@ -155,7 +155,7 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 
 	pageSize := int(req.PageSize)
-	// page size can't be greater than MaxPageSize
+	// Input page size can't be greater than MaxPageSize.
 	if pageSize > params.BeaconConfig().MaxPageSize {
 		pageSize = params.BeaconConfig().MaxPageSize
 	}
