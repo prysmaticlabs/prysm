@@ -18,7 +18,7 @@ import (
 
 type mockPool struct{}
 
-func (m *mockPool) PooledAttestations() []*ethpb.Attestation {
+func (m *mockPool) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
 	return []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -30,6 +30,30 @@ func (m *mockPool) PooledAttestations() []*ethpb.Attestation {
 				BeaconBlockRoot: []byte("2"),
 			},
 		},
+	}, nil
+}
+
+func TestBeaconChainServer_ListAttestations(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+	bs := &BeaconChainServer{
+		beaconDB: beaconDB,
+	}
+	att1 := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: []byte("hello"),
+		},
+	}
+	if err := beaconDB.SaveAttestation(ctx, att1); err != nil {
+		t.Fatal(err)
+	}
+	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Attestations) != 1 {
+		t.Errorf("Expected 1 attestation, received %d", len(res.Attestations))
 	}
 }
 
@@ -42,7 +66,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := bs.pool.AttestationPool(ctx)
+	want, _ := bs.pool.AttestationPool(ctx)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}

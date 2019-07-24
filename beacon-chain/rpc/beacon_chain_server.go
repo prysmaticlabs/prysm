@@ -61,8 +61,12 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
+	atts, err := bs.pool.AttestationPool(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	}
 	return &ethpb.AttestationPoolResponse{
-		Attestations: bs.pool.PooledAttestations(ctx),
+		Attestations: atts,
 	}, nil
 }
 
