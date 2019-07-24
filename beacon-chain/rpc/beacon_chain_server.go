@@ -2,10 +2,10 @@ package rpc
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -134,6 +134,10 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context,
 	req *ethpb.GetValidatorsRequest) (*ethpb.Validators, error) {
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
 
 	validators, err := bs.beaconDB.Validators(ctx)
 	if err != nil {
@@ -179,6 +183,10 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
 
 	e := req.Epoch
 	s, err := bs.beaconDB.HeadState(ctx)
@@ -239,7 +247,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		}
 	}
 
-	// Return filtered assignments when pagination.
+	// Return filtered assignments with pagination.
 	if len(res) > 0 {
 		start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), len(res))
 		if err != nil {
@@ -254,7 +262,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		}, nil
 	}
 
-	// If there's no filter, return assignments from active validator indices with pagination.
+	// If no filter was specified, return assignments from active validator indices with pagination.
 	activeIndices, err := helpers.ActiveValidatorIndices(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
@@ -298,7 +306,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-// startAndEndPage is a pagination wrapper, it takes in the requested page token, size, total size,
+// startAndEndPage is a pagination heloer, it takes in the requested page token, size, total size,
 // and returns start, end page and the next page token.
 func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, string, error) {
 	if pageToken == "" {
@@ -306,11 +314,6 @@ func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, tot
 	}
 	if pageSize == 0 {
 		pageSize = params.BeaconConfig().DefaultPageSize
-	}
-
-	// Input page size can't be greater than MaxPageSize.
-	if pageSize > params.BeaconConfig().MaxPageSize {
-		pageSize = params.BeaconConfig().MaxPageSize
 	}
 
 	token, err := strconv.Atoi(pageToken)

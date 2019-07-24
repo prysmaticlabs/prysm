@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"math/big"
 	"sort"
 	"strings"
@@ -672,6 +673,8 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}
 }
 func TestBlockTreeBySlots_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
