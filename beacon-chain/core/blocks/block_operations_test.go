@@ -1683,31 +1683,46 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().ShardCount)
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	exits := []*ethpb.VoluntaryExit{
+		{
+			ValidatorIndex: 0,
+			Epoch:          0,
+		},
+	}
+	registry := []*ethpb.Validator{
+		{
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch: 0,
+		},
+	}
+	state := &pb.BeaconState{
+		Validators: registry,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
+	}
+	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+
+	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Error(err)
 	}
-	committeePeriod := (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
-	state.Slot = (params.BeaconConfig().SlotsPerEpoch * 5) + committeePeriod
-
-	exit := &ethpb.VoluntaryExit{
-		ValidatorIndex: 0,
-		Epoch:          0,
-	}
-	signingRoot, err := ssz.SigningRoot(exit)
+	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
+	signingRoot, err := ssz.SigningRoot(exits[0])
 	if err != nil {
 		t.Error(err)
 	}
 	domain := helpers.Domain(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
-	sig := privKeys[exit.ValidatorIndex].Sign(signingRoot[:], domain)
-	exit.Signature = sig.Marshal()
+	sig := priv.Sign(signingRoot[:], domain)
+	exits[0].Signature = sig.Marshal()
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
-			VoluntaryExits: []*ethpb.VoluntaryExit{exit},
+			VoluntaryExits: exits,
 		},
 	}
+
 	newState, err := blocks.ProcessVoluntaryExits(state, block.Body)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
