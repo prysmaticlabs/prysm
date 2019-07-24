@@ -2,11 +2,31 @@
 """
 
 mainnet = {
-    "attestation.aggregation_bits.max": "4096",
+    "block_roots.size": "8192,32",
+    "state_roots.size": "8192,32",
+    "eth1_data_votes.size": "1024",
+    "randao_mixes.size": "65536,32",
+    "active_index_roots.size": "65536,32",
+    "compact_committees_roots.size": "65536,32",
+    "previous_epoch_attestations.max": "8192",
+    "current_epoch_attestations.max": "8192",
+    "previous_crosslinks.size": "1024",
+    "current_crosslinks.size": "1024",
+    "slashings.size": "8192",
 }
 
 minimal = {
-    "attestation.aggregation_bits.max": "64",
+    "block_roots.size": "64,32",
+    "state_roots.size": "64,32",
+    "eth1_data_votes.size": "16",
+    "randao_mixes.size": "64,32",
+    "active_index_roots.size": "64,32",
+    "compact_committees_roots.size": "64,32",
+    "previous_epoch_attestations.max": "1024",
+    "current_epoch_attestations.max": "1024",
+    "previous_crosslinks.size": "8",
+    "current_crosslinks.size": "8",
+    "slashings.size": "64",
 }
 
 def _ssz_proto_files_impl(ctx):
@@ -24,7 +44,7 @@ def _ssz_proto_files_impl(ctx):
         ctx.actions.expand_template(
             template = src.files.to_list()[0],
             output = output,
-            substitutions = mainnet,
+            substitutions = subs,
         )
 
     return [DefaultInfo(files = depset(outputs))]
