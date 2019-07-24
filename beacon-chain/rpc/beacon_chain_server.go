@@ -141,7 +141,7 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 	validatorCount := len(validators)
 
-	start, end, nextToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
+	start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (bs *BeaconChainServer) GetValidators(
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
 		TotalSize:     int32(validatorCount),
-		NextPageToken: strconv.Itoa(nextToken),
+		NextPageToken: nextPageToken,
 	}
 	return res, nil
 }
@@ -189,6 +189,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
+	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
 		index, err := bs.beaconDB.ValidatorIndex(pubKey)
 		if err != nil {
@@ -215,6 +216,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		})
 	}
 
+	// Filter out assignments by validator indices.
 	for _, index := range req.Indices {
 		if int(index) >= len(s.Validators) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
@@ -237,11 +239,53 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		}
 	}
 
+	// Return filtered assignments when pagination.
 	if len(res) > 0 {
+		start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), len(res))
+		if err != nil {
+			return nil, err
+		}
 
+		return &ethpb.ValidatorAssignments{
+			Epoch:         e,
+			Assignments:   res[start:end],
+			NextPageToken: nextPageToken,
+			TotalSize:     int32(len(res)),
+		}, nil
 	}
 
-	return nil, nil
+	// If there's no filter, return assignments from active validator indices with pagination.
+	activeIndices, err := helpers.ActiveValidatorIndices(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
+	}
+
+	start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, index := range activeIndices[start:end] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		}
+
+		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	return &ethpb.ValidatorAssignments{
+		Epoch:         e,
+		Assignments:   res,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(len(res)),
+	}, nil
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch.
@@ -255,8 +299,8 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 }
 
 // startAndEndPage is a pagination wrapper, it takes in the requested page token, size, total size,
-// and returns start, end page and the next token.
-func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, int, error) {
+// and returns start, end page and the next page token.
+func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, string, error) {
 	if pageToken == "" {
 		pageToken = "0"
 	}
@@ -271,13 +315,13 @@ func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, tot
 
 	token, err := strconv.Atoi(pageToken)
 	if err != nil {
-		return 0, 0, 0, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
+		return 0, 0, "", status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
 	}
 
 	// Start page can not be greater than validator size.
 	start := token * pageSize
 	if start >= totalSize {
-		return 0, 0, 0, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
+		return 0, 0, "", status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
 			start, totalSize)
 	}
 
@@ -287,6 +331,6 @@ func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, tot
 		end = totalSize
 	}
 
-	token++
-	return start, end, token, nil
+	nextPageToken := strconv.Itoa(token + 1)
+	return start, end, nextPageToken, nil
 }
