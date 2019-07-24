@@ -34,14 +34,15 @@ func (m *mockPool) PooledAttestations() []*ethpb.Attestation {
 }
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
+	ctx := context.Background()
 	bs := &BeaconChainServer{
 		pool: &mockPool{},
 	}
-	res, err := bs.AttestationPool(context.Background(), &ptypes.Empty{})
+	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := bs.pool.PooledAttestations()
+	want := bs.pool.AttestationPool(ctx)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}

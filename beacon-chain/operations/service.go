@@ -29,7 +29,7 @@ var log = logrus.WithField("prefix", "operation")
 // which have been observed by the beacon node but not yet included in
 // a beacon block by a proposer.
 type Pool interface {
-	AttestationPool() []*ethpb.Attestation
+	AttestationPool(ctx context.Context) []*ethpb.Attestation
 }
 
 // OperationFeeds inteface defines the informational feeds from the operations

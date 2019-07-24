@@ -26,6 +26,9 @@ type BeaconChainServer struct {
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
+//
+// TODO(#3064): Filtering blocked by DB refactor for easier access to
+// fetching data by attributes efficiently.
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
@@ -37,13 +40,19 @@ func (bs *BeaconChainServer) ListAttestations(
 	case *ethpb.ListAttestationsRequest_Epoch:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}
-	return nil, nil
+	atts, err := bs.beaconDB.Attestations()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	}
+	return &ethpb.ListAttestationsResponse{
+		Attestations: atts,
+	}, nil
 }
 
 // AttestationPool retrieves pending attestations.
 //
 // The server returns a list of attestations that have been seen but not
-// yet processed. Pending attestations eventually expire as the slot
+// yet processed. These attestations eventually expire as the slot
 // advances, so an attestation missing from this request does not imply
 // that it was included in a block. The attestation may have expired.
 // Refer to the ethereum 2.0 specification for more details on how
@@ -53,7 +62,7 @@ func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
 	return &ethpb.AttestationPoolResponse{
-		Attestations: bs.pool.PooledAttestations(),
+		Attestations: bs.pool.PooledAttestations(ctx),
 	}, nil
 }
 

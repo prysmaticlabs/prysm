@@ -24,7 +24,6 @@ func init() {
 }
 
 var _ = TargetHandler(&Service{})
-var _ = Pool(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
