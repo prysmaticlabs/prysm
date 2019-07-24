@@ -1,5 +1,11 @@
 """
+SSZ proto templating rules.
+
+These rules allow for variable substitution for hardcoded tag values like ssz-size and ssz-max.
+
 """
+
+####### Configuration #######
 
 mainnet = {
     "block_roots.size": "8192,32",
@@ -29,7 +35,12 @@ minimal = {
     "slashings.size": "64",
 }
 
+###### Rules definitions #######
+
 def _ssz_proto_files_impl(ctx):
+    """
+    ssz_proto_files implementation performs expand_template based on the value of "config".
+    """
     outputs = []
     if (ctx.attr.config.lower() == "mainnet"):
         subs = mainnet
