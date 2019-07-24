@@ -35,11 +35,6 @@ func runDepositTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		helpers.ClearAllCaches()
 		t.Run(tt.Description, func(t *testing.T) {
-			if tt.Description == "invalid_sig_new_deposit" {
-				// TODO(#2857): uncompressed signature format is not supported
-				t.Skip("Uncompressed BLS signature format is not supported")
-			}
-
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
 			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap)
 			// Note: This doesn't test anything worthwhile. It essentially tests
