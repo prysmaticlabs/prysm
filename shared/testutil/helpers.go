@@ -4,9 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"sync"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
