@@ -35,49 +35,27 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	t.Skip("Skip until bls.Verify is finished")
-	// TODO(#2307) unskip after bls.Verify is finished
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Validators:        validators,
-		Slot:              0,
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	validators[5896].Slashed = false
-
-	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
+
+	lbhsr, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
+		t.Error(err)
 	}
-	priv2, err := bls.RandKey(rand.Reader)
+
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
+		t.Error(err)
 	}
-	validators[5896].PublicKey = priv.PublicKey().Marshal()
+
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
@@ -89,11 +67,12 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
-	blockSig := priv2.Sign(signingRoot[:], dt)
+	dt := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
 
-	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "verify signature failed"
+	_, err = blocks.ProcessBlockHeader(beaconState, block)
+	want := "signature did not verify"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
