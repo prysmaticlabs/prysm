@@ -232,7 +232,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Error("Retrieved attestations did not match prev generated attestations")
 	}
 
-	if err := s.removeAttestationPool(attestations); err != nil {
+	if err := s.removeAttestationsFromPool(attestations); err != nil {
 		t.Fatalf("Could not remove attestations: %v", err)
 	}
 
