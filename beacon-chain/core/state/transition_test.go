@@ -68,7 +68,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 			Eth1Data:     eth1Data,
 		},
 	}
-	block, err = helpers.SignBlock(beaconState, block, privKeys)
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
@@ -118,7 +118,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
-	block, err = helpers.SignBlock(beaconState, block, privKeys)
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
@@ -226,7 +226,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		CustodyBits:     bitfield.NewBitlist(0),
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +259,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Deposits: make([]*ethpb.Deposit, 0),
 		},
 	}
-	block, err = helpers.SignBlock(beaconState, block, privKeys)
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
@@ -546,7 +546,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	block, err = helpers.SignBlock(beaconState, block, privKeys)
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}

@@ -3,11 +3,7 @@ package helpers
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/go-ssz"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -38,24 +34,4 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //    return get_block_root_at_slot(state, compute_start_slot_of_epoch(epoch))
 func BlockRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) {
 	return BlockRootAtSlot(state, StartSlot(epoch))
-}
-
-// SignBlock generates a signed block using the block slot and the beacon proposer priv key.
-func SignBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBlock, privKeys []*bls.SecretKey) (*ethpb.BeaconBlock, error) {
-	slot := beaconState.Slot
-	beaconState.Slot = block.Slot
-	proposerIdx, err := BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, err
-	}
-	beaconState.Slot = slot
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		return nil, err
-	}
-	epoch := SlotToEpoch(block.Slot)
-	domain := Domain(beaconState, epoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
-	block.Signature = blockSig[:]
-	return block, nil
 }

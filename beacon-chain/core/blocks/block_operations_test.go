@@ -359,7 +359,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	epochSignature, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
