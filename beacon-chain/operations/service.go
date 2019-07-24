@@ -277,14 +277,14 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 	// Removes the attestations from the pool that have been included
 	// in the received block.
 	if err := s.removeAttestationsFromPool(block.Body.Attestations); err != nil {
-		return fmt.Errorf("Could not remove processed attestations from DB: %v", err)
+		return fmt.Errorf("could not remove processed attestations from DB: %v", err)
 	}
 	state, err := s.beaconDB.HeadState(s.ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestations from DB")
 	}
 	if err := s.removeEpochOldAttestations(state); err != nil {
-		return fmt.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
+		return fmt.Errorf("could not remove old attestations from DB at slot %d: %v", block.Slot, err)
 	}
 	return nil
 }
