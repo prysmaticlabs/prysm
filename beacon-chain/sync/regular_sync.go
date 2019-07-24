@@ -313,12 +313,18 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		).Debug("Requested state root is diff than local state root")
 		return err
 	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Error("could not get finalized block")
+		return err
+	}
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
-	).Debug("Sending finalized, justified, and canonical states to peer")
+	).Debug("Sending finalized state and block to peer")
 	defer sentState.Inc()
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
+		FinalizedBlock: finalizedBlk,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)

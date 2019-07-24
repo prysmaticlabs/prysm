@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -705,6 +706,10 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveFinalizedBlock(genBlock); err != nil {
+		t.Fatalf("could not save genesis block: %v", err)
+	}
 
 	ss := setupService(db)
 
@@ -721,7 +726,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized state and block to peer")
 }
 
 func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
