@@ -33,8 +33,8 @@ var endpoint = "ws://127.0.0.1"
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 5, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, 5)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -99,8 +99,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatal(err)
 		}
 		unixTime := uint64(time.Now().Unix())
-		deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+		deposits, _ := testutil.SetupInitialDeposits(t, 100)
+		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 

@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["flags.go"],
-    importpath = "github.com/prysmaticlabs/prysm/validator/types",
+    importpath = "github.com/prysmaticlabs/prysm/validator/flags",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/cmd:go_default_library",

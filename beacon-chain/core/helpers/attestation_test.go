@@ -15,8 +15,8 @@ import (
 func TestAttestationDataSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())
@@ -64,8 +64,8 @@ func TestAttestationDataSlot_ReturnsErrorWithNilData(t *testing.T) {
 func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())
@@ -84,8 +84,8 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(context.Background())

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -700,24 +699,20 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
 
-	copiedBit0Indices := make([]uint64, len(custodyBit0Indices))
-	copy(copiedBit0Indices, custodyBit0Indices)
-
-	sort.SliceStable(copiedBit0Indices, func(i, j int) bool {
-		return copiedBit0Indices[i] < copiedBit0Indices[j]
+	custodyBit0IndicesIsSorted := sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
 	})
-	if !reflect.DeepEqual(copiedBit0Indices, custodyBit0Indices) {
-		return fmt.Errorf("custody Bit0 indices are not sorted, wanted %v but got %v", copiedBit0Indices, custodyBit0Indices)
+
+	if !custodyBit0IndicesIsSorted {
+		return fmt.Errorf("custody Bit0 indices are not sorted, got %v", custodyBit0Indices)
 	}
 
-	copiedBit1Indices := make([]uint64, len(custodyBit1Indices))
-	copy(copiedBit1Indices, custodyBit1Indices)
-
-	sort.SliceStable(copiedBit1Indices, func(i, j int) bool {
-		return copiedBit1Indices[i] < copiedBit1Indices[j]
+	custodyBit1IndicesIsSorted := sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
+		return custodyBit1Indices[i] < custodyBit1Indices[j]
 	})
-	if len(custodyBit1Indices) > 0 && !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
-		return fmt.Errorf("custody Bit1 indices are not sorted, wanted %v but got %v", copiedBit1Indices, custodyBit1Indices)
+
+	if !custodyBit1IndicesIsSorted {
+		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
 	if verifySignatures {
@@ -788,14 +783,13 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 func ProcessDeposits(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
 
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for _, deposit := range deposits {
-		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, verifySignatures, true)
+		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 		}
@@ -848,30 +842,24 @@ func ProcessDeposits(
 //         # Increase balance by deposit amount
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
-func ProcessDeposit(
-	beaconState *pb.BeaconState,
-	deposit *ethpb.Deposit,
-	valIndexMap map[[32]byte]int,
-	verifySignatures bool,
-	verifyTree bool,
-) (*pb.BeaconState, error) {
-	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
+func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+	if err := verifyDeposit(beaconState, deposit); err != nil {
+		return nil, fmt.Errorf("could not verify deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
-		if verifySignatures {
-			domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
-			depositSig := deposit.Data.Signature
-			if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
-				// Ignore this error as in the spec pseudo code.
-				log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
-				return beaconState, nil
-			}
+
+		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+		depositSig := deposit.Data.Signature
+		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+			// Ignore this error as in the spec pseudo code.
+			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
+			return beaconState, nil
 		}
+
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
@@ -893,25 +881,24 @@ func ProcessDeposit(
 	return beaconState, nil
 }
 
-func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, verifyTree bool) error {
-	if verifyTree {
-		// Verify Merkle proof of deposit and deposit trie root.
-		receiptRoot := beaconState.Eth1Data.DepositRoot
-		leaf, err := hashutil.DepositHash(deposit.Data)
-		if err != nil {
-			return fmt.Errorf("could not tree hash deposit data: %v", err)
-		}
-		if ok := trieutil.VerifyMerkleProof(
+func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
+	// Verify Merkle proof of deposit and deposit trie root.
+	receiptRoot := beaconState.Eth1Data.DepositRoot
+	leaf, err := hashutil.DepositHash(deposit.Data)
+	if err != nil {
+		return fmt.Errorf("could not tree hash deposit data: %v", err)
+	}
+	if ok := trieutil.VerifyMerkleProof(
+		receiptRoot,
+		leaf[:],
+		int(beaconState.Eth1DepositIndex),
+		deposit.Proof,
+	); !ok {
+		fmt.Printf("deposit index %d\n", beaconState.Eth1DepositIndex)
+		return fmt.Errorf(
+			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
-			leaf[:],
-			int(beaconState.Eth1DepositIndex),
-			deposit.Proof,
-		); !ok {
-			return fmt.Errorf(
-				"deposit merkle branch of deposit root did not verify for root: %#x",
-				receiptRoot,
-			)
-		}
+		)
 	}
 
 	return nil

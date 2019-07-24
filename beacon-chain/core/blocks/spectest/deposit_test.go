@@ -36,7 +36,7 @@ func runDepositTest(t *testing.T, filename string) {
 		helpers.ClearAllCaches()
 		t.Run(tt.Description, func(t *testing.T) {
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
-			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true, true)
+			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {

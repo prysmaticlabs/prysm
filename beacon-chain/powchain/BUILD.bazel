@@ -38,7 +38,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "block_cache_test.go",
         "block_reader_test.go",
@@ -48,6 +48,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
