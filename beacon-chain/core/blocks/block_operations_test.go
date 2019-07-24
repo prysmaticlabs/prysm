@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -1485,10 +1486,11 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 			CurrentVersion: []byte{0, 0, 0, 0},
 		},
 		Validators: registry,
+		Eth1Data: &ethpb.Eth1Data{},
 	}
 
 	deposit := &ethpb.Deposit{
-		Proof: [][]byte{},
+		Proof: [][]byte{{}},
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             []byte{7, 8, 9},
 			WithdrawalCredentials: []byte{1},
@@ -1501,8 +1503,6 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		beaconState,
 		deposit,
 		stateutils.ValidatorIndexMap(beaconState),
-		true,
-		false,
 	)
 
 	if err != nil {
@@ -1555,10 +1555,11 @@ func TestProcessDeposit_PublicKeyDoesNotExist_ValidSignature(t *testing.T) {
 			CurrentVersion: []byte{0, 0, 0, 0},
 		},
 		Validators: registry,
+		Eth1Data: &ethpb.Eth1Data{},
 	}
 
 	deposit := &ethpb.Deposit{
-		Proof: [][]byte{},
+		Proof: [][]byte{{}},
 		Data: &ethpb.Deposit_Data{
 			PublicKey: []byte{0x96, 0xa2, 0xb, 0xb9, 0x48, 0x5f, 0xf6, 0xd8, 0x95, 0x9, 0x55, 0xa6, 0x29,
 				0xe8, 0x4, 0x3a, 0x43, 0x77, 0x59, 0x68, 0xac, 0x13, 0x3e, 0xb7, 0xb1, 0x9c, 0x5f, 0x3, 0x89, 0xa2,
@@ -1579,8 +1580,6 @@ func TestProcessDeposit_PublicKeyDoesNotExist_ValidSignature(t *testing.T) {
 		beaconState,
 		deposit,
 		stateutils.ValidatorIndexMap(beaconState),
-		true,
-		false,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
@@ -1628,10 +1627,11 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 			CurrentVersion: []byte{0, 0, 0, 0},
 		},
 		Validators: registry,
+		Eth1Data: &ethpb.Eth1Data{},
 	}
 
 	deposit := &ethpb.Deposit{
-		Proof: [][]byte{},
+		Proof: [][]byte{{}},
 		Data: &ethpb.Deposit_Data{
 			PublicKey: []byte{0x96, 0xa2, 0xb, 0xb9, 0x48, 0x5f, 0xf6, 0xd8, 0x95, 0x9, 0x55, 0xa6, 0x29,
 				0xe8, 0x4, 0x3a, 0x43, 0x77, 0x59, 0x68, 0xac, 0x13, 0x3e, 0xb7, 0xb1, 0x9c, 0x5f, 0x3, 0x89, 0xa2,
@@ -1658,8 +1658,6 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 		beaconState,
 		deposit,
 		stateutils.ValidatorIndexMap(beaconState),
-		true,
-		false,
 	)
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
