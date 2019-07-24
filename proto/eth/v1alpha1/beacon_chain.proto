@@ -138,6 +138,14 @@ message ListAttestationsRequest {
         // Filter attestations by epoch number.
         uint64 epoch = 3;
     }
+
+    // A pagination token returned from a previous call to `ListAttestations`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string next_page_token = 4;
+
+    // Total count of Attestations matching the request filter.
+    int32 total_size = 5;
 }
 
 message ListAttestationsResponse {
@@ -159,6 +167,14 @@ message ListBlocksRequest {
         // from another fork.
         uint64 epoch = 3;
     }
+
+    // A pagination token returned from a previous call to `ListBlocks`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string next_page_token = 4;
+
+    // Total count of Blocks matching the request filter.
+    int32 total_size = 5;
 }
 
 message ListBlocksResponse {
