@@ -22,6 +22,8 @@ var (
 	})
 )
 
+// DepositCache stores all in-memory deposit objects. This
+// stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
 	pendingDeposits       []*DepositContainer
