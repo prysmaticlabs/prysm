@@ -138,7 +138,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	atts, err := ps.operationService.PendingAttestations(ctx)
+	atts, err := ps.operationService.AttestationPool(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}

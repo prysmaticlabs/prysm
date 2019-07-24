@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -18,7 +18,7 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
-	pool     attestation.Pool
+	pool     operations.Pool
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
