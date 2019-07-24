@@ -249,7 +249,7 @@ func (c *ChainService) AdvanceState(
 		}
 	}
 
-	if helpers.IsEpochEnd(newState.Slot) {
+	if helpers.IsEpochStart(newState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(newState); err != nil {
 			return newState, fmt.Errorf("could not save validator index: %v", err)
