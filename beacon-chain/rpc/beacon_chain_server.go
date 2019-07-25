@@ -2,11 +2,12 @@ package rpc
 
 import (
 	"context"
-	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -133,48 +134,26 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context,
 	req *ethpb.GetValidatorsRequest) (*ethpb.Validators, error) {
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
 
 	validators, err := bs.beaconDB.Validators(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
+	validatorCount := len(validators)
 
-	if req.PageToken == "" {
-		req.PageToken = "0"
-	}
-	if req.PageSize == 0 {
-		req.PageSize = int32(params.BeaconConfig().DefaultPageSize)
-	}
-
-	pageSize := int(req.PageSize)
-	// Input page size can't be greater than MaxPageSize.
-	if pageSize > params.BeaconConfig().MaxPageSize {
-		pageSize = params.BeaconConfig().MaxPageSize
-	}
-
-	pageToken, err := strconv.Atoi(req.PageToken)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
-	}
-
-	// Start page can not be greater than validator size.
-	start := pageToken * pageSize
-	totalSize := len(validators)
-	if start >= totalSize {
-		return nil, status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
-			start, totalSize)
-	}
-
-	// End page can not go out of bound.
-	end := start + pageSize
-	if end > totalSize {
-		end = totalSize
+		return nil, err
 	}
 
 	res := &ethpb.Validators{
 		Validators:    validators[start:end],
-		TotalSize:     int32(totalSize),
-		NextPageToken: strconv.Itoa(pageToken + 1),
+		TotalSize:     int32(validatorCount),
+		NextPageToken: nextPageToken,
 	}
 	return res, nil
 }
@@ -196,14 +175,125 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-// ListValidatorAssignments retrieves the validator assignments for a given epoch.
+// ListValidatorAssignments retrieves the validator assignments for a given epoch,
+// optional validator indices or public keys may be included to filter validator assignments.
 //
-// This request may specify optional validator indices or public keys to
-// filter validator assignments.
+// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
+// this is blocked by DB refactor.
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
+	e := req.Epoch
+	s, err := bs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
+	}
+
+	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
+	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
+
+	// Filter out assignments by public keys.
+	for _, pubKey := range req.PublicKeys {
+		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		filtered[index] = true
+
+		if int(index) >= len(s.Validators) {
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+				index, len(s.Validators))
+		}
+
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		}
+
+		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           pubKey,
+		})
+	}
+
+	// Filter out assignments by validator indices.
+	for _, index := range req.Indices {
+		if int(index) >= len(s.Validators) {
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+				index, len(s.Validators))
+		}
+
+		if !filtered[index] {
+			committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
+
+			res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+				CrosslinkCommittees: committee,
+				Shard:               shard,
+				Slot:                slot,
+				Proposer:            isProposer,
+				PublicKey:           s.Validators[index].PublicKey,
+			})
+		}
+	}
+
+	// Return filtered assignments with pagination.
+	if len(res) > 0 {
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(res))
+		if err != nil {
+			return nil, err
+		}
+
+		return &ethpb.ValidatorAssignments{
+			Epoch:         e,
+			Assignments:   res[start:end],
+			NextPageToken: nextPageToken,
+			TotalSize:     int32(len(res)),
+		}, nil
+	}
+
+	// If no filter was specified, return assignments from active validator indices with pagination.
+	activeIndices, err := helpers.ActiveValidatorIndices(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
+	}
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, index := range activeIndices[start:end] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		}
+
+		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	return &ethpb.ValidatorAssignments{
+		Epoch:         e,
+		Assignments:   res,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(len(res)),
+	}, nil
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch.
