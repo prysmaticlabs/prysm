@@ -117,7 +117,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -147,7 +146,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +164,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
@@ -175,6 +178,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -198,7 +205,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -243,6 +250,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
@@ -253,6 +264,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -389,7 +404,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,8 +417,16 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
+	goodStateBlock, err = testutil.SignBlock(beaconState, goodStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
+	goodStateBlock, err = testutil.SignBlock(beaconState, goodStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
 		t.Fatal(err)
@@ -453,7 +476,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -466,6 +489,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
+	}
+	invalidStateBlock, err = testutil.SignBlock(beaconState, invalidStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
 	}
 	beaconState.Slot--
 
@@ -526,7 +553,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	currentSlot := uint64(0)
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -574,18 +601,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits:     pendingDeposits,
 		},
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
-	signingRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	dt := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], dt)
-	block.Signature = blockSig.Marshal()[:]
 
 	beaconState.Slot--
 
@@ -598,6 +617,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
+	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
 	}
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
@@ -717,7 +740,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -734,7 +757,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 				RandaoReveal: randaoReveal,
 			},
 		}
+		block, err = testutil.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		initBlockStateRoot(t, block, chainService)
+		block, err = testutil.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		computedState, err := chainService.ReceiveBlock(ctx, block)
 		if err != nil {
 			t.Fatal(err)
@@ -776,7 +807,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	epoch = helpers.CurrentEpoch(beaconState)
-	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -796,7 +827,16 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	blockF, err = testutil.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockF, chainService)
+	blockF, err = testutil.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
@@ -817,7 +857,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	epoch = helpers.CurrentEpoch(beaconState)
-	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -832,7 +872,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
+	blockG, err = testutil.SignBlock(beaconState, blockG, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockG, chainService)
+	blockG, err = testutil.SignBlock(beaconState, blockG, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	computedState, err = chainService.ReceiveBlock(ctx, blockG)
 	if err != nil {
@@ -901,7 +949,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	currentSlot := uint64(1)
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}

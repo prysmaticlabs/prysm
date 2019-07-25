@@ -41,7 +41,7 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
 
-			post, err := blocks.ProcessBlockHeader(tt.Pre, tt.Block, true)
+			post, err := blocks.ProcessBlockHeader(tt.Pre, tt.Block)
 
 			if tt.Post == nil {
 				// Note: This doesn't test anything worthwhile. It essentially tests

@@ -75,7 +75,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	mockChain := &mockChainService{}
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -108,7 +108,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
-		Slot:       8,
+		Slot:       1,
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal:      nil,
 			ProposerSlashings: nil,
@@ -116,6 +116,20 @@ func TestComputeStateRoot_OK(t *testing.T) {
 			Eth1Data:          &ethpb.Eth1Data{},
 		},
 	}
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Error(err)
+	}
+	beaconState.Slot--
+	signingRoot, err := ssz.SigningRoot(req)
+	if err != nil {
+		t.Error(err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+	req.Signature = blockSig[:]
 
 	_, err = proposerServer.computeStateRoot(context.Background(), req)
 	if err != nil {

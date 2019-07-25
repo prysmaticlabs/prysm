@@ -2,10 +2,14 @@ package testutil
 
 import (
 	"crypto/rand"
+	"encoding/binary"
+	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -104,6 +108,41 @@ func GenerateEth1Data(t testing.TB, deposits []*ethpb.Deposit) *ethpb.Eth1Data {
 	}
 
 	return eth1Data
+}
+
+// SignBlock generates a signed block using the block slot and the beacon proposer priv key.
+func SignBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBlock, privKeys []*bls.SecretKey) (*ethpb.BeaconBlock, error) {
+	slot := beaconState.Slot
+	beaconState.Slot = block.Slot
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, err
+	}
+	beaconState.Slot = slot
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		return nil, err
+	}
+	epoch := helpers.SlotToEpoch(block.Slot)
+	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+	block.Signature = blockSig[:]
+	return block, nil
+}
+
+// CreateRandaoReveal generates a epoch signature using the beacon proposer priv key.
+func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*bls.SecretKey) ([]byte, error) {
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return []byte{}, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	// We make the previous validator's index sign the message instead of the proposer.
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	return epochSignature.Marshal(), nil
 }
 
 // ResetCache clears out the old trie, private keys and deposits.

@@ -91,7 +91,11 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
+	eth1DataHash, err := hashutil.HashProto(data)
+	if err != nil {
+		return false, fmt.Errorf("could not hash eth1data: %v", err)
+	}
+	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
@@ -107,8 +111,8 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 	}
 
 	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		DepositRoot: data.DepositRoot,
-		VoteCount:   voteCount,
+		Eth1DataHash: eth1DataHash,
+		VoteCount:    voteCount,
 	}); err != nil {
 		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
@@ -143,7 +147,6 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
@@ -181,12 +184,10 @@ func ProcessBlockHeader(
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
-	if verifySignatures {
-		currentEpoch := helpers.CurrentEpoch(beaconState)
-		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-		if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
-			return nil, fmt.Errorf("could not verify block signature: %v", err)
-		}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
+		return nil, fmt.Errorf("could not verify block signature: %v", err)
 	}
 	return beaconState, nil
 }
@@ -930,13 +931,12 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 func ProcessVoluntaryExits(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := verifyExit(beaconState, exit, verifySignatures); err != nil {
+		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
@@ -947,7 +947,7 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySignatures bool) error {
+func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
@@ -974,11 +974,9 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit, verifySi
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	if verifySignatures {
-		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-		if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-			return fmt.Errorf("could not verify voluntary exit signature: %v", err)
-		}
+	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
+		return fmt.Errorf("could not verify voluntary exit signature: %v", err)
 	}
 	return nil
 }
