@@ -7,8 +7,8 @@ import (
 	"runtime"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -21,15 +21,15 @@ import (
 )
 
 var appFlags = []cli.Flag{
-	utils.NoCustomConfigFlag,
-	utils.DepositContractFlag,
-	utils.Web3ProviderFlag,
-	utils.HTTPWeb3ProviderFlag,
-	utils.RPCPort,
-	utils.CertFlag,
-	utils.KeyFlag,
-	utils.EnableDBCleanup,
-	utils.GRPCGatewayPort,
+	flags.NoCustomConfigFlag,
+	flags.DepositContractFlag,
+	flags.Web3ProviderFlag,
+	flags.HTTPWeb3ProviderFlag,
+	flags.RPCPort,
+	flags.CertFlag,
+	flags.KeyFlag,
+	flags.EnableDBCleanup,
+	flags.GRPCGatewayPort,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,8 +27,8 @@ func TestInitializeState_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 10, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 10)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -69,8 +70,8 @@ func TestFinalizeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 20, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 20)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -99,8 +100,8 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(b, 10, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(b, 10)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -209,31 +210,31 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 		{
 			state: &pb.BeaconState{
 				Slot:                66,
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
 				Slot:                72,
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
 				Slot:                96,
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 1},
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
 			},
 		},
 		{
 			state: &pb.BeaconState{
 				Slot:                130,
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 2},
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2},
 			},
 		},
 		{
 			state: &pb.BeaconState{
 				Slot:                300,
-				FinalizedCheckpoint: &pb.Checkpoint{Epoch: 4},
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 4},
 			},
 		},
 	}
@@ -333,7 +334,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 		}
 
 		// Save a dummy genesis state so that db doesnt return an error.
-		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: 0, FinalizedCheckpoint: &pb.Checkpoint{}}, root); err != nil {
+		if err := db.SaveHistoricalState(context.Background(), &pb.BeaconState{Slot: 0, FinalizedCheckpoint: &ethpb.Checkpoint{}}, root); err != nil {
 			t.Fatalf("could not save historical state: %v", err)
 		}
 

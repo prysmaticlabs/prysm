@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -23,7 +23,7 @@ var (
 // DepositContainer object for holding the deposit and a reference to the block in
 // which the deposit transaction was included in the proof of work chain.
 type DepositContainer struct {
-	Deposit     *pb.Deposit
+	Deposit     *ethpb.Deposit
 	Block       *big.Int
 	Index       int
 	depositRoot [32]byte
@@ -31,7 +31,7 @@ type DepositContainer struct {
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
+func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -50,7 +50,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 // PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.
-func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.Deposit {
+func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.PendingDeposits")
 	defer span.End()
 	db.depositsLock.RLock()
@@ -67,7 +67,7 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 		return depositCntrs[i].Index < depositCntrs[j].Index
 	})
 
-	var deposits []*pb.Deposit
+	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
 		deposits = append(deposits, dep.Deposit)
 	}
@@ -99,7 +99,7 @@ func (db *BeaconDB) PendingContainers(ctx context.Context, beforeBlk *big.Int) [
 
 // RemovePendingDeposit from the database. The deposit is indexed by the
 // Index. This method does nothing if deposit ptr is nil.
-func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
+func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *ethpb.Deposit) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.RemovePendingDeposit")
 	defer span.End()
 

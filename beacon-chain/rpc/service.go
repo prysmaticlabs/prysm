@@ -16,8 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,8 +45,8 @@ type chainService interface {
 }
 
 type operationService interface {
-	PendingAttestations(ctx context.Context) ([]*pbp2p.Attestation, error)
-	IsAttCanonical(ctx context.Context, att *pbp2p.Attestation) (bool, error)
+	PendingAttestations(ctx context.Context) ([]*ethpb.Attestation, error)
+	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
 	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -61,12 +63,13 @@ type powChainService interface {
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
 	ChainStartDepositHashes() ([][]byte, error)
-	ChainStartDeposits() []*pbp2p.Deposit
-	ChainStartETH1Data() *pbp2p.Eth1Data
+	ChainStartDeposits() []*ethpb.Deposit
+	ChainStartETH1Data() *ethpb.Eth1Data
 }
 
 type syncService interface {
 	Status() error
+	sync.Checker
 }
 
 // Service defining an RPC server for a beacon node.
@@ -84,7 +87,7 @@ type Service struct {
 	withKey             string
 	grpcServer          *grpc.Server
 	canonicalStateChan  chan *pbp2p.BeaconState
-	incomingAttestation chan *pbp2p.Attestation
+	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
 	p2p                 p2p.Broadcaster
 }
@@ -119,7 +122,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 
@@ -189,10 +192,20 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 	}
+	nodeServer := &NodeServer{
+		beaconDB:    s.beaconDB,
+		server:      s.grpcServer,
+		syncChecker: s.syncService,
+	}
+	beaconChainServer := &BeaconChainServer{
+		beaconDB: s.beaconDB,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

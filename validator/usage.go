@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/validator/types"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli"
 )
 
@@ -66,14 +66,14 @@ var appHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "types",
+		Name: "validator",
 		Flags: []cli.Flag{
-			types.NoCustomConfigFlag,
-			types.BeaconRPCProviderFlag,
-			types.CertFlag,
-			types.KeystorePathFlag,
-			types.PasswordFlag,
-			types.DisablePenaltyRewardLogFlag,
+			flags.NoCustomConfigFlag,
+			flags.BeaconRPCProviderFlag,
+			flags.CertFlag,
+			flags.KeystorePathFlag,
+			flags.PasswordFlag,
+			flags.DisablePenaltyRewardLogFlag,
 		},
 	},
 	{

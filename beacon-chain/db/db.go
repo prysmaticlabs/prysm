@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,7 +24,7 @@ type BeaconDB struct {
 	stateLock         sync.RWMutex
 	serializedState   []byte
 	stateHash         [32]byte
-	validatorRegistry []*pb.Validator
+	validatorRegistry []*ethpb.Validator
 	validatorBalances []uint64
 	db                *bolt.DB
 	DatabasePath      string
@@ -34,7 +34,7 @@ type BeaconDB struct {
 	// We keep a map of hashes of blocks which failed processing for blacklisting.
 	badBlockHashes map[[32]byte]bool
 	badBlocksLock  sync.RWMutex
-	blocks         map[[32]byte]*pb.BeaconBlock
+	blocks         map[[32]byte]*ethpb.BeaconBlock
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
@@ -85,7 +85,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
-	db.blocks = make(map[[32]byte]*pb.BeaconBlock)
+	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,

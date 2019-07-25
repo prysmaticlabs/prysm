@@ -18,10 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -146,16 +145,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
-func createPreChainStartDeposit(pk []byte) *pb.Deposit {
-	balance := params.BeaconConfig().MaxEffectiveBalance
-	depositData := &pb.DepositData{Pubkey: pk, Amount: balance, Signature: make([]byte, 96)}
-
-	return &pb.Deposit{
-		Data: depositData,
-	}
-}
-
-func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *pb.BeaconBlock) {
+func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
@@ -260,8 +250,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db, nil)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	setupGenesisBlock(t, chainService)

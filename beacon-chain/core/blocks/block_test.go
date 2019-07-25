@@ -6,7 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
@@ -23,11 +23,19 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 }
 
 func TestHeaderFromBlock(t *testing.T) {
-	dummyBody := &pb.BeaconBlockBody{
-		RandaoReveal: []byte("Reveal"),
+	dummyBody := &ethpb.BeaconBlockBody{
+		Eth1Data:          &ethpb.Eth1Data{},
+		Graffiti:          []byte{},
+		RandaoReveal:      []byte("Reveal"),
+		AttesterSlashings: []*ethpb.AttesterSlashing{},
+		ProposerSlashings: []*ethpb.ProposerSlashing{},
+		Attestations:      []*ethpb.Attestation{},
+		Transfers:         []*ethpb.Transfer{},
+		Deposits:          []*ethpb.Deposit{},
+		VoluntaryExits:    []*ethpb.VoluntaryExit{},
 	}
 
-	dummyBlock := &pb.BeaconBlock{
+	dummyBlock := &ethpb.BeaconBlock{
 		Slot:       10,
 		Signature:  []byte{'S'},
 		ParentRoot: []byte("Parent"),
@@ -40,7 +48,7 @@ func TestHeaderFromBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedHeader := &pb.BeaconBlockHeader{
+	expectedHeader := &ethpb.BeaconBlockHeader{
 		Slot:       dummyBlock.Slot,
 		Signature:  dummyBlock.Signature,
 		ParentRoot: dummyBlock.ParentRoot,
@@ -61,7 +69,7 @@ func TestHeaderFromBlock(t *testing.T) {
 }
 
 func TestBlockFromHeader(t *testing.T) {
-	dummyHeader := &pb.BeaconBlockHeader{
+	dummyHeader := &ethpb.BeaconBlockHeader{
 		Slot:       10,
 		Signature:  []byte{'S'},
 		ParentRoot: []byte("Parent"),
@@ -70,7 +78,7 @@ func TestBlockFromHeader(t *testing.T) {
 
 	block := BlockFromHeader(dummyHeader)
 
-	expectedBlock := &pb.BeaconBlock{
+	expectedBlock := &ethpb.BeaconBlock{
 		Slot:       dummyHeader.Slot,
 		Signature:  dummyHeader.Signature,
 		ParentRoot: dummyHeader.ParentRoot,

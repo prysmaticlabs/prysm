@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,6 +13,8 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
+const finalUpdatesPrefix = "tests/epoch_processing/final_updates/"
+
 func runFinalUpdatesTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -22,7 +22,7 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 	}
 
 	s := &EpochProcessingTest{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
@@ -30,52 +30,25 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 		t.Fatal(err)
 	}
 
-	for _, tt := range s.TestCases[0:1] {
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
+	}
+
+	for _, tt := range s.TestCases {
 		t.Run(tt.Description, func(t *testing.T) {
 			helpers.ClearAllCaches()
-			preState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Pre, preState); err != nil {
-				t.Fatal(err)
-			}
 
 			var postState *pb.BeaconState
-			postState, err = epoch.ProcessFinalUpdates(preState)
+			postState, err = epoch.ProcessFinalUpdates(tt.Pre)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			expectedPostState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPostState); err != nil {
-				t.Fatal(err)
-			}
-
-			if expectedPostState.CurrentEpochAttestations == nil {
-				expectedPostState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-			}
-
-			if !reflect.DeepEqual(postState, expectedPostState) {
+			if !reflect.DeepEqual(postState, tt.Post) {
 				t.Error("Did not get expected state")
-				diff, _ := messagediff.PrettyDiff(expectedPostState, postState)
+				diff, _ := messagediff.PrettyDiff(tt.Post, postState)
 				t.Log(diff)
 			}
 		})
 	}
-}
-
-const finalUpdatesPrefix = "tests/epoch_processing/final_updates/"
-
-func TestFinalUpdatesMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runFinalUpdatesTests(t, filepath)
-}
-
-func TestFinalUpdatesMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runFinalUpdatesTests(t, filepath)
 }

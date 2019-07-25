@@ -9,6 +9,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -18,7 +19,7 @@ import (
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
+func (s *InitialSync) processBlock(ctx context.Context, block *ethpb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
@@ -58,6 +59,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainH
 	sort.Slice(batchedBlocks, func(i, j int) bool {
 		return batchedBlocks[i].Slot < batchedBlocks[j].Slot
 	})
+
 	for _, block := range batchedBlocks {
 		if err := s.processBlock(ctx, block, chainHead); err != nil {
 			return err
@@ -88,7 +90,7 @@ func (s *InitialSync) requestBatchedBlocks(ctx context.Context, FinalizedRoot []
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
-func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.BeaconBlock) error {
+func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.validateAndSaveNextBlock")
 	defer span.End()
 	if block == nil {
@@ -114,7 +116,17 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	state, err := s.db.HeadState(ctx)
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
+	parentBlock, err := s.db.Block(parentRoot)
+	if err != nil {
+		return err
+	}
+
+	if parentBlock == nil {
+		return fmt.Errorf("parent block with root %#x doesnt exist in the db", parentRoot)
+	}
+
+	state, err := s.db.HistoricalStateFromSlot(ctx, parentBlock.Slot, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -125,9 +137,9 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		return err
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  root[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: root[:],
+		ParentRoot:      block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}

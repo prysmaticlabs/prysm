@@ -6,8 +6,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
+<<<<<<< HEAD
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+=======
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+>>>>>>> prylabs/master
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	p2p "github.com/prysmaticlabs/prysm/shared/p2p"
@@ -33,8 +37,13 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
+<<<<<<< HEAD
 func configureP2P(ctx *cli.Context, db *db.BeaconDB) (p2p.P2pComposite, error) {
 	contractAddress := ctx.GlobalString(utils.DepositContractFlag.Name)
+=======
+func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+	contractAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
+>>>>>>> prylabs/master
 	if contractAddress == "" {
 		var err error
 		contractAddress, err = fetchDepositContract()

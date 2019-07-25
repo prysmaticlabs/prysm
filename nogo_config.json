@@ -1,13 +1,14 @@
 {
   "unsafeptr": {
     "exclude_files": {
-      "external/*": "Unsafe third party code"
+      "external/.*": "Unsafe third party code",
+      "rules_go_work-.*": "Third party code"
     }
   },
   "unreachable": {
     "exclude_files": {
       "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
-      "external/*": "Unreachable third party code"
+      "external/.*": "Unreachable third party code"
     }
   },
   "lostcancel": {
@@ -17,37 +18,38 @@
   },
   "nilness": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
     }
   },
   "stdmethods": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     }
   }, 
   "copylocks": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     }
   },
   "composites": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     } 
   }, 
   "cgocall": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     } 
   },
   "assign": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     }
   },
   "structtag": {
     "exclude_files": {
-      "external/*": "Third party code"
+      "external/.*": "Third party code"
     }
   }
 }

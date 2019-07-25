@@ -12,10 +12,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -71,7 +73,7 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	if err := ms.db.SaveBlock(block); err != nil {
 		return nil, err
 	}
@@ -79,20 +81,20 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 }
 
 func (ms *mockChainService) AdvanceState(
-	ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock,
+	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error {
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
-func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -100,7 +102,7 @@ func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
 	return true
 }
 
-func (ms *mockChainService) UpdateCanonicalRoots(block *pb.BeaconBlock, root [32]byte) {
+func (ms *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
 }
 
 type mockOperationService struct{}
@@ -174,15 +176,15 @@ func TestProcessBlock_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	validators := make([]*pb.Validator, 10)
+	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			Pubkey: []byte(strconv.Itoa(i)),
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -198,7 +200,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	parentBlock := &pb.BeaconBlock{
+	parentBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
@@ -209,19 +211,19 @@ func TestProcessBlock_OK(t *testing.T) {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
 
-	data := &pb.BeaconBlock{
+	data := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       0,
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
 				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
 		},
 	}
-	attestation := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+	attestation := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard:    0,
 				DataRoot: []byte{'A'},
 			},
@@ -252,15 +254,15 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	validators := make([]*pb.Validator, 10)
+	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			Pubkey: []byte(strconv.Itoa(i)),
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -276,7 +278,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	parentBlock := &pb.BeaconBlock{
+	parentBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
@@ -287,11 +289,11 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
 
-	data1 := &pb.BeaconBlock{
+	data1 := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       1,
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte{1, 2, 3, 4, 5},
 				BlockHash:   []byte{6, 7, 8, 9, 10},
 			},
@@ -300,9 +302,9 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	responseBlock1 := &pb.BeaconBlockResponse{
 		Block: data1,
-		Attestation: &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		Attestation: &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard:    0,
 					DataRoot: []byte{},
 				},
@@ -316,11 +318,11 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Data: responseBlock1,
 	}
 
-	data2 := &pb.BeaconBlock{
+	data2 := &ethpb.BeaconBlock{
 		ParentRoot: []byte{},
 		Slot:       1,
-		Body: &pb.BeaconBlockBody{
-			Eth1Data: &pb.Eth1Data{
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot: []byte{11, 12, 13, 14, 15},
 				BlockHash:   []byte{16, 17, 18, 19, 20},
 			},
@@ -329,9 +331,9 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	responseBlock2 := &pb.BeaconBlockResponse{
 		Block: data2,
-		Attestation: &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		Attestation: &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard:    0,
 					DataRoot: []byte{},
 				},
@@ -370,7 +372,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
-	beaconBlock := &pb.BeaconBlock{
+	beaconBlock := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
 	if err := db.SaveBlock(beaconBlock); err != nil {
@@ -389,13 +391,13 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	request1 := &pb.AttestationResponse{
-		Attestation: &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		Attestation: &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: 1,
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		},
 	}
@@ -426,7 +428,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
-	headBlock := &pb.BeaconBlock{Slot: state.Slot}
+	headBlock := &ethpb.BeaconBlock{Slot: state.Slot}
 	if err := db.SaveBlock(headBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
@@ -443,13 +445,13 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	request1 := &pb.AttestationResponse{
-		Attestation: &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		Attestation: &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: 900,
 				},
-				Source: &pb.Checkpoint{},
-				Target: &pb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		},
 	}
@@ -481,7 +483,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &pb.VoluntaryExit{
+	request1 := &ethpb.VoluntaryExit{
 		Epoch: 100,
 	}
 
@@ -531,7 +533,7 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	att := &pb.Attestation{
+	att := &ethpb.Attestation{
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
@@ -573,7 +575,7 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	att := &pb.Attestation{
+	att := &ethpb.Attestation{
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	hash, err := hashutil.HashProto(att)
@@ -611,7 +613,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	att := &pb.Attestation{
+	att := &ethpb.Attestation{
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
 	attRoot, err := hashutil.HashProto(att)
@@ -655,8 +657,8 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -687,7 +689,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(context.Background(), unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+	if err := db.InitializeState(context.Background(), unixTime, []*ethpb.Deposit{}, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)
@@ -703,6 +705,10 @@ func TestHandleStateReq_OK(t *testing.T) {
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
+	}
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveFinalizedBlock(genBlock); err != nil {
+		t.Fatalf("could not save genesis block: %v", err)
 	}
 
 	ss := setupService(db)
@@ -720,7 +726,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized state and block to peer")
 }
 
 func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
@@ -731,7 +737,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	// Construct the following chain:
 	//    /- B3
 	//	 B1  - B2 - B4
-	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	block1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
@@ -739,16 +745,16 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	if err = ss.db.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block2 := &pb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
+	block2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
 	root2, _ := ssz.SigningRoot(block2)
 	if err = ss.db.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block3 := &pb.BeaconBlock{Slot: 3, ParentRoot: root1[:]}
+	block3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: root1[:]}
 	if err = ss.db.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	block4 := &pb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
+	block4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
 	root4, _ := ssz.SigningRoot(block4)
 	if err = ss.db.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
@@ -759,7 +765,7 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantList := []*pb.BeaconBlock{block2, block4}
+	wantList := []*ethpb.BeaconBlock{block2, block4}
 	if !reflect.DeepEqual(list, wantList) {
 		t.Error("Did not retrieve the correct canonical lists")
 	}
@@ -772,7 +778,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 
 	// Construct the following chain:
 	//	 B1 (finalized and head)
-	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	block1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
@@ -807,7 +813,7 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ss := setupService(db)
 
-	block1 := &pb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
+	block1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
 	root1, err := ssz.SigningRoot(block1)
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)

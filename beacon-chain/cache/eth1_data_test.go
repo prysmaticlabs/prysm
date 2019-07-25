@@ -7,16 +7,16 @@ import (
 
 func TestEth1DataVoteKeyFn_OK(t *testing.T) {
 	eInfo := &Eth1DataVote{
-		VoteCount:   44,
-		DepositRoot: []byte{'A'},
+		VoteCount:    44,
+		Eth1DataHash: [32]byte{'A'},
 	}
 
 	key, err := eth1DataVoteKeyFn(eInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != string(eInfo.DepositRoot) {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, string(eInfo.DepositRoot))
+	if key != string(eInfo.Eth1DataHash[:]) {
+		t.Errorf("Incorrect hash key: %s, expected %s", key, string(eInfo.Eth1DataHash[:]))
 	}
 }
 
@@ -31,10 +31,10 @@ func TestEth1DataVoteCache_CanAdd(t *testing.T) {
 	cache := NewEth1DataVoteCache()
 
 	eInfo := &Eth1DataVote{
-		VoteCount:   55,
-		DepositRoot: []byte{'B'},
+		VoteCount:    55,
+		Eth1DataHash: [32]byte{'B'},
 	}
-	count, err := cache.Eth1DataVote(eInfo.DepositRoot)
+	count, err := cache.Eth1DataVote(eInfo.Eth1DataHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestEth1DataVoteCache_CanAdd(t *testing.T) {
 	if err := cache.AddEth1DataVote(eInfo); err != nil {
 		t.Fatal(err)
 	}
-	count, err = cache.Eth1DataVote(eInfo.DepositRoot)
+	count, err = cache.Eth1DataVote(eInfo.Eth1DataHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,20 +62,20 @@ func TestEth1DataVoteCache_CanIncrement(t *testing.T) {
 	cache := NewEth1DataVoteCache()
 
 	eInfo := &Eth1DataVote{
-		VoteCount:   55,
-		DepositRoot: []byte{'B'},
+		VoteCount:    55,
+		Eth1DataHash: [32]byte{'B'},
 	}
 
 	if err := cache.AddEth1DataVote(eInfo); err != nil {
 		t.Fatal(err)
 	}
 
-	_, err := cache.IncrementEth1DataVote(eInfo.DepositRoot)
+	_, err := cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = cache.IncrementEth1DataVote(eInfo.DepositRoot)
-	count, _ := cache.IncrementEth1DataVote(eInfo.DepositRoot)
+	_, _ = cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
+	count, _ := cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
 
 	if count != 58 {
 		t.Errorf(
@@ -90,8 +90,10 @@ func TestEth1Data_MaxSize(t *testing.T) {
 	cache := NewEth1DataVoteCache()
 
 	for i := 0; i < maxEth1DataVoteSize+1; i++ {
+		var hash [32]byte
+		copy(hash[:], []byte(strconv.Itoa(i)))
 		eInfo := &Eth1DataVote{
-			DepositRoot: []byte(strconv.Itoa(i)),
+			Eth1DataHash: hash,
 		}
 		if err := cache.AddEth1DataVote(eInfo); err != nil {
 			t.Fatal(err)

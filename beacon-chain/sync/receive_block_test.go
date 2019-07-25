@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,8 +17,8 @@ import (
 // totalMissingParents describes the number of missing parent requests we want to test.
 var totalMissingParents = 50
 
-func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [][32]byte) {
-	parents := []*pb.BeaconBlock{}
+func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*ethpb.BeaconBlock, [][32]byte) {
+	parents := []*ethpb.BeaconBlock{}
 	parentRoots := [][32]byte{}
 	// Sets up a list of block parents of the form:
 	//   Parent 1: {Slot: 1, Parent: genesisBlock},
@@ -25,7 +26,7 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 	//   Parent 3: {Slot: 5, Parent: parent2},
 	//   ...
 	for slot := 1; slot < totalMissingParents; slot += 2 {
-		parent := &pb.BeaconBlock{
+		parent := &ethpb.BeaconBlock{
 			Slot: uint64(slot),
 		}
 		// At slot 1, the parent is the genesis block.
@@ -44,15 +45,15 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 	return parents, parentRoots
 }
 
-func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte) []*pb.BeaconBlock {
-	blocksMissingParent := []*pb.BeaconBlock{}
+func setupBlocksMissingParent(parents []*ethpb.BeaconBlock, parentRoots [][32]byte) []*ethpb.BeaconBlock {
+	blocksMissingParent := []*ethpb.BeaconBlock{}
 	// Sets up a list of block with missing parents of the form:
 	//   Parent 1: {Slot: 6, Parent: parents[0]},
 	//   Parent 2: {Slot: 4, Parent: parents[1]},
 	//   Parent 3: {Slot: 2, Parent: parents[2]},
 	//   ...
 	for slot := parents[len(parents)-1].Slot + 1; slot >= 2; slot -= 2 {
-		blocksMissingParent = append(blocksMissingParent, &pb.BeaconBlock{
+		blocksMissingParent = append(blocksMissingParent, &ethpb.BeaconBlock{
 			Slot: slot,
 		})
 	}
@@ -101,7 +102,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	rsCfg.BeaconDB = db
 	rsCfg.P2P = &mockP2P{}
 	rs := NewRegularSyncService(context.Background(), rsCfg)
-	genesisBlock := &pb.BeaconBlock{
+	genesisBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
 	genesisRoot, err := ssz.SigningRoot(genesisBlock)
@@ -110,7 +111,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	}
 	genesisState := &pb.BeaconState{
 		Slot:                0,
-		FinalizedCheckpoint: &pb.Checkpoint{Epoch: 0},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 0},
 	}
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)

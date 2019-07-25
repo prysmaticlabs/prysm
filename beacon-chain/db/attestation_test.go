@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -15,9 +15,9 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 0,
 			},
 		},
@@ -54,11 +54,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	// Generate 100 unique attestations to save in DB.
-	attestations := make([]*pb.Attestation, 100)
+	attestations := make([]*ethpb.Attestation, 100)
 	for i := 0; i < len(attestations); i++ {
-		attestations[i] = &pb.Attestation{
-			Data: &pb.AttestationData{
-				Crosslink: &pb.Crosslink{
+		attestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
 					Shard: uint64(i),
 				},
 			},
@@ -82,9 +82,9 @@ func TestDeleteAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 0,
 			},
 		},
@@ -134,9 +134,9 @@ func TestHasAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Crosslink: &pb.Crosslink{
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
 				Shard: 0,
 			},
 		},

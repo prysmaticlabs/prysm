@@ -6,24 +6,14 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ghodss/yaml"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
-
-func TestBlockProcessingMinimalYaml(t *testing.T) {
-	t.Skip("Test will fail with mainnet protos")
-
-	runBlockProcessingTest(t, "sanity_blocks_minimal.yaml")
-}
-
-func TestBlockProcessingMainnetYaml(t *testing.T) {
-	runBlockProcessingTest(t, "sanity_blocks_mainnet.yaml")
-}
 
 func runBlockProcessingTest(t *testing.T, filename string) {
 	filepath, err := bazel.Runfile("tests/sanity/blocks/" + filename)
@@ -36,12 +26,16 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 	}
 
 	s := &BlocksMainnet{}
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
 
 	if err := spectest.SetConfig(s.Config); err != nil {
 		t.Fatalf("Could not set config: %v", err)
+	}
+
+	if len(s.TestCases) == 0 {
+		t.Fatal("No tests!")
 	}
 
 	for _, tt := range s.TestCases {

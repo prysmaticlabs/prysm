@@ -3,7 +3,10 @@
 
 package spectest
 
-import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import (
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+)
 
 type BlocksMinimal struct {
 	Title         string   `json:"title"`
@@ -14,9 +17,9 @@ type BlocksMinimal struct {
 	Runner        string   `json:"runner"`
 	Handler       string   `json:"handler"`
 	TestCases     []struct {
-		Description string            `json:"description"`
-		Pre         *pb.BeaconState   `json:"pre"`
-		Blocks      []*pb.BeaconBlock `json:"blocks"`
-		Post        *pb.BeaconState   `json:"post"`
+		Description string               `json:"description"`
+		Pre         *pb.BeaconState      `json:"pre"`
+		Blocks      []*ethpb.BeaconBlock `json:"blocks"`
+		Post        *pb.BeaconState      `json:"post"`
 	} `json:"test_cases"`
 }

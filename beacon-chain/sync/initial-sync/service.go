@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -150,7 +151,7 @@ func (s *InitialSync) NodeIsSynced() bool {
 	return s.nodeIsSynced
 }
 
-func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
+func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
 	if s.nodeIsSynced {
 		return nil
 	}
@@ -174,9 +175,9 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *pb.BeaconBlock
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:       block.Slot,
-		BlockRoot:  root[:],
-		ParentRoot: block.ParentRoot,
+		Slot:            block.Slot,
+		BeaconBlockRoot: root[:],
+		ParentRoot:      block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}

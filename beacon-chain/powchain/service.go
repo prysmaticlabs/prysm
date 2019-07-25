@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -86,14 +86,14 @@ type Web3Service struct {
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.MerkleTrie
-	chainStartDeposits      []*pb.Deposit
+	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
 	lastRequestedBlock      *big.Int
-	chainStartETH1Data      *pb.Eth1Data
+	chainStartETH1Data      *ethpb.Eth1Data
 	activeValidatorCount    uint64
 	depositedPubkeys        map[[48]byte]uint64
 	eth2GenesisTime         uint64
@@ -151,11 +151,11 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		httpLogger:              config.HTTPLogger,
 		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
-		chainStartDeposits:      make([]*pb.Deposit, 0),
+		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
-		chainStartETH1Data:      &pb.Eth1Data{},
+		chainStartETH1Data:      &ethpb.Eth1Data{},
 		depositedPubkeys:        make(map[[48]byte]uint64),
 	}, nil
 }
@@ -188,12 +188,12 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
-func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
+func (w *Web3Service) ChainStartDeposits() []*ethpb.Deposit {
 	return w.chainStartDeposits
 }
 
 // ChainStartETH1Data returns the eth1 data at chainstart.
-func (w *Web3Service) ChainStartETH1Data() *pb.Eth1Data {
+func (w *Web3Service) ChainStartETH1Data() *ethpb.Eth1Data {
 	return w.chainStartETH1Data
 }
 

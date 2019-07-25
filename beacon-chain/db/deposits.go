@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -23,7 +23,7 @@ var (
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (db *BeaconDB) InsertDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
+func (db *BeaconDB) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -68,7 +68,7 @@ func (db *BeaconDB) PubkeyInChainstart(ctx context.Context, pubkey string) bool 
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
-func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.Deposit {
+func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
 	defer span.End()
 	db.depositsLock.RLock()
@@ -81,7 +81,7 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 		}
 	}
 
-	var deposits []*pb.Deposit
+	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
 		deposits = append(deposits, dep.Deposit)
 	}
@@ -107,16 +107,16 @@ func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeig
 
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
-func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*pb.Deposit, *big.Int) {
+func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositByPubkey")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 
-	var deposit *pb.Deposit
+	var deposit *ethpb.Deposit
 	var blockNum *big.Int
 	for _, ctnr := range db.deposits {
-		if bytes.Equal(ctnr.Deposit.Data.Pubkey, pubKey) {
+		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
 			blockNum = ctnr.Block
 			break

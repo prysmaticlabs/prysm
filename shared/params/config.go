@@ -94,6 +94,8 @@ type BeaconChainConfig struct {
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
+	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
+	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 }
 
 // DepositContractConfig contains the deposits for
@@ -191,6 +193,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
 	GenesisForkVersion:        []byte{0, 0, 0, 0},
 	EmptySignature:            [96]byte{},
+	DefaultPageSize:           250,
+	MaxPageSize:               500,
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.

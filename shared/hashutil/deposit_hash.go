@@ -3,7 +3,7 @@ package hashutil
 import (
 	"reflect"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -23,14 +23,14 @@ import (
 //            signature_root,
 //        ))
 //    ))
-func DepositHash(dep *pb.DepositData) ([32]byte, error) {
+func DepositHash(dep *ethpb.Deposit_Data) ([32]byte, error) {
 	if dep == nil || reflect.ValueOf(dep).IsNil() {
 		return [32]byte{}, ErrNilProto
 	}
 
 	var zeroBytes [32]byte
 
-	pubkeyRoot := Hash(append(dep.Pubkey, zeroBytes[:16]...))
+	pubkeyRoot := Hash(append(dep.PublicKey, zeroBytes[:16]...))
 	sigHash := Hash(dep.Signature[:64])
 	sigZeroBytesHash := Hash(append(dep.Signature[64:96], zeroBytes[:]...))
 	sigRoot := Hash(append(sigHash[:], sigZeroBytesHash[:]...))

@@ -19,9 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -192,7 +194,7 @@ func (rs *RegularSync) run() {
 	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
 	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
 	announceAttestationSub := rs.p2p.Subscribe(&pb.AttestationAnnounce{}, rs.announceAttestationBuf)
-	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
+	exitSub := rs.p2p.Subscribe(&ethpb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
 
@@ -283,6 +285,8 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 				Message: err.Error(),
 			})
 		}
+
+		log.WithField("method", logutil.FunctionName(fn)).Error(err)
 	}
 }
 
@@ -300,11 +304,13 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return err
 	}
+
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return err
 	}
+
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
 		log.WithFields(logrus.Fields{
 			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),
@@ -312,12 +318,19 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		).Debug("Requested state root is diff than local state root")
 		return err
 	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Error("could not get finalized block")
+		return err
+	}
+
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
-	).Debug("Sending finalized, justified, and canonical states to peer")
+	).Debug("Sending finalized state and block to peer")
 	defer sentState.Inc()
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
+		FinalizedBlock: finalizedBlk,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
@@ -461,7 +474,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
 	defer span.End()
 	recExit.Inc()
-	exit := msg.Data.(*pb.VoluntaryExit)
+	exit := msg.Data.(*ethpb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)
@@ -610,7 +623,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 
 // respondBatchedBlocks returns the requested block list inclusive of head block but not inclusive of the finalized block.
 // the return should look like (finalizedBlock... headBlock].
-func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*pb.BeaconBlock, error) {
+func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot []byte, headRoot []byte) ([]*ethpb.BeaconBlock, error) {
 	// if head block was the same as the finalized block.
 	if bytes.Equal(headRoot, finalizedRoot) {
 		return nil, nil
@@ -624,7 +637,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		return nil, fmt.Errorf("nil block %#x from db", bytesutil.Trunc(headRoot))
 	}
 
-	bList := []*pb.BeaconBlock{b}
+	bList := []*ethpb.BeaconBlock{b}
 	parentRoot := b.ParentRoot
 	for !bytes.Equal(parentRoot, finalizedRoot) {
 		if ctx.Err() != nil {
@@ -639,7 +652,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		}
 
 		// Prepend parent to the beginning of the list.
-		bList = append([]*pb.BeaconBlock{b}, bList...)
+		bList = append([]*ethpb.BeaconBlock{b}, bList...)
 
 		parentRoot = b.ParentRoot
 	}

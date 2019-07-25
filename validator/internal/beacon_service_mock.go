@@ -10,8 +10,8 @@ import (
 
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 )
@@ -40,14 +40,14 @@ func (m *MockBeaconServiceClient) EXPECT() *MockBeaconServiceClientMockRecorder 
 }
 
 // BlockTree mocks base method
-func (m *MockBeaconServiceClient) BlockTree(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.BlockTreeResponse, error) {
+func (m *MockBeaconServiceClient) BlockTree(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1.BlockTreeResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BlockTree", varargs...)
-	ret0, _ := ret[0].(*v10.BlockTreeResponse)
+	ret0, _ := ret[0].(*v1.BlockTreeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -60,14 +60,14 @@ func (mr *MockBeaconServiceClientMockRecorder) BlockTree(arg0, arg1 interface{},
 }
 
 // BlockTreeBySlots mocks base method
-func (m *MockBeaconServiceClient) BlockTreeBySlots(arg0 context.Context, arg1 *v10.TreeBlockSlotRequest, arg2 ...grpc.CallOption) (*v10.BlockTreeResponse, error) {
+func (m *MockBeaconServiceClient) BlockTreeBySlots(arg0 context.Context, arg1 *v1.TreeBlockSlotRequest, arg2 ...grpc.CallOption) (*v1.BlockTreeResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BlockTreeBySlots", varargs...)
-	ret0, _ := ret[0].(*v10.BlockTreeResponse)
+	ret0, _ := ret[0].(*v1.BlockTreeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -80,14 +80,14 @@ func (mr *MockBeaconServiceClientMockRecorder) BlockTreeBySlots(arg0, arg1 inter
 }
 
 // CanonicalHead mocks base method
-func (m *MockBeaconServiceClient) CanonicalHead(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1.BeaconBlock, error) {
+func (m *MockBeaconServiceClient) CanonicalHead(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CanonicalHead", varargs...)
-	ret0, _ := ret[0].(*v1.BeaconBlock)
+	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -100,14 +100,14 @@ func (mr *MockBeaconServiceClientMockRecorder) CanonicalHead(arg0, arg1 interfac
 }
 
 // WaitForChainStart mocks base method
-func (m *MockBeaconServiceClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_WaitForChainStartClient, error) {
+func (m *MockBeaconServiceClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v1.BeaconService_WaitForChainStartClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "WaitForChainStart", varargs...)
-	ret0, _ := ret[0].(v10.BeaconService_WaitForChainStartClient)
+	ret0, _ := ret[0].(v1.BeaconService_WaitForChainStartClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -186,10 +186,10 @@ func (mr *MockBeaconService_WaitForChainStartClientMockRecorder) Header() *gomoc
 }
 
 // Recv mocks base method
-func (m *MockBeaconService_WaitForChainStartClient) Recv() (*v10.ChainStartResponse, error) {
+func (m *MockBeaconService_WaitForChainStartClient) Recv() (*v1.ChainStartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v10.ChainStartResponse)
+	ret0, _ := ret[0].(*v1.ChainStartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

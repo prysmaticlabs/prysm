@@ -16,12 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -72,7 +72,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	// Use custom config values if the --no-custom-config flag is set.
-	if !ctx.GlobalBool(utils.NoCustomConfigFlag.Name) {
+	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
@@ -251,7 +251,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		return b.services.RegisterService(&powchain.Web3Service{})
 	}
 
-	depAddress := cliCtx.GlobalString(utils.DepositContractFlag.Name)
+	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
 
 	if depAddress == "" {
 		var err error
@@ -265,13 +265,13 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.HTTPWeb3ProviderFlag.Name))
+	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.Web3ProviderFlag.Name))
+	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
@@ -279,7 +279,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(utils.Web3ProviderFlag.Name),
+		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
 		Client:          httpClient,
 		Reader:          powClient,
@@ -366,9 +366,9 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	port := ctx.GlobalString(utils.RPCPort.Name)
-	cert := ctx.GlobalString(utils.CertFlag.Name)
-	key := ctx.GlobalString(utils.KeyFlag.Name)
+	port := ctx.GlobalString(flags.RPCPort.Name)
+	cert := ctx.GlobalString(flags.CertFlag.Name)
+	key := ctx.GlobalString(flags.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
 		Port:             port,
 		CertFlag:         cert,
@@ -404,9 +404,9 @@ func (b *BeaconNode) registerAttestationService() error {
 }
 
 func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
-	gatewayPort := ctx.GlobalInt(utils.GRPCGatewayPort.Name)
+	gatewayPort := ctx.GlobalInt(flags.GRPCGatewayPort.Name)
 	if gatewayPort > 0 {
-		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(utils.RPCPort.Name))
+		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}

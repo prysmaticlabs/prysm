@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -27,7 +28,7 @@ var (
 //    committee_count = get_committee_count(state, data.target.epoch)
 //    offset = (data.crosslink.shard + SHARD_COUNT - get_start_shard(state, data.target.epoch)) % SHARD_COUNT
 //    return Slot(compute_start_slot_of_epoch(data.target.epoch) + offset // (committee_count // SLOTS_PER_EPOCH))
-func AttestationDataSlot(state *pb.BeaconState, data *pb.AttestationData) (uint64, error) {
+func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (uint64, error) {
 	if state == nil {
 		return 0, ErrAttestationDataSlotNilState
 	}
