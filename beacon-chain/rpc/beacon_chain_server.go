@@ -2,8 +2,6 @@ package rpc
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -12,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // BeaconChainServer defines a server implementation of the gRPC Beacon Chain service,
