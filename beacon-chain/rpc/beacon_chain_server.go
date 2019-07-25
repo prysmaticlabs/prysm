@@ -221,14 +221,10 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
-	finalizedBlk, err := bs.beaconDB.FinalizedBlock()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve last finalized block: %v", err)
-	}
+
 
 	currentEpoch := helpers.SlotToEpoch(s.Slot)
-	lastFinalizedEpoch := helpers.SlotToEpoch(finalizedBlk.Slot)
-	finalized := currentEpoch == lastFinalizedEpoch
+	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
 
 	atts, err := epoch.MatchAttestations(s, currentEpoch)
 	if err != nil {
