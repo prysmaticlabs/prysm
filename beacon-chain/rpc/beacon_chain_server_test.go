@@ -544,8 +544,6 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {
-		t.Log(res)
-		t.Log(wantedRes)
 		t.Error("Did not receive wanted assignments")
 	}
 }
