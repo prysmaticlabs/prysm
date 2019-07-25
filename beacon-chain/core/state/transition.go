@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_gogo_protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -74,9 +75,10 @@ func ExecuteStateTransition(
 // ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
 // This does not validate state root, The use case of such is for state root calculation, the proposer
 // should first run state transition on an unsigned block containing a stub for the state root and signature.
+// This does not modify state.
 //
 // WARNING: This method does not validate state root and proposer signature. This is used for proposer to compute
-// state root before proposing a new block.
+// state root before proposing a new block, and this does not modify state.
 //
 // Spec pseudocode definition:
 //  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
@@ -94,25 +96,28 @@ func ExecuteStateTransitionNoVerify(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
+
+	stateCopy := proto.Clone(state).(*pb.BeaconState)
+
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
 
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, block.Slot)
+	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlockNoVerify(ctx, state, block)
+		stateCopy, err = ProcessBlockNoVerify(ctx, stateCopy, block)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
 	}
 
-	return state, nil
+	return stateCopy, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
