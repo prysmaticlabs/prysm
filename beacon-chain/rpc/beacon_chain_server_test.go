@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -247,42 +248,14 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsMaxPageSize(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
+	bs := &BeaconChainServer{}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
-	count := 1000
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
-	bs := &BeaconChainServer{
-		beaconDB: db,
-	}
-
-	start := 1
-	max := params.BeaconConfig().MaxPageSize
-	exceedsMax := int32(max + 1)
-	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(start), PageSize: exceedsMax}
-	res, err := bs.GetValidators(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	i := start * max
-	j := (start + 1) * max
-	if !reflect.DeepEqual(res.Validators, validators[i:j]) {
-		t.Error("Incorrect respond of validators")
+	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
@@ -319,5 +292,258 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	j := params.BeaconConfig().DefaultPageSize
 	if !reflect.DeepEqual(res.Validators, validators[i:j]) {
 		t.Error("Incorrect respond of validators")
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 1
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
+	}
+
+	if err := db.SaveState(
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators}); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{beaconDB: db}
+
+	wanted := fmt.Sprintf("page start %d >= validator list %d", 0, 0)
+	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
+	bs := &BeaconChainServer{}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	req := &ethpb.ListValidatorAssignmentsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListValidatorAssignments(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 1000
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		// Mark the validators with index divisible by 3 inactive.
+		if i%3 == 0 {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+		} else {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		}
+	}
+
+	s := &pbp2p.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	if err := db.SaveState(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments
+	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
+
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	if !reflect.DeepEqual(res.Assignments, wanted) {
+		t.Error("Did not receive wanted assignments")
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
+	helpers.ClearAllCaches()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 100
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+	}
+
+	s := &pbp2p.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	if err := db.SaveState(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
+	res, err := bs.ListValidatorAssignments(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments
+	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
+
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[1:4] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	if !reflect.DeepEqual(res.Assignments, wanted) {
+		t.Error("Did not receive wanted assignments")
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
+	helpers.ClearAllCaches()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	count := 100
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+			t.Fatal(err)
+		}
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+	}
+
+	s := &pbp2p.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	if err := db.SaveState(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
+	res, err := bs.ListValidatorAssignments(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments
+	var assignments []*ethpb.ValidatorAssignments_CommitteeAssignment
+
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[3:5] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	wantedRes := &ethpb.ValidatorAssignments{
+		Assignments:   assignments,
+		TotalSize:     int32(len(req.Indices)),
+		NextPageToken: "2",
+	}
+
+	if !reflect.DeepEqual(res, wantedRes) {
+		t.Error("Did not receive wanted assignments")
+	}
+
+	// Test the wrap around scenario
+	assignments = nil
+	req = &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
+	res, err = bs.ListValidatorAssignments(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, index := range activeIndices[6:7] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	wantedRes = &ethpb.ValidatorAssignments{
+		Assignments:   assignments,
+		TotalSize:     int32(len(req.Indices)),
+		NextPageToken: "2",
+	}
+
+	if !reflect.DeepEqual(res, wantedRes) {
+		t.Error("Did not receive wanted assignments")
 	}
 }
