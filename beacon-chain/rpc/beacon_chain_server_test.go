@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -545,5 +546,78 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 	if !reflect.DeepEqual(res, wantedRes) {
 		t.Error("Did not receive wanted assignments")
+	}
+}
+
+func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
+	helpers.ClearAllCaches()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	epoch := uint64(1)
+	attestedBalance := uint64(1)
+	validatorCount := uint64(100)
+
+	validators := make([]*ethpb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
+	var crosslinks []*ethpb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &ethpb.Crosslink{
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
+		})
+	}
+
+	s := &pbp2p.BeaconState{
+		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:                 validators,
+		Balances:                   balances,
+		BlockRoots:                 make([][]byte, 128),
+		Slashings:                  []uint64{0, 1e9, 1e9},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentCrosslinks:          crosslinks,
+		CurrentEpochAttestations:   atts,
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		JustificationBits:          bitfield.Bitvector4{0x00},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	if err := bs.beaconDB.SaveState(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := bs.GetValidatorParticipation(context.Background(), &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := &ethpb.ValidatorParticipation{
+		Epoch:                   epoch,
+		VotedEther:              attestedBalance,
+		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
+	}
+
+	if !reflect.DeepEqual(res, wanted) {
+		t.Error("Incorrect validator participation respond")
 	}
 }
