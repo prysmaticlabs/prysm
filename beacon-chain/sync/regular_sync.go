@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -284,6 +285,8 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 				Message: err.Error(),
 			})
 		}
+
+		log.WithField("method", logutil.FunctionName(fn)).Error(err)
 	}
 }
 

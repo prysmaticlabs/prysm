@@ -1,8 +1,10 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
 	ggio "github.com/gogo/protobuf/io"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
@@ -76,7 +78,7 @@ func setupPeerNegotiation(h host.Host, contractAddress string, exclusions []peer
 
 				log.WithField("msg", resp).Debug("Handshake received")
 
-				if resp.DepositContractAddress != contractAddress {
+				if !bytes.Equal(common.HexToHash(resp.DepositContractAddress).Bytes(), common.HexToHash(contractAddress).Bytes()) {
 					log.WithFields(logrus.Fields{
 						"peerContract":     resp.DepositContractAddress,
 						"expectedContract": contractAddress,

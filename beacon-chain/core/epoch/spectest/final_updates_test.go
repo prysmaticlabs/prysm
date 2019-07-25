@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -13,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
+
+const finalUpdatesPrefix = "tests/epoch_processing/final_updates/"
 
 func runFinalUpdatesTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -50,22 +51,4 @@ func runFinalUpdatesTests(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-const finalUpdatesPrefix = "tests/epoch_processing/final_updates/"
-
-func TestFinalUpdatesMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runFinalUpdatesTests(t, filepath)
-}
-
-func TestFinalUpdatesMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(finalUpdatesPrefix + "final_updates_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runFinalUpdatesTests(t, filepath)
 }
