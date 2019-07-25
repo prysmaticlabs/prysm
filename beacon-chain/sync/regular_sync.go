@@ -272,7 +272,7 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	}()
 
 	// messages received in sync should be processed in a timely manner
-	ctx, cancel := context.WithTimeout(msg.Ctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(msg.Ctx, 30*time.Second)
 	defer cancel()
 	msg.Ctx = ctx
 
