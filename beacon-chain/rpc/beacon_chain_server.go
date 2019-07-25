@@ -222,7 +222,6 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
 
-
 	currentEpoch := helpers.SlotToEpoch(s.Slot)
 	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
 
