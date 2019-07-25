@@ -2,12 +2,12 @@ package rpc
 
 import (
 	"context"
-	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -145,7 +145,7 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 	validatorCount := len(validators)
 
-	start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Return filtered assignments with pagination.
 	if len(res) > 0 {
-		start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), len(res))
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(res))
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +268,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
 	}
 
-	start, end, nextPageToken, err := bs.startAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
 	if err != nil {
 		return nil, err
 	}
@@ -304,36 +304,4 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-// startAndEndPage is a pagination heloer, it takes in the requested page token, size, total size,
-// and returns start, end page and the next page token.
-func (bs *BeaconChainServer) startAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, string, error) {
-	if pageToken == "" {
-		pageToken = "0"
-	}
-	if pageSize == 0 {
-		pageSize = params.BeaconConfig().DefaultPageSize
-	}
-
-	token, err := strconv.Atoi(pageToken)
-	if err != nil {
-		return 0, 0, "", status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
-	}
-
-	// Start page can not be greater than validator size.
-	start := token * pageSize
-	if start >= totalSize {
-		return 0, 0, "", status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
-			start, totalSize)
-	}
-
-	// End page can not go out of bound.
-	end := start + pageSize
-	if end > totalSize {
-		end = totalSize
-	}
-
-	nextPageToken := strconv.Itoa(token + 1)
-	return start, end, nextPageToken, nil
 }
