@@ -183,7 +183,7 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, block, config.VerifySignatures)
+	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
@@ -269,7 +269,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessVoluntaryExits(state, body, config.VerifySignatures)
+	state, err = b.ProcessVoluntaryExits(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
