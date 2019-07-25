@@ -257,7 +257,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessAttesterSlashings(state, body, config.VerifySignatures)
+	state, err = b.ProcessAttesterSlashings(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attester slashings: %v", err)
 	}
