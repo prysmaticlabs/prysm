@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -271,7 +272,7 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	}()
 
 	// messages received in sync should be processed in a timely manner
-	ctx, cancel := context.WithTimeout(msg.Ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(msg.Ctx, 2*time.Minute)
 	defer cancel()
 	msg.Ctx = ctx
 
@@ -284,6 +285,8 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 				Message: err.Error(),
 			})
 		}
+
+		log.WithField("method", logutil.FunctionName(fn)).Error(err)
 	}
 }
 
