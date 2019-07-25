@@ -210,28 +210,24 @@ func ProcessBlockHeader(
 func ProcessRandao(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	if verifySignatures {
-		proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-		if err != nil {
-			return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
-		}
-		proposerPub := beaconState.Validators[proposerIdx].PublicKey
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	proposerPub := beaconState.Validators[proposerIdx].PublicKey
 
-		currentEpoch := helpers.CurrentEpoch(beaconState)
-		buf := make([]byte, 32)
-		binary.LittleEndian.PutUint64(buf, currentEpoch)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-		domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
-		if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
-			return nil, fmt.Errorf("could not verify block randao: %v", err)
-		}
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
+		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {

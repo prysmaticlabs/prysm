@@ -60,11 +60,18 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 		t.Error(err)
 	}
 
+	beaconState.Slot++
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot--
 	block := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+			RandaoReveal: randaoReveal,
 			Eth1Data:     eth1Data,
 		},
 	}
@@ -529,11 +536,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
 		Slot:       beaconState.Slot,
 		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      []byte{},
+			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      []*ethpb.Attestation{blockAtt},

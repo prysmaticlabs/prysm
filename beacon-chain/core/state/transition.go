@@ -188,7 +188,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process block header: %v", err)
 	}
 
-	state, err = b.ProcessRandao(state, block.Body, config.VerifySignatures)
+	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process randao: %v", err)
 	}
