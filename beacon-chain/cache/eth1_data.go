@@ -30,8 +30,8 @@ var (
 
 // Eth1DataVote defines the struct which keeps track of the vote count of individual deposit root.
 type Eth1DataVote struct {
-	DepositRoot []byte
-	VoteCount   uint64
+	Eth1DataHash [32]byte
+	VoteCount    uint64
 }
 
 // Eth1DataVoteCache is a struct with 1 queue for looking up eth1 data vote count by deposit root.
@@ -40,14 +40,14 @@ type Eth1DataVoteCache struct {
 	lock              sync.RWMutex
 }
 
-// eth1DataVoteKeyFn takes the deposit root as the key for the eth1 data vote count of a given root.
+// eth1DataVoteKeyFn takes the eth1data hash as the key for the eth1 data vote count of a given eth1data object.
 func eth1DataVoteKeyFn(obj interface{}) (string, error) {
 	eInfo, ok := obj.(*Eth1DataVote)
 	if !ok {
 		return "", ErrNotEth1DataVote
 	}
 
-	return string(eInfo.DepositRoot), nil
+	return string(eInfo.Eth1DataHash[:]), nil
 }
 
 // NewEth1DataVoteCache creates a new eth1 data vote count cache for storing/accessing Eth1DataVote.
@@ -57,12 +57,12 @@ func NewEth1DataVoteCache() *Eth1DataVoteCache {
 	}
 }
 
-// Eth1DataVote fetches eth1 data vote count by deposit root. Returns vote count,
+// Eth1DataVote fetches eth1 data vote count by the eth1data hash. Returns vote count,
 // if exists. Otherwise returns false, nil.
-func (c *Eth1DataVoteCache) Eth1DataVote(depositRoot []byte) (uint64, error) {
+func (c *Eth1DataVoteCache) Eth1DataVote(eth1DataHash [32]byte) (uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(depositRoot))
+	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(eth1DataHash[:]))
 	if err != nil {
 		return 0, err
 	}
@@ -97,10 +97,10 @@ func (c *Eth1DataVoteCache) AddEth1DataVote(eth1DataVote *Eth1DataVote) error {
 
 // IncrementEth1DataVote increments the existing eth1 data object's vote count by 1,
 // and returns the vote count.
-func (c *Eth1DataVoteCache) IncrementEth1DataVote(depositRoot []byte) (uint64, error) {
+func (c *Eth1DataVoteCache) IncrementEth1DataVote(eth1DataHash [32]byte) (uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(depositRoot))
+	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(eth1DataHash[:]))
 	if err != nil {
 		return 0, err
 	}

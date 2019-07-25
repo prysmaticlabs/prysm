@@ -295,6 +295,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	defer span.End()
 	stateReq.Inc()
 	req, ok := msg.Data.(*pb.BeaconStateRequest)
+	log.Error("handling state req")
 	if !ok {
 		log.Error("Message is of the incorrect type")
 		return errors.New("incoming message is not *pb.BeaconStateRequest")
@@ -304,11 +305,15 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return err
 	}
+	log.Error("getting finalized state")
+
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return err
 	}
+	log.Error("hashing state")
+
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
 		log.WithFields(logrus.Fields{
 			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),
@@ -321,6 +326,8 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Error("could not get finalized block")
 		return err
 	}
+	log.Error("getting block")
+
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
 	).Debug("Sending finalized state and block to peer")
