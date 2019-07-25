@@ -3,8 +3,9 @@ package testutil
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/prysmaticlabs/go-ssz"
 	"testing"
+
+	"github.com/prysmaticlabs/go-ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
