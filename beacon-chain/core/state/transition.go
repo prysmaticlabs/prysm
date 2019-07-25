@@ -69,7 +69,7 @@ func ExecuteStateTransition(
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlock(ctx, state, block, config)
+		state, err = ProcessBlock(ctx, state, block)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -178,7 +178,6 @@ func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
-	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
@@ -198,7 +197,7 @@ func ProcessBlock(
 		return nil, fmt.Errorf("could not process eth1 data: %v", err)
 	}
 
-	state, err = ProcessOperations(ctx, state, block.Body, config)
+	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block operation: %v", err)
 	}
@@ -232,7 +231,7 @@ func ProcessOperations(
 	ctx context.Context,
 	state *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	config *TransitionConfig) (*pb.BeaconState, error) {
+) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
@@ -261,7 +260,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attester slashings: %v", err)
 	}
-	state, err = b.ProcessAttestations(state, body, config.VerifySignatures)
+	state, err = b.ProcessAttestations(state, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}

@@ -3,11 +3,12 @@ package rpc
 import (
 	"context"
 	"crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"

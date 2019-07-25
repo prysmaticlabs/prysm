@@ -149,7 +149,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 
 	want := "could not process block proposer slashing"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -298,7 +298,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		t.Error(err)
 	}
 	want := "could not verify attestation at index 0"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -419,7 +419,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err == nil {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block); err == nil {
 		t.Error("Expected err, received nil")
 	}
 }
@@ -634,7 +634,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Error(err)
 	}
 
-	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig())
+	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
@@ -847,10 +847,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		CurrentCrosslinks: crosslinks,
 	}
 
-	c := &state.TransitionConfig{
-		VerifySignatures: true,
-	}
-
 	// Set up proposer slashing object for block
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
@@ -989,7 +985,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessBlock(context.Background(), s, blk, c)
+		_, err := state.ProcessBlock(context.Background(), s, blk)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1055,7 +1051,6 @@ func TestProcessOperations_OverMaxProposerSlashings(t *testing.T) {
 		context.Background(),
 		&pb.BeaconState{},
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1075,7 +1070,6 @@ func TestProcessOperations_OverMaxAttesterSlashings(t *testing.T) {
 		context.Background(),
 		&pb.BeaconState{},
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1094,7 +1088,6 @@ func TestProcessOperations_OverMaxAttestations(t *testing.T) {
 		context.Background(),
 		&pb.BeaconState{},
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1113,7 +1106,6 @@ func TestProcessOperations_OverMaxTransfers(t *testing.T) {
 		context.Background(),
 		&pb.BeaconState{},
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1133,7 +1125,6 @@ func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
 		context.Background(),
 		&pb.BeaconState{},
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1156,7 +1147,6 @@ func TestProcessOperations_IncorrectDeposits(t *testing.T) {
 		context.Background(),
 		s,
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1191,7 +1181,6 @@ func TestProcessOperation_DuplicateTransfer(t *testing.T) {
 		context.Background(),
 		s,
 		block.Body,
-		state.DefaultConfig(),
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}

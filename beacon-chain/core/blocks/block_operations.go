@@ -415,7 +415,6 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 func ProcessAttestations(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
-	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {

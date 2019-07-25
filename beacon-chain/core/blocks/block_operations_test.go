@@ -897,7 +897,6 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -941,7 +940,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -988,7 +986,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1004,7 +1001,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1052,7 +1048,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1068,7 +1063,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1112,7 +1106,6 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1121,7 +1114,6 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1136,7 +1128,6 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1209,7 +1200,6 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(
 		beaconState,
 		block.Body,
-		false,
 	); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
