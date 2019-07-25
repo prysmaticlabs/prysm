@@ -17,7 +17,7 @@ func TestNegotiation_AcceptsValidPeer(t *testing.T) {
 	hostA := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	hostB := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	address := "same"
+	address := "0x83250193c56fab7a25b40fe98c9b4f7fc238a568"
 	setHandshakeHandler(hostA, address)
 	setHandshakeHandler(hostB, address)
 
@@ -40,11 +40,11 @@ func TestNegotiation_DisconnectsDifferentDepositContract(t *testing.T) {
 	hostA := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	hostB := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	setHandshakeHandler(hostA, "hostA")
-	setHandshakeHandler(hostB, "hostB")
+	setHandshakeHandler(hostA, "0x83250193c56fab7a25b40fe98c9b4f7fc238a568")
+	setHandshakeHandler(hostB, "0x9d525e28fe5830ee92d7aa799c4d21590567b595")
 
-	setupPeerNegotiation(hostA, "hostA", []peer.ID{})
-	setupPeerNegotiation(hostB, "hostB", []peer.ID{})
+	setupPeerNegotiation(hostA, "0x83250193c56fab7a25b40fe98c9b4f7fc238a568", []peer.ID{})
+	setupPeerNegotiation(hostB, "0x9d525e28fe5830ee92d7aa799c4d21590567b595", []peer.ID{})
 
 	if err := hostA.Connect(ctx, pstore.PeerInfo{ID: hostB.ID(), Addrs: hostB.Addrs()}); err != nil {
 		t.Fatal(err)
