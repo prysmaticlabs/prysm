@@ -5,12 +5,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+const crosslinkPrefix = "tests/epoch_processing/crosslinks/"
 
 func runCrosslinkProcessingTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -44,23 +44,4 @@ func runCrosslinkProcessingTests(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-const crosslinkPrefix = "tests/epoch_processing/crosslinks/"
-
-func TestCrosslinksProcessingMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runCrosslinkProcessingTests(t, filepath)
-}
-
-func TestCrosslinksProcessingMainnet(t *testing.T) {
-	helpers.ClearAllCaches()
-	filepath, err := bazel.Runfile(crosslinkPrefix + "crosslinks_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runCrosslinkProcessingTests(t, filepath)
 }

@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -12,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
+
+const blkHeaderPrefix = "tests/operations/block_header/"
 
 // Block header test is actually a full block processing test. Not sure why it
 // was named "block_header". The note in the test format readme says "Note that
@@ -61,22 +62,4 @@ func runBlockHeaderTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-var blkHeaderPrefix = "tests/operations/block_header/"
-
-func TestBlockHeaderMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(blkHeaderPrefix + "block_header_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runBlockHeaderTest(t, filepath)
-}
-
-func TestBlockHeaderMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(blkHeaderPrefix + "block_header_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runBlockHeaderTest(t, filepath)
 }
