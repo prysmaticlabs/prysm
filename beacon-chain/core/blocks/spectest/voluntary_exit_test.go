@@ -40,7 +40,7 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 
 			body := &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.VoluntaryExit{tt.VoluntaryExit}}
 
-			postState, err := blocks.ProcessVoluntaryExits(tt.Pre, body, true)
+			postState, err := blocks.ProcessVoluntaryExits(tt.Pre, body)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {

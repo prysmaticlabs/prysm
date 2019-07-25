@@ -35,49 +35,27 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	t.Skip("Skip until bls.Verify is finished")
-	// TODO(#2307) unskip after bls.Verify is finished
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Slashed:   true,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Validators:        validators,
-		Slot:              0,
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	validators[5896].Slashed = false
-
-	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
-	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv, err := bls.RandKey(rand.Reader)
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
+
+	lbhsr, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
+		t.Error(err)
 	}
-	priv2, err := bls.RandKey(rand.Reader)
+
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		t.Errorf("failed to generate private key got: %v", err)
+		t.Error(err)
 	}
-	validators[5896].PublicKey = priv.PublicKey().Marshal()
+
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
@@ -89,11 +67,12 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
-	blockSig := priv2.Sign(signingRoot[:], dt)
+	dt := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
 
-	_, err = blocks.ProcessBlockHeader(state, block, true)
-	want := "verify signature failed"
+	_, err = blocks.ProcessBlockHeader(beaconState, block)
+	want := "signature did not verify"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -146,7 +125,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "is different then block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -195,7 +174,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -248,7 +227,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err = blocks.ProcessBlockHeader(state, block, false)
+	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "was previously slashed"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -317,7 +296,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 
-	newState, err := blocks.ProcessBlockHeader(state, block, true)
+	newState, err := blocks.ProcessBlockHeader(state, block)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
@@ -380,7 +359,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	epochSignature, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1636,7 +1615,6 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	if _, err := blocks.ProcessVoluntaryExits(
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1666,10 +1644,8 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	want := "expected current epoch >= exit epoch"
 
 	if _, err := blocks.ProcessVoluntaryExits(
-
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1699,10 +1675,8 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 
 	want := "validator has not been active long enough to exit"
 	if _, err := blocks.ProcessVoluntaryExits(
-
 		state,
 		block.Body,
-		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1723,15 +1697,33 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators: registry,
-		Slot:       params.BeaconConfig().SlotsPerEpoch * 5,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	}
 	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
+	signingRoot, err := ssz.SigningRoot(exits[0])
+	if err != nil {
+		t.Error(err)
+	}
+	domain := helpers.Domain(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	sig := priv.Sign(signingRoot[:], domain)
+	exits[0].Signature = sig.Marshal()
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
 		},
 	}
-	newState, err := blocks.ProcessVoluntaryExits(state, block.Body, false)
+
+	newState, err := blocks.ProcessVoluntaryExits(state, block.Body)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}

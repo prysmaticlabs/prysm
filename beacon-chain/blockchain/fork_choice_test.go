@@ -1294,7 +1294,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	offset := uint64(64)
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1376,7 +1376,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1454,7 +1454,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	lastAvailableSlot := uint64(60)
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, 0, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, 0, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
