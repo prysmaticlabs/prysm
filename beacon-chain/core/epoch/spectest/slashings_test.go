@@ -5,12 +5,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+const slashingsPrefix = "tests/epoch_processing/slashings/"
 
 func runSlashingsTests(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -44,22 +45,4 @@ func runSlashingsTests(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-const slashingsPrefix = "tests/epoch_processing/slashings/"
-
-func TestSlashingsMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(slashingsPrefix + "slashings_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runSlashingsTests(t, filepath)
-}
-
-func TestSlashingsMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(slashingsPrefix + "slashings_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runSlashingsTests(t, filepath)
 }

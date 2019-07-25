@@ -1,9 +1,10 @@
 # gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 
-proto_library(
-    name = "v1alpha1_proto",
+ssz_proto_files(
+    name = "ssz_proto_files",
     srcs = [
         "attestation.proto",
         "beacon_block.proto",
@@ -11,6 +12,16 @@ proto_library(
         "node.proto",
         "validator.proto",
     ],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
+)
+
+proto_library(
+    name = "v1alpha1_proto",
+    srcs = [":ssz_proto_files"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:empty_proto",
@@ -31,9 +42,3 @@ go_proto_library(
         "@go_googleapis//google/api:annotations_go_proto",
     ],
 )
-
-#go_library(
-#    name = "go_default_library",
-#    embed = [":v1alpha1_go_proto"],
-#    visibility = ["//visibility:public"],
-#)

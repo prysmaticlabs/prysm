@@ -15,16 +15,6 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func TestBlockProcessingMinimalYaml(t *testing.T) {
-	t.Skip("Test will fail with mainnet protos")
-
-	runBlockProcessingTest(t, "sanity_blocks_minimal.yaml")
-}
-
-func TestBlockProcessingMainnetYaml(t *testing.T) {
-	runBlockProcessingTest(t, "sanity_blocks_mainnet.yaml")
-}
-
 func runBlockProcessingTest(t *testing.T, filename string) {
 	filepath, err := bazel.Runfile("tests/sanity/blocks/" + filename)
 	if err != nil {
