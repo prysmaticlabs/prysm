@@ -1,0 +1,13 @@
+config_setting(
+    name = "ssz_mainnet",
+    define_values = {
+        "ssz": "mainnet",
+    },
+)
+
+config_setting(
+    name = "ssz_minimal",
+    define_values = {
+        "ssz": "minimal",
+    },
+)
