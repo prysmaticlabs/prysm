@@ -1,11 +1,10 @@
 package pagination
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // StartAndEndPage takes in the requested page token, wanted page size, total page size.
@@ -20,14 +19,13 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 
 	token, err := strconv.Atoi(pageToken)
 	if err != nil {
-		return 0, 0, "", status.Errorf(codes.InvalidArgument, "could not convert page token: %v", err)
+		return 0, 0, "", fmt.Errorf("could not convert page token: %v", err)
 	}
 
 	// Start page can not be greater than validator size.
 	start := token * pageSize
 	if start >= totalSize {
-		return 0, 0, "", status.Errorf(codes.InvalidArgument, "page start %d >= validator list %d",
-			start, totalSize)
+		return 0, 0, "", fmt.Errorf("page start %d >= validator list %d", start, totalSize)
 	}
 
 	// End page can not go out of bound.
