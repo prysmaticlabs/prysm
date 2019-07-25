@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
+
+const attesterSlashingPrefix = "tests/operations/attester_slashing/"
 
 func runAttesterSlashingTest(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -59,22 +60,4 @@ func runAttesterSlashingTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-var attesterSlashingPrefix = "tests/operations/attester_slashing/"
-
-func TestAttesterSlashingMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(attesterSlashingPrefix + "attester_slashing_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runAttesterSlashingTest(t, filepath)
-}
-
-func TestAttesterSlashingMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(attesterSlashingPrefix + "attester_slashing_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runAttesterSlashingTest(t, filepath)
 }

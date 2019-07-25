@@ -14,13 +14,13 @@ message BeaconState {
 
   // History [2001-3000]
   ethereum.eth.v1alpha1.BeaconBlockHeader latest_block_header = 2001;
-  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
+  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
   repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
 
   // Eth1 [3001-4000]
   ethereum.eth.v1alpha1.Eth1Data eth1_data = 3001;
-  repeated ethereum.eth.v1alpha1.Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+  repeated ethereum.eth.v1alpha1.Eth1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"eth1_data_votes.size\""];
   uint64 eth1_deposit_index = 3003;
 
   // Registry [4001-5000]
@@ -29,20 +29,20 @@ message BeaconState {
 
   // Shuffling [5001-6000]
   uint64 start_shard = 5001;
-  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
+  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
+  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
+  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
 
   // Slashings [6001-7000]
-  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"8192\""];
+  repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
 
   // Attestations [7001-8000]
-  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
-  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
+  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
 
   // Crosslinks [8001-9000]
-  repeated ethereum.eth.v1alpha1.Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"1024\""];
-  repeated ethereum.eth.v1alpha1.Crosslink current_crosslinks = 8002 [(gogoproto.moretags) = "ssz-size:\"1024\""];
+  repeated ethereum.eth.v1alpha1.Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"previous_crosslinks.size\""];
+  repeated ethereum.eth.v1alpha1.Crosslink current_crosslinks = 8002 [(gogoproto.moretags) = "ssz-size:\"current_crosslinks.size\""];
 
   // Finality [9001-10000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
@@ -84,8 +84,8 @@ message AttestationDataAndCustodyBit {
 }
 
 message HistoricalBatch {
-  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
-  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
+  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
 }
 
 message CompactCommittee {
