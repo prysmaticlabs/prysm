@@ -169,7 +169,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
 
-		if _, err := blocks.ProcessAttestation(beaconState, att, false); err != nil {
+		if _, err := blocks.ProcessAttestation(beaconState, att); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
