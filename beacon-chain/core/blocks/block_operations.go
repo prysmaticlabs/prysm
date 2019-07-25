@@ -91,7 +91,11 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
+	eth1DataHash, err := hashutil.HashProto(data)
+	if err != nil {
+		return false, fmt.Errorf("could not hash eth1data: %v", err)
+	}
+	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
@@ -107,8 +111,8 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 	}
 
 	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		DepositRoot: data.DepositRoot,
-		VoteCount:   voteCount,
+		Eth1DataHash: eth1DataHash,
+		VoteCount:    voteCount,
 	}); err != nil {
 		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
