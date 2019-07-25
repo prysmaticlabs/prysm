@@ -5,6 +5,8 @@ package logutil
 import (
 	"io"
 	"os"
+	"reflect"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 )
@@ -22,4 +24,9 @@ func ConfigurePersistentLogging(logFileName string) error {
 
 	logrus.Info("File logging initialized")
 	return nil
+}
+
+// FunctionName returns the string representation of the function name for some interface.
+func FunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }

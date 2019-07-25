@@ -57,7 +57,7 @@ func IsValidBlock(
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	secondsPerSlot := time.Duration((slot)*params.BeaconConfig().SecondsPerSlot) * time.Second
 	validTimeThreshold := genesisTime.Add(secondsPerSlot)
-	now := clock.Now()
+	now := time.Now()
 	isValid := now.After(validTimeThreshold)
 
 	return isValid

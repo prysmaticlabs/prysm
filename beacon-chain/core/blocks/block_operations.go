@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -22,7 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "blocks")
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
@@ -89,7 +91,11 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	voteCount, err := eth1DataCache.Eth1DataVote(data.DepositRoot)
+	eth1DataHash, err := hashutil.HashProto(data)
+	if err != nil {
+		return false, fmt.Errorf("could not hash eth1data: %v", err)
+	}
+	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
 	}
@@ -105,8 +111,8 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 	}
 
 	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		DepositRoot: data.DepositRoot,
-		VoteCount:   voteCount,
+		Eth1DataHash: eth1DataHash,
+		VoteCount:    voteCount,
 	}); err != nil {
 		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
 	}
@@ -179,6 +185,7 @@ func ProcessBlockHeader(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
+	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
@@ -761,24 +768,20 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
 	}
 
-	copiedBit0Indices := make([]uint64, len(custodyBit0Indices))
-	copy(copiedBit0Indices, custodyBit0Indices)
-
-	sort.SliceStable(copiedBit0Indices, func(i, j int) bool {
-		return copiedBit0Indices[i] < copiedBit0Indices[j]
+	custodyBit0IndicesIsSorted := sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
 	})
-	if !reflect.DeepEqual(copiedBit0Indices, custodyBit0Indices) {
-		return fmt.Errorf("custody Bit0 indices are not sorted, wanted %v but got %v", copiedBit0Indices, custodyBit0Indices)
+
+	if !custodyBit0IndicesIsSorted {
+		return fmt.Errorf("custody Bit0 indices are not sorted, got %v", custodyBit0Indices)
 	}
 
-	copiedBit1Indices := make([]uint64, len(custodyBit1Indices))
-	copy(copiedBit1Indices, custodyBit1Indices)
-
-	sort.SliceStable(copiedBit1Indices, func(i, j int) bool {
-		return copiedBit1Indices[i] < copiedBit1Indices[j]
+	custodyBit1IndicesIsSorted := sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
+		return custodyBit1Indices[i] < custodyBit1Indices[j]
 	})
-	if len(custodyBit1Indices) > 0 && !reflect.DeepEqual(copiedBit1Indices, custodyBit1Indices) {
-		return fmt.Errorf("custody Bit1 indices are not sorted, wanted %v but got %v", copiedBit1Indices, custodyBit1Indices)
+
+	if !custodyBit1IndicesIsSorted {
+		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
 	domain := helpers.Domain(beaconState, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
@@ -854,7 +857,7 @@ func ProcessDeposits(
 
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for _, deposit := range deposits {
-		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap, true)
+		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 		}
@@ -907,14 +910,9 @@ func ProcessDeposits(
 //         # Increase balance by deposit amount
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
-func ProcessDeposit(
-	beaconState *pb.BeaconState,
-	deposit *ethpb.Deposit,
-	valIndexMap map[[32]byte]int,
-	verifyTree bool,
-) (*pb.BeaconState, error) {
-	if err := verifyDeposit(beaconState, deposit, verifyTree); err != nil {
-		return nil, fmt.Errorf("could not verify deposit from #%x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
+func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+	if err := verifyDeposit(beaconState, deposit); err != nil {
+		return nil, fmt.Errorf("could not verify deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
@@ -925,7 +923,9 @@ func ProcessDeposit(
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
-			return nil, fmt.Errorf("could not verify deposit data signature: %v", err)
+			// Ignore this error as in the spec pseudo code.
+			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
+			return beaconState, nil
 		}
 
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
@@ -949,25 +949,24 @@ func ProcessDeposit(
 	return beaconState, nil
 }
 
-func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, verifyTree bool) error {
-	if verifyTree {
-		// Verify Merkle proof of deposit and deposit trie root.
-		receiptRoot := beaconState.Eth1Data.DepositRoot
-		leaf, err := hashutil.DepositHash(deposit.Data)
-		if err != nil {
-			return fmt.Errorf("could not tree hash deposit data: %v", err)
-		}
-		if ok := trieutil.VerifyMerkleProof(
+func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
+	// Verify Merkle proof of deposit and deposit trie root.
+	receiptRoot := beaconState.Eth1Data.DepositRoot
+	leaf, err := hashutil.DepositHash(deposit.Data)
+	if err != nil {
+		return fmt.Errorf("could not tree hash deposit data: %v", err)
+	}
+	if ok := trieutil.VerifyMerkleProof(
+		receiptRoot,
+		leaf[:],
+		int(beaconState.Eth1DepositIndex),
+		deposit.Proof,
+	); !ok {
+		fmt.Printf("deposit index %d\n", beaconState.Eth1DepositIndex)
+		return fmt.Errorf(
+			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
-			leaf[:],
-			int(beaconState.Eth1DepositIndex),
-			deposit.Proof,
-		); !ok {
-			return fmt.Errorf(
-				"deposit merkle branch of deposit root did not verify for root: %#x",
-				receiptRoot,
-			)
-		}
+		)
 	}
 
 	return nil
@@ -1042,7 +1041,6 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-
 	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
 		return fmt.Errorf("could not verify voluntary exit signature: %v", err)

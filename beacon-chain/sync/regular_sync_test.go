@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -182,8 +183,8 @@ func TestProcessBlock_OK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -260,8 +261,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -656,8 +657,8 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	ss := setupService(db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), genesisTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -705,6 +706,10 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveFinalizedBlock(genBlock); err != nil {
+		t.Fatalf("could not save genesis block: %v", err)
+	}
 
 	ss := setupService(db)
 
@@ -721,7 +726,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+	testutil.AssertLogsContain(t, hook, "Sending finalized state and block to peer")
 }
 
 func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {

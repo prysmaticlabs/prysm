@@ -33,8 +33,8 @@ var endpoint = "ws://127.0.0.1"
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 5, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, 5)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -99,8 +99,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatal(err)
 		}
 		unixTime := uint64(time.Now().Unix())
-		deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+		deposits, _ := testutil.SetupInitialDeposits(t, 100)
+		if err := beaconDb.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
@@ -1294,7 +1294,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	offset := uint64(64)
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, gState.CurrentJustifiedCheckpoint.Epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1376,7 +1376,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	gState.FinalizedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, gState.FinalizedCheckpoint.Epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1454,7 +1454,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	lastAvailableSlot := uint64(60)
 	gState.CurrentJustifiedCheckpoint.Epoch = 1
 	gState.Slot = genesisSlot + offset
-	epochSignature, err := helpers.CreateRandaoReveal(gState, 0, privKeys)
+	epochSignature, err := testutil.CreateRandaoReveal(gState, 0, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}

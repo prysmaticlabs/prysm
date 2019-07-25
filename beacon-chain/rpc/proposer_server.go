@@ -117,8 +117,8 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
-
 	}
+
 	ps.chainService.UpdateCanonicalRoots(blk, root)
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
@@ -169,7 +169,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
 
-		if _, err := blocks.ProcessAttestation(beaconState, att, false); err != nil {
+		if _, err := blocks.ProcessAttestation(beaconState, att); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}

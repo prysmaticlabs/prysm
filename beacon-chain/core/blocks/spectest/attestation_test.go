@@ -76,11 +76,3 @@ func runAttestationTest(t *testing.T, filename string) {
 		})
 	}
 }
-
-func TestAttestationMinimal(t *testing.T) {
-	runAttestationTest(t, "attestation_minimal.yaml")
-}
-
-func TestAttestationMainnet(t *testing.T) {
-	runAttestationTest(t, "attestation_mainnet.yaml")
-}

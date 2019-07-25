@@ -43,7 +43,7 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationTargetBucket)
 
-		return a.Put(attTarget.BlockRoot, encodedAttTgt)
+		return a.Put(attTarget.BeaconBlockRoot, encodedAttTgt)
 	})
 }
 

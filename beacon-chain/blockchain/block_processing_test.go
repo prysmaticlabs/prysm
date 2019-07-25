@@ -19,10 +19,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -66,8 +64,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -114,12 +112,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -149,7 +146,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,6 +164,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
@@ -177,6 +178,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
@@ -200,8 +205,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -245,6 +250,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 			Attestations: nil,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	s, err := chainService.AdvanceState(ctx, beaconState, block)
 	if err != nil {
@@ -255,6 +264,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -274,8 +287,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, false)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -359,8 +372,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -391,7 +404,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,8 +417,16 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
+	goodStateBlock, err = testutil.SignBlock(beaconState, goodStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, chainService)
+	goodStateBlock, err = testutil.SignBlock(beaconState, goodStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
 		t.Fatal(err)
@@ -423,8 +444,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -455,7 +476,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,6 +489,10 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 			Eth1Data:     &ethpb.Eth1Data{},
 			RandaoReveal: randaoReveal,
 		},
+	}
+	invalidStateBlock, err = testutil.SignBlock(beaconState, invalidStateBlock, privKeys)
+	if err != nil {
+		t.Error(err)
 	}
 	beaconState.Slot--
 
@@ -490,8 +515,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
 	chainService := setupBeaconChain(t, db, attsService)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -528,35 +553,33 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	currentSlot := uint64(0)
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pendingDeposits := []*ethpb.Deposit{
-		createPreChainStartDeposit([]byte{'F'}),
-	}
-	pendingDepositsData := make([][]byte, len(pendingDeposits))
-	for i, pd := range pendingDeposits {
-		h, err := hashutil.DepositHash(pd.Data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pendingDepositsData[i] = h[:]
-	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(pendingDepositsData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate deposit trie: %v", err)
-	}
+	pendingDeposits := make([]*ethpb.Deposit, 1)
 	for i := range pendingDeposits {
-		proof, err := depositTrie.MerkleProof(0)
-		if err != nil {
-			t.Fatalf("Could not generate proof: %v", err)
+		var withdrawalCreds [32]byte
+		copy(withdrawalCreds[:], []byte("testing"))
+		depositData := &ethpb.Deposit_Data{
+			Amount:                params.BeaconConfig().MaxEffectiveBalance,
+			WithdrawalCredentials: withdrawalCreds[:],
 		}
-		pendingDeposits[i].Proof = proof
+		depositData.PublicKey = privKeys[0].PublicKey().Marshal()
+		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+		root, err := ssz.SigningRoot(depositData)
+		if err != nil {
+			t.Fatalf("could not get signing root of deposit data %v", err)
+		}
+		depositData.Signature = privKeys[0].Sign(root[:], domain).Marshal()
+		deposit := &ethpb.Deposit{
+			Data: depositData,
+		}
+		pendingDeposits[i] = deposit
 	}
-	depositRoot := depositTrie.Root()
-	beaconState.Eth1Data.DepositRoot = depositRoot[:]
+	pendingDeposits, root := testutil.GenerateDepositProof(t, pendingDeposits)
+	beaconState.Eth1Data.DepositRoot = root[:]
 	if err := db.SaveHistoricalState(context.Background(), beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
@@ -578,6 +601,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits:     pendingDeposits,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	beaconState.Slot--
 
@@ -590,6 +617,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
+	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
 	}
 
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
@@ -674,8 +705,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -709,7 +740,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +757,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 				RandaoReveal: randaoReveal,
 			},
 		}
+		block, err = testutil.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		initBlockStateRoot(t, block, chainService)
+		block, err = testutil.SignBlock(beaconState, block, privKeys)
+		if err != nil {
+			t.Error(err)
+		}
 		computedState, err := chainService.ReceiveBlock(ctx, block)
 		if err != nil {
 			t.Fatal(err)
@@ -768,7 +807,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	epoch = helpers.CurrentEpoch(beaconState)
-	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -788,7 +827,16 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	blockF, err = testutil.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockF, chainService)
+	blockF, err = testutil.SignBlock(beaconState, blockF, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	computedState, err := chainService.ReceiveBlock(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
@@ -809,7 +857,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	}
 
 	epoch = helpers.CurrentEpoch(beaconState)
-	randaoReveal, err = helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -824,7 +872,15 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 			RandaoReveal: randaoReveal,
 		},
 	}
+	blockG, err = testutil.SignBlock(beaconState, blockG, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	initBlockStateRoot(t, blockG, chainService)
+	blockG, err = testutil.SignBlock(beaconState, blockG, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 
 	computedState, err = chainService.ReceiveBlock(ctx, blockG)
 	if err != nil {
@@ -843,8 +899,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, nil); err != nil {
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.HeadState(ctx)
@@ -893,7 +949,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	currentSlot := uint64(1)
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}

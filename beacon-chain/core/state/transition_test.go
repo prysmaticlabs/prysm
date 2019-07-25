@@ -38,8 +38,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,6 +68,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 			Eth1Data:     eth1Data,
 		},
 	}
+
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Error(err)
@@ -88,8 +94,8 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +119,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,6 +137,11 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			Deposits: blkDeposits,
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -138,14 +149,14 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	proposerIdx := uint64(3)
+	proposerSlashIdx := uint64(3)
 
 	domain := helpers.Domain(
 		beaconState,
@@ -161,7 +172,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
@@ -171,16 +182,16 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
+			ProposerIndex: proposerSlashIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
@@ -216,7 +227,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		CustodyBits:     bitfield.NewBitlist(0),
 	}
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := helpers.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,6 +260,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Deposits: make([]*ethpb.Deposit, 0),
 		},
 	}
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
 	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -258,8 +273,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, false)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,8 +392,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount/8, true)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,7 +409,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	proposerIdx := uint64(3)
+	proposerSlashIdx := uint64(3)
 
 	domain := helpers.Domain(
 		beaconState,
@@ -410,7 +425,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
@@ -420,16 +435,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
+			ProposerIndex: proposerSlashIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-	beaconState.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()[:]
+	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
@@ -482,31 +497,25 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-	attestations := []*ethpb.Attestation{blockAtt}
-	exits := []*ethpb.VoluntaryExit{
-		{
-			ValidatorIndex: 10,
-			Epoch:          0,
-		},
+
+	exit := &ethpb.VoluntaryExit{
+		ValidatorIndex: 10,
+		Epoch:          0,
 	}
+	signingRoot, err = ssz.SigningRoot(exit)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	domain = helpers.Domain(
+		beaconState,
+		helpers.CurrentEpoch(beaconState),
+		params.BeaconConfig().DomainVoluntaryExit,
+	)
+	exit.Signature = privKeys[exit.ValidatorIndex].Sign(signingRoot[:], domain).Marshal()[:]
+
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		t.Fatal(err)
-	}
-	block := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       beaconState.Slot,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      []byte{},
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			VoluntaryExits:    exits,
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-		},
 	}
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
 		{
@@ -520,8 +529,30 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	block := &ethpb.BeaconBlock{
+		ParentRoot: parentRoot[:],
+		Slot:       beaconState.Slot,
+		Body: &ethpb.BeaconBlockBody{
+			RandaoReveal:      []byte{},
+			ProposerSlashings: proposerSlashings,
+			AttesterSlashings: attesterSlashings,
+			Attestations:      []*ethpb.Attestation{blockAtt},
+			VoluntaryExits:    []*ethpb.VoluntaryExit{exit},
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot: []byte{2},
+				BlockHash:   []byte{3},
+			},
+		},
+	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
@@ -535,10 +566,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Error("Expected validator at index 1 to be slashed, received false")
 	}
 
-	received := beaconState.Validators[exits[0].ValidatorIndex].ExitEpoch
+	received := beaconState.Validators[exit.ValidatorIndex].ExitEpoch
 	wanted := params.BeaconConfig().FarFutureEpoch
 	if received == wanted {
-		t.Errorf("Expected validator at index %d to be exiting, did not expect: %d", exits[0].ValidatorIndex, wanted)
+		t.Errorf("Expected validator at index %d to be exiting, did not expect: %d", exit.ValidatorIndex, wanted)
 	}
 }
 

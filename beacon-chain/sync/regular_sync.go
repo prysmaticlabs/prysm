@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -284,6 +285,8 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 				Message: err.Error(),
 			})
 		}
+
+		log.WithField("method", logutil.FunctionName(fn)).Error(err)
 	}
 }
 
@@ -301,11 +304,13 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return err
 	}
+
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return err
 	}
+
 	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
 		log.WithFields(logrus.Fields{
 			"requested": fmt.Sprintf("%#x", req.FinalizedStateRootHash32S),
@@ -313,12 +318,19 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		).Debug("Requested state root is diff than local state root")
 		return err
 	}
+	finalizedBlk, err := rs.db.FinalizedBlock()
+	if err != nil {
+		log.Error("could not get finalized block")
+		return err
+	}
+
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
-	).Debug("Sending finalized, justified, and canonical states to peer")
+	).Debug("Sending finalized state and block to peer")
 	defer sentState.Inc()
 	resp := &pb.BeaconStateResponse{
 		FinalizedState: fState,
+		FinalizedBlock: finalizedBlk,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)

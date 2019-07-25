@@ -30,18 +30,18 @@ service BeaconChain {
         };
     }
 
-    // Retrieve pending attestations.
+    // Retrieve attestations from pool.
     //
     // The server returns a list of attestations that have been seen but not
-    // yet processed. Pending attestations eventually expire as the slot
+    // yet processed. Pool attestations eventually expire as the slot
     // advances, so an attestation missing from this request does not imply
     // that it was included in a block. The attestation may have expired.
     // Refer to the ethereum 2.0 specification for more details on how
     // attestations are processed and when they are no longer valid.
     // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-    rpc ListPendingAttestations(google.protobuf.Empty) returns (ListPendingAttestationsResponse) {
+    rpc AttestationPool(google.protobuf.Empty) returns (AttestationPoolResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/pending"
+            get: "/eth/v1alpha1/beacon/attestations/pool"
         };
     }
 
@@ -229,6 +229,15 @@ message GetValidatorsRequest {
         // Optional criteria to retrieve the genesis set of validators.
         bool genesis = 2;
     }
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 3;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 4;
 }
 
 message Validators {
@@ -238,6 +247,14 @@ message Validators {
     uint64 epoch = 1;
 
     repeated Validator validators = 2;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 3;
+
+    // Total count of Validators matching the request filter.
+    int32 total_size = 4;
 }
 
 
@@ -285,6 +302,15 @@ message ListValidatorAssignmentsRequest {
         
     // Validator indicies to filter assignments for the given epoch.
     repeated uint64 indices = 3;
+
+    // The maximum number of ValidatorAssignments to return in the response.
+    // This field is optional.
+    int32 page_size = 4;
+
+    // A pagination token returned from a previous call to `ListValidatorAssignments`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 5;
 }
 
 message ValidatorAssignments {
@@ -316,6 +342,14 @@ message ValidatorAssignments {
     uint64 epoch = 1;
 
     repeated CommitteeAssignment assignments = 2;
+
+    // A pagination token returned from a previous call to `ListValidatorAssignmentsRequest`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string next_page_token = 3;
+
+    // Total count of CommitteeAssignments matching the request filter.
+    int32 total_size = 4;
 }
 
 message GetValidatorParticipationRequest {
@@ -341,6 +375,7 @@ message ValidatorParticipation {
     uint64 eligible_ether = 5;   
 }
 
-message ListPendingAttestationsResponse {
-  repeated Attestation pending_attestations = 1;
+message AttestationPoolResponse {
+    repeated Attestation attestations = 1;
 }
+

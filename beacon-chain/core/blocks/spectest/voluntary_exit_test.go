@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
+
+const exitPrefix = "tests/operations/voluntary_exit/"
 
 func runVoluntaryExitTest(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -59,22 +60,4 @@ func runVoluntaryExitTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-var exitPrefix = "tests/operations/voluntary_exit/"
-
-func TestVoluntaryExitMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile(exitPrefix + "voluntary_exit_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runVoluntaryExitTest(t, filepath)
-}
-
-func TestVoluntaryExitMainnet(t *testing.T) {
-	filepath, err := bazel.Runfile(exitPrefix + "voluntary_exit_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runVoluntaryExitTest(t, filepath)
 }

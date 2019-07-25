@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["pagination.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/pagination",
+    visibility = ["//visibility:public"],
+    deps = ["//shared/params:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["pagination_test.go"],
+    embed = [":go_default_library"],
+)

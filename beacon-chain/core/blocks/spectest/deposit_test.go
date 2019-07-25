@@ -5,13 +5,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+const depositPrefix = "tests/operations/deposit/"
 
 func runDepositTest(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)
@@ -35,13 +36,8 @@ func runDepositTest(t *testing.T, filename string) {
 	for _, tt := range test.TestCases {
 		helpers.ClearAllCaches()
 		t.Run(tt.Description, func(t *testing.T) {
-			if tt.Description == "invalid_sig_new_deposit" {
-				// TODO(#2857): uncompressed signature format is not supported
-				t.Skip("Uncompressed BLS signature format is not supported")
-			}
-
 			valMap := stateutils.ValidatorIndexMap(tt.Pre)
-			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap, true)
+			post, err := blocks.ProcessDeposit(tt.Pre, tt.Deposit, valMap)
 			// Note: This doesn't test anything worthwhile. It essentially tests
 			// that *any* error has occurred, not any specific error.
 			if tt.Post == nil {
@@ -59,22 +55,4 @@ func runDepositTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-var depositPrefix = "tests/operations/deposit/"
-
-func TestDepositMinimalYaml(t *testing.T) {
-	filepath, err := bazel.Runfile(depositPrefix + "deposit_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runDepositTest(t, filepath)
-}
-
-func TestDepositMainnetYaml(t *testing.T) {
-	filepath, err := bazel.Runfile(depositPrefix + "deposit_mainnet.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	runDepositTest(t, filepath)
 }

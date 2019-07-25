@@ -92,7 +92,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := beaconDB.InitializeState(context.Background(), unixTime, []*ethpb.Deposit{}, nil); err != nil {
+	if err := beaconDB.InitializeState(context.Background(), unixTime, []*ethpb.Deposit{}, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := beaconDB.HeadState(ctx)
@@ -128,10 +128,25 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	batchSize := 20
 	batchedBlocks := make([]*ethpb.BeaconBlock, batchSize)
+	blocks, err := ss.db.BlocksBySlot(ss.ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genBlock := blocks[0]
+	parentRoot, err := ssz.SigningRoot(genBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := 1; i <= batchSize; i++ {
-		batchedBlocks[i-1] = &ethpb.BeaconBlock{
-			Slot: uint64(i),
+		block := &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: parentRoot[:],
+		}
+		batchedBlocks[i-1] = block
+		parentRoot, err = ssz.SigningRoot(block)
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 	// edge case: handle out of order block list. Specifically with the highest

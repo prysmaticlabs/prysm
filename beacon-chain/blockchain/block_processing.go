@@ -170,7 +170,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:       block.Slot,
-		BlockRoot:  blockRoot[:],
+		BeaconBlockRoot:  blockRoot[:],
 		ParentRoot: block.ParentRoot,
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
@@ -246,7 +246,7 @@ func (c *ChainService) AdvanceState(
 		}
 	}
 
-	if helpers.IsEpochEnd(newState.Slot) {
+	if helpers.IsEpochStart(newState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(newState); err != nil {
 			return newState, fmt.Errorf("could not save validator index: %v", err)

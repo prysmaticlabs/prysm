@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 )
 
@@ -75,7 +74,7 @@ func runShuffleTest(testCase *ShuffleTestCase) error {
 	}
 	shuffledList := make([]uint64, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
-		si, err := utils.ShuffledIndex(i, testCase.Count, seed)
+		si, err := helpers.ShuffledIndex(i, testCase.Count, seed)
 		if err != nil {
 			return err
 		}
