@@ -6,18 +6,31 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSignBlock(t *testing.T) {
 	deposits, privKeys := SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Error(err)
+	validators := make([]*ethpb.Validator, len(deposits))
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey: privKeys[i].PublicKey().Marshal()[:],
+		}
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot: 0,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	block := &ethpb.BeaconBlock{
@@ -48,9 +61,23 @@ func TestSignBlock(t *testing.T) {
 
 func TestCreateRandaoReveal(t *testing.T) {
 	deposits, privKeys := SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Error(err)
+	validators := make([]*ethpb.Validator, len(deposits))
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey: privKeys[i].PublicKey().Marshal()[:],
+		}
+	}
+
+	beaconState := &pb.BeaconState{
+		Slot: 0,
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
