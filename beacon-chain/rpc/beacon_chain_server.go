@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -72,7 +73,7 @@ func (bs *BeaconChainServer) GetChainHead(
 // ListValidatorBalances retrieves the validator balances for a given set of public key at
 // a specific epoch in time.
 //
-// TODO(#3045): Implement balances for a specific epoch. Current implementation returns latest balances,
+// TODO(#3064): Implement balances for a specific epoch. Current implementation returns latest balances,
 // this is blocked by DB refactor.
 func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
@@ -129,7 +130,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 // GetValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
 //
-// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
+// TODO(#3064): Implement validator set for a specific epoch. Current implementation returns latest set,
 // this is blocked by DB refactor.
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context,
@@ -296,12 +297,42 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}, nil
 }
 
-// GetValidatorParticipation retrieves the validator participation information for a given epoch.
+// GetValidatorParticipation retrieves the validator participation information for a given epoch,
+// it returns the information about validator's participation rate
 //
-// This method returns information about the global participation of
-// validator attestations.
+// TODO(#3064): Implement validator participation for a specific epoch. Current implementation returns latest,
+// this is blocked by DB refactor.
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+
+	s, err := bs.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
+	}
+
+	currentEpoch := helpers.SlotToEpoch(s.Slot)
+	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
+
+	atts, err := epoch.MatchAttestations(s, currentEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
+	}
+	attestedBalances, err := epoch.AttestingBalance(s, atts.Target)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve attested balances: %v", err)
+	}
+
+	totalBalances, err := helpers.TotalActiveBalance(s)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve total balances: %v", err)
+	}
+
+	return &ethpb.ValidatorParticipation{
+		Epoch:                   currentEpoch,
+		Finalized:               finalized,
+		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
+		VotedEther:              attestedBalances,
+		EligibleEther:           totalBalances,
+	}, nil
 }
