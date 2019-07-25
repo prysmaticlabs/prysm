@@ -14,6 +14,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -29,7 +31,17 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["json_to_pb_converter_test.go"],
+    srcs = [
+        "helpers_test.go",
+        "json_to_pb_converter_test.go",
+    ],
     embed = [":go_default_library"],
-    deps = ["//proto/testing:go_default_library"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/testing:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
 )
