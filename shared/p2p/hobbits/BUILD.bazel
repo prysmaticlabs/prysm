@@ -38,7 +38,6 @@ go_test(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_renaynay_go_hobbits//encoding:go_default_library",
         "@com_github_renaynay_go_hobbits//tcp:go_default_library",

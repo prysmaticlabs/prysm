@@ -34,7 +34,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
-func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+func configureP2P(ctx *cli.Context) (p2p.P2pComposite, error) {
 	contractAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error

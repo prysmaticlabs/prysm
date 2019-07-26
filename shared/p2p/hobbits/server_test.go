@@ -11,7 +11,6 @@ import (
 	ttl "github.com/ReneKroon/ttlcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/renaynay/go-hobbits/encoding"
 	"github.com/renaynay/go-hobbits/tcp"
@@ -99,82 +98,82 @@ func TestHobbitsNode_Hello(t *testing.T) {
 	select {}
 }
 
-func TestHobbitsNode_GetBlock(t *testing.T) { //TODO finish this test
-	fakeDB, err := db.NewDB("tmp/rene/")
-	if err != nil {
-		t.Errorf("could not generate new DB, %s", err.Error())
-	}
-
-	cb1 := &v1alpha1.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	err = fakeDB.SaveBlock(cb1)
-	if err != nil {
-		t.Error("test block failed to save")
-	}
-
-	hobNode := Hobbits("127.0.0.1", 0, []string{}, fakeDB)
-
-	cache := ttl.NewCache()
-	cache.Set(string(make([]byte, 32)), true)
-
-	hobNode.MessageStore = cache
-
-	go func() {
-		hobNode.Listen()
-	}()
-
-	for {
-		if hobNode.Server.Addr() != nil {
-			break
-		}
-
-		time.Sleep(1)
-	}
-
-	conn, err := net.Dial("tcp", hobNode.Server.Addr().String())
-	if err != nil {
-		t.Error("could not connect to TCP server: ", err)
-	}
-
-	responseBody := Hello{
-		NodeID:               "12",
-		LatestFinalizedRoot:  [32]byte{},
-		LatestFinalizedEpoch: 0,
-		BestRoot:             [32]byte{},
-		BestSlot:             0,
-	}
-
-	marshBody, err := bson.Marshal(responseBody)
-	if err != nil {
-		t.Errorf("error bson marshaling response body")
-	}
-
-	responseHeader := RPCHeader{
-		MethodID: 0x00,
-	}
-
-	marshHeader, err := bson.Marshal(responseHeader)
-	if err != nil {
-		fmt.Println("error bson marshaling response header")
-	}
-
-	msg := HobbitsMessage{
-		Version:  CurrentHobbits,
-		Protocol: encoding.RPC,
-		Header:   marshHeader,
-		Body:     marshBody,
-	}
-
-	toSend := encoding.Marshal(encoding.Message(msg))
-
-	_, err = conn.Write(toSend)
-	if err != nil {
-		t.Error("could not write to the TCP server: ", err)
-	}
-
-	fmt.Println("writing...")
-
-	select {}
-}
+//func TestHobbitsNode_GetBlock(t *testing.T) { //TODO finish this test
+//	fakeDB, err := db.NewDB("tmp/rene/")
+//	if err != nil {
+//		t.Errorf("could not generate new DB, %s", err.Error())
+//	}
+//
+//	cb1 := &v1alpha1.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
+//	err = fakeDB.SaveBlock(cb1)
+//	if err != nil {
+//		t.Error("test block failed to save")
+//	}
+//
+//	hobNode := Hobbits("127.0.0.1", 0, []string{}, fakeDB)
+//
+//	cache := ttl.NewCache()
+//	cache.Set(string(make([]byte, 32)), true)
+//
+//	hobNode.MessageStore = cache
+//
+//	go func() {
+//		hobNode.Listen()
+//	}()
+//
+//	for {
+//		if hobNode.Server.Addr() != nil {
+//			break
+//		}
+//
+//		time.Sleep(1)
+//	}
+//
+//	conn, err := net.Dial("tcp", hobNode.Server.Addr().String())
+//	if err != nil {
+//		t.Error("could not connect to TCP server: ", err)
+//	}
+//
+//	responseBody := Hello{
+//		NodeID:               "12",
+//		LatestFinalizedRoot:  [32]byte{},
+//		LatestFinalizedEpoch: 0,
+//		BestRoot:             [32]byte{},
+//		BestSlot:             0,
+//	}
+//
+//	marshBody, err := bson.Marshal(responseBody)
+//	if err != nil {
+//		t.Errorf("error bson marshaling response body")
+//	}
+//
+//	responseHeader := RPCHeader{
+//		MethodID: 0x00,
+//	}
+//
+//	marshHeader, err := bson.Marshal(responseHeader)
+//	if err != nil {
+//		fmt.Println("error bson marshaling response header")
+//	}
+//
+//	msg := HobbitsMessage{
+//		Version:  CurrentHobbits,
+//		Protocol: encoding.RPC,
+//		Header:   marshHeader,
+//		Body:     marshBody,
+//	}
+//
+//	toSend := encoding.Marshal(encoding.Message(msg))
+//
+//	_, err = conn.Write(toSend)
+//	if err != nil {
+//		t.Error("could not write to the TCP server: ", err)
+//	}
+//
+//	fmt.Println("writing...")
+//
+//	select {}
+//}
 
 func TestHobbitsNode_Broadcast(t *testing.T) {
 	db, err := db.NewDB("go/src/renaynay/db")
