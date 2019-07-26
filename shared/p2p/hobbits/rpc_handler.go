@@ -168,6 +168,13 @@ func (h *HobbitsNode) blockHeadersResponse(msg proto.Message) (HobbitsMessage, e
 }
 
 func (h *HobbitsNode) receivedBlockHeaders(message HobbitsMessage) error {
+	var header *v1alpha1.BeaconBlockHeader
+
+	err := ssz.Unmarshal(message.Body, header)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal block headers")
+	}
+
 	return nil
 }
 
