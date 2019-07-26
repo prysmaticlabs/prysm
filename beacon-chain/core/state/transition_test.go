@@ -38,6 +38,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
+	helpers.ClearAllCaches()
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -77,9 +78,9 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
-		t.Fatal(epoch)
+		t.Fatal(err)
 	}
-	t.Log(stateRootCandidate)
+
 	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +91,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	helpers.ClearAllCaches()
+
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Error(err)
