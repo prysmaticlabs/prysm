@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -23,7 +24,18 @@ type BeaconChainServer struct {
 	pool     operations.Pool
 }
 
+// sortableAttestations implements the Sort interface to sort attestations
+// by shard as the canonical sorting attribute.
+type sortableAttestations []*ethpb.Attestation
+
+func (s sortableAttestations) Len() int      { return len(s) }
+func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortableAttestations) Less(i, j int) bool {
+	return s[i].Data.Crosslink.Shard < s[j].Data.Crosslink.Shard
+}
+
 // ListAttestations retrieves attestations by block root, slot, or epoch.
+// Attestations are sorted by crosslink shard by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
@@ -51,11 +63,13 @@ func (bs *BeaconChainServer) ListAttestations(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
+	// We sort attestations according to the Sortable interface.
+	sort.Sort(sortableAttestations(atts))
 	numAttestations := len(atts)
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "could not paginate attestations: %v", err)
 	}
 	return &ethpb.ListAttestationsResponse{
 		Attestations:  atts[start:end],

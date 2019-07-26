@@ -25,7 +25,7 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 	// Start page can not be greater than validator size.
 	start := token * pageSize
 	if start >= totalSize {
-		return 0, 0, "", fmt.Errorf("page start %d >= validator list %d", start, totalSize)
+		return 0, 0, "", fmt.Errorf("page start %d >= list %d", start, totalSize)
 	}
 
 	// End page can not go out of bound.
