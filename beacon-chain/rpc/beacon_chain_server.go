@@ -34,6 +34,11 @@ type BeaconChainServer struct {
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
 	switch req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
@@ -46,8 +51,16 @@ func (bs *BeaconChainServer) ListAttestations(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
+	numAttestations := len(atts)
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.ListAttestationsResponse{
-		Attestations: atts,
+		Attestations:  atts[start:end],
+		TotalSize:     int32(numAttestations),
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
