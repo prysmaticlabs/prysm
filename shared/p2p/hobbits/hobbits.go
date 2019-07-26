@@ -31,7 +31,7 @@ type HobbitsMessage encoding.Message
 
 const CurrentHobbits = uint32(3)
 
-//var topicMapping map[reflect.Type]string // TODO: initialize with a const? How TF do I use this??
+//var topicMapping map[reflect.Type]string // TODO: initialize with a const? How do I use this??
 
 type RPCMethod uint16
 
