@@ -73,7 +73,7 @@ func TestStartAndEndPage_CannotConvertPage(t *testing.T) {
 }
 
 func TestStartAndEndPage_ExceedsMaxPage(t *testing.T) {
-	wanted := "page start 0 >= validator list 0"
+	wanted := "page start 0 >= list 0"
 	if _, _, _, err := StartAndEndPage("", 0, 0); !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("wanted error: %v, got error: %v", wanted, err.Error())
 	}
