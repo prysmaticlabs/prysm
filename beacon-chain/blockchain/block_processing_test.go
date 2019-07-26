@@ -45,9 +45,9 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 		return nil, err
 	}
 
-	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
+	computedState, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(computedState)
@@ -167,20 +167,18 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
 
-	s, err := chainService.AdvanceState(ctx, beaconState, block)
+	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.HashTreeRoot(s)
+
+	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+
 	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -260,20 +258,18 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
 
-	s, err := chainService.AdvanceState(ctx, beaconState, block)
+	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.HashTreeRoot(s)
+
+	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block.StateRoot = stateRoot[:]
+
 	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -513,7 +509,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err == nil {
 		t.Fatal("no error for wrong block state root")
 	}
-	if !strings.Contains(err.Error(), "beacon state root is not equal to block state root: ") {
+	if !strings.Contains(err.Error(), "block failed processing: validate state root failed") {
 		t.Fatal(err)
 	}
 }
