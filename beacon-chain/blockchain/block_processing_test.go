@@ -170,7 +170,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
-		t.Fatal(epoch)
+		t.Fatal(err)
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
@@ -261,7 +261,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 
 	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
-		t.Fatal(epoch)
+		t.Fatal(err)
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
