@@ -44,14 +44,9 @@ func runBlockProcessingTest(t *testing.T, filename string) {
 			helpers.ClearAllCaches()
 			blocks.ClearEth1DataVoteCache()
 
-			stateConfig := &state.TransitionConfig{
-				VerifySignatures: true,
-				VerifyStateRoot:  true,
-			}
-
 			s := tt.Pre
 			for _, b := range tt.Blocks {
-				tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b, stateConfig)
+				tt.Pre, err = state.ExecuteStateTransition(ctx, tt.Pre, b)
 				if tt.Post == nil {
 					if err == nil {
 						t.Fatal("Transition did not fail despite being invalid")

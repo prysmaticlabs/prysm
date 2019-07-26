@@ -32,12 +32,13 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 		Slot: 4,
 	}
 	want := "expected state.slot"
-	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
+	helpers.ClearAllCaches()
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -54,7 +55,6 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	oldMix := beaconState.RandaoMixes[1]
 	oldStartShard := beaconState.StartShard
-
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
@@ -75,12 +75,24 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 			Eth1Data:     eth1Data,
 		},
 	}
+
+	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = stateRoot[:]
+
 	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
 
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block, state.DefaultConfig())
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -297,7 +309,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	want := "could not verify attestation at index 0"
+	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -629,6 +641,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
 	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
