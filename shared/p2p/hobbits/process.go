@@ -21,7 +21,7 @@ func (h *HobbitsNode) processHobbitsMessage(id peer.ID, message HobbitsMessage) 
 
 		err := h.processRPC(id, message)
 		if err != nil {
-			log.Trace("there was an error processing an RPC hobbits msg ") // TODO DELETE
+			log.Trace("there was an error processing an RPC hobbits msg ")
 			return errors.Wrap(err, "error processing an RPC hobbits message")
 		}
 		return nil
@@ -80,8 +80,10 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case BLOCK_HEADERS:
-		//TODO
-		// log this?
+		err := h.receivedBlockHeaders(message)
+		if err != nil {
+			return errors.Wrap(err, "could not process block headers")
+		}
 
 		return nil
 	case GET_BLOCK_BODIES:
@@ -92,20 +94,24 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 		return nil
 	case BLOCK_BODIES:
-		//TODO
-		// log this somehow?
+		err := h.receivedBlockBodies(message)
+		if err != nil {
+			return errors.Wrap(err, "could not process block bodies")
+		}
 
 		return nil
 	case GET_ATTESTATION:
 		err := h.attestationRequest(id, message)
 		if err != nil {
-			return errors.Wrap(err, "could not retrieve attestationRequest")
+			return errors.Wrap(err, "could not retrieve attestation")
 		}
 
 		return nil
 	case ATTESTATION:
-		//TODO
-		// log this somehow?
+		err := h.receivedAttestation(message)
+		if err != nil {
+			return errors.Wrap(err, "could not process attestation")
+		}
 
 		return nil
 	}
@@ -115,7 +121,6 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	log.Trace("processing GOSSIP message")
-	log.Println("processing GOSSIP message") // TODO delete
 
 	header := new(GossipHeader)
 
@@ -134,9 +139,10 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 
 	switch topic {
 	case "BLOCK":
+		log.Trace("a gossiped block was received, processing...")
 		function = h.gossipBlock
 	case "ATTESTATION":
-		log.Println("an attestation was received, processing...") // TODO delete
+		log.Trace("an gossiped attestation was received, processing...")
 		function = h.gossipAttestation
 	default:
 		return errors.New("message topic unsupported")
@@ -158,17 +164,15 @@ func (h *HobbitsNode) received(header GossipHeader) bool {
 }
 
 func (h *HobbitsNode) parseMethodID(header []byte) (RPCMethod, error) {
-	fmt.Println("parsing method ID from header...") // TODO delete
-
 	unmarshaledHeader := &RPCHeader{}
 
 	err := bson.Unmarshal(header, unmarshaledHeader)
 	if err != nil {
-		fmt.Println("could not unmarshal the header of the message") // TODO delete
+		log.Trace("could not unmarshal the header of the message")
 		return RPCMethod(0), errors.Wrap(err, "could not unmarshal the header of the message")
 	}
 
-	log.Println("methodID has been parsed from header") // TODO delete
+	log.Trace("methodID has been parsed from header")
 	return RPCMethod(unmarshaledHeader.MethodID), nil
 }
 
@@ -177,6 +181,7 @@ func (h *HobbitsNode) parseTopic(header GossipHeader) string {
 	return header.Topic
 }
 
+// Feed routes incoming Hobbits messages and provides asynchronous responses when necessary
 func (h *HobbitsNode) Feed(msg proto.Message) p2p.Feed {
 	t := messageTopic(msg)
 
