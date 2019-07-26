@@ -156,7 +156,6 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-
 	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
@@ -202,7 +201,6 @@ func ProcessBlockHeader(
 // using a unsigned block.
 //
 // Spec pseudocode definition:
-//
 //  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
 //    # Verify that the slots match
 //    assert block.slot == state.slot
@@ -231,7 +229,6 @@ func ProcessBlockHeaderNoVerify(
 	if err != nil {
 		return nil, err
 	}
-
 	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
@@ -383,7 +380,6 @@ func verifyProposerSlashing(
 			return fmt.Errorf("could not verify beacon block header: %v", err)
 		}
 	}
-
 	return nil
 }
 
@@ -500,7 +496,6 @@ func ProcessAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 	}
-
 	return beaconState, nil
 }
 
@@ -836,7 +831,6 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 	if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
 		return fmt.Errorf("attestation aggregation signature did not verify")
 	}
-
 	return nil
 }
 
@@ -967,7 +961,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 			receiptRoot,
 		)
 	}
-
 	return nil
 }
 
@@ -1044,7 +1037,6 @@ func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
 		return fmt.Errorf("could not verify voluntary exit signature: %v", err)
 	}
-
 	return nil
 }
 
@@ -1169,7 +1161,6 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer) error
 	if err := verifySigningRoot(transfer, transfer.SenderWithdrawalPublicKey, transfer.Signature, domain); err != nil {
 		return fmt.Errorf("could not verify transfer signature: %v", err)
 	}
-
 	return nil
 }
 
