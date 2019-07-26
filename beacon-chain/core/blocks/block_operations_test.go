@@ -1206,11 +1206,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
-	helpers.ClearActiveIndicesCache()
-	helpers.ClearActiveCountCache()
-	helpers.ClearStartShardCache()
-	helpers.ClearShuffledValidatorCache()
-
+	helpers.ClearAllCaches()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1288,11 +1284,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
-	helpers.ClearActiveIndicesCache()
-	helpers.ClearActiveCountCache()
-	helpers.ClearStartShardCache()
-	helpers.ClearShuffledValidatorCache()
-
+	helpers.ClearAllCaches()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
