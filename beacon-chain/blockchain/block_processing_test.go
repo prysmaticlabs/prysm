@@ -34,29 +34,30 @@ func init() {
 	params.OverrideBeaconConfig(c)
 }
 
-func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) {
+func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) (*ethpb.BeaconBlock, error) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot, parentRoot)
 	if err != nil {
-		t.Fatalf("Unable to retrieve state %v", err)
+		return nil, err
 	}
 
 	computedState, err := chainService.AdvanceState(context.Background(), beaconState, block)
 	if err != nil {
-		t.Fatalf("could not apply block state transition: %v", err)
+		return nil, err
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(computedState)
 	if err != nil {
-		t.Fatalf("could not tree hash state: %v", err)
+		return nil, err
 	}
 
 	block.StateRoot = stateRoot[:]
 	t.Logf("state root after block: %#x", stateRoot)
+	return block, nil
 }
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
@@ -146,10 +147,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
+	beaconState.Slot++
 	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.Slot--
 
 	block := &ethpb.BeaconBlock{
 		Slot:       slot,
@@ -160,7 +163,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 				DepositRoot:  []byte("a"),
 				BlockHash:    []byte("b"),
 			},
-			RandaoReveal: randaoReveal,
+			RandaoReveal: randaoReveal[:],
 			Attestations: nil,
 		},
 	}
@@ -237,6 +240,13 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 
 	// We ensure the block uses the right state parent if its ancestor is not block.Slot-1.
 	beaconState, err = state.ProcessSlots(ctx, beaconState, beaconState.Slot+3)
+	beaconState.Slot++
+	epoch := helpers.SlotToEpoch(beaconState.Slot)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+	beaconState.Slot--
 	block := &ethpb.BeaconBlock{
 		Slot:       beaconState.Slot + 1,
 		StateRoot:  []byte{},
@@ -246,7 +256,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 				DepositRoot: []byte("a"),
 				BlockHash:   []byte("b"),
 			},
-			RandaoReveal: []byte{},
+			RandaoReveal: randaoReveal,
 			Attestations: nil,
 		},
 	}
@@ -422,7 +432,10 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Error(err)
 	}
 	beaconState.Slot--
-	initBlockStateRoot(t, goodStateBlock, chainService)
+	goodStateBlock, err = initBlockStateRoot(t, goodStateBlock, chainService)
+	if err != nil {
+		t.Error(err)
+	}
 	goodStateBlock, err = testutil.SignBlock(beaconState, goodStateBlock, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -612,7 +625,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	initBlockStateRoot(t, block, chainService)
+	block, err = initBlockStateRoot(t, block, chainService)
+	if err != nil {
+		t.Error(err)
+	}
 
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
@@ -739,15 +755,18 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Top chain slots (see graph)
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
+		epoch := helpers.SlotToEpoch(genesisSlot + slot)
+		beaconSlot := beaconState.Slot
+		beaconState.Slot = genesisSlot + slot
+		randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+		if err != nil {
+			t.Fatal(err)
+		}
+		beaconState.Slot = beaconSlot
 		block := &ethpb.BeaconBlock{
 			Slot:       genesisSlot + slot,
 			StateRoot:  stateRoot[:],
@@ -761,7 +780,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		initBlockStateRoot(t, block, chainService)
+		block, err = initBlockStateRoot(t, block, chainService)
+		if err != nil {
+			t.Error(err)
+		}
 		block, err = testutil.SignBlock(beaconState, block, privKeys)
 		if err != nil {
 			t.Error(err)
@@ -806,12 +828,14 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	epoch = helpers.CurrentEpoch(beaconState)
-	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	beaconSlot := beaconState.Slot
+	beaconState.Slot = genesisSlot + 6
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	beaconState.Slot = beaconSlot
 	// Then we receive the block `f` from slot 6
 	blockF := &ethpb.BeaconBlock{
 		Slot:       genesisSlot + 6,
@@ -831,7 +855,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	initBlockStateRoot(t, blockF, chainService)
+	blockF, err = initBlockStateRoot(t, blockF, chainService)
+	if err != nil {
+		t.Error(err)
+	}
 	blockF, err = testutil.SignBlock(beaconState, blockF, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -856,11 +883,14 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	beaconSlot = beaconState.Slot
+	beaconState.Slot = genesisSlot + 7
 	epoch = helpers.CurrentEpoch(beaconState)
 	randaoReveal, err = testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
+	beaconState.Slot = beaconSlot
 
 	// Then we apply block `g` from slot 7
 	blockG := &ethpb.BeaconBlock{
@@ -876,7 +906,10 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	initBlockStateRoot(t, blockG, chainService)
+	blockG, err = initBlockStateRoot(t, blockG, chainService)
+	if err != nil {
+		t.Error(err)
+	}
 	blockG, err = testutil.SignBlock(beaconState, blockG, privKeys)
 	if err != nil {
 		t.Error(err)
