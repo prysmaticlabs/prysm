@@ -39,7 +39,7 @@ func (h *HobbitsNode) processHobbitsMessage(id peer.ID, message HobbitsMessage) 
 	return errors.New(fmt.Sprintf("protocol unsupported %v", message.Protocol))
 }
 
-func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // TODO all of this needs to be put into funcs bc this function is getting disgusting.
+func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error {
 	method, err := h.parseMethodID(message.Header)
 	if err != nil {
 		log.Trace("method id could not be parsed from message header")
@@ -48,7 +48,7 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 
 	switch method {
 	case HELLO:
-		log.Trace("HELLO received")
+		log.Trace("HELLO checkGossipMessageDuplicate")
 
 		err := h.sendHello(id, message)
 		if err != nil {
@@ -114,9 +114,10 @@ func (h *HobbitsNode) processRPC(id peer.ID, message HobbitsMessage) error { // 
 		}
 
 		return nil
-	}
 
-	return nil
+	default:
+		return nil
+	}
 }
 
 func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
@@ -129,7 +130,7 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 		return errors.Wrap(err, "error unmarshaling gossip message header")
 	}
 
-	if h.received(*header) {
+	if h.checkGossipMessageDuplicate(*header) {
 		return errors.New("GOSSIP message is duplicate, aborting process")
 	}
 
@@ -139,10 +140,10 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 
 	switch topic {
 	case "BLOCK":
-		log.Trace("a gossiped block was received, processing...")
+		log.Trace("a gossiped block was checkGossipMessageDuplicate, processing...")
 		function = h.gossipBlock
 	case "ATTESTATION":
-		log.Trace("an gossiped attestation was received, processing...")
+		log.Trace("an gossiped attestation was checkGossipMessageDuplicate, processing...")
 		function = h.gossipAttestation
 	default:
 		return errors.New("message topic unsupported")
@@ -153,7 +154,7 @@ func (h *HobbitsNode) processGossip(message HobbitsMessage) error {
 	return nil
 }
 
-func (h *HobbitsNode) received(header GossipHeader) bool {
+func (h *HobbitsNode) checkGossipMessageDuplicate(header GossipHeader) bool {
 	_, exists := h.MessageStore.Get(string(header.MessageHash[:]))
 	if exists {
 		return true

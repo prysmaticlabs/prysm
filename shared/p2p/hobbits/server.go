@@ -86,7 +86,7 @@ func (h *HobbitsNode) Listen() error {
 			return
 		}
 
-		log.Trace("a message has been received")
+		log.Trace("a message has been checkGossipMessageDuplicate")
 	})
 }
 
