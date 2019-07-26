@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -110,7 +111,7 @@ func ExecuteStateTransitionNoVerify(
 
 	// Execute per block transition.
 	if block != nil {
-		stateCopy, err = ProcessBlockNoVerify(ctx, stateCopy, block)
+		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -235,7 +236,7 @@ func ProcessBlock(
 	return state, nil
 }
 
-// ProcessBlockNoVerify creates a new, modified beacon state by applying block operation
+// processBlockNoVerify creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // block signature.
 //
@@ -250,7 +251,7 @@ func ProcessBlock(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func ProcessBlockNoVerify(
+func processBlockNoVerify(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
