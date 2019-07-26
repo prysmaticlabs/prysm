@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -158,8 +159,15 @@ func (h *HobbitsNode) removePeer(id peer.ID) error {
 	return nil
 }
 
-func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) error {
+func (h *HobbitsNode) blockHeadersRequest(id peer.ID, message HobbitsMessage) error { // TODO all block header funcs
+	return nil
+}
 
+func (h *HobbitsNode) blockHeadersResponse(msg proto.Message) (HobbitsMessage, error) {
+	return HobbitsMessage{}, nil
+}
+
+func (h *HobbitsNode) receivedBlockHeaders(message HobbitsMessage) error {
 	return nil
 }
 
@@ -208,6 +216,19 @@ func (h *HobbitsNode) blockBodiesResponse(msg proto.Message) (HobbitsMessage, er
 	}, nil
 }
 
+func (h *HobbitsNode) receivedBlockBodies(message HobbitsMessage) error {
+	var blockBody *v1alpha1.BeaconBlock
+
+	err := ssz.Unmarshal(message.Body, blockBody)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal block body")
+	}
+
+	h.Feed(blockBody)
+
+	return nil
+}
+
 func (h *HobbitsNode) attestationRequest(id peer.ID, message HobbitsMessage) error {
 	var requestBody AttestationRequest
 
@@ -252,4 +273,17 @@ func (h *HobbitsNode) attestationResponse(msg proto.Message) (HobbitsMessage, er
 		Header:   header,
 		Body:     body,
 	}, nil
+}
+
+func (h *HobbitsNode) receivedAttestation(message HobbitsMessage) error {
+	var attestation *v1alpha1.Attestation
+
+	err := ssz.Unmarshal(message.Body, attestation)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal attestation")
+	}
+
+	h.Feed(attestation)
+
+	return nil
 }
