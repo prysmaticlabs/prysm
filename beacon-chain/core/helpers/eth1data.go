@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // VoteHierarchyMap struct that holds all the relevant data in order to count and
@@ -35,10 +36,11 @@ func EmptyVoteHierarchyMap() *VoteHierarchyMap {
 // CountVote takes a votecount map and adds the given vote to it in the relevant
 // position while updating the best vote, most votes and best vote hash.
 func CountVote(voteMap *VoteHierarchyMap, vote *ethpb.Eth1Data, blockHeight *big.Int) (*VoteHierarchyMap, error) {
-	he, err := ssz.HashedEncoding(vote)
+	encoded, err := ssz.Marshal(vote)
 	if err != nil {
 		return &VoteHierarchyMap{}, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
 	}
+	he := hashutil.Hash(encoded)
 	v, ok := voteMap.voteCountMap[string(he[:])]
 
 	if !ok {
