@@ -315,6 +315,14 @@ func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 //        shard = Shard((shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT)
 //    return shard
 func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	startShard, err := startShardCache.StartShardInEpoch(epoch)
+	if err != nil {
+		return 0, fmt.Errorf("could not retrieve start shard from cache: %v", err)
+	}
+	if startShard != params.BeaconConfig().FarFutureEpoch {
+		return startShard, nil
+	}
+
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
 
@@ -328,7 +336,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		return 0, fmt.Errorf("could not get shard delta: %v", err)
 	}
 
-	startShard := (state.StartShard + delta) % params.BeaconConfig().ShardCount
+	startShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
 		d, err := ShardDelta(state, checkEpoch)
@@ -336,6 +344,13 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 			return 0, fmt.Errorf("could not get shard delta: %v", err)
 		}
 		startShard = (startShard + params.BeaconConfig().ShardCount - d) % params.BeaconConfig().ShardCount
+	}
+
+	if err := startShardCache.AddStartShard(&cache.StartShardByEpoch{
+		Epoch:      epoch,
+		StartShard: startShard,
+	}); err != nil {
+		return 0, fmt.Errorf("could not save start shard for cache: %v", err)
 	}
 
 	return startShard, nil
