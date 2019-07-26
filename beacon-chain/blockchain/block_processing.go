@@ -217,9 +217,6 @@ func (c *ChainService) AdvanceState(
 		ctx,
 		beaconState,
 		block,
-		&state.TransitionConfig{
-			VerifySignatures: false, // We disable signature verification for now.
-		},
 	)
 	if err != nil {
 		return beaconState, &BlockFailedProcessingErr{err}

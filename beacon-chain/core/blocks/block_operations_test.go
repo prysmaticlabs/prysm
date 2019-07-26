@@ -623,6 +623,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
 	}
 }
+
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1},
@@ -841,6 +842,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
+
 	newState, err := blocks.ProcessAttesterSlashings(beaconState, block.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -894,10 +896,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot,
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -937,10 +936,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -983,10 +979,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		helpers.CurrentEpoch(beaconState),
 		attestations[0].Data.Source.Epoch,
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -998,10 +991,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		beaconState.CurrentJustifiedCheckpoint.Root,
 		attestations[0].Data.Source.Root,
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -1045,10 +1035,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		attestations[0].Data.Source.Epoch,
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -1060,10 +1047,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		beaconState.PreviousJustifiedCheckpoint.Root,
 		attestations[0].Data.Source.Root,
 	)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -1103,18 +1087,12 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	want := "mismatched parent crosslink root"
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
 	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -1125,10 +1103,7 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = encoded[:]
 
 	want = fmt.Sprintf("expected data root %#x == ZERO_HASH", encoded)
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -1197,10 +1172,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
 	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
-	if _, err := blocks.ProcessAttestations(
-		beaconState,
-		block.Body,
-	); err != nil {
+	if _, err := blocks.ProcessAttestations(beaconState, block.Body); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -1298,10 +1270,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "over max number of allowed indices"
-	if err := blocks.VerifyIndexedAttestation(
-		&pb.BeaconState{},
-		indexedAtt1,
-	); !strings.Contains(err.Error(), want) {
+	if err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected verification to fail return false, received: %v", err)
 	}
 }
@@ -1341,10 +1310,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	want := "deposit root did not verify"
-	if _, err := blocks.ProcessDeposits(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessDeposits(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
@@ -1447,10 +1413,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			BlockHash:   root[:],
 		},
 	}
-	newState, err := blocks.ProcessDeposits(
-		beaconState,
-		block.Body,
-	)
+	newState, err := blocks.ProcessDeposits(beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1774,10 +1737,7 @@ func TestProcessBeaconTransfers_NotEnoughSenderIndexBalance(t *testing.T) {
 		balances[0],
 		transfers[0].Fee+transfers[0].Amount,
 	)
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -1815,10 +1775,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 		balances[0],
 		transfers[0].Fee,
 	)
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -1833,10 +1790,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 		state.Slot,
 		block.Body.Transfers[0].Slot,
 	)
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -1851,10 +1805,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 		},
 	}
 	want = "over max transfer"
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -1874,10 +1825,7 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 		},
 	}
 	want = "invalid public key"
-	if _, err := blocks.ProcessTransfers(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
