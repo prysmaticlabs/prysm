@@ -16,7 +16,7 @@ import (
 )
 
 func TestGenesisInitializationMinimal(t *testing.T) {
-	t.Skip("Tests will fail with mainnet config - awaiting mainnet tests from the researchers")
+	t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //... See https://github.com/prysmaticlabs/prysm/issues/3066")
 	filepath, err := bazel.Runfile("tests/genesis/initialization/genesis_initialization_minimal.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -64,47 +64,6 @@ func TestGenesisInitializationMinimal(t *testing.T) {
 
 			if !proto.Equal(genesisState, tt.State) {
 				t.Error("States are not equal")
-			}
-		})
-	}
-}
-
-func TestGenesisValidityMinimal(t *testing.T) {
-	filepath, err := bazel.Runfile("tests/genesis/validity/genesis_validity_minimal.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	file, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		t.Fatalf("Could not load file %v", err)
-	}
-
-	s := &GensisValidityTest{}
-	if err := testutil.UnmarshalYaml(file, s); err != nil {
-		t.Fatalf("Failed to Unmarshal: %v", err)
-	}
-
-	if err := spectest.SetConfig(s.Config); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, tt := range s.TestCases {
-		t.Run(tt.Description, func(t *testing.T) {
-			helpers.ClearAllCaches()
-			genesisState := tt.Genesis
-			validatorCount, err := helpers.ActiveValidatorCount(genesisState, 0)
-			if err != nil {
-				t.Fatalf("Could not get active validator count: %v", err)
-			}
-			isValid := state.IsValidGenesisState(validatorCount, genesisState.GenesisTime)
-			if isValid != tt.IsValid {
-				t.Fatalf(
-					"Genesis state does not have expected validity. Expected to be valid: %d, %d. %t %t",
-					tt.Genesis.GenesisTime,
-					validatorCount,
-					isValid,
-					tt.IsValid,
-				)
 			}
 		})
 	}

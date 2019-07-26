@@ -47,7 +47,7 @@ func runAttestationTest(t *testing.T, filename string) {
 				},
 			}
 
-			post, err := blocks.ProcessAttestations(tt.Pre, body, true /*verify sig*/)
+			post, err := blocks.ProcessAttestations(tt.Pre, body)
 			if !reflect.ValueOf(tt.Post).IsValid() {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.
@@ -75,12 +75,4 @@ func runAttestationTest(t *testing.T, filename string) {
 			}
 		})
 	}
-}
-
-func TestAttestationMinimal(t *testing.T) {
-	runAttestationTest(t, "attestation_minimal.yaml")
-}
-
-func TestAttestationMainnet(t *testing.T) {
-	runAttestationTest(t, "attestation_mainnet.yaml")
 }
