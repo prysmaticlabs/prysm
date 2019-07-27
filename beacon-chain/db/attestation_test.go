@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -73,8 +74,12 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
 
+	sort.Slice(retrievedAttestations, func(i, j int) bool {
+		return retrievedAttestations[i].Data.Crosslink.Shard < retrievedAttestations[j].Data.Crosslink.Shard
+	})
+
 	if !reflect.DeepEqual(retrievedAttestations, attestations) {
-		t.Log("Retrieved attestations did not match generated attestations")
+		t.Fatal("Retrieved attestations did not match generated attestations")
 	}
 }
 
