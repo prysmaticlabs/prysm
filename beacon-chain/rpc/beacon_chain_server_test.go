@@ -902,7 +902,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 	}{
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Slot{5},
+			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        []*ethpb.BeaconBlock{{Slot: 5}},
@@ -910,7 +910,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 				TotalSize:     1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Root{root6[:]},
+			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
@@ -918,7 +918,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 				TotalSize:     1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{0},
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
 			PageSize:    100},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        blks[0:params.BeaconConfig().SlotsPerEpoch],
@@ -926,7 +926,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{5},
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        blks[43:46],
@@ -934,7 +934,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{11},
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
 			PageSize:    7},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        blks[95:96],
@@ -942,7 +942,7 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{12},
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:        blks[96:100],
