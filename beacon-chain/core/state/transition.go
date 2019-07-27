@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -42,7 +43,8 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-
+	helpers.ClearStartShardCache()
+	blocks.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
@@ -98,7 +100,8 @@ func ExecuteStateTransitionNoVerify(
 	}
 
 	stateCopy := proto.Clone(state).(*pb.BeaconState)
-
+	helpers.ClearStartShardCache()
+	blocks.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
