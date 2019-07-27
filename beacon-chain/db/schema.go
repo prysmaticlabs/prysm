@@ -23,6 +23,9 @@ var (
 	histStateBucket         = []byte("historical-state-bucket")
 	chainInfoBucket         = []byte("chain-info")
 	validatorBucket         = []byte("validator")
+	latestMessageBucket     = []byte("latest-message-bucket")
+	checkpointBucket        = []byte("checkpoint-bucket")
+	forkChoiceStateBucket   = []byte("forkchoice-state-bucket")
 
 	mainChainHeightKey      = []byte("chain-height")
 	canonicalHeadKey        = []byte("canonical-head")
