@@ -131,7 +131,7 @@ func (bs *BeaconChainServer) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return nil, status.Errorf(codes.NotFound, "block does not exists in DB")
+			return nil, status.Errorf(codes.NotFound, "block for epoch %d does not exists in DB", q.Epoch)
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -152,7 +152,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}
 
 		if blk == nil {
-			return nil, status.Errorf(codes.NotFound, "block does not exists in DB")
+			return nil, status.Errorf(codes.NotFound, "block for root %#x does not exists in DB", q.Root)
 		}
 
 		token, err := strconv.Atoi(req.PageToken)
@@ -174,7 +174,7 @@ func (bs *BeaconChainServer) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return nil, status.Errorf(codes.NotFound, "block does not exists in DB")
+			return nil, status.Errorf(codes.NotFound, "block for slot %d does not exists in DB", q.Slot)
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
