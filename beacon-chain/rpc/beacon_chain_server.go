@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -108,7 +110,86 @@ func (bs *BeaconChainServer) AttestationPool(
 func (bs *BeaconChainServer) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListBlocksRequest_Epoch:
+		startSlot := helpers.StartSlot(q.Epoch)
+		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+
+		var blks []*ethpb.BeaconBlock
+		for i := startSlot; i < endSlot; i++ {
+			b, err := bs.beaconDB.BlocksBySlot(ctx, i)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+			}
+			blks = append(blks, b...)
+		}
+
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return nil, status.Errorf(codes.NotFound, "block for epoch %d does not exists in DB", q.Epoch)
+		}
+
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        blks[start:end],
+			TotalSize:     int32(numBlks),
+			NextPageToken: nextPageToken,
+		}, nil
+
+	case *ethpb.ListBlocksRequest_Root:
+		blk, err := bs.beaconDB.Block(bytesutil.ToBytes32(q.Root))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
+		}
+
+		if blk == nil {
+			return nil, status.Errorf(codes.NotFound, "block for root %#x does not exists in DB", q.Root)
+		}
+
+		token, err := strconv.Atoi(req.PageToken)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not convert page token: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        []*ethpb.BeaconBlock{blk},
+			TotalSize:     1,
+			NextPageToken: strconv.Itoa(token + 1),
+		}, nil
+
+	case *ethpb.ListBlocksRequest_Slot:
+		blks, err := bs.beaconDB.BlocksBySlot(ctx, q.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
+		}
+
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return nil, status.Errorf(codes.NotFound, "block for slot %d does not exists in DB", q.Slot)
+		}
+
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        blks[start:end],
+			TotalSize:     int32(numBlks),
+			NextPageToken: nextPageToken,
+		}, nil
+	}
+
+	return nil, status.Errorf(codes.InvalidArgument, "must satisfy one of the filter requirement")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from
