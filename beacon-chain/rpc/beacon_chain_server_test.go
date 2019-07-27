@@ -994,7 +994,7 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 
 	wanted = "block for root 0x41 does not exists in DB"
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{[]byte{'A'}}}
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
 	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
