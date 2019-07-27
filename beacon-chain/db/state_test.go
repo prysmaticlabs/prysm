@@ -358,3 +358,51 @@ func TestHistoricalState_Pruning(t *testing.T) {
 
 	}
 }
+
+func TestCheckpointState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	checkpt := &ethpb.Checkpoint{Epoch: 1}
+	slot := uint64(10)
+	state := &pb.BeaconState{
+		Slot: slot,
+	}
+
+	if err := db.SaveCheckpointState(context.Background(), state, checkpt); err != nil {
+		t.Fatalf("could not save check point state: %v", err)
+	}
+
+	s, err := db.CheckpointState(context.Background(), checkpt)
+	if err != nil {
+		t.Fatalf("could not get check point state: %v", err)
+	}
+	if s.Slot != slot {
+		t.Errorf("Saved state does not have the slot from which it was requested, wanted: %d, got: %d",
+			slot, s.Slot)
+	}
+}
+
+func TestForkchoiceState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blockRoot := []byte{'A'}
+	slot := uint64(11)
+	state := &pb.BeaconState{
+		Slot: slot,
+	}
+
+	if err := db.SaveForkChoiceState(context.Background(), state, blockRoot); err != nil {
+		t.Fatalf("could not save fork choice state: %v", err)
+	}
+
+	s, err := db.ForkChoiceState(context.Background(), blockRoot)
+	if err != nil {
+		t.Fatalf("could not get fork choice state: %v", err)
+	}
+	if s.Slot != slot {
+		t.Errorf("Saved state does not have the slot from which it was requested, wanted: %d, got: %d",
+			slot, s.Slot)
+	}
+}

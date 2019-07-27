@@ -493,3 +493,104 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		return nil
 	})
 }
+
+// SaveCheckpointState saves the check pointed state by using check point as key.
+func (db *BeaconDB) SaveCheckpointState(ctx context.Context, beaconState *pb.BeaconState, checkpt *ethpb.Checkpoint) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveCheckpointState")
+	defer span.End()
+
+	key, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return err
+	}
+
+	enc, err := proto.Marshal(beaconState)
+	if err != nil {
+		return err
+	}
+
+	return db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(checkpointBucket)
+		return b.Put(key[:], enc)
+	})
+}
+
+// CheckpointState gets the check pointed state check point as key.
+func (db *BeaconDB) CheckpointState(ctx context.Context, checkpt *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckpointState")
+	defer span.End()
+
+	key, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return nil, err
+	}
+
+	var s *pb.BeaconState
+	err = db.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(checkpointBucket)
+
+		enc := bucket.Get(key[:])
+		if enc == nil {
+			return nil
+		}
+
+		s, err = createState(enc)
+		return err
+	})
+	return s, err
+}
+
+// HasCheckpoint checks if a state of the corresponded check point exists in db.
+func (db *BeaconDB) HasCheckpoint(checkpt *ethpb.Checkpoint) (bool, error) {
+	b, err := hashutil.HashProto(checkpt)
+	if err != nil {
+		return false, err
+	}
+
+	exists := false
+	if err := db.view(func(tx *bolt.Tx) error {
+		l := tx.Bucket(checkpointBucket)
+		exists = l.Get(b[:]) != nil
+		return nil
+	}); err != nil {
+		return false, nil
+	}
+	return exists, nil
+}
+
+// SaveForkChoiceState saves the beacon state using beacon block root as key. This is used for fork choice.
+func (db *BeaconDB) SaveForkChoiceState(ctx context.Context, beaconState *pb.BeaconState, blockRoot []byte) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveForkChoiceState")
+	defer span.End()
+
+	enc, err := proto.Marshal(beaconState)
+	if err != nil {
+		return err
+	}
+
+	return db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(forkChoiceStateBucket)
+		return b.Put(blockRoot, enc)
+	})
+}
+
+// ForkChoiceState gets the beacon state using beacon block root as key. This is used for fork choice.
+func (db *BeaconDB) ForkChoiceState(ctx context.Context, blockRoot []byte) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.ForkChoiceState")
+	defer span.End()
+
+	var s *pb.BeaconState
+	var err error
+	err = db.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(forkChoiceStateBucket)
+
+		enc := bucket.Get(blockRoot)
+		if enc == nil {
+			return nil
+		}
+
+		s, err = createState(enc)
+		return err
+	})
+	return s, err
+}
