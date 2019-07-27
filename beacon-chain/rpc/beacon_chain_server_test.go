@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -866,5 +867,135 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 
 	if !reflect.DeepEqual(res, wanted) {
 		t.Error("Incorrect validator participation respond")
+	}
+}
+
+func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(100)
+	blks := make([]*ethpb.BeaconBlock, count)
+	for i := uint64(0); i < count; i++ {
+		b := &ethpb.BeaconBlock{
+			Slot: i,
+		}
+		if err := db.SaveBlock(b); err != nil {
+			t.Fatal(err)
+		}
+		blks[i] = b
+	}
+
+	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	tests := []struct {
+		req *ethpb.ListBlocksRequest
+		res *ethpb.ListBlocksResponse
+	}{
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        []*ethpb.BeaconBlock{{Slot: 5}},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     1}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     1}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
+			PageSize:    100},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[0:params.BeaconConfig().SlotsPerEpoch],
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(1),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[43:46],
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(1),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
+			PageSize:    7},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[95:96],
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
+			PageSize:    4},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[96:100],
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+	}
+
+	for _, test := range tests {
+		res, err := bs.ListBlocks(ctx, test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(res, test.res) {
+			t.Error("Incorrect blocks response")
+		}
+	}
+}
+
+func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	bs := &BeaconChainServer{beaconDB: db}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "must satisfy one of the filter requirement"
+	req = &ethpb.ListBlocksRequest{}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for epoch 0 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for slot 0 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for root 0x41 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
