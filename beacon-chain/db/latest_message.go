@@ -12,14 +12,14 @@ import (
 )
 
 // SaveLatestMessage puts the validator's latest message record into the beacon chain db.
-func (db *BeaconDB) SaveLatestMessage(ctx context.Context, index uint64, attestation *pb.LatestMessage) error {
+func (db *BeaconDB) SaveLatestMessage(ctx context.Context, index uint64, latestMsg *pb.LatestMessage) error {
 	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveLatestMessage")
 	defer span.End()
 
 	b := make([]byte, 64)
 	binary.LittleEndian.PutUint64(b, uint64(index))
 
-	encodedAtt, err := proto.Marshal(attestation)
+	encodedAtt, err := proto.Marshal(latestMsg)
 	if err != nil {
 		return err
 	}

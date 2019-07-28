@@ -96,8 +96,10 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 		return nil, fmt.Errorf("could not get ancestor block: %v", err)
 	}
 
-	if b.Slot < slot {
-		return nil, fmt.Errorf("could not retrieve ancestor for slot %d", slot)
+	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
+	// operation can proceed. This is not an error condition.
+	if b == nil || b.Slot < slot {
+		return nil, nil
 	}
 
 	if b.Slot == slot {
@@ -141,10 +143,12 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 			if err != nil {
 				return 0, fmt.Errorf("could not get validator %d's latest msg: %v", i, err)
 			}
+
 			wantedRoot, err := s.Ancestor(msg.Root, wantedBlk.Slot)
 			if err != nil {
 				return 0, fmt.Errorf("could not get ancestor root for slot %d: %v", wantedBlk.Slot, err)
 			}
+			fmt.Println(i, wantedRoot)
 			if bytes.Equal(wantedRoot, root) {
 				balances += lastJustifiedState.Validators[i].EffectiveBalance
 			}
