@@ -243,18 +243,19 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	children, childrenRoots, err := store.db.ChildrenBlocksFromParent(roots[0])
+	children, err := store.db.ChildrenBlocksFromParent(roots[0], 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: roots[0]}
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: roots[0]}
-
-	if reflect.DeepEqual(children, []*ethpb.BeaconBlock{b1, b3}) {
-		t.Error("Did not receive correct children block")
+	if !reflect.DeepEqual(children, [][]byte{roots[1], roots[3]}) {
+		t.Error("Did not receive correct children roots")
 	}
-	if reflect.DeepEqual(childrenRoots, roots[1:3]) {
+
+	children, err = store.db.ChildrenBlocksFromParent(roots[0], 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(children, [][]byte{roots[3]}) {
 		t.Error("Did not receive correct children roots")
 	}
 }

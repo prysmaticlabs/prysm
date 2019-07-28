@@ -402,10 +402,12 @@ func (db *BeaconDB) ClearBlockCache() {
 	blockCacheSize.Set(float64(len(db.blocks)))
 }
 
-// ChildrenBlocksFromParent retrieves the children blocks of a block root.
-func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte) ([]*ethpb.BeaconBlock, [][]byte, error) {
+// ChildrenBlocksFromParent retrieves the children block roots from a parent block root.
+// It has an optional filter slot to filter out children blocks below input slot.
+func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte, slot uint64) ([][]byte, error) {
 	childrenRoots := db.blockChildrenRoots[bytesutil.ToBytes32(parentRoot)]
-	blocks := make([]*ethpb.BeaconBlock, len(childrenRoots))
+
+	i := 0
 	for _, r := range childrenRoots {
 		var b *ethpb.BeaconBlock
 		err := db.view(func(tx *bolt.Tx) error {
@@ -418,13 +420,17 @@ func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte) ([]*ethpb.Beacon
 
 			var err error
 			b, err = createBlock(enc)
-			blocks = append(blocks, b)
+
+			if b.Slot > slot {
+				childrenRoots[i] = r
+				i++
+			}
 			return err
 		})
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return blocks, childrenRoots, nil
+	return childrenRoots[:i], nil
 }
