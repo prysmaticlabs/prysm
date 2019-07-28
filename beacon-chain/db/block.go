@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -157,6 +158,9 @@ func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 	if block.Slot > db.highestBlockSlot {
 		db.highestBlockSlot = block.Slot
 	}
+
+	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
+	db.blockChildrenRoots[parentRoot] = append(db.blockChildrenRoots[parentRoot], signingRoot[:])
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
@@ -396,4 +400,31 @@ func (db *BeaconDB) ClearBlockCache() {
 	defer db.blocksLock.Unlock()
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 	blockCacheSize.Set(float64(len(db.blocks)))
+}
+
+// ChildrenBlocksFromParent retrieves the children blocks of a block root.
+func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte) ([]*ethpb.BeaconBlock, [][]byte, error) {
+	childrenRoots := db.blockChildrenRoots[bytesutil.ToBytes32(parentRoot)]
+	blocks := make([]*ethpb.BeaconBlock, len(childrenRoots))
+	for _, r := range childrenRoots {
+		var b *ethpb.BeaconBlock
+		err := db.view(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(blockBucket)
+
+			enc := bucket.Get(r)
+			if enc == nil {
+				return nil
+			}
+
+			var err error
+			b, err = createBlock(enc)
+			blocks = append(blocks, b)
+			return err
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return blocks, childrenRoots, nil
 }

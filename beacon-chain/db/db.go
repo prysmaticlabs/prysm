@@ -43,6 +43,9 @@ type BeaconDB struct {
 	depositsLock          sync.RWMutex
 	chainstartPubkeys     map[string]bool
 	chainstartPubkeysLock sync.RWMutex
+
+	// Parent block root to children block roots.
+	blockChildrenRoots map[[32]byte][][]byte
 }
 
 // Close closes the underlying boltdb database.
@@ -86,6 +89,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
+	db.blockChildrenRoots = make(map[[32]byte][][]byte)
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
