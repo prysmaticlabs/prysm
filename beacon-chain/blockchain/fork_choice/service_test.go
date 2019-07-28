@@ -1,6 +1,7 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"testing"
@@ -257,5 +258,89 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	}
 	if !reflect.DeepEqual(children, [][]byte{roots[3]}) {
 		t.Error("Did not receive correct children roots")
+	}
+}
+
+func TestStore_GetHead(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	validators := make([]*ethpb.Validator, 100)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
+	}
+
+	s := &pb.BeaconState{Validators: validators}
+	if err := store.GensisStore(s); err != nil {
+		t.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.db.SaveCheckpointState(ctx, s, store.justifiedCheckpt); err != nil {
+		t.Fatal(err)
+	}
+
+	//    /- B1 (33 votes)
+	// B0           /- B5 - B7 (33 votes)
+	//    \- B3 - B4 - B6 - B8 (34 votes)
+	for i := 0; i < len(validators); i++ {
+		switch {
+		case i < 33:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[1]}); err != nil {
+				t.Fatal(err)
+			}
+		case i > 66:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[7]}); err != nil {
+				t.Fatal(err)
+			}
+		default:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[8]}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	// Default head is B8
+	head, err := store.Head()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(head, roots[8]) {
+		t.Error("Incorrect head")
+	}
+
+	// 1 validator switches vote to B7 to gain 34%, enough to switch head
+	if err := store.db.SaveLatestMessage(ctx, 50, &pb.LatestMessage{Root: roots[7]}); err != nil {
+		t.Fatal(err)
+	}
+	head, err = store.Head()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(head, roots[7]) {
+		t.Error("Incorrect head")
+	}
+
+	// 18 validators switches vote to B1 to gain 51%, enough to switch head
+	for i := 0; i < 18; i++ {
+		idx := 50 + uint64(i)
+		if err := store.db.SaveLatestMessage(ctx, idx, &pb.LatestMessage{Root: roots[1]}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	head, err = store.Head()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(head, roots[1]) {
+		t.Log(head)
+		t.Error("Incorrect head")
 	}
 }

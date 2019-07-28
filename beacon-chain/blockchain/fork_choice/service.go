@@ -148,7 +148,6 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 			if err != nil {
 				return 0, fmt.Errorf("could not get ancestor root for slot %d: %v", wantedBlk.Slot, err)
 			}
-			fmt.Println(i, wantedRoot)
 			if bytes.Equal(wantedRoot, root) {
 				balances += lastJustifiedState.Validators[i].EffectiveBalance
 			}
@@ -187,7 +186,7 @@ func (s *Store) Head() ([]byte, error) {
 			return head, nil
 		}
 
-		head := children[0]
+		head = children[0]
 		highest, err := s.LatestAttestingBalance(head)
 		if err != nil {
 			return nil, fmt.Errorf("could not get latest balance: %v", err)
@@ -198,6 +197,7 @@ func (s *Store) Head() ([]byte, error) {
 				return nil, fmt.Errorf("could not get latest balance: %v", err)
 			}
 			if balance > highest {
+				highest = balance
 				head = child
 			}
 		}
