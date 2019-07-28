@@ -2,9 +2,7 @@ package forkchoice
 
 import (
 	"context"
-	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -24,7 +22,7 @@ func blockTree(db *db.BeaconDB) ([][]byte, error) {
 	r0, _ := ssz.SigningRoot(b0)
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
 	r1, _ := ssz.SigningRoot(b1)
-	b3 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r0[:]}
 	r3, _ := ssz.SigningRoot(b3)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r3[:]}
 	r4, _ := ssz.SigningRoot(b4)
@@ -36,12 +34,12 @@ func blockTree(db *db.BeaconDB) ([][]byte, error) {
 	r7, _ := ssz.SigningRoot(b7)
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
 	r8, _ := ssz.SigningRoot(b8)
-	for _, b := range []*ethpb.BeaconBlock{b0, b1, b4, b5, b6, b7, b8} {
+	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(b); err != nil {
 			return nil, err
 		}
 	}
-	return [][]byte{r0[:],r1[:],r3[:],nil,r4[:],r5[:],r6[:],r7[:],r8[:]}, nil
+	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
 }
 
 func TestStore_GensisStoreOk(t *testing.T) {
@@ -104,7 +102,7 @@ func TestStore_AncestorOk(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db);
+	roots, err := blockTree(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,34 +115,34 @@ func TestStore_AncestorOk(t *testing.T) {
 	// B0           /- B5 - B7
 	//    \- B3 - B4 - B6 - B8
 	tests := []struct {
-		args    *args
-		want    []byte
+		args *args
+		want []byte
 	}{
-		{args: &args{roots[1], 0}, want:roots[0]},
-		{args: &args{roots[8], 0}, want:roots[0]},
-		{args: &args{roots[8], 4}, want:roots[4]},
-		{args: &args{roots[7], 4}, want:roots[4]},
-		{args: &args{roots[7], 0}, want:roots[0]},
+		{args: &args{roots[1], 0}, want: roots[0]},
+		{args: &args{roots[8], 0}, want: roots[0]},
+		{args: &args{roots[8], 4}, want: roots[4]},
+		{args: &args{roots[7], 4}, want: roots[4]},
+		{args: &args{roots[7], 0}, want: roots[0]},
 	}
 	for _, tt := range tests {
-			got, err := store.Ancestor(tt.args.root, tt.args.slot)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Store.Ancestor() = %v, want %v", got, tt.want)
-			}
+		got, err := store.Ancestor(tt.args.root, tt.args.slot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("Store.Ancestor() = %v, want %v", got, tt.want)
+		}
 	}
 }
 
-func TestStore_AncestorOutOfRange(t *testing.T) {
+func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db);
+	roots, err := blockTree(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,8 +150,83 @@ func TestStore_AncestorOutOfRange(t *testing.T) {
 	//    /- B1
 	// B0           /- B5 - B7
 	//    \- B3 - B4 - B6 - B8
-	wanted := fmt.Sprintf("could not retrieve ancestor for slot %d", 2)
-	if _, err := store.Ancestor(roots[8], 2); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	root, err := store.Ancestor(roots[8], 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != nil {
+		t.Error("block at slot 1 is not part of the chain")
+	}
+	root, err = store.Ancestor(roots[8], 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != nil {
+		t.Error("block at slot 2 is not part of the chain")
+	}
+}
+
+func TestStore_LatestAttestingBalance(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	validators := make([]*ethpb.Validator, 100)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
+	}
+
+	s := &pb.BeaconState{Validators: validators}
+
+	if err := store.GensisStore(s); err != nil {
+		t.Fatal(err)
+	}
+
+	//    /- B1 (33 votes)
+	// B0           /- B5 - B7 (33 votes)
+	//    \- B3 - B4 - B6 - B8 (34 votes)
+	for i := 0; i < len(validators); i++ {
+		switch {
+		case i < 33:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[1]}); err != nil {
+				t.Fatal(err)
+			}
+		case i > 66:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[7]}); err != nil {
+				t.Fatal(err)
+			}
+		default:
+			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[8]}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	tests := []struct {
+		root []byte
+		want uint64
+	}{
+		{root: roots[0], want: 100 * 1e9},
+		{root: roots[1], want: 33 * 1e9},
+		{root: roots[3], want: 67 * 1e9},
+		{root: roots[4], want: 67 * 1e9},
+		{root: roots[7], want: 33 * 1e9},
+		{root: roots[8], want: 34 * 1e9},
+	}
+	for _, tt := range tests {
+		got, err := store.LatestAttestingBalance(tt.root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != tt.want {
+			t.Errorf("Store.LatestAttestingBalance() = %v, want %v", got, tt.want)
+		}
 	}
 }
