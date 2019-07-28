@@ -653,12 +653,12 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
 //
 // Spec pseudocode definition:
-//   def convert_to_indexed(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+//   def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
 //    """
-//    Convert ``attestation`` to (almost) indexed-verifiable form.
+//    Return the indexed attestation corresponding to ``attestation``.
 //    """
-//    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bitfield)
-//    custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bitfield)
+//    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
+//    custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bits)
 //    assert custody_bit_1_indices.issubset(attesting_indices)
 //    custody_bit_0_indices = attesting_indices.difference(custody_bit_1_indices)
 //
