@@ -178,18 +178,9 @@ func (s *Store) Head() ([]byte, error) {
 	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 
 	for {
-		// TODO: To be implemented, stubbing children and roots
-		children := [][]byte{{}}
-		roots := [][]byte{{}}
-
-		for _, r := range roots {
-			b, err := s.db.Block(bytesutil.ToBytes32(r))
-			if err != nil {
-				return nil, fmt.Errorf("could not get block: %v", err)
-			}
-			if bytes.Equal(b.ParentRoot, head) && b.Slot > justifiedSlot {
-				children = append(children, r)
-			}
+		children, err := s.db.ChildrenBlocksFromParent(head, justifiedSlot)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve children info: %v", err)
 		}
 
 		if len(children) == 0 {
