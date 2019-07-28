@@ -52,35 +52,32 @@ func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 //        block_states={root: genesis_state.copy()},
 //        checkpoint_states={justified_checkpoint: genesis_state.copy()},
 //    )
-func (s *Store) GensisStore(state *pb.BeaconState) error {
+func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 
-	stateRoot, err := ssz.HashTreeRoot(state)
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis state: %v", err)
 	}
 
 	genesisBlk := &ethpb.BeaconBlock{StateRoot: stateRoot[:]}
 
-	blkRoot, err := ssz.HashTreeRoot(genesisBlk)
+	blkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)
 	}
 
-	s.time = state.GenesisTime
+	s.time = genesisState.GenesisTime
 	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
 	if err := s.db.SaveBlock(genesisBlk); err != nil {
 		return fmt.Errorf("could not save genesis block: %v", err)
 	}
-	if err := s.db.SaveState(s.ctx, state); err != nil {
+	if err := s.db.SaveState(s.ctx, genesisState); err != nil {
 		return fmt.Errorf("could not save genesis state: %v", err)
 	}
-	if err := s.db.SaveCheckpointState(s.ctx, state, s.justifiedCheckpt); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
 		return fmt.Errorf("could not save justified checkpt: %v", err)
-	}
-	if err := s.db.SaveCheckpointState(s.ctx, state, s.finalizedCheckpt); err != nil {
-		return fmt.Errorf("could not save finalized checkpt: %v", err)
 	}
 
 	return nil
@@ -100,7 +97,7 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 	}
 
 	if b.Slot < slot {
-		return nil, fmt.Errorf("ancestor slot %d reacched below wanted slot %d", b.Slot, slot)
+		return nil, fmt.Errorf("could not retrieve ancestor for slot %d", slot)
 	}
 
 	if b.Slot == slot {
@@ -377,7 +374,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	if !exists {
 		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot)
 		if err != nil {
-			return fmt.Errorf("could not process slots up to %d", tgtSlot, err)
+			return fmt.Errorf("could not process slots up to %d: %v", tgtSlot, err)
 		}
 		if err := s.db.SaveCheckpointState(s.ctx, baseState, tgt); err != nil {
 			return fmt.Errorf("could not save check point state: %v", err)
