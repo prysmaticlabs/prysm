@@ -3,7 +3,9 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -11,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // blockTree constructs the following tree
@@ -348,16 +351,12 @@ func TestStore_GetHead(t *testing.T) {
 	}
 }
 
-func TestStore_OnBlock(t *testing.T) {
+func TestStore_OnBlockErrors(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	_, err := blockTree(db)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	roots, err := blockTree(db)
 	if err != nil {
@@ -423,6 +422,126 @@ func TestStore_OnBlock(t *testing.T) {
 			if tt.wantErr {
 				if err.Error() != tt.wantErrString {
 					t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
+				}
+			} else {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestStore_OnAttestationErrors(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	_, err := blockTree(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	BlkWithOutState := &ethpb.BeaconBlock{}
+	if err := db.SaveBlock(BlkWithOutState); err != nil {
+		t.Fatal(err)
+	}
+	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
+
+	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
+	if err := db.SaveBlock(BlkWithStateBadAtt); err != nil {
+		t.Fatal(err)
+	}
+	BlkWithStateBadAttRoot, _ := ssz.SigningRoot(BlkWithStateBadAtt)
+	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
+	if err := db.SaveBlock(BlkWithValidState); err != nil {
+		t.Fatal(err)
+	}
+	BlkWithValidStateRoot, _ := ssz.SigningRoot(BlkWithValidState)
+	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{
+		Fork: &pb.Fork{
+			Epoch:           0,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}, BlkWithValidStateRoot[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name          string
+		a             *ethpb.Attestation
+		s             *pb.BeaconState
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:          "attestation's target root not in db",
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "target root 0x41 does not exist in db",
+		},
+		{
+			name:          "no pre state for attestations's target block",
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "pre state of target block 0 does not exist",
+		},
+		{
+			name:    "process attestation from future epoch",
+			a:       &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1, Root: BlkWithStateBadAttRoot[:]}}},
+			s:       &pb.BeaconState{},
+			wantErr: true,
+			wantErrString: fmt.Sprintf("could not process attestation from the future epoch, time %d > time 0",
+				params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot),
+		},
+		{
+			name: "process attestation before inclusion delay",
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
+				Crosslink: &ethpb.Crosslink{}}},
+			s:       &pb.BeaconState{},
+			wantErr: true,
+			wantErrString: fmt.Sprintf("could not process attestation for fork choice until inclusion delay, time %d > time 0",
+				params.BeaconConfig().SecondsPerSlot),
+		},
+		{
+			name: "process attestation with invalid index",
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
+				Crosslink: &ethpb.Crosslink{}}},
+			s:             &pb.BeaconState{Slot: 1},
+			wantErr:       true,
+			wantErrString: "could not convert attestation to indexed attestation",
+		},
+		{
+			name: "process attestation with invalid signature",
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
+				Crosslink: &ethpb.Crosslink{}}},
+			s:             &pb.BeaconState{Slot: 1},
+			wantErr:       true,
+			wantErrString: "could not verify indexed attestation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := store.GensisStore(tt.s); err != nil {
+				t.Fatal(err)
+			}
+
+			store.OnTick(tt.s.Slot * params.BeaconConfig().SecondsPerSlot)
+
+			err := store.OnAttestation(tt.a)
+			if tt.wantErr {
+				if !strings.Contains(err.Error(), tt.wantErrString) {
+					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
 				}
 			} else {
 				t.Error(err)

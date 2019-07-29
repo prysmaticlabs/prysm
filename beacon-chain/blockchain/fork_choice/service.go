@@ -271,9 +271,8 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("could not get sign root of block %d: %v", b.Slot, err)
 	}
-	fmt.Println(root, finalizedBlk.Slot)
+
 	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
-	fmt.Println(bFinalizedRoot)
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", b.Slot)
 	}
@@ -355,11 +354,11 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		return fmt.Errorf("could not get pre state for slot %d: %v", tgtSlot, err)
 	}
 	if baseState == nil {
-		return fmt.Errorf("pre state of slot %d does not exist: %v", tgtSlot, err)
+		return fmt.Errorf("pre state of target block %d does not exist", tgtSlot)
 	}
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
-		return fmt.Errorf("could not process attestation from the future, %d > %d", slotTime, s.time)
+		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, s.time)
 	}
 
 	// Store target checkpoint state if not yet seen.
@@ -385,7 +384,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	}
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
-		return fmt.Errorf("could not process attestation for fork choice, %d > %d", slotTime, s.time)
+		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, s.time)
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
