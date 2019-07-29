@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -163,7 +162,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	validatorMap := make(map[[32]byte]int)
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
-		hash, err := hashutil.DepositHash(deposit.Data)
+		hash, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return nil, err
 		}

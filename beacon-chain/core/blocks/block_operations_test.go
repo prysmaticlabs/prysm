@@ -1464,7 +1464,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	}
 	sig := sk.Sign(sr[:], 3)
 	deposit.Data.Signature = sig.Marshal()
-	leaf, err := hashutil.DepositHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,7 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -35,7 +34,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
+	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}
@@ -76,7 +75,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
+	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}
@@ -124,7 +123,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	deposits, _ := testutil.SetupInitialDeposits(t, 1)
 	deposits[0].Data.PublicKey = []byte("junk")
 
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
+	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}
@@ -170,7 +169,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
 
-	leaf, err := hashutil.DepositHash(deposits[0].Data)
+	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}

@@ -945,7 +945,7 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := beaconState.Eth1Data.DepositRoot
-	leaf, err := hashutil.DepositHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		return fmt.Errorf("could not tree hash deposit data: %v", err)
 	}

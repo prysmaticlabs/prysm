@@ -15,7 +15,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -292,7 +291,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	}
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
-		depHash, err := hashutil.DepositHash(dep.Data)
+		depHash, err := ssz.HashTreeRoot(dep.Data)
 		if err != nil {
 			return nil, fmt.Errorf("coulf not hash deposit data %v", err)
 		}

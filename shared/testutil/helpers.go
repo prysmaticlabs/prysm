@@ -12,7 +12,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -75,7 +74,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 func GenerateDepositProof(t testing.TB, deposits []*ethpb.Deposit) ([]*ethpb.Deposit, [32]byte) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := hashutil.DepositHash(deposits[i].Data)
+		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}

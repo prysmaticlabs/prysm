@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -93,7 +94,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		WithdrawalCredentials: withdrawalCredentials,
 	}
 
-	depositHash, err := hashutil.DepositHash(depositData)
+	depositHash, err := ssz.HashTreeRoot(depositData)
 	if err != nil {
 		log.Errorf("Unable to determine hashed value of deposit %v", err)
 		return
@@ -276,7 +277,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 func (w *Web3Service) ChainStartDepositHashes() ([][]byte, error) {
 	hashes := make([][]byte, len(w.chainStartDeposits))
 	for i, dep := range w.chainStartDeposits {
-		hash, err := hashutil.DepositHash(dep.Data)
+		hash, err := ssz.HashTreeRoot(dep.Data)
 		if err != nil {
 			return nil, err
 		}
