@@ -249,30 +249,31 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
 	}
 	if preState == nil {
-		return fmt.Errorf("pre state of slot %d does not exist: %v", b.Slot, err)
+		return fmt.Errorf("pre state of slot %d does not exist", b.Slot)
 	}
 
 	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
 	slotTime := preState.GenesisTime + b.Slot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
-		return fmt.Errorf("could not process block from the future, %d > %d", slotTime, s.time)
+		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, s.time)
 	}
 
-	// TODO: Why would you save the block here?
 	if err := s.db.SaveBlock(b); err != nil {
 		return fmt.Errorf("could not save block from slot %d: %v", b.Slot, err)
 	}
 
 	// Verify block is a descendent of a finalized block.
 	finalizedBlk, err := s.db.Block(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil {
+	if err != nil || finalizedBlk == nil {
 		return fmt.Errorf("could not get finalized block: %v", err)
 	}
 	root, err := ssz.SigningRoot(b)
 	if err != nil {
 		return fmt.Errorf("could not get sign root of block %d: %v", b.Slot, err)
 	}
+	fmt.Println(root, finalizedBlk.Slot)
 	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
+	fmt.Println(bFinalizedRoot)
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", b.Slot)
 	}
@@ -280,7 +281,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	// Verify block is later than the finalized epoch slot.
 	finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if finalizedSlot >= b.Slot {
-		return fmt.Errorf("block is equal or earlier than finalized block, %d < %d", b.Slot, finalizedSlot)
+		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
 	}
 
 	// Apply new state transition for the block to the store.

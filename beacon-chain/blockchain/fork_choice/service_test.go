@@ -19,7 +19,7 @@ import (
 //    \- B3 - B4 - B6 - B8
 // (B1, and B3 are all from the same slots)
 func blockTree(db *db.BeaconDB) ([][]byte, error) {
-	b0 := &ethpb.BeaconBlock{Slot: 0}
+	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
 	r0, _ := ssz.SigningRoot(b0)
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
 	r1, _ := ssz.SigningRoot(b1)
@@ -37,6 +37,9 @@ func blockTree(db *db.BeaconDB) ([][]byte, error) {
 	r8, _ := ssz.SigningRoot(b8)
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(b); err != nil {
+			return nil, err
+		}
+		if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{}, b.ParentRoot); err != nil {
 			return nil, err
 		}
 	}
@@ -342,5 +345,88 @@ func TestStore_GetHead(t *testing.T) {
 	if !bytes.Equal(head, roots[1]) {
 		t.Log(head)
 		t.Error("Incorrect head")
+	}
+}
+
+func TestStore_OnBlock(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	_, err := blockTree(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roots, err := blockTree(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	randaomParentRoot := []byte{'a'}
+	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, randaomParentRoot); err != nil {
+		t.Fatal(err)
+	}
+	validGenesisRoot := []byte{'g'}
+	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name          string
+		blk           *ethpb.BeaconBlock
+		s             *pb.BeaconState
+		time          uint64
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:          "parent block root does not have a state",
+			blk:           &ethpb.BeaconBlock{},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "pre stacte of slot 0 does not exist",
+		},
+		{
+			name:          "block is from the feature",
+			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot, Slot: 1},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "could not process block from the future, slot time 6 > current time 0",
+		},
+		{
+			name:          "could not get finalized block",
+			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
+		},
+		{
+			name:          "same slot as finalized block",
+			blk:           &ethpb.BeaconBlock{Slot: 0, ParentRoot: validGenesisRoot},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "block is equal or earlier than finalized block, slot 0 < slot 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := store.GensisStore(tt.s); err != nil {
+				t.Fatal(err)
+			}
+			store.finalizedCheckpt.Root = roots[0]
+			store.time = tt.time
+
+			err := store.OnBlock(tt.blk)
+			if tt.wantErr {
+				if err.Error() != tt.wantErrString {
+					t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
+				}
+			} else {
+				t.Error(err)
+			}
+		})
 	}
 }
