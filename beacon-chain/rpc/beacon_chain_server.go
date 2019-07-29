@@ -2,12 +2,16 @@ package rpc
 
 import (
 	"context"
+	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -19,32 +23,82 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
+	pool     operations.Pool
+}
+
+// sortableAttestations implements the Sort interface to sort attestations
+// by shard as the canonical sorting attribute.
+type sortableAttestations []*ethpb.Attestation
+
+func (s sortableAttestations) Len() int      { return len(s) }
+func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortableAttestations) Less(i, j int) bool {
+	return s[i].Data.Crosslink.Shard < s[j].Data.Crosslink.Shard
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
+// Attestations are sorted by crosslink shard by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
+//
+// TODO(#3064): Filtering blocked by DB refactor for easier access to
+// fetching data by attributes efficiently.
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
+	switch req.QueryFilter.(type) {
+	case *ethpb.ListAttestationsRequest_BlockRoot:
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	case *ethpb.ListAttestationsRequest_Slot:
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	case *ethpb.ListAttestationsRequest_Epoch:
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	}
+	atts, err := bs.beaconDB.Attestations()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	}
+	// We sort attestations according to the Sortable interface.
+	sort.Sort(sortableAttestations(atts))
+	numAttestations := len(atts)
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not paginate attestations: %v", err)
+	}
+	return &ethpb.ListAttestationsResponse{
+		Attestations:  atts[start:end],
+		TotalSize:     int32(numAttestations),
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 // AttestationPool retrieves pending attestations.
 //
 // The server returns a list of attestations that have been seen but not
-// yet processed. Pending attestations eventually expire as the slot
+// yet processed. Pool attestations eventually expire as the slot
 // advances, so an attestation missing from this request does not imply
 // that it was included in a block. The attestation may have expired.
 // Refer to the ethereum 2.0 specification for more details on how
 // attestations are processed and when they are no longer valid.
-// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestation
+// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	atts, err := bs.pool.AttestationPool(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	}
+	return &ethpb.AttestationPoolResponse{
+		Attestations: atts,
+	}, nil
 }
 
 // ListBlocks retrieves blocks by root, slot, or epoch.
@@ -56,7 +110,86 @@ func (bs *BeaconChainServer) AttestationPool(
 func (bs *BeaconChainServer) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListBlocksRequest_Epoch:
+		startSlot := helpers.StartSlot(q.Epoch)
+		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+
+		var blks []*ethpb.BeaconBlock
+		for i := startSlot; i < endSlot; i++ {
+			b, err := bs.beaconDB.BlocksBySlot(ctx, i)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+			}
+			blks = append(blks, b...)
+		}
+
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return nil, status.Errorf(codes.NotFound, "block for epoch %d does not exists in DB", q.Epoch)
+		}
+
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        blks[start:end],
+			TotalSize:     int32(numBlks),
+			NextPageToken: nextPageToken,
+		}, nil
+
+	case *ethpb.ListBlocksRequest_Root:
+		blk, err := bs.beaconDB.Block(bytesutil.ToBytes32(q.Root))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
+		}
+
+		if blk == nil {
+			return nil, status.Errorf(codes.NotFound, "block for root %#x does not exists in DB", q.Root)
+		}
+
+		token, err := strconv.Atoi(req.PageToken)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not convert page token: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        []*ethpb.BeaconBlock{blk},
+			TotalSize:     1,
+			NextPageToken: strconv.Itoa(token + 1),
+		}, nil
+
+	case *ethpb.ListBlocksRequest_Slot:
+		blks, err := bs.beaconDB.BlocksBySlot(ctx, q.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
+		}
+
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return nil, status.Errorf(codes.NotFound, "block for slot %d does not exists in DB", q.Slot)
+		}
+
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+		}
+
+		return &ethpb.ListBlocksResponse{
+			Blocks:        blks[start:end],
+			TotalSize:     int32(numBlks),
+			NextPageToken: nextPageToken,
+		}, nil
+	}
+
+	return nil, status.Errorf(codes.InvalidArgument, "must satisfy one of the filter requirement")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from

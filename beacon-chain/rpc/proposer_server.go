@@ -139,9 +139,9 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	atts, err := ps.operationService.PendingAttestations(ctx)
+	atts, err := ps.operationService.AttestationPool(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve pending attest ations from operations service: %v", err)
+		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
 	// advance slot, if it is behind
 	if beaconState.Slot < expectedSlot {
@@ -170,7 +170,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
 
-		if _, err := blocks.ProcessAttestation(beaconState, att, false); err != nil {
+		if _, err := blocks.ProcessAttestation(beaconState, att); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
@@ -229,11 +229,10 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-	s, err := state.ExecuteStateTransition(
+	s, err := state.ExecuteStateTransitionNoVerify(
 		ctx,
 		beaconState,
 		block,
-		state.DefaultConfig(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition for state: %v at slot %d", err, beaconState.Slot)
