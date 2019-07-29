@@ -374,7 +374,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "89529c6904fcd077434931b4eac8b4b2f0991baf",  # v1.1.0
+    commit = "d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43",  # v1.1.2
     importpath = "github.com/mr-tron/base58",
 )
 
