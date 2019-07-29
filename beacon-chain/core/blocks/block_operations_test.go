@@ -1612,6 +1612,7 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
 	uncompressedSignature := a.SerializeBytes()
 	dep[0].Data.Signature = uncompressedSignature[:]
+	ssz.ToggleCache(false)
 	eth1Data := testutil.GenerateEth1Data(t, dep)
 	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
 
