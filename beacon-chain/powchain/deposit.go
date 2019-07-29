@@ -7,7 +7,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -63,7 +62,7 @@ func (w *Web3Service) processDeposit(
 func verifyDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := eth1Data.DepositRoot
-	leaf, err := hashutil.DepositHash(deposit.Data)
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		return fmt.Errorf("could not tree hash deposit data: %v", err)
 	}
