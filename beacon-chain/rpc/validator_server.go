@@ -139,14 +139,11 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 
-	// Advance state with empty transitions if the head state slot is farther
-	// than 1 epoch away from the request.
-	if req.EpochStart > 1 && s.Slot < helpers.StartSlot(req.EpochStart-1) {
-		slotsToAdvance := helpers.StartSlot(req.EpochStart - 1)
-		s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
-		if err != nil {
-			return nil, err
-		}
+	// Advance state with empty transitions up to the requested slot.
+	wantedSlot := req.EpochStart * params.BeaconConfig().SlotsPerEpoch
+	s, err = state.ProcessSlots(ctx, s, wantedSlot)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slots up to ")
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
@@ -188,7 +185,6 @@ func (vs *ValidatorServer) assignment(
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
 ) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
 			"expected public key to have length %d, received %d",
@@ -201,7 +197,6 @@ func (vs *ValidatorServer) assignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
-
 	committee, shard, slot, isProposer, err :=
 		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
 	if err != nil {
