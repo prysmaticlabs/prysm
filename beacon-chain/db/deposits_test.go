@@ -7,9 +7,8 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
