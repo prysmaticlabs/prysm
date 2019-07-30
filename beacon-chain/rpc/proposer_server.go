@@ -268,7 +268,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	var eth1BlockHash [32]byte
-	var depositCount uint64
+	//var depositCount uint64
 
 	// Add in current vote, to get accurate vote tally
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
