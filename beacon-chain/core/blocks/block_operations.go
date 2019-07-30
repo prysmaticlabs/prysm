@@ -91,12 +91,32 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	voteCount := uint64(0)
-	for _, vote := range beaconState.Eth1DataVotes {
-		if proto.Equal(vote, data) {
-			voteCount++
-		}
+	eth1DataHash, err := hashutil.HashProto(data)
+	if err != nil {
+		return false, fmt.Errorf("could not hash eth1data: %v", err)
 	}
+	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve eth1 data vote cache: %v", err)
+	}
+
+	if voteCount == 0 {
+		for _, vote := range beaconState.Eth1DataVotes {
+			if proto.Equal(vote, data) {
+				voteCount++
+			}
+		}
+	} else {
+		voteCount++
+	}
+
+	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+		Eth1DataHash: eth1DataHash,
+		VoteCount:    voteCount,
+	}); err != nil {
+		return false, fmt.Errorf("could not save eth1 data vote cache: %v", err)
+	}
+
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the
 	// state.
 	return voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod, nil

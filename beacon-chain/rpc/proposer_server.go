@@ -268,9 +268,6 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	var eth1BlockHash [32]byte
-
-	// Add in current vote, to get accurate vote tally
-	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine if current eth1data vote has enough support: %v", err)
