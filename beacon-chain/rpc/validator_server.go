@@ -140,8 +140,8 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	}
 
 	// Advance state with empty transitions up to the requested slot.
-	wantedSlot := req.EpochStart * params.BeaconConfig().SlotsPerEpoch
-	s, err = state.ProcessSlots(ctx, s, wantedSlot)
+	slotsToAdvance := req.EpochStart * params.BeaconConfig().SlotsPerEpoch
+	s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
 	if err != nil {
 		return nil, fmt.Errorf("could not process slots up to ")
 	}
