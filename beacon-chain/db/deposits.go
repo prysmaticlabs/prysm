@@ -32,15 +32,16 @@ func (db *BeaconDB) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNu
 			"deposit":      d,
 			"index":        index,
 			"deposit root": hex.EncodeToString(depositRoot[:]),
-		}).Debug("Ignoring nil deposit insertion")
+		}).Warn("Ignoring nil deposit insertion")
 		return
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
-	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Index >= index })
-	newDeposits := append([]*DepositContainer{{Deposit: d, Block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[heightIdx:]...)
-	db.deposits = append(db.deposits[:heightIdx], newDeposits...)
+
+	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
+	insertionIndex := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Index >= index })
+	newDeposits := append([]*DepositContainer{{Deposit: d, Block: blockNum, depositRoot: depositRoot, Index: index}}, db.deposits[insertionIndex:]...)
+	db.deposits = append(db.deposits[:insertionIndex], newDeposits...)
 	historicalDepositsCount.Inc()
 }
 
@@ -67,7 +68,7 @@ func (db *BeaconDB) PubkeyInChainstart(ctx context.Context, pubkey string) bool 
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
-// (inclusive). If no block is specified then this method returns all historical deposits.
+// (inclusive). If no block number is specified then this method returns all historical deposits.
 func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
 	defer span.End()
@@ -89,24 +90,24 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethp
 	return deposits
 }
 
-// DepositsNumberAndRootAtHeight returns number of deposits made prior to blockheight and the
-// root that corresponds to the latest deposit at that blockheight.
+// DepositsNumberAndRootAtHeight returns number of deposits made prior to block height and the
+// deposit root that corresponds to the latest deposit at that block height.
 func (db *BeaconDB) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositsNumberAndRootAtHeight")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
-	heightIdx := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Block.Cmp(blockHeight) > 0 })
-	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
-	// deposit.
-	if heightIdx == 0 {
+	upperBounds := sort.Search(len(db.deposits), func(i int) bool { return db.deposits[i].Block.Cmp(blockHeight) > 0 })
+	// Send the deposit root of the empty trie, if block height is less than the block height of
+	// the earliest deposit.
+	if upperBounds == 0 {
 		return 0, [32]byte{}
 	}
-	return uint64(heightIdx), db.deposits[heightIdx-1].depositRoot
+	return uint64(upperBounds), db.deposits[upperBounds-1].depositRoot
 }
 
-// DepositByPubkey looks through historical deposits and finds one which contains
-// a certain public key within its deposit data.
+// DepositByPubkey looks through historical deposits and finds the first one which
+// contains a certain public key within its deposit data.
 func (db *BeaconDB) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositByPubkey")
 	defer span.End()
