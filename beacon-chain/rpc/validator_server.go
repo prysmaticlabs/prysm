@@ -185,6 +185,7 @@ func (vs *ValidatorServer) assignment(
 	beaconState *pbp2p.BeaconState,
 	epochStart uint64,
 ) (*pb.AssignmentResponse_ValidatorAssignment, error) {
+
 	if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
 			"expected public key to have length %d, received %d",
@@ -197,6 +198,7 @@ func (vs *ValidatorServer) assignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
+
 	committee, shard, slot, isProposer, err :=
 		helpers.CommitteeAssignment(beaconState, epochStart, uint64(idx))
 	if err != nil {
