@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -1566,6 +1567,14 @@ func setupFFGTest(t *testing.T) ([32]byte, *ethpb.BeaconBlock, *pb.BeaconState, 
 }
 
 func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
+	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableAncestorBlockCache: true,
+	})
+	defer func() {
+		featureconfig.InitFeatureConfig(nil)
+	}()
+
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))

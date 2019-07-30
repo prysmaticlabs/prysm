@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -59,6 +60,12 @@ func NewAttestationCache() *AttestationCache {
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
+	if !featureconfig.FeatureConfig().EnableAttestationCache {
+		// Return a miss result if cache is not enabled.
+		attestationCacheMiss.Inc()
+		return nil, nil
+	}
+
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
 	}

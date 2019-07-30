@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -62,6 +63,12 @@ func NewStartShardCache() *StartShardCache {
 // StartShardInEpoch fetches StartShardByEpoch by epoch. Returns true with a
 // reference to the StartShardInEpoch info, if exists. Otherwise returns false, nil.
 func (c *StartShardCache) StartShardInEpoch(epoch uint64) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableStartShardCache {
+		// Return a miss result if cache is not enabled.
+		startShardCacheMiss.Inc()
+		return params.BeaconConfig().FarFutureEpoch, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.startShardCache.GetByKey(strconv.Itoa(int(epoch)))

@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -60,8 +61,14 @@ func NewActiveBalanceCache() *ActiveBalanceCache {
 }
 
 // ActiveBalanceInEpoch fetches ActiveBalanceByEpoch by epoch. Returns true with a
-// reference to the ActiveBalanceInEpoch info, if exists. Otherwise returns false, nil.
+// reference to the ActiveBalanceInEpoch info, if exists. Otherwise returns FAR_FUTURE_EPOCH, nil.
 func (c *ActiveBalanceCache) ActiveBalanceInEpoch(epoch uint64) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableActiveBalanceCache {
+		// Return a miss result if cache is not enabled.
+		activeBalanceCacheMiss.Inc()
+		return params.BeaconConfig().FarFutureEpoch, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.activeBalanceCache.GetByKey(strconv.Itoa(int(epoch)))
