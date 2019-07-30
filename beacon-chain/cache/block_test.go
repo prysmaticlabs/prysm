@@ -68,7 +68,7 @@ func TestAncestorCache_AncestorInfoByHeight(t *testing.T) {
 		t.Fatal(err)
 	}
 	if fetchedInfo == nil {
-		t.Error("Expected ancestor info to exist")
+		t.Fatal("Expected ancestor info to exist")
 	}
 	if fetchedInfo.Height != height {
 		t.Errorf(

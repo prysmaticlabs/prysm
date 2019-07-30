@@ -27,7 +27,6 @@ var log = logrus.WithField("prefix", "flags")
 type FeatureFlagConfig struct {
 	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
-	EnableCommitteesCache         bool // EnableCommitteesCache for state transition.
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
 
