@@ -123,7 +123,9 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
 	if c.inProgress[s] {
 		return ErrAlreadyInProgress
 	}
-	c.inProgress[s] = true
+	if featureconfig.FeatureConfig().EnableAttestationCache {
+		c.inProgress[s] = true
+	}
 	return nil
 }
 
