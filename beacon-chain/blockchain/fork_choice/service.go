@@ -135,8 +135,8 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not get slot for an ancestor block: %v", err)
 	}
-	balances := uint64(0)
 
+	balances := uint64(0)
 	for _, i := range activeIndices {
 		if s.db.HasLatestMessage(i) {
 			msg, err := s.db.LatestMessage(i)
