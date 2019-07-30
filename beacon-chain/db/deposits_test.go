@@ -11,6 +11,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+const nilDepositErr = "Ignoring nil deposit insertion"
+
 func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := setupDB(t)
@@ -21,7 +23,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	if len(db.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
 	}
-	if hook.LastEntry().Message != "Ignoring nil deposit insertion" {
+	if hook.LastEntry().Message != nilDepositErr {
 		t.Errorf("Did not log correct message, wanted \"Ignoring nil deposit insertion\", got \"%s\"", hook.LastEntry().Message)
 	}
 }
@@ -36,7 +38,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
 	if len(db.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
 	}
-	if hook.LastEntry().Message != "Ignoring nil deposit insertion" {
+	if hook.LastEntry().Message != nilDepositErr {
 		t.Errorf("Did not log correct message, wanted \"Ignoring nil deposit insertion\", got \"%s\"", hook.LastEntry().Message)
 	}
 }
