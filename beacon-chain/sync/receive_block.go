@@ -168,8 +168,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		"Sending newly received block to chain service")
 	// We then process the block by passing it through the ChainService and running
 	// a fork choice rule.
-	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
-	if err != nil {
+	if err = rs.chainService.ReceiveBlock(ctx, block); err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err

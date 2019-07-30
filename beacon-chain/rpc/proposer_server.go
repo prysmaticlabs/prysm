@@ -95,7 +95,6 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, fmt.Errorf("could not get compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-
 	return blk, nil
 }
 
@@ -108,21 +107,9 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
-
-	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
-	if err != nil {
+	if err := ps.chainService.ReceiveBlock(ctx, blk); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
-
-	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		return nil, fmt.Errorf("failed to update chain: %v", err)
-	}
-
-	ps.chainService.UpdateCanonicalRoots(blk, root)
-	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"headSlot": blk.Slot,
-	}).Info("Chain head block and state updated")
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }

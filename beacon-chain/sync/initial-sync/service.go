@@ -77,6 +77,7 @@ type powChainService interface {
 }
 
 type chainService interface {
+	blockchain.BlockReceiver
 	blockchain.BlockProcessor
 	blockchain.ForkChoice
 }
@@ -164,9 +165,6 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	if err != nil {
 		return err
 	}
-	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
-		return err
-	}
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
@@ -181,7 +179,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	}); err != nil {
 		return fmt.Errorf("failed to save attestation target: %v", err)
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
+	err = s.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {

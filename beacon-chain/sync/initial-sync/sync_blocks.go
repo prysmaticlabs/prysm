@@ -126,13 +126,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 		return fmt.Errorf("parent block with root %#x doesnt exist in the db", parentRoot)
 	}
 
-	state, err := s.db.HistoricalStateFromSlot(ctx, parentBlock.Slot, parentRoot)
-	if err != nil {
-		return err
-	}
-	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
-		return err
-	}
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
@@ -143,12 +136,10 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	}); err != nil {
 		return fmt.Errorf("could not to save attestation target: %v", err)
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
-	if err != nil {
+
+	if err = s.chainService.ReceiveBlock(ctx, block); err != nil {
 		return fmt.Errorf("could not apply block state transition: %v", err)
 	}
-	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
-		return err
-	}
-	return s.db.UpdateChainHead(ctx, block, state)
+
+	return nil
 }

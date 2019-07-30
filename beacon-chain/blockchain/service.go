@@ -13,6 +13,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	forkchoice "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/fork_choice"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -42,6 +43,7 @@ type ChainService struct {
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
+	ForkChoiceStore      forkchoice.Store
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
@@ -89,6 +91,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	beaconState, err := c.beaconDB.HeadState(c.ctx)
+
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
