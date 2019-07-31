@@ -119,7 +119,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots %v", err)
+		return nil, fmt.Errorf("could not process slots up to %d: %v", req.Slot, err)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
