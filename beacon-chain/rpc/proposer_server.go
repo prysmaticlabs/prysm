@@ -268,7 +268,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	latestEth1DataHeight, err := ps.determineLatestETH1Height(ctx, beaconState, currentVote)
+	latestEth1DataHeight, err := ps.latestEth1Height(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
 	}
@@ -324,12 +324,11 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	return pendingDeposits, nil
 }
 
-// determineLatestETH1Height determines what the latest eth1Blockhash is by tallying the votes in the
+// latestEth1Height determines what the latest eth1Blockhash is by tallying the votes in the
 // beacon state
-func (ps *ProposerServer) determineLatestETH1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
+func (ps *ProposerServer) latestEth1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
 	currentVote *ethpb.Eth1Data) (*big.Int, error) {
 	var eth1BlockHash [32]byte
-	var depositCount uint64
 
 	// Add in current vote, to get accurate vote tally
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
@@ -339,16 +338,13 @@ func (ps *ProposerServer) determineLatestETH1Height(ctx context.Context, beaconS
 	}
 	if hasSupport {
 		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
-		depositCount = currentVote.DepositCount
 	} else {
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
-		depositCount = beaconState.Eth1Data.DepositCount
 	}
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
 	}
-	logrus.Infof("hasSupport: %v, with eth1Block %#x and deposit count %d at eth1height %d", hasSupport, eth1BlockHash, depositCount, latestEth1DataHeight.Uint64())
 	return latestEth1DataHeight, nil
 }
 
