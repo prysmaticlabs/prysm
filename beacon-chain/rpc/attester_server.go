@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -122,11 +121,6 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	headState, err := as.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch head state: %v", err)
-	}
-
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not process slot: %v", err)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)

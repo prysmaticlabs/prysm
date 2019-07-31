@@ -137,10 +137,11 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	atts, err := ps.operationService.AttestationPool(ctx)
+	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
+
 	// advance slot, if it is behind
 	if beaconState.Slot < expectedSlot {
 		beaconState, err = state.ProcessSlots(ctx, beaconState, expectedSlot)
@@ -276,6 +277,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
 	// so we want to avoid any possible mismatches in these lengths.
 	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	log.Errorf("uptoEth1deps %d and alldeps %d at blockHeight %d", len(upToEth1DataDeposits), len(allDeps), latestEth1DataHeight.Uint64())
 	if len(upToEth1DataDeposits) != len(allDeps) {
 		return nil, nil
 	}
@@ -327,6 +329,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 func (ps *ProposerServer) determineLatestETH1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
 	currentVote *ethpb.Eth1Data) (*big.Int, error) {
 	var eth1BlockHash [32]byte
+	var depositCount uint64
 
 	// Add in current vote, to get accurate vote tally
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
@@ -336,13 +339,16 @@ func (ps *ProposerServer) determineLatestETH1Height(ctx context.Context, beaconS
 	}
 	if hasSupport {
 		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
+		depositCount = currentVote.DepositCount
 	} else {
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
+		depositCount = beaconState.Eth1Data.DepositCount
 	}
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
 	}
+	logrus.Infof("hasSupport: %v, with eth1Block %#x and deposit count %d at eth1height %d", hasSupport, eth1BlockHash, depositCount, latestEth1DataHeight.Uint64())
 	return latestEth1DataHeight, nil
 }
 
