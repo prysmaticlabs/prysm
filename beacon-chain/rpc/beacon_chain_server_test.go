@@ -253,8 +253,17 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	bs := &BeaconChainServer{
-		pool: &mockPool{},
+		pool:     &mockPool{},
+		beaconDB: db,
+	}
+	if err := bs.beaconDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
+		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
