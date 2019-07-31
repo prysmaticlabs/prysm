@@ -277,7 +277,6 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
 	// so we want to avoid any possible mismatches in these lengths.
 	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
-	log.Errorf("uptoEth1deps %d and alldeps %d at blockHeight %d", len(upToEth1DataDeposits), len(allDeps), latestEth1DataHeight.Uint64())
 	if len(upToEth1DataDeposits) != len(allDeps) {
 		return nil, nil
 	}
