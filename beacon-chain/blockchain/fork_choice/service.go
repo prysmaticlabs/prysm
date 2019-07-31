@@ -129,6 +129,10 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not get checkpoint state: %v", err)
 	}
+	if lastJustifiedState == nil {
+		return 0, fmt.Errorf("could not get justified state at epoch %d: %v", s.justifiedCheckpt.Epoch, err)
+	}
+
 	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
 	activeIndices, err := helpers.ActiveValidatorIndices(lastJustifiedState, lastJustifiedEpoch)
 	if err != nil {
@@ -325,7 +329,6 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		if err := deleteValidatorIdx(postState, s.db); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}
-
 		logEpochData(postState)
 	}
 
@@ -485,9 +488,6 @@ func deleteValidatorIdx(state *pb.BeaconState, db *db.BeaconDB) error {
 
 // logs epoch related data in each epoch transition
 func logEpochData(beaconState *pb.BeaconState) {
-
-	log.WithField("currentEpochAttestations", len(beaconState.CurrentEpochAttestations)).Info("Number of current epoch attestations")
-	log.WithField("prevEpochAttestations", len(beaconState.PreviousEpochAttestations)).Info("Number of previous epoch attestations")
 	log.WithField(
 		"previousJustifiedEpoch", beaconState.PreviousJustifiedCheckpoint.Epoch,
 	).Info("Previous justified epoch")
@@ -503,8 +503,7 @@ func logEpochData(beaconState *pb.BeaconState) {
 	log.WithField(
 		"numValidators", len(beaconState.Validators),
 	).Info("Validator registry length")
-
 	log.WithField(
 		"SlotsSinceGenesis", beaconState.Slot,
-	).Info("Epoch transition successfully processed")
+	).Info(fmt.Sprintf("Epoch transition %d successfully processed", helpers.SlotToEpoch(beaconState.Slot)))
 }

@@ -2,12 +2,15 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -42,19 +45,46 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
+
+	// Run block state transition and broadcast the block to other peers.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
-		return fmt.Errorf("failed to receive block in fork choice service: %v", err)
+		return fmt.Errorf("failed to process block from fork choice service: %v", err)
 	}
-
-	log.WithField("slot", block.Slot).Info("Executing state transition")
-
-	// We save the block to the DB and broadcast it to our peers.
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
 		return fmt.Errorf(
 			"could not save and broadcast beacon block with slot %d: %v",
 			block.Slot, err,
 		)
 	}
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"slots": block.Slot,
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("successful ran state transition")
+
+	// Run fork choice for head block and head state.
+	headRoot, err := c.forkChoiceStore.Head()
+	if err != nil {
+		return fmt.Errorf("failed to get head from fork choice service: %v", err)
+	}
+	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
+		return fmt.Errorf("failed to update head: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"slots": headBlk.Slot,
+		"root":  hex.EncodeToString(headRoot),
+	}).Info("successful ran fork choice")
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.

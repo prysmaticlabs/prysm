@@ -211,7 +211,6 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		log.Error(err)
 		return err
 	}
-	log.Info("GETTING ASSIGNMENT", slot, resp.ValidatorAssignment)
 
 	v.assignments = resp
 	// Only log the full assignments output on epoch start to be less verbose.
