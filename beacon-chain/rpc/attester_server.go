@@ -50,7 +50,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	if head == nil {
 		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
 	}
-	// TODO(): Remove this when fork-choice is updated to the new one.
+	// TODO(#3088): Remove this when fork-choice is updated to the new one.
 	attestationSlot := att.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	attTarget := &pbp2p.AttestationTarget{
 		Slot:            attestationSlot,
