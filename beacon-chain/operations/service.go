@@ -138,7 +138,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 
 	bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots %v", err)
+		return nil, fmt.Errorf("could not process slots up to %d: %v", requestedSlot, err)
 	}
 
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
