@@ -558,7 +558,6 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	if !proto.Equal(newState.Eth1Data, vote) {
 		t.Errorf("eth1data in the state not of the expected kind: Got %v but wanted %v", newState.Eth1Data, vote)
 	}
-
 }
 
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
