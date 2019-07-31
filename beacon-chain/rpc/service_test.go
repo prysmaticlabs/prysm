@@ -43,7 +43,7 @@ func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *ethpb.Att
 	return true, nil
 }
 
-func (ms *mockOperationService) AttestationPool(_ context.Context) ([]*ethpb.Attestation, error) {
+func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}

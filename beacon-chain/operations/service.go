@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -29,7 +30,7 @@ var log = logrus.WithField("prefix", "operation")
 // which have been observed by the beacon node but not yet included in
 // a beacon block by a proposer.
 type Pool interface {
-	AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error)
+	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 }
 
 // OperationFeeds inteface defines the informational feeds from the operations
@@ -124,15 +125,20 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // AttestationPool returns the attestations that have not seen on the beacon chain,
 // the attestations are returned in slot ascending order and up to MaxAttestations
 // capacity. The attestations get deleted in DB after they have been retrieved.
-func (s *Service) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
+func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
-	state, err := s.beaconDB.HeadState(ctx)
+	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve attestations from DB")
+	}
+
+	bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
+	if err != nil {
+		return nil, fmt.Errorf("could not process slots up to %d: %v", requestedSlot, err)
 	}
 
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
@@ -141,13 +147,13 @@ func (s *Service) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, er
 
 	var validAttsCount uint64
 	for _, att := range attestationsFromDB {
-		slot, err := helpers.AttestationDataSlot(state, att.Data)
+		slot, err := helpers.AttestationDataSlot(bState, att.Data)
 		if err != nil {
 			return nil, fmt.Errorf("could not get attestation slot: %v", err)
 		}
 		// Delete the attestation if the attestation is one epoch older than head state,
 		// we don't want to pass these attestations to RPC for proposer to include.
-		if slot+params.BeaconConfig().SlotsPerEpoch <= state.Slot {
+		if slot+params.BeaconConfig().SlotsPerEpoch <= bState.Slot {
 			if err := s.beaconDB.DeleteAttestation(att); err != nil {
 				return nil, err
 			}

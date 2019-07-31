@@ -21,7 +21,7 @@ import (
 
 type mockPool struct{}
 
-func (m *mockPool) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
+func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	return []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -253,14 +253,23 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	bs := &BeaconChainServer{
-		pool: &mockPool{},
+		pool:     &mockPool{},
+		beaconDB: db,
+	}
+	if err := bs.beaconDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
+		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx)
+	want, _ := bs.pool.AttestationPool(ctx, 10)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}

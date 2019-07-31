@@ -40,15 +40,6 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, err
 	}
 
-	headState, err := as.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	slot, err := helpers.AttestationDataSlot(headState, att.Data)
-	if err != nil {
-		return nil, fmt.Errorf("could not get attestation slot: %v", err)
-	}
-
 	// Update attestation target for RPC server to run necessary fork choice.
 	// We need to retrieve the head block to get its parent root.
 	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
@@ -59,8 +50,10 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	if head == nil {
 		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
 	}
+	// TODO(#3088): Remove this when fork-choice is updated to the new one.
+	attestationSlot := att.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	attTarget := &pbp2p.AttestationTarget{
-		Slot:            slot,
+		Slot:            attestationSlot,
 		BeaconBlockRoot: att.Data.BeaconBlockRoot,
 		ParentRoot:      head.ParentRoot,
 	}
@@ -126,7 +119,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slot: %v", err)
+		return nil, fmt.Errorf("could not process slots up to %d: %v", req.Slot, err)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)

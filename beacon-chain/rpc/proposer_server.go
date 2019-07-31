@@ -137,10 +137,11 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	atts, err := ps.operationService.AttestationPool(ctx)
+	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
+
 	// advance slot, if it is behind
 	if beaconState.Slot < expectedSlot {
 		beaconState, err = state.ProcessSlots(ctx, beaconState, expectedSlot)
