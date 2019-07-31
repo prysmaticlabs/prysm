@@ -196,9 +196,6 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
-	if slot == 0 {
-		return nil
-	}
 
 	req := &pb.AssignmentRequest{
 		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
