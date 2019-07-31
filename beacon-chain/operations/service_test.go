@@ -131,7 +131,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
-	attestations, err := service.AttestationPool(context.Background())
+	attestations, err := service.AttestationPool(context.Background(), 64)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
-	attestations, err := service.AttestationPool(context.Background())
+	attestations, err := service.AttestationPool(context.Background(), 200)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retrievedAtts, err := s.AttestationPool(context.Background())
+	retrievedAtts, err := s.AttestationPool(context.Background(), 15)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -236,7 +236,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Fatalf("Could not remove attestations: %v", err)
 	}
 
-	retrievedAtts, _ = s.AttestationPool(context.Background())
+	retrievedAtts, _ = s.AttestationPool(context.Background(), 15)
 	if len(retrievedAtts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
 	}
@@ -271,7 +271,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	atts, _ := s.AttestationPool(context.Background())
+	atts, _ := s.AttestationPool(context.Background(), 15)
 	if len(atts) != len(attestations) {
 		t.Errorf("Attestation pool should be %d but got a length of %d",
 			len(attestations), len(atts))
@@ -288,7 +288,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	atts, _ = s.AttestationPool(context.Background())
+	atts, _ = s.AttestationPool(context.Background(), 15)
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}

@@ -21,7 +21,7 @@ import (
 
 type mockPool struct{}
 
-func (m *mockPool) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
+func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	return []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -260,7 +260,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx)
+	want, _ := bs.pool.AttestationPool(ctx, 10)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
