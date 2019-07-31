@@ -267,19 +267,9 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	var eth1BlockHash [32]byte
-	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
+	latestEth1DataHeight, err := ps.latestEth1Height(ctx, beaconState, currentVote)
 	if err != nil {
-		return nil, fmt.Errorf("could not determine if current eth1data vote has enough support: %v", err)
-	}
-	if hasSupport {
-		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
-	} else {
-		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
-	}
-	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
+		return nil, err
 	}
 	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
 	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
@@ -330,6 +320,30 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
+}
+
+// latestEth1Height determines what the latest eth1Blockhash is by tallying the votes in the
+// beacon state
+func (ps *ProposerServer) latestEth1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
+	currentVote *ethpb.Eth1Data) (*big.Int, error) {
+	var eth1BlockHash [32]byte
+
+	// Add in current vote, to get accurate vote tally
+	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
+	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine if current eth1data vote has enough support: %v", err)
+	}
+	if hasSupport {
+		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
+	} else {
+		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
+	}
+	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
+	}
+	return latestEth1DataHeight, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we
