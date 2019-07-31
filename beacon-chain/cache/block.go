@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -65,6 +66,12 @@ func NewBlockAncestorCache() *AncestorBlockCache {
 // AncestorBySlot fetches block's ancestor by height. Returns true with a
 // reference to the ancestor block, if exists. Otherwise returns false, nil.
 func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*AncestorInfo, error) {
+	if !featureconfig.FeatureConfig().EnableAncestorBlockCache {
+		// Return a miss result if cache is not enabled.
+		ancestorBlockCacheMiss.Inc()
+		return nil, nil
+	}
+
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 

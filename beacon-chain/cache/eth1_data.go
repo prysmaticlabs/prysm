@@ -6,6 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -60,6 +61,12 @@ func NewEth1DataVoteCache() *Eth1DataVoteCache {
 // Eth1DataVote fetches eth1 data vote count by the eth1data hash. Returns vote count,
 // if exists. Otherwise returns false, nil.
 func (c *Eth1DataVoteCache) Eth1DataVote(eth1DataHash [32]byte) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		// Return a miss result if cache is not enabled.
+		eth1DataVoteCacheMiss.Inc()
+		return 0, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(eth1DataHash[:]))

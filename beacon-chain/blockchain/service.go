@@ -43,7 +43,7 @@ type ChainService struct {
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
-	ForkChoiceStore      forkchoice.Store
+	forkChoiceStore      *forkchoice.Store
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
@@ -71,6 +71,8 @@ type Config struct {
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                  ctx,
@@ -79,6 +81,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
+		forkChoiceStore:      store,
 		canonicalBlockFeed:   new(event.Feed),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
@@ -180,6 +183,10 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
 		return nil, fmt.Errorf("could not save gensis state as finalized state: %v", err)
 	}
+	if err := c.forkChoiceStore.GensisStore(beaconState); err != nil {
+		return nil, fmt.Errorf("could not start gensis store for fork choice: %v", err)
+	}
+
 	return beaconState, nil
 }
 

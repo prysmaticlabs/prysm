@@ -39,15 +39,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "3b0116a8a91a75678a57ba676c246ac0fa9c90dc3d46daef305b11b54ed4467e",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.33.1/rules_nodejs-0.33.1.tar.gz"],
+    sha256 = "7c4a690268be97c96f04d505224ec4cb1ae53c2c2b68be495c9bd2634296a5cd",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.34.0/rules_nodejs-0.34.0.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "7af870fdee5951353aa342c5f1f5a5ae8fce55d4d9a5c133251df5debc59b516",
-    strip_prefix = "rules_k8s-68aa778efc98cf4aa41e14e63fd0c54a170004dc",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/68aa778efc98cf4aa41e14e63fd0c54a170004dc.tar.gz",
+    sha256 = "1f107d9ee45a421dfd21cc1750bf996b7ac31c89cfc7dab0a30affb5bd9a077b",
+    strip_prefix = "rules_k8s-a7836b7a591fa105e553ad9762400fe87e4528c2",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/a7836b7a591fa105e553ad9762400fe87e4528c2.tar.gz",
 )
 
 git_repository(
@@ -241,7 +241,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "e69d17141ca58ba6afbf13098e90c9377938e590",  # v0.2.0
+    commit = "15764f7bb21ae2a9095573c0acb1b331f6b74650",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -290,7 +290,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "ad0faef7c7093eb3cdc86c060fff4657969dd7f9",  # v0.1.2
+    commit = "f4c9af195c69379f1cf284dba31985482a56f78e",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
@@ -374,7 +374,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "89529c6904fcd077434931b4eac8b4b2f0991baf",  # v1.1.0
+    commit = "d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43",  # v1.1.2
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -483,13 +483,13 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    commit = "8fc2e5773bbd308ca2fcc962fd8d25c1bd0f6743",  # v1.1.4
+    commit = "b13675009d59c97f3721247d9efa8914e1866a5b",  # v1.1.15
     importpath = "github.com/miekg/dns",
 )
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38",  # v1.0.2
+    commit = "659c90643e714681897ec2521c60567dd21da733",  # v1.1.0
     importpath = "github.com/opentracing/opentracing-go",
 )
 
@@ -519,7 +519,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    commit = "e1e72e9de974bd926e5c56f83753fba2df402ce5",  # v1.3.0
+    commit = "839c75faf7f98a33d445d181f3018b5c3409a45e",  # v1.4.2
     importpath = "github.com/sirupsen/logrus",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "bfe829fefc91f676644aee0dc057097c605ae5ab",  # v1.0.5
+    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",  # v1.0.5
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -794,7 +794,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    commit = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c",  # v0.5.1
+    commit = "7f827b33c0f158ec5dfbba01bb0b14a4541fd81d",  # v0.5.3
     importpath = "github.com/hashicorp/golang-lru",
 )
 
@@ -818,7 +818,7 @@ go_repository(
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
-    commit = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",
+    commit = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",  # v1.0.2
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
 )
 

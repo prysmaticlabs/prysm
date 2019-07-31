@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -57,13 +58,12 @@ func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 //        checkpoint_states={justified_checkpoint: genesis_state.copy()},
 //    )
 func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
-
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis state: %v", err)
 	}
 
-	genesisBlk := &ethpb.BeaconBlock{StateRoot: stateRoot[:]}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 
 	blkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	if err := s.db.SaveBlock(genesisBlk); err != nil {
 		return fmt.Errorf("could not save genesis block: %v", err)
 	}
-	if err := s.db.SaveState(s.ctx, genesisState); err != nil {
+	if err := s.db.SaveForkChoiceState(s.ctx, genesisState, blkRoot[:]); err != nil {
 		return fmt.Errorf("could not save genesis state: %v", err)
 	}
 	if err := s.db.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
@@ -257,6 +257,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	}
 
 	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
+	s.OnTick(uint64(time.Now().Unix()))
 	slotTime := preState.GenesisTime + b.Slot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, s.time)

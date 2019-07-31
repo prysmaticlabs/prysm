@@ -254,7 +254,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.BaseRewardsPerEpoch = 5
 	minimalConfig.ShuffleRoundCount = 10
-	minimalConfig.MinGenesisActiveValidatorCount = 64
+	minimalConfig.MinGenesisActiveValidatorCount = 8
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.MinDepositAmount = 1e9
 	minimalConfig.MaxEffectiveBalance = 32e9

@@ -42,7 +42,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	if err := c.ForkChoiceStore.OnBlock(block); err != nil {
+	if err := c.forkChoiceStore.OnBlock(block); err != nil {
 		return fmt.Errorf("failed to receive block in fork choice service: %v", err)
 	}
 
