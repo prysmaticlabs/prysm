@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -109,15 +108,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		"slot":  block.Slot,
 		"epoch": helpers.SlotToEpoch(block.Slot),
 	}).Info("State transition complete")
-
-	// Check state root
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon state: %v", err)
-	}
-	if !bytes.Equal(block.StateRoot, stateRoot[:]) {
-		return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRoot)
-	}
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
