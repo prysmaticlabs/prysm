@@ -143,7 +143,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 	slotsToAdvance := req.EpochStart * params.BeaconConfig().SlotsPerEpoch
 	s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots up to ")
+		return nil, fmt.Errorf("could not process slots up to %d", slotsToAdvance)
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)
