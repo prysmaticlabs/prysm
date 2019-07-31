@@ -405,6 +405,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 		if err != nil {
 			return [32]byte{}, err
 		}
+
 		for i := uint64(0); i < comCount; i++ {
 			shard := (startShard + i) % shardCount
 			crossComm, err := CrosslinkCommittee(state, epoch, shard)
@@ -417,7 +418,6 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
-
 			}
 		}
 		return ssz.HashTreeRoot(compactCommArray)

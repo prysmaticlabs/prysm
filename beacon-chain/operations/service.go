@@ -25,6 +25,13 @@ import (
 
 var log = logrus.WithField("prefix", "operation")
 
+// Pool defines an interface for fetching the list of attestations
+// which have been observed by the beacon node but not yet included in
+// a beacon block by a proposer.
+type Pool interface {
+	AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error)
+}
+
 // OperationFeeds inteface defines the informational feeds from the operations
 // service.
 type OperationFeeds interface {
@@ -114,10 +121,10 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 	return s.incomingProcessedBlockFeed
 }
 
-// PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
-// returns in slot ascending order and up to MaxAttestations capacity. The attestations get
-// deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations(ctx context.Context) ([]*ethpb.Attestation, error) {
+// AttestationPool returns the attestations that have not seen on the beacon chain,
+// the attestations are returned in slot ascending order and up to MaxAttestations
+// capacity. The attestations get deleted in DB after they have been retrieved.
+func (s *Service) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
@@ -261,35 +268,30 @@ func (s *Service) removeOperations() {
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
-			// Removes the pending attestations received from processed block body in DB.
-			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
-				log.Errorf("Could not remove processed attestations from DB: %v", err)
-				continue
-			}
-			state, err := s.beaconDB.HeadState(s.ctx)
-			if err != nil {
-				log.Errorf("could not retrieve attestations from DB")
-				continue
-			}
-			if err := s.removeEpochOldAttestations(state); err != nil {
-				log.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
-				continue
-			}
 		}
 	}
 }
 
 func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message) error {
 	block := message.(*ethpb.BeaconBlock)
-	// Removes the pending attestations received from processed block body in DB.
-	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
+	// Removes the attestations from the pool that have been included
+	// in the received block.
+	if err := s.removeAttestationsFromPool(block.Body.Attestations); err != nil {
 		return fmt.Errorf("could not remove processed attestations from DB: %v", err)
+	}
+	state, err := s.beaconDB.HeadState(s.ctx)
+	if err != nil {
+		return fmt.Errorf("could not retrieve attestations from DB")
+	}
+	if err := s.removeEpochOldAttestations(state); err != nil {
+		return fmt.Errorf("could not remove old attestations from DB at slot %d: %v", block.Slot, err)
 	}
 	return nil
 }
 
-// removePendingAttestations removes a list of attestations from DB.
-func (s *Service) removePendingAttestations(attestations []*ethpb.Attestation) error {
+// removeAttestationsFromPool removes a list of attestations from the DB
+// after they have been included in a beacon block.
+func (s *Service) removeAttestationsFromPool(attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
 		hash, err := hashutil.HashProto(attestation)
 		if err != nil {

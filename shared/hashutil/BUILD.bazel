@@ -3,15 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "deposit_hash.go",
         "hash.go",
         "merkleRoot.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/hashutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@org_golang_x_crypto//sha3:go_default_library",
     ],

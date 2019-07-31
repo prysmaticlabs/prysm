@@ -19,7 +19,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -543,7 +542,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
@@ -650,7 +649,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
@@ -750,7 +749,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := hashutil.DepositHash(dp.Deposit.Data)
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}

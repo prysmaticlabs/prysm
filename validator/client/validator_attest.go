@@ -88,7 +88,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainAttestation})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return

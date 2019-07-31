@@ -13,6 +13,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -305,6 +306,14 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 }
 
 func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
+	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableAttestationCache: true,
+	})
+	defer func() {
+		featureconfig.InitFeatureConfig(nil)
+	}()
+
 	ctx := context.Background()
 	server := &AttesterServer{
 		cache: cache.NewAttestationCache(),

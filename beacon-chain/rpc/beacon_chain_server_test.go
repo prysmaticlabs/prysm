@@ -9,13 +9,262 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+type mockPool struct{}
+
+func (m *mockPool) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("1"),
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("2"),
+			},
+		},
+	}, nil
+}
+
+func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(10)
+	atts := make([]*ethpb.Attestation, 0, count)
+	for i := uint64(0); i < count; i++ {
+		attExample := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard: i,
+				},
+			},
+		}
+		if err := db.SaveAttestation(ctx, attExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, attExample)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(atts, received.Attestations) {
+		t.Fatalf("incorrect attestations response: wanted %v, received %v", atts, received.Attestations)
+	}
+}
+
+func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(100)
+	atts := make([]*ethpb.Attestation, 0, count)
+	for i := uint64(0); i < count; i++ {
+		attExample := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard: i,
+				},
+			},
+		}
+		if err := db.SaveAttestation(ctx, attExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, attExample)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	tests := []struct {
+		req *ethpb.ListAttestationsRequest
+		res *ethpb.ListAttestationsResponse
+	}{
+		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
+			res: &ethpb.ListAttestationsResponse{
+				Attestations: []*ethpb.Attestation{
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 3},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 4},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 5},
+					}},
+				},
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
+			res: &ethpb.ListAttestationsResponse{
+				Attestations: []*ethpb.Attestation{
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 50},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 51},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 52},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 53},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 54},
+					}},
+				},
+				NextPageToken: strconv.Itoa(11),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
+			res: &ethpb.ListAttestationsResponse{
+				Attestations: []*ethpb.Attestation{
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 99},
+					}},
+				},
+				NextPageToken: strconv.Itoa(34),
+				TotalSize:     int32(count)}},
+		{req: &ethpb.ListAttestationsRequest{PageSize: 2},
+			res: &ethpb.ListAttestationsResponse{
+				Attestations: []*ethpb.Attestation{
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 0},
+					}},
+					{Data: &ethpb.AttestationData{
+						Crosslink: &ethpb.Crosslink{Shard: 1},
+					}},
+				},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(count)}},
+	}
+	for _, test := range tests {
+		res, err := bs.ListAttestations(ctx, test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(res, test.res) {
+			t.Error("Incorrect attestations response")
+		}
+	}
+}
+
+func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(1)
+	atts := make([]*ethpb.Attestation, 0, count)
+	for i := uint64(0); i < count; i++ {
+		attExample := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard: i,
+				},
+			},
+		}
+		if err := db.SaveAttestation(ctx, attExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, attExample)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
+	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
+	ctx := context.Background()
+	bs := &BeaconChainServer{}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(params.BeaconConfig().DefaultPageSize)
+	atts := make([]*ethpb.Attestation, 0, count)
+	for i := uint64(0); i < count; i++ {
+		attExample := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard: i,
+				},
+			},
+		}
+		if err := db.SaveAttestation(ctx, attExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, attExample)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	req := &ethpb.ListAttestationsRequest{}
+	res, err := bs.ListAttestations(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := 0
+	j := params.BeaconConfig().DefaultPageSize
+	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
+		t.Error("Incorrect attestations response")
+	}
+}
+
+func TestBeaconChainServer_AttestationPool(t *testing.T) {
+	ctx := context.Background()
+	bs := &BeaconChainServer{
+		pool: &mockPool{},
+	}
+	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := bs.pool.AttestationPool(ctx)
+	if !reflect.DeepEqual(res.Attestations, want) {
+		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
+	}
+}
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -142,7 +391,6 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(validators, received.Validators) {
-		fmt.Println(received.Validators)
 		t.Fatal("Incorrect respond of validators")
 	}
 }
@@ -243,7 +491,7 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	}
 
 	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
-	wanted := fmt.Sprintf("page start %d >= validator list %d", req.PageSize, len(validators))
+	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(validators))
 	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
@@ -317,7 +565,7 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 
 	bs := &BeaconChainServer{beaconDB: db}
 
-	wanted := fmt.Sprintf("page start %d >= validator list %d", 0, 0)
+	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
 	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
@@ -619,5 +867,135 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 
 	if !reflect.DeepEqual(res, wanted) {
 		t.Error("Incorrect validator participation respond")
+	}
+}
+
+func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(100)
+	blks := make([]*ethpb.BeaconBlock, count)
+	for i := uint64(0); i < count; i++ {
+		b := &ethpb.BeaconBlock{
+			Slot: i,
+		}
+		if err := db.SaveBlock(b); err != nil {
+			t.Fatal(err)
+		}
+		blks[i] = b
+	}
+
+	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	tests := []struct {
+		req *ethpb.ListBlocksRequest
+		res *ethpb.ListBlocksResponse
+	}{
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        []*ethpb.BeaconBlock{{Slot: 5}},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     1}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     1}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
+			PageSize:    100},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[0:params.BeaconConfig().SlotsPerEpoch],
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(1),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[43:46],
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(1),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
+			PageSize:    7},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[95:96],
+				NextPageToken: strconv.Itoa(2),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
+			PageSize:    4},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:        blks[96:100],
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+	}
+
+	for _, test := range tests {
+		res, err := bs.ListBlocks(ctx, test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(res, test.res) {
+			t.Error("Incorrect blocks response")
+		}
+	}
+}
+
+func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
+	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	bs := &BeaconChainServer{beaconDB: db}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "must satisfy one of the filter requirement"
+	req = &ethpb.ListBlocksRequest{}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for epoch 0 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for slot 0 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+
+	wanted = "block for root 0x41 does not exists in DB"
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
+	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }

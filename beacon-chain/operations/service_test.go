@@ -22,6 +22,7 @@ import (
 
 // Ensure operations service implements intefaces.
 var _ = OperationFeeds(&Service{})
+var _ = Pool(&Service{})
 
 type mockBroadcaster struct {
 }
@@ -130,7 +131,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
-	attestations, err := service.PendingAttestations(context.Background())
+	attestations, err := service.AttestationPool(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -176,7 +177,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
 		t.Fatal(err)
 	}
-	attestations, err := service.PendingAttestations(context.Background())
+	attestations, err := service.AttestationPool(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -223,7 +224,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retrievedAtts, err := s.PendingAttestations(context.Background())
+	retrievedAtts, err := s.AttestationPool(context.Background())
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -231,11 +232,11 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Error("Retrieved attestations did not match prev generated attestations")
 	}
 
-	if err := s.removePendingAttestations(attestations); err != nil {
-		t.Fatalf("Could not remove pending attestations: %v", err)
+	if err := s.removeAttestationsFromPool(attestations); err != nil {
+		t.Fatalf("Could not remove attestations: %v", err)
 	}
 
-	retrievedAtts, _ = s.PendingAttestations(context.Background())
+	retrievedAtts, _ = s.AttestationPool(context.Background())
 	if len(retrievedAtts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
 	}
@@ -270,7 +271,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	atts, _ := s.PendingAttestations(context.Background())
+	atts, _ := s.AttestationPool(context.Background())
 	if len(atts) != len(attestations) {
 		t.Errorf("Attestation pool should be %d but got a length of %d",
 			len(attestations), len(atts))
@@ -287,7 +288,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	atts, _ = s.PendingAttestations(context.Background())
+	atts, _ = s.AttestationPool(context.Background())
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
