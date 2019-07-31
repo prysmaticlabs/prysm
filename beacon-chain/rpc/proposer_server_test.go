@@ -470,6 +470,96 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	}
 }
 
+func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	newHeight := big.NewInt(height.Int64() + 11000)
+	p := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()):    []byte("0x0"),
+			int(newHeight.Int64()): []byte("0x1"),
+		},
+	}
+	d := internal.SetupDB(t)
+
+	var votes []*ethpb.Eth1Data
+
+	vote := &ethpb.Eth1Data{
+		BlockHash:    []byte("0x1"),
+		DepositCount: 3,
+	}
+	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
+		votes = append(votes, vote)
+	}
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash:    []byte("0x0"),
+			DepositCount: 2,
+		},
+		Eth1DepositIndex: 2,
+		Eth1DataVotes:    votes,
+	}
+	if err := d.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &ProposerServer{
+		beaconDB:        d,
+		powChainService: p,
+		chainService:    newMockChainService(),
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	eth1Height, err := bs.latestEth1Height(ctx, beaconState, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if eth1Height.Cmp(height) != 0 {
+		t.Errorf("Wanted Eth1 height of %d but got %d", height.Uint64(), eth1Height.Uint64())
+	}
+
+	newState, err := b.ProcessEth1DataInBlock(beaconState, blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if proto.Equal(newState.Eth1Data, vote) {
+		t.Errorf("eth1data in the state equal to vote, when not expected to"+
+			"have majority: Got %v", vote)
+	}
+
+	blk = &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{Eth1Data: vote},
+	}
+
+	eth1Height, err = bs.latestEth1Height(ctx, beaconState, vote)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if eth1Height.Cmp(newHeight) != 0 {
+		t.Errorf("Wanted Eth1 height of %d but got %d", newHeight.Uint64(), eth1Height.Uint64())
+	}
+
+	newState, err = b.ProcessEth1DataInBlock(beaconState, blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !proto.Equal(newState.Eth1Data, vote) {
+		t.Errorf("eth1data in the state not of the expected kind: Got %v but wanted %v", newState.Eth1Data, vote)
+	}
+}
+
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
 
