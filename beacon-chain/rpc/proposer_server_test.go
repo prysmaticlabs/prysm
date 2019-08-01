@@ -664,6 +664,21 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if len(deposits) != 0 {
 		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
 	}
+
+	// It should not return the recent deposits after their follow window.
+	// as latest block number makes no difference in retrieval of deposits
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	deposits, err = bs.deposits(ctx, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deposits) != 0 {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: %d",
+			len(deposits),
+			len(recentDeposits),
+		)
+	}
 }
 
 func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
