@@ -193,7 +193,6 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
-
 	log.Info("Stopping service")
 	return nil
 }

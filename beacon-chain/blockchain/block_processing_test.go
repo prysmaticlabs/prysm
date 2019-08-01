@@ -505,7 +505,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 	beaconState.Slot--
 
-	_, err = chainService.ReceiveBlock(context.Background(), invalidStateBlock)
+	err = chainService.ReceiveBlock(context.Background(), invalidStateBlock)
 	if err == nil {
 		t.Fatal("no error for wrong block state root")
 	}

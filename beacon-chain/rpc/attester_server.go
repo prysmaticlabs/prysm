@@ -10,10 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,6 +22,7 @@ import (
 type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
+	chainService       chainService
 	operationService operationService
 	cache            *cache.AttestationCache
 }
@@ -36,34 +35,9 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, fmt.Errorf("could not hash attestation: %v", err)
 	}
 
-	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
+	if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {
 		return nil, err
 	}
-
-	// Update attestation target for RPC server to run necessary fork choice.
-	// We need to retrieve the head block to get its parent root.
-	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
-	if err != nil {
-		return nil, err
-	}
-	// If the head block is nil, we can't save the attestation target.
-	if head == nil {
-		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
-	}
-	// TODO(#3088): Remove this when fork-choice is updated to the new one.
-	attestationSlot := att.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	attTarget := &pbp2p.AttestationTarget{
-		Slot:            attestationSlot,
-		BeaconBlockRoot: att.Data.BeaconBlockRoot,
-		ParentRoot:      head.ParentRoot,
-	}
-	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
-		return nil, fmt.Errorf("could not save attestation target")
-	}
-
-	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
-		Hash: h[:],
-	})
 
 	return &pb.AttestResponse{Root: h[:]}, nil
 }

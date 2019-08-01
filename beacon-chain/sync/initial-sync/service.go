@@ -79,7 +79,6 @@ type powChainService interface {
 type chainService interface {
 	blockchain.BlockReceiver
 	blockchain.BlockProcessor
-	blockchain.ForkChoice
 }
 
 // SyncService is the interface for the Sync service.

@@ -385,6 +385,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	if baseState == nil {
 		return fmt.Errorf("pre state of target block %d does not exist", tgtSlot)
 	}
+	s.OnTick(uint64(time.Now().Unix()))
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, s.time)
@@ -406,11 +407,11 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	// Delay consideration in the fork choice until their slot is in the past.
 	aSlot, err := helpers.AttestationDataSlot(baseState, a.Data)
 	if err != nil {
 		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
+	s.OnTick(uint64(time.Now().Unix()))
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, s.time)

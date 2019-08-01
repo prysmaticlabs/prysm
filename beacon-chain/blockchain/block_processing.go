@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -21,6 +23,12 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	IsCanonical(slot uint64, hash []byte) bool
 	UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte)
+}
+
+// AttestationReceiver interface defines the methods in the blockchain service which
+// directly receives a new attestation from other services and applies the full processing pipeline.
+type AttestationReceiver interface {
+	ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -39,31 +47,30 @@ func (b *BlockFailedProcessingErr) Error() string {
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
-// any block that is received from p2p layer or rpc. It performs the following actions.
+// any block that is received from p2p layer or rpc.
 func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
-	c.receiveBlockLock.Lock()
-	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
+
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
 
 	// Run block state transition and broadcast the block to other peers.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
 		return fmt.Errorf("failed to process block from fork choice service: %v", err)
 	}
-	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
-		return fmt.Errorf(
-			"could not save and broadcast beacon block with slot %d: %v",
-			block.Slot, err,
-		)
-	}
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return fmt.Errorf("failed to compute state from block head: %v", err)
-	}
 	log.WithFields(logrus.Fields{
 		"slots": block.Slot,
 		"root":  hex.EncodeToString(root[:]),
-	}).Info("successful ran state transition")
+	}).Info("Successful updated fork choice store for block")
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+		Hash:       root[:],
+		SlotNumber: block.Slot,
+	})
 
 	// Run fork choice for head block and head state.
 	headRoot, err := c.forkChoiceStore.Head()
@@ -84,7 +91,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
-	}).Info("successful ran fork choice")
+	}).Info("successful ran fork choice for block")
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
@@ -95,29 +102,54 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	return nil
 }
 
-// SaveAndBroadcastBlock stores the block in persistent storage and then broadcasts it to
-// peers via p2p. Blocks which have already been saved are not processed again via p2p, which is why
-// the order of operations is important in this function to prevent infinite p2p loops.
-func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
-	blockRoot, err := ssz.SigningRoot(block)
+// ReceiveAttestation is a function that defines the operations that are preformed on
+// any attestation that is received from p2p layer or rpc.
+func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	c.receiveBlockLock.Lock()
+	defer c.receiveBlockLock.Unlock()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestation")
+	defer span.End()
+
+	root, err := ssz.SigningRoot(att)
 	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
+		return fmt.Errorf("failed to compute state from block head: %v", err)
 	}
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("failed to save block: %v", err)
-	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            block.Slot,
-		BeaconBlockRoot: blockRoot[:],
-		ParentRoot:      block.ParentRoot,
-	}); err != nil {
-		return fmt.Errorf("failed to save attestation target: %v", err)
-	}
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       blockRoot[:],
-		SlotNumber: block.Slot,
+
+	c.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
+		Hash: root[:],
 	})
+
+	c.opsPoolService.IncomingAttFeed().Send(att)
+
+	// Run attestation transition and broadcast the attestation to other peers.
+	if err := c.forkChoiceStore.OnAttestation(att); err != nil {
+		return fmt.Errorf("failed to process block from fork choice service: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("Successful updated fork choice store for attestation")
+
+	// Run fork choice for head block and head state.
+	headRoot, err := c.forkChoiceStore.Head()
+	if err != nil {
+		return fmt.Errorf("failed to get head from fork choice service: %v", err)
+	}
+	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
+		return fmt.Errorf("failed to update head: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"slots": headBlk.Slot,
+		"root":  hex.EncodeToString(headRoot),
+	}).Info("successful ran fork choice for attestation")
+
 	return nil
 }
 
@@ -140,4 +172,18 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
+}
+
+// waitForAttInclDelay waits until the next slot because attestation can only affect
+// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
+// until the attested slot is in the past.
+func (c *ChainService) waitForAttInclDelay(ctx context.Context, slot uint64) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.waitForAttInclDelay")
+	defer span.End()
+
+	nextSlot := slot + 1
+	duration := time.Duration(nextSlot * params.BeaconConfig().SecondsPerSlot) * time.Second
+	timeToInclude := time.Unix(int64(c.genesisTime.Unix()), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToInclude))
 }

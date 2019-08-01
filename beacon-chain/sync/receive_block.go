@@ -5,13 +5,10 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -124,6 +121,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).
 		Debug("Processing response to block request")
+
 	hasBlock := rs.db.HasBlock(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
@@ -134,18 +132,6 @@ func (rs *RegularSync) validateAndProcessBlock(
 	beaconState, err := rs.db.HeadState(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
-		return nil, nil, false, err
-	}
-
-	finalizedSlot := helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch)
-	slot := block.Slot
-	span.AddAttributes(
-		trace.Int64Attribute("block.Slot", int64(slot)),
-		trace.Int64Attribute("finalized slot", int64(finalizedSlot)),
-	)
-	if block.Slot < beaconState.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
-		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
@@ -170,46 +156,18 @@ func (rs *RegularSync) validateAndProcessBlock(
 	// a fork choice rule.
 	if err = rs.chainService.ReceiveBlock(ctx, block); err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
+		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
 		return nil, nil, false, err
 	}
 
-	head, err := rs.db.ChainHead()
-	if err != nil {
-		log.Errorf("Could not retrieve chainhead %v", err)
-		return nil, nil, false, err
-	}
-
-	headRoot, err := ssz.SigningRoot(head)
-	if err != nil {
-		log.Errorf("Could not hash head block: %v", err)
-		return nil, nil, false, err
-	}
-
-	if headRoot != bytesutil.ToBytes32(block.ParentRoot) {
-		// Save historical state from forked block.
-		forkedBlock.Inc()
-		log.WithFields(logrus.Fields{
-			"slot": block.Slot,
-			"root": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))},
-		).Warn("Received Block from a forked chain")
-		if err := rs.db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
-			log.Errorf("Could not save historical state %v", err)
-			return nil, nil, false, err
-		}
-	}
-
-	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		log.WithError(err).Error("Could not run fork choice on block")
-		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
-		return nil, nil, false, err
-	}
 	rs.p2p.Reputation(blockMsg.Peer, p2p.RepRewardValidBlock)
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
 		rs.highestObservedSlot = block.Slot
 	}
+
 	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
 	return block, beaconState, true, nil
 }

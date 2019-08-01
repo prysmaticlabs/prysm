@@ -40,7 +40,7 @@ func init() {
 type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
-	blockchain.ForkChoice
+	blockchain.AttestationReceiver
 	blockchain.TargetsFetcher
 }
 
@@ -182,6 +182,7 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
+		chainService:       s.chainService,
 		p2p:              s.p2p,
 		cache:            cache.NewAttestationCache(),
 	}

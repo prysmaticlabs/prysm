@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 var (
@@ -19,12 +17,6 @@ var (
 	})
 )
 var blkAncestorCache = cache.NewBlockAncestorCache()
-
-// ForkChoice interface defines the methods for applying fork choice rule
-// operations to the blockchain.
-type ForkChoice interface {
-	ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error
-}
 
 // TargetsFetcher defines a struct which can retrieve latest attestation targets
 // from a given justified state.

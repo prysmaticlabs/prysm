@@ -2,33 +2,19 @@ package blockchain
 
 import (
 	"context"
-	"crypto/rand"
-	"reflect"
 	"testing"
-	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure ChainService implements interfaces.
-var _ = ForkChoice(&ChainService{})
 var endpoint = "ws://127.0.0.1"
 
 func TestAttestationTargets_RetrieveWorks(t *testing.T) {

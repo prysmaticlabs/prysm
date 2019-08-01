@@ -41,7 +41,6 @@ var (
 type chainService interface {
 	blockchain.BlockReceiver
 	blockchain.BlockProcessor
-	blockchain.ForkChoice
 	blockchain.ChainFeeds
 }
 
