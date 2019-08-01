@@ -367,7 +367,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pb.BeaconState{
-		Slot: 2,
+		Slot:                2,
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
