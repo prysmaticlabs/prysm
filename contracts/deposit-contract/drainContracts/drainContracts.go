@@ -195,7 +195,7 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 
 	logs, err := client.FilterLogs(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("could not get all deposit logs: %v", err)
+		return nil, errors.Wrap(err, "could not get all deposit logs")
 	}
 
 	fmt.Printf("%d deposit logs found\n", len(logs))

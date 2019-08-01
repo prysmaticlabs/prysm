@@ -1,11 +1,10 @@
 package helpers
 
 import (
-	"errors"
-	"fmt"
-
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,7 +42,7 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 
 	epochStartShardNumber, err := StartShard(state, data.Target.Epoch)
 	if err != nil { // This should never happen if CommitteeCount was successful
-		return 0, fmt.Errorf("could not determine epoch start shard: %v", err)
+		return 0, errors.Wrap(err, "could not determine epoch start shard")
 	}
 	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -
 		epochStartShardNumber) % params.BeaconConfig().ShardCount

@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -193,7 +194,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	beaconp2p, err := configureP2P(ctx)
 	if err != nil {
-		return fmt.Errorf("could not register p2p service: %v", err)
+		return errors.Wrap(err, "could not register p2p service")
 	}
 
 	return b.services.RegisterService(beaconp2p)
@@ -227,7 +228,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		MaxRoutines:    maxRoutines,
 	})
 	if err != nil {
-		return fmt.Errorf("could not register blockchain service: %v", err)
+		return errors.Wrap(err, "could not register blockchain service")
 	}
 	return b.services.RegisterService(blockchainService)
 }
@@ -291,7 +292,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
+		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
 	if err := b.db.VerifyContractAddress(ctx, cfg.DepositContract); err != nil {

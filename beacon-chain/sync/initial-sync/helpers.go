@@ -2,11 +2,11 @@ package initialsync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -21,7 +21,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *ethpb.Beaco
 	defer span.End()
 	beaconState, err := s.db.HeadState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get beacon state: %v", err)
+		return errors.Wrap(err, "failed to get beacon state")
 	}
 
 	if block.Slot < helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch) {

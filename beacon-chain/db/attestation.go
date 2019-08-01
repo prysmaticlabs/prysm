@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -137,7 +137,7 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 func createAttestation(enc []byte) (*ethpb.Attestation, error) {
 	protoAttestation := &ethpb.Attestation{}
 	if err := proto.Unmarshal(enc, protoAttestation); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoAttestation, nil
 }
@@ -145,7 +145,7 @@ func createAttestation(enc []byte) (*ethpb.Attestation, error) {
 func createAttestationTarget(enc []byte) (*pb.AttestationTarget, error) {
 	protoAttTgt := &pb.AttestationTarget{}
 	if err := proto.Unmarshal(enc, protoAttTgt); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoAttTgt, nil
 }

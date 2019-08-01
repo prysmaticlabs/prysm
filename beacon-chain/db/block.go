@@ -3,11 +3,11 @@ package db
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -39,7 +39,7 @@ func createBlock(enc []byte) (*ethpb.BeaconBlock, error) {
 	protoBlock := &ethpb.BeaconBlock{}
 	err := proto.Unmarshal(enc, protoBlock)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoBlock, nil
 }
@@ -137,7 +137,7 @@ func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 
 	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("failed to tree hash header: %v", err)
+		return errors.Wrap(err, "failed to tree hash header")
 	}
 
 	// Skip saving block to DB if it exists in the cache.
@@ -150,7 +150,7 @@ func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 
 	enc, err := proto.Marshal(block)
 	if err != nil {
-		return fmt.Errorf("failed to encode block: %v", err)
+		return errors.Wrap(err, "failed to encode block")
 	}
 	slotRootBinary := encodeSlotNumberRoot(block.Slot, signingRoot)
 
@@ -161,7 +161,7 @@ func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		if err := bucket.Put(slotRootBinary, enc); err != nil {
-			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+			return errors.Wrap(err, "failed to include the block in the main chain bucket")
 		}
 		return bucket.Put(signingRoot[:], enc)
 	})
@@ -174,7 +174,7 @@ func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
 
 	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("failed to tree hash block: %v", err)
+		return errors.Wrap(err, "failed to tree hash block")
 	}
 
 	// Delete the block from the cache.
@@ -186,7 +186,7 @@ func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 		if err := bucket.Delete(slotRootBinary); err != nil {
-			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+			return errors.Wrap(err, "failed to include the block in the main chain bucket")
 		}
 		return bucket.Delete(signingRoot[:])
 	})
@@ -197,7 +197,7 @@ func (db *BeaconDB) SaveJustifiedBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		enc, err := proto.Marshal(block)
 		if err != nil {
-			return fmt.Errorf("failed to encode block: %v", err)
+			return errors.Wrap(err, "failed to encode block")
 		}
 		chainInfo := tx.Bucket(chainInfoBucket)
 		return chainInfo.Put(justifiedBlockLookupKey, enc)
@@ -209,7 +209,7 @@ func (db *BeaconDB) SaveFinalizedBlock(block *ethpb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		enc, err := proto.Marshal(block)
 		if err != nil {
-			return fmt.Errorf("failed to encode block: %v", err)
+			return errors.Wrap(err, "failed to encode block")
 		}
 		chainInfo := tx.Bucket(chainInfoBucket)
 		return chainInfo.Put(finalizedBlockLookupKey, enc)
@@ -288,7 +288,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBloc
 
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("unable to determine block signing root: %v", err)
+		return errors.Wrap(err, "unable to determine block signing root")
 	}
 
 	slotBinary := encodeSlotNumber(block.Slot)
@@ -297,7 +297,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBloc
 	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
-		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
+		return errors.Wrap(err, "failed to save beacon state as canonical")
 	}
 
 	blockEnc, err := proto.Marshal(block)
@@ -323,7 +323,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBloc
 		}
 
 		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
-			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
+			return errors.Wrap(err, "failed to record the block as the head of the main chain")
 		}
 
 		return nil

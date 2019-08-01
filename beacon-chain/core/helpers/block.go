@@ -1,8 +1,7 @@
 package helpers
 
 import (
-	"errors"
-
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )

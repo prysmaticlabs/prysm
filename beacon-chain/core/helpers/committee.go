@@ -4,6 +4,7 @@ package helpers
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -39,7 +40,7 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	}
 	count, err := ActiveValidatorCount(state, epoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not get active count: %v", err)
+		return 0, errors.Wrap(err, "could not get active count")
 	}
 
 	var currCommitteePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
@@ -69,24 +70,24 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
 	seed, err := Seed(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get seed: %v", err)
+		return nil, errors.Wrap(err, "could not get seed")
 	}
 
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active indices: %v", err)
+		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
 	startShard, err := StartShard(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get start shard: %v", err)
+		return nil, errors.Wrap(err, "could not get start shard")
 	}
 
 	shardCount := params.BeaconConfig().ShardCount
 	currentShard := (shard + shardCount - startShard) % shardCount
 	committeeCount, err := CommitteeCount(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get committee count: %v", err)
+		return nil, errors.Wrap(err, "could not get committee count")
 	}
 
 	return ComputeCommittee(indices, seed, currentShard, committeeCount)
@@ -139,7 +140,7 @@ func ComputeCommittee(
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
-		return []uint64{}, fmt.Errorf("could not add shuffled indices list to cache: %v", err)
+		return []uint64{}, errors.Wrap(err, "could not add shuffled indices list to cache")
 	}
 	return shuffledIndices, nil
 }
@@ -158,7 +159,7 @@ func ComputeCommittee(
 func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
 	committee, err := CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
-		return nil, fmt.Errorf("could not get committee: %v", err)
+		return nil, errors.Wrap(err, "could not get committee")
 	}
 
 	indices := make([]uint64, 0, len(committee))
@@ -227,7 +228,7 @@ func CommitteeAssignment(
 
 	committeeCount, err := CommitteeCount(state, epoch)
 	if err != nil {
-		return nil, 0, 0, false, fmt.Errorf("could not get committee count: %v", err)
+		return nil, 0, 0, false, errors.Wrap(err, "could not get committee count")
 	}
 	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 
@@ -280,7 +281,7 @@ func CommitteeAssignment(
 func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
 	committeeCount, err := CommitteeCount(beaconState, epoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not get committee count: %v", err)
+		return 0, errors.Wrap(err, "could not get committee count")
 	}
 	return ShardDeltaFromCommitteeCount(committeeCount), nil
 }
@@ -317,7 +318,7 @@ func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	startShard, err := startShardCache.StartShardInEpoch(epoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not retrieve start shard from cache: %v", err)
+		return 0, errors.Wrap(err, "could not retrieve start shard from cache")
 	}
 	if startShard != params.BeaconConfig().FarFutureEpoch {
 		return startShard, nil
@@ -333,7 +334,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 
 	delta, err := ShardDelta(state, currentEpoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not get shard delta: %v", err)
+		return 0, errors.Wrap(err, "could not get shard delta")
 	}
 
 	startShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
@@ -341,7 +342,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		checkEpoch--
 		d, err := ShardDelta(state, checkEpoch)
 		if err != nil {
-			return 0, fmt.Errorf("could not get shard delta: %v", err)
+			return 0, errors.Wrap(err, "could not get shard delta")
 		}
 		startShard = (startShard + params.BeaconConfig().ShardCount - d) % params.BeaconConfig().ShardCount
 	}
@@ -350,7 +351,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		Epoch:      epoch,
 		StartShard: startShard,
 	}); err != nil {
-		return 0, fmt.Errorf("could not save start shard for cache: %v", err)
+		return 0, errors.Wrap(err, "could not save start shard for cache")
 	}
 
 	return startShard, nil
@@ -361,7 +362,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
-		return false, fmt.Errorf("could not retrieve crosslink committees at slot: %v", err)
+		return false, errors.Wrap(err, "could not retrieve crosslink committees at slot")
 	}
 
 	if committee == nil {
