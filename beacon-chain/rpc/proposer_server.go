@@ -256,8 +256,8 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, errors.New("latest PoW block number is unknown")
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
-	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	allDeps := ps.beaconDB.AllDeposits(ctx, bNum)
+	subbedBnum := big.NewInt(0).Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	allDeps := ps.beaconDB.AllDeposits(ctx, subbedBnum)
 	if len(allDeps) == 0 {
 		return nil, nil
 	}
@@ -273,12 +273,11 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, err
 	}
 	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
-	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
-	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
-	// so we want to avoid any possible mismatches in these lengths.
+	// If this is more than the total number of deposits stored in our deposit cache, we return an error
 	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
-	if len(upToEth1DataDeposits) != len(allDeps) {
-		return nil, nil
+	if len(upToEth1DataDeposits) > len(allDeps) {
+		return nil, fmt.Errorf("number of deposits referred to by the eth1data is more than the current "+
+			"number of deposits in the deposit cache. %d is more than %d", len(upToEth1DataDeposits), len(allDeps))
 	}
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
@@ -294,7 +293,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 
-	allPendingContainers := ps.beaconDB.PendingContainers(ctx, bNum)
+	allPendingContainers := ps.beaconDB.PendingContainers(ctx, latestEth1DataHeight)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
