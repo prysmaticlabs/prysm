@@ -74,19 +74,12 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethp
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
-
-	var depositCntrs []*DepositContainer
+	var deposits []*ethpb.Deposit
 	for _, ctnr := range db.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
-			depositCntrs = append(depositCntrs, ctnr)
+			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
-
-	var deposits []*ethpb.Deposit
-	for _, dep := range depositCntrs {
-		deposits = append(deposits, dep.Deposit)
-	}
-
 	return deposits
 }
 
