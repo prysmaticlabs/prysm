@@ -23,7 +23,6 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/p2p:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -37,7 +36,6 @@ go_test(
     size = "medium",
     srcs = [
         "block_processing_test.go",
-        "fork_choice_reorg_test.go",
         "fork_choice_test.go",
         "service_test.go",
     ],
