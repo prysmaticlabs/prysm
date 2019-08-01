@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"sync"
 
@@ -13,8 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
