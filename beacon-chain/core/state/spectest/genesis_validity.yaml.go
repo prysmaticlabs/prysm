@@ -5,7 +5,7 @@ package spectest
 
 import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
-type GensisValidityTest struct {
+type GenesisValidityTest struct {
 	Title         string   `json:"title"`
 	Summary       string   `json:"summary"`
 	ForksTimeline string   `json:"forks_timeline"`

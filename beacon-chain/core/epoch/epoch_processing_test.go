@@ -300,7 +300,7 @@ func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	}
 }
 
-func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
+func TestWinningCrosslink_ReturnGenesisCrosslink(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	gs := uint64(0) // genesis slot
 	ge := uint64(0) // genesis epoch
@@ -323,7 +323,7 @@ func TestWinningCrosslink_ReturnGensisCrosslink(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(indices) != 0 {
-		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
+		t.Errorf("genesis crosslink indices is not 0, got: %d", len(indices))
 	}
 	if !reflect.DeepEqual(crosslink, gCrosslink) {
 		t.Errorf("Did not get genesis crosslink, got: %v", crosslink)
@@ -396,7 +396,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(indices) != 0 {
-		t.Errorf("gensis crosslink indices is not 0, got: %d", len(indices))
+		t.Errorf("genesis crosslink indices is not 0, got: %d", len(indices))
 	}
 	want := &ethpb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
