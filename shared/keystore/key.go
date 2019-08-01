@@ -28,7 +28,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
