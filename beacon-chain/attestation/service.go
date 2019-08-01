@@ -280,13 +280,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 					"sourceEpoch":     attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
-
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
-			votedBlock, err := a.beaconDB.Block(blockRoot)
-			if err != nil {
-				return err
-			}
-			reportVoteMetrics(committee[i], votedBlock)
 		}
 	}
 	return nil
