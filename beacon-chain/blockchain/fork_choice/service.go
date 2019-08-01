@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "forkchoice")
@@ -411,6 +412,8 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	if err != nil {
 		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
+	// Delay attestation inclusion until the attested slot is in the past.
+	waitForAttInclDelay(s.ctx, baseState.GenesisTime, aSlot + 1)
 	s.OnTick(uint64(time.Now().Unix()))
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
@@ -434,7 +437,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		if err != nil {
 			return fmt.Errorf("could not get latest msg for validator %d: %v", i, err)
 		}
-		if s.db.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
+		if !s.db.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
 			if err := s.db.SaveLatestMessage(s.ctx, i, &pb.LatestMessage{
 				Epoch: tgt.Epoch,
 				Root:  a.Data.BeaconBlockRoot,
@@ -507,4 +510,18 @@ func logEpochData(beaconState *pb.BeaconState) {
 	log.WithField(
 		"SlotsSinceGenesis", beaconState.Slot,
 	).Info(fmt.Sprintf("Epoch transition %d successfully processed", helpers.SlotToEpoch(beaconState.Slot)))
+}
+
+// waitForAttInclDelay waits until the next slot because attestation can only affect
+// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
+// until the attested slot is in the past.
+func waitForAttInclDelay(ctx context.Context, genesisTime uint64, slot uint64) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
+	defer span.End()
+
+	nextSlot := slot + 1
+	duration := time.Duration(nextSlot * params.BeaconConfig().SecondsPerSlot) * time.Second
+	timeToInclude := time.Unix(int64(genesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToInclude))
 }

@@ -127,7 +127,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
 		"pubKey":      tpk,
-	}).Info("Attested latest head")
+	}).Info("Attested latest hea" +
+		"d")
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
