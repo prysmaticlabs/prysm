@@ -589,6 +589,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	readyDeposits := []*db.DepositContainer{
 		{
 			Index: 0,
+			Block: big.NewInt(1000),
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("a"),
@@ -598,6 +599,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		{
 			Index: 1,
+			Block: big.NewInt(1001),
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("b"),
@@ -610,6 +612,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	recentDeposits := []*db.DepositContainer{
 		{
 			Index: 2,
+			Block: big.NewInt(4000),
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("c"),
@@ -619,6 +622,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		{
 			Index: 3,
+			Block: big.NewInt(5000),
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("d"),
@@ -641,10 +645,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -659,20 +663,6 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 	if len(deposits) != 0 {
 		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
-	}
-
-	// It should also return the recent deposits after their follow window.
-	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	deposits, err = bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != len(recentDeposits) {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			len(recentDeposits),
-		)
 	}
 }
 
