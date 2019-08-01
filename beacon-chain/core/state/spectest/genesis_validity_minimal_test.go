@@ -21,7 +21,7 @@ func TestGenesisValidityMinimal(t *testing.T) {
 		t.Fatalf("Could not load file %v", err)
 	}
 
-	s := &GensisValidityTest{}
+	s := &GenesisValidityTest{}
 	if err := testutil.UnmarshalYaml(file, s); err != nil {
 		t.Fatalf("Failed to Unmarshal: %v", err)
 	}
