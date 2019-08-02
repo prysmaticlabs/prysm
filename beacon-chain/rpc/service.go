@@ -41,7 +41,6 @@ type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
 	blockchain.AttestationReceiver
-	blockchain.TargetsFetcher
 }
 
 type operationService interface {
@@ -166,7 +165,6 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
-		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,

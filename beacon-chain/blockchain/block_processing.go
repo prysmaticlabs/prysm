@@ -4,15 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"time"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -165,27 +162,9 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
-		return errors.Wrap(err, "failed to update latest attestation for store")
-	}
-
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
-}
-
-// waitForAttInclDelay waits until the next slot because attestation can only affect
-// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
-// until the attested slot is in the past.
-func (c *ChainService) waitForAttInclDelay(ctx context.Context, slot uint64) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.waitForAttInclDelay")
-	defer span.End()
-
-	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclude := time.Unix(int64(c.genesisTime.Unix()), 0).Add(duration)
-
-	time.Sleep(time.Until(timeToInclude))
 }

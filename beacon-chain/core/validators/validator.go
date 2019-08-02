@@ -187,15 +187,6 @@ func InitializeValidatorStore(bState *pb.BeaconState) error {
 	return nil
 }
 
-// InsertActivatedVal locks the validator store, inserts the activated validator
-// indices, then unlocks the store again. This method may be used by
-// external services in testing to populate the validator store.
-func InsertActivatedVal(epoch uint64, validators []uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	VStore.activatedValidators[epoch] = validators
-}
-
 // InsertActivatedIndices locks the validator store, inserts the activated validator
 // indices corresponding to their activation epochs.
 func InsertActivatedIndices(epoch uint64, indices []uint64) {

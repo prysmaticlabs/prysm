@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -89,10 +88,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerPOWChainService(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerAttestationService(); err != nil {
 		return nil, err
 	}
 
@@ -209,10 +204,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
-	var attsService *attestation.Service
-	if err := b.services.FetchService(&attsService); err != nil {
-		return err
-	}
 	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
@@ -223,7 +214,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		BeaconDB:       b.db,
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
-		AttsService:    attsService,
 		P2p:            p2pService,
 		MaxRoutines:    maxRoutines,
 	})
@@ -318,11 +308,6 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		return err
 	}
 
-	var attsService *attestation.Service
-	if err := b.services.FetchService(&attsService); err != nil {
-		return err
-	}
-
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -334,7 +319,6 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		BeaconDB:         b.db,
 		OperationService: operationService,
 		PowChainService:  web3Service,
-		AttsService:      attsService,
 	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -393,15 +377,6 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)
 	return b.services.RegisterService(service)
-}
-
-func (b *BeaconNode) registerAttestationService() error {
-	attsService := attestation.NewAttestationService(context.Background(),
-		&attestation.Config{
-			BeaconDB: b.db,
-		})
-
-	return b.services.RegisterService(attsService)
 }
 
 func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
