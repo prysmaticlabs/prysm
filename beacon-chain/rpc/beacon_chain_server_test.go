@@ -879,7 +879,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
+func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -922,9 +922,8 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
-				NextPageToken: strconv.Itoa(0),
-				TotalSize:     1}},
+				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
 				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
