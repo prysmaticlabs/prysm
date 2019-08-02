@@ -2,9 +2,9 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -49,7 +49,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("could not get private key: %v", err)
+		return nil, errors.Wrap(err, "could not get private key")
 	}
 	var key *keystore.Key
 	for _, v := range keys {

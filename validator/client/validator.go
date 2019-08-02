@@ -9,6 +9,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -47,7 +48,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		return fmt.Errorf("could not setup beacon chain ChainStart streaming client: %v", err)
+		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
 	for {
 		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
@@ -61,7 +62,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
 		if err != nil {
-			return fmt.Errorf("could not receive ChainStart from stream: %v", err)
+			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		break
@@ -84,7 +85,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
-		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
 	}
 	var validatorActivatedRecords [][]byte
 	for {
@@ -98,7 +99,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
 		if err != nil {
-			return fmt.Errorf("could not receive validator activation from stream: %v", err)
+			return errors.Wrap(err, "could not receive validator activation from stream")
 		}
 		log.Info("Waiting for validator to be activated in the beacon chain")
 		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)

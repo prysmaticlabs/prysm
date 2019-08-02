@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -135,47 +136,47 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
-		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
+		return nil, errors.Wrap(err, "could not initialize beacon state to disk")
 	}
 	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not attempt fetch beacon state")
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not hash beacon state")
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	genBlockRoot, err := ssz.SigningRoot(genBlock)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon block: %v", err)
+		return nil, errors.Wrap(err, "could not hash beacon block")
 	}
 
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
+		return nil, errors.Wrap(err, "could not save genesis block to disk")
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            genBlock.Slot,
 		BeaconBlockRoot: genBlockRoot[:],
 		ParentRoot:      genBlock.ParentRoot,
 	}); err != nil {
-		return nil, fmt.Errorf("failed to save attestation target: %v", err)
+		return nil, errors.Wrap(err, "failed to save attestation target")
 	}
 	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
 	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save genesis block as justified block: %v", err)
+		return nil, errors.Wrap(err, "could not save genesis block as justified block")
 	}
 	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save genesis block as finalized block: %v", err)
+		return nil, errors.Wrap(err, "could not save genesis block as finalized block")
 	}
 	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save genesis state as justified state: %v", err)
+		return nil, errors.Wrap(err, "could not save genesis state as justified state")
 	}
 	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save genesis state as finalized state: %v", err)
+		return nil, errors.Wrap(err, "could not save genesis state as finalized state")
 	}
 	return beaconState, nil
 }
@@ -214,12 +215,12 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 	head, err := c.beaconDB.ChainHead()
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
+		return [32]byte{}, errors.Wrap(err, "could not retrieve chain head")
 	}
 
 	root, err := ssz.SigningRoot(head)
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
+		return [32]byte{}, errors.Wrap(err, "could not tree hash parent block")
 	}
 	return root, nil
 }

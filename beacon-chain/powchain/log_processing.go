@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -233,7 +234,7 @@ func (w *Web3Service) processPastLogs() error {
 
 	currentState, err := w.beaconDB.HeadState(w.ctx)
 	if err != nil {
-		return fmt.Errorf("could not get head state: %v", err)
+		return errors.Wrap(err, "could not get head state")
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex > 0 {

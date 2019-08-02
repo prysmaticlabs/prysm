@@ -12,8 +12,6 @@ package initialsync
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"math/big"
 	"sort"
 	"sync"
@@ -21,6 +19,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -172,14 +171,14 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	}
 	root, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("failed to tree hash block: %v", err)
+		return errors.Wrap(err, "failed to tree hash block")
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            block.Slot,
 		BeaconBlockRoot: root[:],
 		ParentRoot:      block.ParentRoot,
 	}); err != nil {
-		return fmt.Errorf("failed to save attestation target: %v", err)
+		return errors.Wrap(err, "failed to save attestation target")
 	}
 	state, err = s.chainService.AdvanceState(ctx, state, block)
 	if err != nil {
@@ -188,11 +187,11 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 		case *blockchain.BlockFailedProcessingErr:
 			// If the block fails processing, we delete it from our DB.
 			if err := s.db.DeleteBlock(block); err != nil {
-				return fmt.Errorf("could not delete bad block from db: %v", err)
+				return errors.Wrap(err, "could not delete bad block from db")
 			}
-			return fmt.Errorf("could not apply block state transition: %v", err)
+			return errors.Wrap(err, "could not apply block state transition")
 		default:
-			return fmt.Errorf("could not apply block state transition: %v", err)
+			return errors.Wrap(err, "could not apply block state transition")
 		}
 	}
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {

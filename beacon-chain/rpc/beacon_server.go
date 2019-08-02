@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -73,7 +73,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
 	block, err := bs.beaconDB.ChainHead()
 	if err != nil {
-		return nil, fmt.Errorf("could not get canonical head block: %v", err)
+		return nil, errors.Wrap(err, "could not get canonical head block")
 	}
 	return block, nil
 }
@@ -82,11 +82,11 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve justified state")
 	}
 	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve attestation target")
 	}
 	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
 	if err != nil {
@@ -133,11 +133,11 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
 	justifiedState, err := bs.beaconDB.JustifiedState()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve justified state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve justified state")
 	}
 	attestationTargets, err := bs.targetsFetcher.AttestationTargets(justifiedState)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve attestation target")
 	}
 	justifiedBlock, err := bs.beaconDB.JustifiedBlock()
 	if err != nil {

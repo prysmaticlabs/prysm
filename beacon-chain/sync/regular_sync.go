@@ -4,13 +4,13 @@ package sync
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -432,7 +432,6 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 
 	attTargetEpoch := attestation.Data.Target.Epoch
 	headFinalizedEpoch := headState.FinalizedCheckpoint.Epoch
-
 	span.AddAttributes(
 		trace.Int64Attribute("attestation.target.epoch", int64(attTargetEpoch)),
 		trace.Int64Attribute("finalized.epoch", int64(headFinalizedEpoch)),

@@ -8,6 +8,7 @@ import (
 	"io"
 
 	g1 "github.com/phoreproject/bls/g1pubs"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -30,7 +31,7 @@ type PublicKey struct {
 func RandKey(r io.Reader) (*SecretKey, error) {
 	k, err := g1.RandKey(r)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize secret key: %v", err)
+		return nil, errors.Wrap(err, "could not initialize secret key")
 	}
 	return &SecretKey{val: k}, nil
 }
@@ -49,7 +50,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal bytes into public key: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
 	return &PublicKey{val: k}, nil
 }
@@ -59,7 +60,7 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal bytes into signature: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal bytes into signature")
 	}
 	return &Signature{val: s}, nil
 }

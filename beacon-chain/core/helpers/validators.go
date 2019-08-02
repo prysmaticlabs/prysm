@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -63,7 +64,7 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve active indices from cache: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve active indices from cache")
 	}
 	if indices != nil {
 		return indices, nil
@@ -79,7 +80,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		Epoch:         epoch,
 		ActiveIndices: indices,
 	}); err != nil {
-		return nil, fmt.Errorf("could not save active indices for cache: %v", err)
+		return nil, errors.Wrap(err, "could not save active indices for cache")
 	}
 
 	return indices, nil
@@ -90,7 +91,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	count, err := activeCountCache.ActiveCountInEpoch(epoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not retrieve active count from cache: %v", err)
+		return 0, errors.Wrap(err, "could not retrieve active count from cache")
 	}
 	if count != params.BeaconConfig().FarFutureEpoch {
 		return count, nil
@@ -107,7 +108,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		Epoch:       epoch,
 		ActiveCount: count,
 	}); err != nil {
-		return 0, fmt.Errorf("could not save active count for cache: %v", err)
+		return 0, errors.Wrap(err, "could not save active count for cache")
 	}
 
 	return count, nil
@@ -139,7 +140,7 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 	validatorCount, err := ActiveValidatorCount(state, CurrentEpoch(state))
 	if err != nil {
-		return 0, fmt.Errorf("could not get validator count: %v", err)
+		return 0, errors.Wrap(err, "could not get validator count")
 	}
 	churnLimit := validatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
@@ -184,7 +185,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// and the offset
 	startShard, err := StartShard(state, e)
 	if err != nil {
-		return 0, fmt.Errorf("could not get start shard: %v", err)
+		return 0, errors.Wrap(err, "could not get start shard")
 	}
 	shard := (startShard + offSet) % params.BeaconConfig().ShardCount
 
@@ -192,7 +193,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// to select proposer
 	firstCommittee, err := CrosslinkCommittee(state, e, shard)
 	if err != nil {
-		return 0, fmt.Errorf("could not get first committee: %v", err)
+		return 0, errors.Wrap(err, "could not get first committee")
 	}
 	if len(firstCommittee) == 0 {
 		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
@@ -202,7 +203,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	maxRandomByte := uint64(1<<8 - 1)
 	seed, err := Seed(state, e)
 	if err != nil {
-		return 0, fmt.Errorf("could not generate seed: %v", err)
+		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
 	// Looping through the committee to select proposer that has enough

@@ -2,9 +2,9 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -59,14 +59,14 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := c.beaconDB.Block(parentRoot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get parent block: %v", err)
+		return nil, errors.Wrap(err, "failed to get parent block")
 	}
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
 	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 
 	blockRoot, err := ssz.SigningRoot(block)
@@ -96,11 +96,11 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
 			c.beaconDB.MarkEvilBlockHash(blockRoot)
 			if err := c.beaconDB.DeleteBlock(block); err != nil {
-				return nil, fmt.Errorf("could not delete bad block from db: %v", err)
+				return nil, errors.Wrap(err, "could not delete bad block from db")
 			}
 			return beaconState, err
 		default:
-			return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
+			return beaconState, errors.Wrap(err, "could not apply block state transition")
 		}
 	}
 
@@ -112,7 +112,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
+		return beaconState, errors.Wrap(err, "could not process block deposits, attestations, and other operations")
 	}
 
 	log.WithFields(logrus.Fields{
@@ -153,17 +153,17 @@ func (c *ChainService) VerifyBlockValidity(
 func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
+		return errors.Wrap(err, "could not tree hash incoming block")
 	}
 	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("failed to save block: %v", err)
+		return errors.Wrap(err, "failed to save block")
 	}
 	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            block.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		ParentRoot:      block.ParentRoot,
 	}); err != nil {
-		return fmt.Errorf("failed to save attestation target: %v", err)
+		return errors.Wrap(err, "failed to save attestation target")
 	}
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
@@ -184,7 +184,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	}
 
 	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
-		return fmt.Errorf("failed to update latest attestation for store: %v", err)
+		return errors.Wrap(err, "failed to update latest attestation for store")
 	}
 
 	// Remove pending deposits from the deposit queue.
@@ -232,22 +232,22 @@ func (c *ChainService) AdvanceState(
 		}
 		// Save Historical States.
 		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
-			return nil, fmt.Errorf("could not save historical state: %v", err)
+			return nil, errors.Wrap(err, "could not save historical state")
 		}
 	}
 
 	if helpers.IsEpochStart(newState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(newState); err != nil {
-			return newState, fmt.Errorf("could not save validator index: %v", err)
+			return newState, errors.Wrap(err, "could not save validator index")
 		}
 		// Delete exited validators of this epoch to public key -> index DB.
 		if err := c.deleteValidatorIdx(newState); err != nil {
-			return newState, fmt.Errorf("could not delete validator index: %v", err)
+			return newState, errors.Wrap(err, "could not delete validator index")
 		}
 		// Update FFG checkpoints in DB.
 		if err := c.updateFFGCheckPts(ctx, newState); err != nil {
-			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
+			return newState, errors.Wrap(err, "could not update FFG checkpts")
 		}
 		logEpochData(newState)
 	}
@@ -270,7 +270,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 		}
 		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
-			return fmt.Errorf("could not save validator index: %v", err)
+			return errors.Wrap(err, "could not save validator index")
 		}
 	}
 	// Since we are processing next epoch, save the can't processed validator indices
@@ -288,7 +288,7 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	for _, idx := range exitedValidators {
 		pubKey := state.Validators[idx].PublicKey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
-			return fmt.Errorf("could not delete validator index: %v", err)
+			return errors.Wrap(err, "could not delete validator index")
 		}
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))

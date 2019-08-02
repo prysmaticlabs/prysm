@@ -1,13 +1,13 @@
 package db
 
 import (
-	"errors"
 	"os"
 	"path"
 	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )

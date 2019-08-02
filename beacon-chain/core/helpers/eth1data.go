@@ -1,9 +1,9 @@
 package helpers
 
 import (
-	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -38,7 +38,7 @@ func EmptyVoteHierarchyMap() *VoteHierarchyMap {
 func CountVote(voteMap *VoteHierarchyMap, vote *ethpb.Eth1Data, blockHeight *big.Int) (*VoteHierarchyMap, error) {
 	encoded, err := ssz.Marshal(vote)
 	if err != nil {
-		return &VoteHierarchyMap{}, fmt.Errorf("could not get encoded hash of eth1data object: %v", err)
+		return &VoteHierarchyMap{}, errors.Wrap(err, "could not get encoded hash of eth1data object")
 	}
 	he := hashutil.Hash(encoded)
 	v, ok := voteMap.voteCountMap[string(he[:])]

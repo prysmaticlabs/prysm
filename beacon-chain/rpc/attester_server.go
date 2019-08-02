@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -33,7 +33,7 @@ type AttesterServer struct {
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	h, err := hashutil.HashProto(att)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash attestation: %v", err)
+		return nil, errors.Wrap(err, "could not hash attestation")
 	}
 
 	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
@@ -104,17 +104,17 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	// is the validator's view of the head block of the beacon chain during the slot.
 	headBlock, err := as.beaconDB.ChainHead()
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
+		return nil, errors.Wrap(err, "failed to retrieve chain head")
 	}
 	headRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash beacon block")
 	}
 
 	// Let head state be the state of head block processed through empty slots up to assigned slot.
 	headState, err := as.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch head state: %v", err)
+		return nil, errors.Wrap(err, "could not fetch head state")
 	}
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
