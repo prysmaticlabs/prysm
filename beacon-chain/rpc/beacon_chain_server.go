@@ -159,9 +159,8 @@ func (bs *BeaconChainServer) ListBlocks(
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        []*ethpb.BeaconBlock{blk},
-			TotalSize:     1,
-			NextPageToken: req.PageToken,
+			Blocks:    []*ethpb.BeaconBlock{blk},
+			TotalSize: 1,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
