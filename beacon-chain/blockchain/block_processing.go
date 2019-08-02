@@ -62,9 +62,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return fmt.Errorf("failed to process block from fork choice service: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"slots": block.Slot,
+		"slot": block.Slot,
 		"root":  hex.EncodeToString(root[:]),
-	}).Info("Successful updated fork choice store for block")
+	}).Info("Successful updated fork choice store for incoming block")
 
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
@@ -89,9 +89,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return fmt.Errorf("failed to update head: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"slots": headBlk.Slot,
+		"slot": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
-	}).Info("successful ran fork choice for block")
+	}).Info("Successful ran fork choice and received latest head")
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
@@ -122,33 +122,40 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	c.opsPoolService.IncomingAttFeed().Send(att)
 
 	// Run attestation transition and broadcast the attestation to other peers.
-	if err := c.forkChoiceStore.OnAttestation(att); err != nil {
-		return fmt.Errorf("failed to process block from fork choice service: %v", err)
-	}
-	log.WithFields(logrus.Fields{
-		"root":  hex.EncodeToString(root[:]),
-	}).Info("Successful updated fork choice store for attestation")
+	go func() {
+		if err := c.forkChoiceStore.OnAttestation(att); err != nil {
+			log.Errorf("failed to process block from fork choice service: %v", err)
+			return
+		}
+		log.WithFields(logrus.Fields{
+			"root": hex.EncodeToString(root[:]),
+		}).Info("Successful updated fork choice store for incoming attestation")
 
-	// Run fork choice for head block and head state.
-	headRoot, err := c.forkChoiceStore.Head()
-	if err != nil {
-		return fmt.Errorf("failed to get head from fork choice service: %v", err)
-	}
-	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return fmt.Errorf("failed to compute state from block head: %v", err)
-	}
-	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
-	if err != nil {
-		return fmt.Errorf("failed to compute state from block head: %v", err)
-	}
-	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
-		return fmt.Errorf("failed to update head: %v", err)
-	}
-	log.WithFields(logrus.Fields{
-		"slots": headBlk.Slot,
-		"root":  hex.EncodeToString(headRoot),
-	}).Info("successful ran fork choice for attestation")
+		// Run fork choice for head block and head state.
+		headRoot, err := c.forkChoiceStore.Head()
+		if err != nil {
+			log.Errorf("failed to get head from fork choice service: %v", err)
+			return
+		}
+		headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			log.Errorf("failed to compute state from block head: %v", err)
+			return
+		}
+		headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
+		if err != nil {
+			log.Errorf("failed to compute state from block head: %v", err)
+			return
+		}
+		if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
+			log.Errorf("failed to update head: %v", err)
+			return
+		}
+		log.WithFields(logrus.Fields{
+			"slot": headBlk.Slot,
+			"root":  hex.EncodeToString(headRoot),
+		}).Info("successful ran fork choice and received latest head")
+	}()
 
 	return nil
 }
@@ -182,7 +189,7 @@ func (c *ChainService) waitForAttInclDelay(ctx context.Context, slot uint64) {
 	defer span.End()
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot * params.BeaconConfig().SecondsPerSlot) * time.Second
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(c.genesisTime.Unix()), 0).Add(duration)
 
 	time.Sleep(time.Until(timeToInclude))

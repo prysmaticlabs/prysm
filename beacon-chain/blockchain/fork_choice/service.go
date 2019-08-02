@@ -310,7 +310,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt.Epoch = postState.CurrentJustifiedCheckpoint.Epoch
+		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
 	}
 
 	// Update finalized check point.
@@ -413,7 +413,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
 	// Delay attestation inclusion until the attested slot is in the past.
-	waitForAttInclDelay(s.ctx, baseState.GenesisTime, aSlot + 1)
+	waitForAttInclDelay(s.ctx, baseState.GenesisTime, aSlot+1)
 	s.OnTick(uint64(time.Now().Unix()))
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
@@ -444,6 +444,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 			}); err != nil {
 				return fmt.Errorf("could not save latest msg for validator %d: %v", i, err)
 			}
+			log.Warn("Saving latest message", i, tgt.Epoch, a.Data.BeaconBlockRoot)
 		}
 	}
 	return nil
@@ -520,7 +521,7 @@ func waitForAttInclDelay(ctx context.Context, genesisTime uint64, slot uint64) {
 	defer span.End()
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot * params.BeaconConfig().SecondsPerSlot) * time.Second
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(genesisTime), 0).Add(duration)
 
 	time.Sleep(time.Until(timeToInclude))

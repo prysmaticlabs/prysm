@@ -182,7 +182,7 @@ func (s *Service) Start() {
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
-		chainService:       s.chainService,
+		chainService:     s.chainService,
 		p2p:              s.p2p,
 		cache:            cache.NewAttestationCache(),
 	}

@@ -22,7 +22,7 @@ import (
 type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
-	chainService       chainService
+	chainService     chainService
 	operationService operationService
 	cache            *cache.AttestationCache
 }
