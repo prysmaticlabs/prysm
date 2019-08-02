@@ -19,8 +19,6 @@ import (
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
-	IsCanonical(slot uint64, hash []byte) bool
-	UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte)
 }
 
 // AttestationReceiver interface defines the methods in the blockchain service which
@@ -103,8 +101,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 // ReceiveAttestation is a function that defines the operations that are preformed on
 // any attestation that is received from p2p layer or rpc.
 func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	c.receiveBlockLock.Lock()
-	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestation")
 	defer span.End()
 

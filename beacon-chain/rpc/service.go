@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -46,7 +44,6 @@ type chainService interface {
 type operationService interface {
 	operations.Pool
 	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
-	HandleAttestations(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
 
@@ -73,22 +70,20 @@ type syncService interface {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	beaconDB            *db.BeaconDB
-	chainService        chainService
-	powChainService     powChainService
-	operationService    operationService
-	syncService         syncService
-	port                string
-	listener            net.Listener
-	withCert            string
-	withKey             string
-	grpcServer          *grpc.Server
-	canonicalStateChan  chan *pbp2p.BeaconState
-	incomingAttestation chan *ethpb.Attestation
-	credentialError     error
-	p2p                 p2p.Broadcaster
+	ctx              context.Context
+	cancel           context.CancelFunc
+	beaconDB         *db.BeaconDB
+	chainService     chainService
+	powChainService  powChainService
+	operationService operationService
+	syncService      syncService
+	port             string
+	listener         net.Listener
+	withCert         string
+	withKey          string
+	grpcServer       *grpc.Server
+	credentialError  error
+	p2p              p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -109,19 +104,17 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		beaconDB:            cfg.BeaconDB,
-		p2p:                 cfg.Broadcaster,
-		chainService:        cfg.ChainService,
-		powChainService:     cfg.POWChainService,
-		operationService:    cfg.OperationService,
-		syncService:         cfg.SyncService,
-		port:                cfg.Port,
-		withCert:            cfg.CertFlag,
-		withKey:             cfg.KeyFlag,
-		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		ctx:              ctx,
+		cancel:           cancel,
+		beaconDB:         cfg.BeaconDB,
+		p2p:              cfg.Broadcaster,
+		chainService:     cfg.ChainService,
+		powChainService:  cfg.POWChainService,
+		operationService: cfg.OperationService,
+		syncService:      cfg.SyncService,
+		port:             cfg.Port,
+		withCert:         cfg.CertFlag,
+		withKey:          cfg.KeyFlag,
 	}
 }
 
@@ -161,21 +154,18 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	beaconServer := &BeaconServer{
-		beaconDB:            s.beaconDB,
-		ctx:                 s.ctx,
-		powChainService:     s.powChainService,
-		chainService:        s.chainService,
-		operationService:    s.operationService,
-		incomingAttestation: s.incomingAttestation,
-		canonicalStateChan:  s.canonicalStateChan,
-		chainStartChan:      make(chan time.Time, 1),
+		beaconDB:         s.beaconDB,
+		ctx:              s.ctx,
+		powChainService:  s.powChainService,
+		chainService:     s.chainService,
+		operationService: s.operationService,
+		chainStartChan:   make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{
-		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
-		powChainService:    s.powChainService,
-		operationService:   s.operationService,
-		canonicalStateChan: s.canonicalStateChan,
+		beaconDB:         s.beaconDB,
+		chainService:     s.chainService,
+		powChainService:  s.powChainService,
+		operationService: s.operationService,
 	}
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
@@ -185,11 +175,10 @@ func (s *Service) Start() {
 		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
-		ctx:                s.ctx,
-		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
-		canonicalStateChan: s.canonicalStateChan,
-		powChainService:    s.powChainService,
+		ctx:             s.ctx,
+		beaconDB:        s.beaconDB,
+		chainService:    s.chainService,
+		powChainService: s.powChainService,
 	}
 	nodeServer := &NodeServer{
 		beaconDB:    s.beaconDB,

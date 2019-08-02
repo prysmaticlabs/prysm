@@ -507,9 +507,6 @@ func logEpochData(beaconState *pb.BeaconState) {
 	log.WithField(
 		"numValidators", len(beaconState.Validators),
 	).Info("Validator registry length")
-	log.WithField(
-		"SlotsSinceGenesis", beaconState.Slot,
-	).Info(fmt.Sprintf("Epoch transition %d successfully processed", helpers.SlotToEpoch(beaconState.Slot)))
 }
 
 // waitForAttInclDelay waits until the next slot because attestation can only affect
