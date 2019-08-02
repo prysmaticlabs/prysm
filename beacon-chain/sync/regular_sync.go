@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -410,7 +410,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot)),
+		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot)),
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.

@@ -29,16 +29,16 @@ type Store struct {
 	time             uint64
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
-	beaconDb               *db.BeaconDB
+	beaconDb         *db.BeaconDB
 }
 
 func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &Store{
-		ctx:    ctx,
-		cancel: cancel,
-		beaconDb:     db,
+		ctx:      ctx,
+		cancel:   cancel,
+		beaconDb: db,
 	}
 }
 

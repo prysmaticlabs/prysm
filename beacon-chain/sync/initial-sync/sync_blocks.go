@@ -2,11 +2,11 @@ package initialsync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -134,11 +134,11 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 		BeaconBlockRoot: root[:],
 		ParentRoot:      block.ParentRoot,
 	}); err != nil {
-		return fmt.Errorf("could not to save attestation target: %v", err)
+		return errors.Wrap(err, "could not to save attestation target")
 	}
 
 	if err = s.chainService.ReceiveBlock(ctx, block); err != nil {
-		return fmt.Errorf("could not apply block state transition: %v", err)
+		return errors.Wrap(err, "could not apply block state transition")
 	}
 
 	return nil

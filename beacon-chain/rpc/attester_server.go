@@ -32,7 +32,7 @@ type AttesterServer struct {
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.SigningRoot(att)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign root for attestation:: %v", err)
+		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
 
 	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{Hash: root[:]})

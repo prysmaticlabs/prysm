@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -50,20 +51,20 @@ func ExecuteStateTransition(
 	// Execute per slots transition.
 	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slot: %v", err)
+		return nil, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
 	if block != nil {
 		state, err = ProcessBlock(ctx, state, block)
 		if err != nil {
-			return nil, fmt.Errorf("could not process block: %v", err)
+			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
 	postStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash processed state: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
 	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
 		return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
@@ -108,14 +109,14 @@ func ExecuteStateTransitionNoVerify(
 	// Execute per slots transition.
 	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slot: %v", err)
+		return nil, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
 	if block != nil {
 		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
 		if err != nil {
-			return nil, fmt.Errorf("could not process block: %v", err)
+			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
@@ -143,7 +144,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	defer span.End()
 	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash prev state root: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
@@ -154,7 +155,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	}
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
-		return nil, fmt.Errorf("could not determine prev block root: %v", err)
+		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
 	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
@@ -183,12 +184,12 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
-			return nil, fmt.Errorf("could not process slot: %v", err)
+			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
-				return nil, fmt.Errorf("could not process epoch: %v", err)
+				return nil, errors.Wrap(err, "could not process epoch")
 			}
 		}
 		state.Slot++
@@ -217,22 +218,22 @@ func ProcessBlock(
 
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block header: %v", err)
+		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify and process randao: %v", err)
+		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not process eth1 data: %v", err)
+		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block operation: %v", err)
+		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
 	return state, nil
@@ -263,22 +264,22 @@ func processBlockNoVerify(
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block header: %v", err)
+		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify and process randao: %v", err)
+		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not process eth1 data: %v", err)
+		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block operation: %v", err)
+		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
 	return state, nil
@@ -314,7 +315,7 @@ func ProcessOperations(
 	defer span.End()
 
 	if err := verifyOperationLengths(state, body); err != nil {
-		return nil, fmt.Errorf("could not verify operation lengths: %v", err)
+		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
 	// Verify that there are no duplicate transfers
@@ -322,7 +323,7 @@ func ProcessOperations(
 	for _, transfer := range body.Transfers {
 		h, err := hashutil.HashProto(transfer)
 		if err != nil {
-			return nil, fmt.Errorf("could not hash transfer: %v", err)
+			return nil, errors.Wrap(err, "could not hash transfer")
 		}
 		if transferSet[h] {
 			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
@@ -332,27 +333,27 @@ func ProcessOperations(
 
 	state, err := b.ProcessProposerSlashings(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block proposer slashings: %v", err)
+		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
 	state, err = b.ProcessAttesterSlashings(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block attester slashings: %v", err)
+		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
 	state, err = b.ProcessAttestations(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block attestations: %v", err)
+		return nil, errors.Wrap(err, "could not process block attestations")
 	}
 	state, err = b.ProcessDeposits(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
+		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
 	state, err = b.ProcessVoluntaryExits(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process validator exits: %v", err)
+		return nil, errors.Wrap(err, "could not process validator exits")
 	}
 	state, err = b.ProcessTransfers(state, body)
 	if err != nil {
-		return nil, fmt.Errorf("could not process block transfers: %v", err)
+		return nil, errors.Wrap(err, "could not process block transfers")
 	}
 
 	return state, nil
@@ -452,41 +453,41 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	}
 	prevEpochAttestedBalance, err := e.AttestingBalance(state, prevEpochAtts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
+		return nil, errors.Wrap(err, "could not get attesting balance prev epoch")
 	}
 	currentEpochAttestedBalance, err := e.AttestingBalance(state, currentEpochAtts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
+		return nil, errors.Wrap(err, "could not get attesting balance current epoch")
 	}
 
 	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
 	if err != nil {
-		return nil, fmt.Errorf("could not process justification: %v", err)
+		return nil, errors.Wrap(err, "could not process justification")
 	}
 
 	state, err = e.ProcessCrosslinks(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not process crosslink: %v", err)
+		return nil, errors.Wrap(err, "could not process crosslink")
 	}
 
 	state, err = e.ProcessRewardsAndPenalties(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not process rewards and penalties: %v", err)
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
 
 	state, err = e.ProcessRegistryUpdates(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not process registry updates: %v", err)
+		return nil, errors.Wrap(err, "could not process registry updates")
 	}
 
 	state, err = e.ProcessSlashings(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slashings: %v", err)
+		return nil, errors.Wrap(err, "could not process slashings")
 	}
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not process final updates: %v", err)
+		return nil, errors.Wrap(err, "could not process final updates")
 	}
 	return state, nil
 }

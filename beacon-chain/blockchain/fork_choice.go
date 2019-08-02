@@ -1,8 +1,7 @@
 package blockchain
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -37,7 +36,7 @@ func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb
 	for i, index := range indices {
 		target, err := c.attsService.LatestAttestationTarget(state, index)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve attestation target")
 		}
 		if target == nil {
 			continue

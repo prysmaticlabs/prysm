@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -231,7 +232,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 	}
 	slot, err := helpers.AttestationDataSlot(beaconState, attestation.Data)
 	if err != nil {
-		return fmt.Errorf("could not get attestation slot: %v", err)
+		return errors.Wrap(err, "could not get attestation slot")
 	}
 	log.WithFields(logrus.Fields{
 		"attestationSlot":    slot,

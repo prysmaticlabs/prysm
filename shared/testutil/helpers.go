@@ -3,10 +3,10 @@ package testutil
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"sync"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -134,7 +134,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		return []byte{}, fmt.Errorf("could not get beacon proposer index: %v", err)
+		return []byte{}, errors.Wrap(err, "could not get beacon proposer index")
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)

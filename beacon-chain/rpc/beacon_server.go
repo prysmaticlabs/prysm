@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -71,7 +71,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
 	block, err := bs.beaconDB.ChainHead()
 	if err != nil {
-		return nil, fmt.Errorf("could not get canonical head block: %v", err)
+		return nil, errors.Wrap(err, "could not get canonical head block")
 	}
 	return block, nil
 }

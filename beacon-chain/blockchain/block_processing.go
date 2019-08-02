@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -122,34 +123,34 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	c.opsPoolService.IncomingAttFeed().Send(att)
 
 	// Run attestation transition and broadcast the attestation to other peers.
-		if err := c.forkChoiceStore.OnAttestation(att); err != nil {
-			return fmt.Errorf("failed to process block from fork choice service: %v", err)
-		}
-		log.WithFields(logrus.Fields{
-			"root": hex.EncodeToString(root[:]),
-		}).Info("Successful updated fork choice store for attestation")
+	if err := c.forkChoiceStore.OnAttestation(att); err != nil {
+		return fmt.Errorf("failed to process block from fork choice service: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"root": hex.EncodeToString(root[:]),
+	}).Info("Successful updated fork choice store for attestation")
 
-		// Run fork choice for head block and head state.
-		headRoot, err := c.forkChoiceStore.Head()
-		if err != nil {
-			return fmt.Errorf("failed to get head from fork choice service: %v", err)
-		}
-		headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
-		if err != nil {
-			return fmt.Errorf("failed to compute state from block head: %v", err)
+	// Run fork choice for head block and head state.
+	headRoot, err := c.forkChoiceStore.Head()
+	if err != nil {
+		return fmt.Errorf("failed to get head from fork choice service: %v", err)
+	}
+	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
 
-		}
-		headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
-		if err != nil {
-			return fmt.Errorf("failed to compute state from block head: %v", err)
-		}
-		if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
-			return fmt.Errorf("failed to update head: %v", err)
-		}
-		log.WithFields(logrus.Fields{
-			"slots": headBlk.Slot,
-			"root":  hex.EncodeToString(headRoot),
-		}).Info("successful ran fork choice for attestation")
+	}
+	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
+	if err != nil {
+		return fmt.Errorf("failed to compute state from block head: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
+		return fmt.Errorf("failed to update head: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"slots": headBlk.Slot,
+		"root":  hex.EncodeToString(headRoot),
+	}).Info("successful ran fork choice for attestation")
 
 	return nil
 }
@@ -165,7 +166,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	}
 
 	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
-		return fmt.Errorf("failed to update latest attestation for store: %v", err)
+		return errors.Wrap(err, "failed to update latest attestation for store")
 	}
 
 	// Remove pending deposits from the deposit queue.
