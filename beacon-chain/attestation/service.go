@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -232,10 +231,10 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestationTargetEpoch":   attestation.Data.Target.Epoch,
-		"attestationShard":   attestation.Data.Crosslink.Shard,
-		"committeesList":     committee,
-		"lengthOfCommittees": len(committee),
+		"attestationTargetEpoch": attestation.Data.Target.Epoch,
+		"attestationShard":       attestation.Data.Crosslink.Shard,
+		"committeesList":         committee,
+		"lengthOfCommittees":     len(committee),
 	}).Debug("Updating latest attestation")
 
 	// Check each bit of participation bitfield to find out which
@@ -261,7 +260,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
 		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].PublicKey)
-		attTargetBoundarySlot := attestation.Data.Target.Epoch* params.BeaconConfig().SlotsPerEpoch
+		attTargetBoundarySlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
 		defer a.store.Unlock()
@@ -275,7 +274,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 			log.WithFields(
 				logrus.Fields{
 					"attTargetBoundarySlot": attTargetBoundarySlot,
-					"sourceEpoch":     attestation.Data.Source.Epoch,
+					"sourceEpoch":           attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 		}
