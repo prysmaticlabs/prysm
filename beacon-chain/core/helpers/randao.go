@@ -1,9 +1,7 @@
 package helpers
 
 import (
-	"errors"
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -30,7 +28,7 @@ var ErrInvalidStateLatestActiveIndexRoots = errors.New("state does not have corr
 func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 	seed, err := currentEpochSeed.SeedInEpoch(epoch)
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not retrieve total balance from cache: %v", err)
+		return [32]byte{}, errors.Wrap(err, "could not retrieve total balance from cache")
 	}
 	if seed != nil {
 		return bytesutil.ToBytes32(seed), nil
@@ -59,7 +57,7 @@ func Seed(state *pb.BeaconState, epoch uint64) ([32]byte, error) {
 		Epoch: epoch,
 		Seed:  seed32[:],
 	}); err != nil {
-		return [32]byte{}, fmt.Errorf("could not save active balance for cache: %v", err)
+		return [32]byte{}, errors.Wrap(err, "could not save active balance for cache")
 	}
 
 	return seed32, nil

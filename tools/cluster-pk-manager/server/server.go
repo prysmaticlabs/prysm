@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"sync"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -70,7 +70,7 @@ func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signat
 	txOps.GasLimit = gasLimit
 	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature)
 	if err != nil {
-		return fmt.Errorf("deposit failed: %v", err)
+		return errors.Wrap(err, "deposit failed")
 	}
 	log.WithField("tx", tx.Hash().Hex()).Info("Deposit transaction sent")
 

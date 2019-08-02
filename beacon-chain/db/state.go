@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -63,15 +63,15 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 		chainInfo := tx.Bucket(chainInfoBucket)
 
 		if err := chainInfo.Put(mainChainHeightKey, zeroBinary); err != nil {
-			return fmt.Errorf("failed to record block height: %v", err)
+			return errors.Wrap(err, "failed to record block height")
 		}
 
 		if err := mainChain.Put(zeroBinary, blockEnc); err != nil {
-			return fmt.Errorf("failed to record block hash: %v", err)
+			return errors.Wrap(err, "failed to record block hash")
 		}
 
 		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
-			return fmt.Errorf("failed to record block as canonical: %v", err)
+			return errors.Wrap(err, "failed to record block as canonical")
 		}
 
 		if err := blockBkt.Put(blockRoot[:], blockEnc); err != nil {
@@ -464,7 +464,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	err := proto.Unmarshal(enc, protoState)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
 }

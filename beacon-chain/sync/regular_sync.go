@@ -4,13 +4,13 @@ package sync
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -438,7 +438,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
 	if err != nil {
-		return fmt.Errorf("could not get attestation slot: %v", err)
+		return errors.Wrap(err, "could not get attestation slot")
 	}
 
 	span.AddAttributes(

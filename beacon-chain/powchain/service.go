@@ -3,7 +3,6 @@ package powchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"runtime/debug"
@@ -15,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -132,7 +132,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
+		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
 	return &Web3Service{
 		ctx:                     ctx,

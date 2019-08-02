@@ -3,11 +3,11 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -66,7 +66,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 				return err
 			}
 		case <-stream.Context().Done():
-			return errors.New("stream context closed,exiting gorutine")
+			return errors.New("stream context closed, exiting gorutine")
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
@@ -78,7 +78,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
 	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not get validator index: %v", err)
+		return nil, errors.Wrap(err, "could not get validator index")
 	}
 
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
@@ -91,25 +91,25 @@ func (vs *ValidatorServer) ValidatorPerformance(
 ) (*pb.ValidatorPerformanceResponse, error) {
 	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not get validator index: %v", err)
+		return nil, errors.Wrap(err, "could not get validator index")
 	}
 	head, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get head: %v", err)
+		return nil, errors.Wrap(err, "could not get head")
 	}
 	Validators, err := vs.beaconDB.Validators(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 
 	activeCount, err := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve active validator count: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve active validator count")
 	}
 
 	totalActiveBalance, err := helpers.TotalActiveBalance(head)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve active balance: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve active balance")
 	}
 
 	validatorBalances, err := vs.beaconDB.Balances(ctx)
@@ -136,7 +136,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	s, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
 
 	// Advance state with empty transitions up to the requested slot.
@@ -196,7 +196,7 @@ func (vs *ValidatorServer) assignment(
 
 	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active validator index: %v", err)
+		return nil, errors.Wrap(err, "could not get active validator index")
 	}
 
 	committee, shard, slot, isProposer, err :=
@@ -228,7 +228,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
 	chainStarted := vs.powChainService.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
@@ -462,7 +462,7 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
 	state, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 	dv := helpers.Domain(state, request.Epoch, request.Domain)
 	return &pb.DomainResponse{

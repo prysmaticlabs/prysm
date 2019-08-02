@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -145,24 +146,24 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	justifiedState, err := c.beaconDB.JustifiedState()
 	if err != nil {
-		return fmt.Errorf("could not retrieve justified state: %v", err)
+		return errors.Wrap(err, "could not retrieve justified state")
 	}
 	attestationTargets, err := c.AttestationTargets(justifiedState)
 	if err != nil {
-		return fmt.Errorf("could not retrieve attestation target: %v", err)
+		return errors.Wrap(err, "could not retrieve attestation target")
 	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
-		return fmt.Errorf("could not retrieve justified head: %v", err)
+		return errors.Wrap(err, "could not retrieve justified head")
 	}
 
 	newHead, err := c.lmdGhost(ctx, justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
-		return fmt.Errorf("could not run fork choice: %v", err)
+		return errors.Wrap(err, "could not run fork choice")
 	}
 	newHeadRoot, err := ssz.SigningRoot(newHead)
 	if err != nil {
-		return fmt.Errorf("could not hash new head block: %v", err)
+		return errors.Wrap(err, "could not hash new head block")
 	}
 	c.canonicalBlocksLock.Lock()
 	defer c.canonicalBlocksLock.Unlock()
@@ -170,16 +171,16 @@ func (c *ChainService) ApplyForkChoiceRule(
 
 	currentHead, err := c.beaconDB.ChainHead()
 	if err != nil {
-		return fmt.Errorf("could not retrieve chain head: %v", err)
+		return errors.Wrap(err, "could not retrieve chain head")
 	}
 	currentHeadRoot, err := ssz.SigningRoot(currentHead)
 	if err != nil {
-		return fmt.Errorf("could not hash current head block: %v", err)
+		return errors.Wrap(err, "could not hash current head block")
 	}
 
 	isDescendant, err := c.isDescendant(currentHead, newHead)
 	if err != nil {
-		return fmt.Errorf("could not check if block is descendant: %v", err)
+		return errors.Wrap(err, "could not check if block is descendant")
 	}
 
 	newState := postState
@@ -193,7 +194,7 @@ func (c *ChainService) ApplyForkChoiceRule(
 		// Only regenerate head state if there was a reorg.
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot, newHeadRoot)
 		if err != nil {
-			return fmt.Errorf("could not gen state: %v", err)
+			return errors.Wrap(err, "could not gen state")
 		}
 
 		for revertedSlot := currentHead.Slot; revertedSlot > newHead.Slot; revertedSlot-- {
@@ -213,16 +214,16 @@ func (c *ChainService) ApplyForkChoiceRule(
 	if newHead.Slot != newState.Slot {
 		newState, err = c.beaconDB.HistoricalStateFromSlot(ctx, newHead.Slot, newHeadRoot)
 		if err != nil {
-			return fmt.Errorf("could not gen state: %v", err)
+			return errors.Wrap(err, "could not gen state")
 		}
 	}
 
 	if err := c.beaconDB.UpdateChainHead(ctx, newHead, newState); err != nil {
-		return fmt.Errorf("failed to update chain: %v", err)
+		return errors.Wrap(err, "failed to update chain")
 	}
 	h, err := ssz.SigningRoot(newHead)
 	if err != nil {
-		return fmt.Errorf("could not hash head: %v", err)
+		return errors.Wrap(err, "could not hash head")
 	}
 	log.WithFields(logrus.Fields{
 		"headRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(h[:])),
@@ -272,7 +273,7 @@ func (c *ChainService) lmdGhost(
 	for {
 		children, err := c.BlockChildren(ctx, head, highestSlot)
 		if err != nil {
-			return nil, fmt.Errorf("could not fetch block children: %v", err)
+			return nil, errors.Wrap(err, "could not fetch block children")
 		}
 		if len(children) == 0 {
 			return head, nil
@@ -281,12 +282,12 @@ func (c *ChainService) lmdGhost(
 
 		maxChildVotes, err := VoteCount(maxChild, startState, voteTargets, c.beaconDB)
 		if err != nil {
-			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+			return nil, errors.Wrap(err, "unable to determine vote count for block")
 		}
 		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], startState, voteTargets, c.beaconDB)
 			if err != nil {
-				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+				return nil, errors.Wrap(err, "unable to determine vote count for block")
 			}
 			maxChildRoot, err := ssz.SigningRoot(maxChild)
 			if err != nil {
@@ -327,7 +328,7 @@ func (c *ChainService) BlockChildren(ctx context.Context, block *ethpb.BeaconBlo
 	for i := startSlot; i <= highestSlot; i++ {
 		kids, err := c.beaconDB.BlocksBySlot(ctx, i)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block by slot: %v", err)
+			return nil, errors.Wrap(err, "could not get block by slot")
 		}
 		children = append(children, kids...)
 	}
@@ -376,7 +377,7 @@ func (c *ChainService) AttestationTargets(state *pb.BeaconState) (map[uint64]*pb
 	for i, index := range indices {
 		target, err := c.attsService.LatestAttestationTarget(state, index)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve attestation target")
 		}
 		if target == nil {
 			continue
@@ -450,10 +451,10 @@ func BlockAncestor(targetBlock *pb.AttestationTarget, slot uint64, beaconDB *db.
 	parentRoot := bytesutil.ToBytes32(targetBlock.ParentRoot)
 	parent, err := beaconDB.Block(parentRoot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get parent block: %v", err)
+		return nil, errors.Wrap(err, "could not get parent block")
 	}
 	if parent == nil {
-		return nil, fmt.Errorf("parent block does not exist: %v", err)
+		return nil, errors.Wrap(err, "parent block does not exist")
 	}
 	newTarget := &pb.AttestationTarget{
 		Slot:            parent.Slot,

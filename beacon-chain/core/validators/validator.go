@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -81,7 +82,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	}
 	churn, err := helpers.ValidatorChurnLimit(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get churn limit: %v", err)
+		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
 	if uint64(exitQueueChurn) >= churn {
@@ -158,7 +159,7 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get proposer idx: %v", err)
+		return nil, errors.Wrap(err, "could not get proposer idx")
 	}
 
 	if whistleBlowerIdx == 0 {

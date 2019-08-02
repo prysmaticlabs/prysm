@@ -3,6 +3,7 @@ package powchain
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -26,16 +27,16 @@ func (w *Web3Service) processDeposit(
 	if !ok {
 		pub, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
-			return fmt.Errorf("could not deserialize validator public key: %v", err)
+			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 		sig, err := bls.SignatureFromBytes(deposit.Data.Signature)
 		if err != nil {
-			return fmt.Errorf("could not convert bytes to signature: %v", err)
+			return errors.Wrap(err, "could not convert bytes to signature")
 		}
 		root, err := ssz.SigningRoot(deposit.Data)
 		if err != nil {
-			return fmt.Errorf("could not sign root for deposit data: %v", err)
+			return errors.Wrap(err, "could not sign root for deposit data")
 		}
 		if !sig.Verify(root[:], pub, domain) {
 			return fmt.Errorf("deposit signature did not verify")
@@ -64,7 +65,7 @@ func verifyDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposit) error {
 	receiptRoot := eth1Data.DepositRoot
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
-		return fmt.Errorf("could not tree hash deposit data: %v", err)
+		return errors.Wrap(err, "could not tree hash deposit data")
 	}
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,

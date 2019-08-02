@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	joonix "github.com/joonix/log"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -95,7 +96,7 @@ func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 	}
 
 	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
-		return "", "", fmt.Errorf("could not initialize validator account: %v", err)
+		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
 	return keystoreDirectory, keystorePassword, nil
 }

@@ -2,10 +2,10 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -38,31 +38,31 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	// Retrieve the parent block as the current head of the canonical chain
 	parent, err := ps.beaconDB.ChainHead()
 	if err != nil {
-		return nil, fmt.Errorf("could not get canonical head block: %v", err)
+		return nil, errors.Wrap(err, "could not get canonical head block")
 	}
 
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
-		return nil, fmt.Errorf("could not get parent block signing root: %v", err)
+		return nil, errors.Wrap(err, "could not get parent block signing root")
 	}
 
 	// Construct block body
 	// Pack ETH1 deposits which have not been included in the beacon chain
 	eth1Data, err := ps.eth1Data(ctx, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
+		return nil, errors.Wrap(err, "could not get ETH1 data")
 	}
 
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := ps.deposits(ctx, eth1Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not get eth1 deposits: %v", err)
+		return nil, errors.Wrap(err, "could not get eth1 deposits")
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	attestations, err := ps.attestations(ctx, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get pending attestations: %v", err)
+		return nil, errors.Wrap(err, "could not get pending attestations")
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -92,7 +92,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	// Compute state root with the newly constructed block.
 	stateRoot, err = ps.computeStateRoot(ctx, blk)
 	if err != nil {
-		return nil, fmt.Errorf("could not get compute state root: %v", err)
+		return nil, errors.Wrap(err, "could not get compute state root")
 	}
 	blk.StateRoot = stateRoot
 
@@ -104,18 +104,18 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash block: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash block")
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
 	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
 	if err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
+		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		return nil, fmt.Errorf("failed to update chain: %v", err)
+		return nil, errors.Wrap(err, "failed to update chain")
 	}
 
 	ps.chainService.UpdateCanonicalRoots(blk, root)
@@ -135,7 +135,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {

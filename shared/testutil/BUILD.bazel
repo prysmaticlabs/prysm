@@ -23,6 +23,7 @@ go_library(
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_json_iterator_go//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],

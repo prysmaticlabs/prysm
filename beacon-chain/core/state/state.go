@@ -4,9 +4,9 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -203,11 +203,11 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	// Populate latest_active_index_roots
 	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active validator indices: %v", err)
+		return nil, errors.Wrap(err, "could not get active validator indices")
 	}
 	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root active indices: %v", err)
+		return nil, errors.Wrap(err, "could not hash tree root active indices")
 	}
 	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
 	if err != nil {
