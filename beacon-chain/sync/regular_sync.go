@@ -4,18 +4,17 @@ package sync
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,6 +39,7 @@ var (
 
 type chainService interface {
 	blockchain.BlockReceiver
+	blockchain.AttestationReceiver
 	blockchain.BlockProcessor
 	blockchain.ChainFeeds
 }
@@ -404,62 +404,32 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	recAttestation.Inc()
 
 	resp := msg.Data.(*pb.AttestationResponse)
-	attestation := resp.Attestation
-	attestationRoot, err := hashutil.HashProto(attestation)
+	att := resp.Attestation
+	attRoot, err := ssz.SigningRoot(att)
 	if err != nil {
-		log.Errorf("Could not hash received attestation: %v", err)
-		return err
+		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot)),
-		"justifiedEpoch": attestation.Data.Source.Epoch,
+		"headRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot)),
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attestationRoot)
+	hasAttestation := rs.db.HasAttestation(attRoot)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attestationRoot[:]))).
-			Debug("Received, skipping attestation")
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attRoot[:]))).
+			Debug("Skipping received attestation")
 		return nil
 	}
 
-	// Skip if attestation slot is older than last finalized slot in state.
-	head, err := rs.db.ChainHead()
-	if err != nil {
-		return err
-	}
-	highestSlot := head.Slot
-
-	headState, err := rs.db.HeadState(rs.ctx)
-	if err != nil {
-		return err
-	}
-	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
-	if err != nil {
-		return fmt.Errorf("could not get attestation slot: %v", err)
-	}
-
-	span.AddAttributes(
-		trace.Int64Attribute("attestation.Data.Slot", int64(slot)),
-		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
-	)
-	oneEpochAgo := uint64(0)
-	if highestSlot > params.BeaconConfig().SlotsPerEpoch {
-		oneEpochAgo = highestSlot - params.BeaconConfig().SlotsPerEpoch
-	}
-	if slot < oneEpochAgo {
-		log.WithFields(logrus.Fields{
-			"receivedSlot": slot,
-			"epochSlot":    oneEpochAgo},
-		).Debug("Skipping received attestation with slot smaller than one epoch ago")
-		return nil
-	}
+	go func() {
+		if err := rs.chainService.ReceiveAttestation(ctx, att); err != nil {
+			log.Errorf("failed to update attestation for fork choice")
+		}
+	}()
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	log.Debug("Sending newly received attestation to subscribers")
-	rs.operationsService.IncomingAttFeed().Send(attestation)
-	rs.attsService.IncomingAttestationFeed().Send(attestation)
+	rs.operationsService.IncomingAttFeed().Send(att)
 	rs.p2p.Reputation(msg.Peer, p2p.RepRewardValidAttestation)
 	sentAttestation.Inc()
 	sendAttestationSpan.End()
