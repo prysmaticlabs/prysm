@@ -406,7 +406,6 @@ func (db *BeaconDB) ClearBlockCache() {
 // It has an optional filter slot to filter out children blocks below input slot.
 func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte, slot uint64) ([][]byte, error) {
 	childrenRoots := db.blockChildrenRoots[bytesutil.ToBytes32(parentRoot)]
-
 	i := 0
 	for _, r := range childrenRoots {
 		var b *ethpb.BeaconBlock
