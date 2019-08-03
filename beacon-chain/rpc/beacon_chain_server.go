@@ -222,6 +222,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	}
 
 	for _, pubKey := range req.PublicKeys {
+		// Skip empty public key
+		if len(pubKey) == 0 {
+			continue
+		}
+
 		index, err := bs.beaconDB.ValidatorIndex(pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
