@@ -59,12 +59,17 @@ type mockChainService struct {
 	db    *db.BeaconDB
 }
 
+func (ms *mockChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	return nil
+}
+
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 	if ms.sFeed == nil {
 		return new(event.Feed)
 	}
 	return ms.sFeed
 }
+
 
 func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	if ms.cFeed == nil {
@@ -73,36 +78,14 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	if err := ms.db.SaveBlock(block); err != nil {
-		return nil, err
-	}
-	return &pb.BeaconState{}, nil
+
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	return ms.db.SaveBlock(block)
 }
 
-func (ms *mockChainService) AdvanceState(
-	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
-) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
-}
-
-func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error {
-	return nil
-}
-
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
-	return nil
-}
 
 func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
-}
-
-func (ms *mockChainService) IsCanonical(slot uint64, hash []byte) bool {
-	return true
-}
-
-func (ms *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
 }
 
 type mockOperationService struct{}

@@ -29,7 +29,7 @@ type Store struct {
 	time             uint64
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
-	beaconDb         *db.BeaconDB
+	db         *db.BeaconDB
 }
 
 func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
@@ -38,7 +38,7 @@ func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 	return &Store{
 		ctx:      ctx,
 		cancel:   cancel,
-		beaconDb: db,
+		db: db,
 	}
 }
 
@@ -75,13 +75,13 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
-	if err := s.beaconDb.SaveBlock(genesisBlk); err != nil {
+	if err := s.db.SaveBlock(genesisBlk); err != nil {
 		return fmt.Errorf("could not save genesis block: %v", err)
 	}
-	if err := s.beaconDb.SaveForkChoiceState(s.ctx, genesisState, blkRoot[:]); err != nil {
+	if err := s.db.SaveForkChoiceState(s.ctx, genesisState, blkRoot[:]); err != nil {
 		return fmt.Errorf("could not save genesis state: %v", err)
 	}
-	if err := s.beaconDb.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
+	if err := s.db.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
 		return fmt.Errorf("could not save justified checkpt: %v", err)
 	}
 
@@ -96,7 +96,7 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 //    assert block.slot >= slot
 //    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
 func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
-	b, err := s.beaconDb.Block(bytesutil.ToBytes32(root))
+	b, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, fmt.Errorf("could not get ancestor block: %v", err)
 	}
@@ -126,7 +126,7 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 //            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
 //    ))
 func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
-	lastJustifiedState, err := s.beaconDb.CheckpointState(s.ctx, s.justifiedCheckpt)
+	lastJustifiedState, err := s.db.CheckpointState(s.ctx, s.justifiedCheckpt)
 	if err != nil {
 		return 0, fmt.Errorf("could not get checkpoint state: %v", err)
 	}
@@ -140,15 +140,15 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 		return 0, fmt.Errorf("could not get active indices for last checkpoint state: %v", err)
 	}
 
-	wantedBlk, err := s.beaconDb.Block(bytesutil.ToBytes32(root))
+	wantedBlk, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
 		return 0, fmt.Errorf("could not get slot for an ancestor block: %v", err)
 	}
 
 	balances := uint64(0)
 	for _, i := range activeIndices {
-		if s.beaconDb.HasLatestMessage(i) {
-			msg, err := s.beaconDb.LatestMessage(i)
+		if s.db.HasLatestMessage(i) {
+			msg, err := s.db.LatestMessage(i)
 			if err != nil {
 				return 0, fmt.Errorf("could not get validator %d's latest msg: %v", i, err)
 			}
@@ -186,7 +186,7 @@ func (s *Store) Head() ([]byte, error) {
 	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 
 	for {
-		children, err := s.beaconDb.ChildrenBlocksFromParent(head, justifiedSlot)
+		children, err := s.db.ChildrenBlocksFromParent(head, justifiedSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve children info: %v", err)
 		}
@@ -253,7 +253,7 @@ func (s *Store) OnTick(t uint64) {
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
 func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
-	preState, err := s.beaconDb.ForkChoiceState(s.ctx, b.ParentRoot)
+	preState, err := s.db.ForkChoiceState(s.ctx, b.ParentRoot)
 	if err != nil {
 		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
 	}
@@ -268,12 +268,12 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, s.time)
 	}
 
-	if err := s.beaconDb.SaveBlock(b); err != nil {
+	if err := s.db.SaveBlock(b); err != nil {
 		return fmt.Errorf("could not save block from slot %d: %v", b.Slot, err)
 	}
 
 	// Verify block is a descendent of a finalized block.
-	finalizedBlk, err := s.beaconDb.Block(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlk, err := s.db.Block(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	if err != nil || finalizedBlk == nil {
 		return fmt.Errorf("could not get finalized block: %v", err)
 	}
@@ -297,14 +297,14 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	// Make block root as bad to reject in sync.
 	postState, err := state.ExecuteStateTransition(s.ctx, preState, b)
 	if err != nil {
-		s.beaconDb.MarkEvilBlockHash(root)
-		if err := s.beaconDb.DeleteBlock(b); err != nil {
+		s.db.MarkEvilBlockHash(root)
+		if err := s.db.DeleteBlock(b); err != nil {
 			return fmt.Errorf("could not delete bad block from db: %v", err)
 		}
 		return fmt.Errorf("could not execute state transition: %v", err)
 	}
 
-	if err := s.beaconDb.SaveForkChoiceState(s.ctx, postState, root[:]); err != nil {
+	if err := s.db.SaveForkChoiceState(s.ctx, postState, root[:]); err != nil {
 		return fmt.Errorf("could not save state: %v", err)
 	}
 
@@ -317,17 +317,17 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		helpers.ClearAllCaches()
-		s.beaconDb.ClearBlockCache()
+		s.db.ClearBlockCache()
 		s.finalizedCheckpt.Epoch = postState.FinalizedCheckpoint.Epoch
 	}
 
 	if helpers.IsEpochStart(postState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
-		if err := saveValidatorIdx(postState, s.beaconDb); err != nil {
+		if err := saveValidatorIdx(postState, s.db); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 		// Delete exited validators of this epoch to public key -> index DB.
-		if err := deleteValidatorIdx(postState, s.beaconDb); err != nil {
+		if err := deleteValidatorIdx(postState, s.db); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}
 		logEpochData(postState)
@@ -372,14 +372,14 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	tgt := a.Data.Target
 
 	// Verify beacon node has seen the target block before.
-	if !s.beaconDb.HasBlock(bytesutil.ToBytes32(tgt.Root)) {
+	if !s.db.HasBlock(bytesutil.ToBytes32(tgt.Root)) {
 		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	// If they are, delay consideration until the epoch arrives
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
-	baseState, err := s.beaconDb.ForkChoiceState(s.ctx, tgt.Root)
+	baseState, err := s.db.ForkChoiceState(s.ctx, tgt.Root)
 	if err != nil {
 		return fmt.Errorf("could not get pre state for slot %d: %v", tgtSlot, err)
 	}
@@ -393,7 +393,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	}
 
 	// Store target checkpoint state if not yet seen.
-	exists, err := s.beaconDb.HasCheckpoint(tgt)
+	exists, err := s.db.HasCheckpoint(tgt)
 	if err != nil {
 		return fmt.Errorf("could not get check point state: %v", err)
 	}
@@ -402,7 +402,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		if err != nil {
 			return fmt.Errorf("could not process slots up to %d: %v", tgtSlot, err)
 		}
-		if err := s.beaconDb.SaveCheckpointState(s.ctx, baseState, tgt); err != nil {
+		if err := s.db.SaveCheckpointState(s.ctx, baseState, tgt); err != nil {
 			return fmt.Errorf("could not save check point state: %v", err)
 		}
 	}
@@ -432,13 +432,13 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 
 	// Update every validator's latest message.
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		s.beaconDb.HasLatestMessage(i)
-		msg, err := s.beaconDb.LatestMessage(i)
+		s.db.HasLatestMessage(i)
+		msg, err := s.db.LatestMessage(i)
 		if err != nil {
 			return fmt.Errorf("could not get latest msg for validator %d: %v", i, err)
 		}
-		if !s.beaconDb.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
-			if err := s.beaconDb.SaveLatestMessage(s.ctx, i, &pb.LatestMessage{
+		if !s.db.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
+			if err := s.db.SaveLatestMessage(s.ctx, i, &pb.LatestMessage{
 				Epoch: tgt.Epoch,
 				Root:  a.Data.BeaconBlockRoot,
 			}); err != nil {

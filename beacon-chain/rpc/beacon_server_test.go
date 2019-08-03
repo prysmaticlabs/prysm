@@ -448,7 +448,6 @@ func TestBlockTree_OK(t *testing.T) {
 
 	bs := &BeaconServer{
 		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
 	sort.Slice(tree, func(i, j int) bool {
 		return string(tree[i].Block.StateRoot) < string(tree[j].Block.StateRoot)
@@ -657,7 +656,6 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	}
 	bs := &BeaconServer{
 		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
 	if _, err := bs.BlockTreeBySlots(ctx, nil); err == nil {
 		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
@@ -874,7 +872,6 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 
 	bs := &BeaconServer{
 		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
 	}
 	slotRange := &pb.TreeBlockSlotRequest{
 		SlotFrom: 3,

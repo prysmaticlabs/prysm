@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -91,11 +90,11 @@ func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	return nil
 }
 
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	return nil
 }
 
@@ -103,21 +102,6 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
-
-}
-
-func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	return nil
-}
-
-func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
-	return bytes.Equal(m.canonicalBlocks[slot], hash)
-}
-
-func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	return m.targets, nil
-}
 
 func newMockChainService() *mockChainService {
 	return &mockChainService{
