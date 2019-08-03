@@ -858,9 +858,6 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	if err := bs.beaconDB.SaveState(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
-		t.Fatal(err)
-	}
 
 	res, err := bs.GetValidatorParticipation(context.Background(), &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
 	if err != nil {

@@ -179,12 +179,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
-		t.Fatal(err)
-	}
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -527,12 +521,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	beaconState.Eth1Data.DepositCount = 1
 	beaconState.Eth1DepositIndex = 0
-	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
-		t.Fatal(err)
-	}
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
@@ -618,13 +606,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	block, err = testutil.SignBlock(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
-	}
-
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
-		t.Fatal(err)
 	}
 
 	for _, dep := range pendingDeposits {

@@ -57,7 +57,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 		Slot:        0,
 		GenesisTime: 0,
 	}
-	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
+	if err := beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 

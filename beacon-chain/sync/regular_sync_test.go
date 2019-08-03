@@ -12,7 +12,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -676,19 +675,10 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
-	if err := db.SaveJustifiedState(beaconState); err != nil {
-		t.Fatalf("could not save justified state: %v", err)
-	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
-		t.Fatalf("could not save justified state: %v", err)
-	}
+
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
-	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveFinalizedBlock(genBlock); err != nil {
-		t.Fatalf("could not save genesis block: %v", err)
 	}
 
 	ss := setupService(db)
