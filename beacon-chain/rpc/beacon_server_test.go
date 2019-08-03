@@ -447,7 +447,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}
 
 	bs := &BeaconServer{
-		beaconDB:       db,
+		beaconDB: db,
 	}
 	sort.Slice(tree, func(i, j int) bool {
 		return string(tree[i].Block.StateRoot) < string(tree[j].Block.StateRoot)
@@ -655,7 +655,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &BeaconServer{
-		beaconDB:       db,
+		beaconDB: db,
 	}
 	if _, err := bs.BlockTreeBySlots(ctx, nil); err == nil {
 		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
@@ -871,7 +871,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}
 
 	bs := &BeaconServer{
-		beaconDB:       db,
+		beaconDB: db,
 	}
 	slotRange := &pb.TreeBlockSlotRequest{
 		SlotFrom: 3,

@@ -33,7 +33,7 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	beaconState, err := ns.beaconDB.FinalizedState()
+	beaconState, err := ns.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve beacon state: %v", err)
 	}

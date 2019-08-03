@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -136,36 +135,13 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return errors.Wrap(err, "could not hash beacon state")
 	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
-	genBlockRoot, err := ssz.SigningRoot(genBlock)
-	if err != nil {
-		return errors.Wrap(err, "could not hash beacon block")
-	}
 
+	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return errors.Wrap(err, "could not save genesis block to disk")
 	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            genBlock.Slot,
-		BeaconBlockRoot: genBlockRoot[:],
-		ParentRoot:      genBlock.ParentRoot,
-	}); err != nil {
-		return errors.Wrap(err, "failed to save attestation target")
-	}
 	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return fmt.Errorf("could not set chain head, %v", err)
-	}
-	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
-		return errors.Wrap(err, "could not save genesis block as justified block")
-	}
-	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
-		return errors.Wrap(err, "could not save genesis block as finalized block")
-	}
-	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		return errors.Wrap(err, "could not save genesis state as justified state")
-	}
-	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
-		return errors.Wrap(err, "could not save genesis state as finalized state")
 	}
 	if err := c.forkChoiceStore.GensisStore(beaconState); err != nil {
 		return errors.Wrap(err, "could not start gensis store for fork choice")

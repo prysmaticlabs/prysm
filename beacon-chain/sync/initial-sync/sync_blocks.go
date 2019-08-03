@@ -129,13 +129,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
-	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            block.Slot,
-		BeaconBlockRoot: root[:],
-		ParentRoot:      block.ParentRoot,
-	}); err != nil {
-		return errors.Wrap(err, "could not to save attestation target")
-	}
 
 	if err = s.chainService.ReceiveBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not apply block state transition")

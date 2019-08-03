@@ -195,35 +195,6 @@ func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) 
 	})
 }
 
-// SaveJustifiedState saves the last justified state in the db.
-func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
-	return db.update(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
-			return err
-		}
-		return chainInfo.Put(justifiedStateLookupKey, beaconStateEnc)
-	})
-}
-
-// SaveFinalizedState saves the last finalized state in the db.
-func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
-
-	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(beaconState.Slot); err != nil {
-		return err
-	}
-	return db.update(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
-			return err
-		}
-		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
-	})
-}
-
 // SaveHistoricalState saves the last finalized state in the db.
 func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.SaveHistoricalState")
@@ -247,40 +218,6 @@ func (db *BeaconDB) SaveHistoricalState(ctx context.Context, beaconState *pb.Bea
 		}
 		return chainInfo.Put(stateHash[:], beaconStateEnc)
 	})
-}
-
-// JustifiedState retrieves the justified state from the db.
-func (db *BeaconDB) JustifiedState() (*pb.BeaconState, error) {
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encState := chainInfo.Get(justifiedStateLookupKey)
-		if encState == nil {
-			return errors.New("no justified state saved")
-		}
-
-		var err error
-		beaconState, err = createState(encState)
-		return err
-	})
-	return beaconState, err
-}
-
-// FinalizedState retrieves the finalized state from the db.
-func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encState := chainInfo.Get(finalizedStateLookupKey)
-		if encState == nil {
-			return errors.New("no finalized state saved")
-		}
-
-		var err error
-		beaconState, err = createState(encState)
-		return err
-	})
-	return beaconState, err
 }
 
 // HistoricalStateFromSlot retrieves the state that is closest to the input slot,

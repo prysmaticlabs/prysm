@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -166,17 +165,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "failed to tree hash block")
-	}
-	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            block.Slot,
-		BeaconBlockRoot: root[:],
-		ParentRoot:      block.ParentRoot,
-	}); err != nil {
-		return errors.Wrap(err, "failed to save attestation target")
-	}
+
 	err = s.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")

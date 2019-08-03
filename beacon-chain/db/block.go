@@ -196,64 +196,6 @@ func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
 	})
 }
 
-// SaveJustifiedBlock saves the last justified block from canonical chain to DB.
-func (db *BeaconDB) SaveJustifiedBlock(block *ethpb.BeaconBlock) error {
-	return db.update(func(tx *bolt.Tx) error {
-		enc, err := proto.Marshal(block)
-		if err != nil {
-			return errors.Wrap(err, "failed to encode block")
-		}
-		chainInfo := tx.Bucket(chainInfoBucket)
-		return chainInfo.Put(justifiedBlockLookupKey, enc)
-	})
-}
-
-// SaveFinalizedBlock saves the last finalized block from canonical chain to DB.
-func (db *BeaconDB) SaveFinalizedBlock(block *ethpb.BeaconBlock) error {
-	return db.update(func(tx *bolt.Tx) error {
-		enc, err := proto.Marshal(block)
-		if err != nil {
-			return errors.Wrap(err, "failed to encode block")
-		}
-		chainInfo := tx.Bucket(chainInfoBucket)
-		return chainInfo.Put(finalizedBlockLookupKey, enc)
-	})
-}
-
-// JustifiedBlock retrieves the justified block from the db.
-func (db *BeaconDB) JustifiedBlock() (*ethpb.BeaconBlock, error) {
-	var block *ethpb.BeaconBlock
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encBlock := chainInfo.Get(justifiedBlockLookupKey)
-		if encBlock == nil {
-			return errors.New("no justified block saved")
-		}
-
-		var err error
-		block, err = createBlock(encBlock)
-		return err
-	})
-	return block, err
-}
-
-// FinalizedBlock retrieves the finalized block from the db.
-func (db *BeaconDB) FinalizedBlock() (*ethpb.BeaconBlock, error) {
-	var block *ethpb.BeaconBlock
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encBlock := chainInfo.Get(finalizedBlockLookupKey)
-		if encBlock == nil {
-			return errors.New("no finalized block saved")
-		}
-
-		var err error
-		block, err = createBlock(encBlock)
-		return err
-	})
-	return block, err
-}
-
 // ChainHead returns the head of the main chain.
 func (db *BeaconDB) ChainHead() (*ethpb.BeaconBlock, error) {
 	var block *ethpb.BeaconBlock

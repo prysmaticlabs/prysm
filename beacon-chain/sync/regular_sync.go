@@ -298,12 +298,9 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Error("Message is of the incorrect type")
 		return errors.New("incoming message is not *pb.BeaconStateRequest")
 	}
-	fState, err := rs.db.FinalizedState()
-	if err != nil {
-		log.Errorf("Unable to retrieve beacon state, %v", err)
-		return err
-	}
 
+	// TODO get finalized state
+	fState := &pb.BeaconState{}
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
@@ -317,11 +314,9 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		).Debug("Requested state root is diff than local state root")
 		return err
 	}
-	finalizedBlk, err := rs.db.FinalizedBlock()
-	if err != nil {
-		log.Error("could not get finalized block")
-		return err
-	}
+
+	// TODO get finalized block
+	finalizedBlk := &ethpb.BeaconBlock{}
 
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
@@ -356,23 +351,17 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	if err != nil {
 		log.Errorf("Could not hash chain head: %v", err)
 	}
-	finalizedBlk, err := rs.db.FinalizedBlock()
-	if err != nil {
-		log.Errorf("Could not retrieve finalized block: %v", err)
-		return err
-	}
+	// TODO get finalized block
+	finalizedBlk := &ethpb.BeaconBlock{}
 	finalizedBlkRoot, err := ssz.SigningRoot(finalizedBlk)
 	if err != nil {
 		log.Errorf("Could not hash finalized block: %v", err)
 	}
 
 	stateRoot := rs.db.HeadStateRoot()
-	finalizedState, err := rs.db.FinalizedState()
-	if err != nil {
-		log.Errorf("Could not retrieve finalized state: %v", err)
-		return err
-	}
-	finalizedRoot, err := hashutil.HashProto(finalizedState)
+	// TODO get finalized state
+	fState := &pb.BeaconState{}
+	finalizedRoot, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("Could not tree hash block: %v", err)
 		return err

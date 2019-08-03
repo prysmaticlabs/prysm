@@ -283,7 +283,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-	
+
 	chainService := setupBeaconChain(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -365,7 +365,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-	
+
 	chainService := setupBeaconChain(t, db)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -507,7 +507,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
-
 
 	chainService := setupBeaconChain(t, db)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)

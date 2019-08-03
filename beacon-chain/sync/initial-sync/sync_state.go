@@ -20,15 +20,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 	finalizedBlock := data.FinalizedBlock
 	recState.Inc()
 
-	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
-		log.Errorf("Unable to set received last finalized state in db: %v", err)
-		return nil
-	}
-
-	if err := s.db.SaveFinalizedBlock(finalizedBlock); err != nil {
-		log.Errorf("Could not save finalized block %v", err)
-		return nil
-	}
+	// TODO save finalized block and state
 
 	if err := s.db.SaveBlock(finalizedBlock); err != nil {
 		log.Errorf("Could not save block %v", err)
@@ -47,24 +39,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            finalizedState.LatestBlockHeader.Slot,
-		BeaconBlockRoot: finalizedBlockRoot[:],
-		ParentRoot:      finalizedState.LatestBlockHeader.ParentRoot,
-	}); err != nil {
-		log.Errorf("Could not to save attestation target: %v", err)
-		return nil
-	}
-
-	if err := s.db.SaveJustifiedState(finalizedState); err != nil {
-		log.Errorf("Could not set beacon state for initial sync %v", err)
-		return nil
-	}
-
-	if err := s.db.SaveJustifiedBlock(finalizedBlock); err != nil {
-		log.Errorf("Could not save finalized block %v", err)
-		return nil
-	}
+	// TODO save justified block and state
 
 	exists, _, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.Eth1Data.BlockHash))
 	if err != nil {

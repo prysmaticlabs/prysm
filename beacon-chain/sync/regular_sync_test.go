@@ -70,7 +70,6 @@ func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 	return ms.sFeed
 }
 
-
 func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	if ms.cFeed == nil {
 		return new(event.Feed)
@@ -78,11 +77,9 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-
 func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return ms.db.SaveBlock(block)
 }
-
 
 func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
