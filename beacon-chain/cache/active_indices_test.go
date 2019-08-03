@@ -12,7 +12,7 @@ func TestActiveIndicesKeyFn_OK(t *testing.T) {
 		ActiveIndices: []uint64{1, 2, 3, 4, 5},
 	}
 
-	key, err := ActiveIndicesKeyFn(aInfo)
+	key, err := activeIndicesKeyFn(aInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestActiveIndicesKeyFn_OK(t *testing.T) {
 }
 
 func TestActiveIndicesKeyFn_InvalidObj(t *testing.T) {
-	_, err := ActiveIndicesKeyFn("bad")
+	_, err := activeIndicesKeyFn("bad")
 	if err != ErrNotActiveIndicesInfo {
 		t.Errorf("Expected error %v, got %v", ErrNotActiveIndicesInfo, err)
 	}

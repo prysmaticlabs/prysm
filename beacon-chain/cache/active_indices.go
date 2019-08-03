@@ -16,7 +16,7 @@ var (
 	ErrNotActiveIndicesInfo = errors.New("object is not a active indices list")
 
 	// maxActiveIndicesListSize defines the max number of active indices can cache.
-	maxActiveIndicesListSize = 100
+	maxActiveIndicesListSize = 4
 
 	// Metrics.
 	activeIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -42,7 +42,7 @@ type ActiveIndicesCache struct {
 }
 
 // activeIndicesKeyFn takes the epoch as the key for the active indices of a given epoch.
-func ActiveIndicesKeyFn(obj interface{}) (string, error) {
+func activeIndicesKeyFn(obj interface{}) (string, error) {
 	aInfo, ok := obj.(*ActiveIndicesByEpoch)
 	if !ok {
 		return "", ErrNotActiveIndicesInfo
@@ -54,7 +54,7 @@ func ActiveIndicesKeyFn(obj interface{}) (string, error) {
 // NewActiveIndicesCache creates a new active indices cache for storing/accessing active validator indices.
 func NewActiveIndicesCache() *ActiveIndicesCache {
 	return &ActiveIndicesCache{
-		activeIndicesCache: cache.NewFIFO(ActiveIndicesKeyFn),
+		activeIndicesCache: cache.NewFIFO(activeIndicesKeyFn),
 	}
 }
 
