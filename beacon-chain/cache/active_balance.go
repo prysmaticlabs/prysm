@@ -94,6 +94,10 @@ func (c *ActiveBalanceCache) ActiveBalanceInEpoch(epoch uint64) (uint64, error) 
 // AddActiveBalance adds ActiveBalanceByEpoch object to the cache. This method also trims the least
 // recently added ActiveBalanceByEpoch object if the cache size has ready the max cache size limit.
 func (c *ActiveBalanceCache) AddActiveBalance(activeBalance *ActiveBalanceByEpoch) error {
+	if !featureconfig.FeatureConfig().EnableActiveBalanceCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.activeBalanceCache.AddIfNotPresent(activeBalance); err != nil {
