@@ -133,7 +133,6 @@ func (ss *Service) run() {
 	if err != nil {
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
 	}
-	slog.Errorf("Is Synced: %v", synced)
 	ss.querierFinished = true
 
 	if synced {
