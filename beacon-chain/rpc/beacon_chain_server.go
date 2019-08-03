@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"sort"
-	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -135,7 +134,7 @@ func (bs *BeaconChainServer) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return nil, status.Errorf(codes.NotFound, "block for epoch %d does not exists in DB", q.Epoch)
+			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -156,18 +155,12 @@ func (bs *BeaconChainServer) ListBlocks(
 		}
 
 		if blk == nil {
-			return nil, status.Errorf(codes.NotFound, "block for root %#x does not exists in DB", q.Root)
-		}
-
-		token, err := strconv.Atoi(req.PageToken)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not convert page token: %v", err)
+			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        []*ethpb.BeaconBlock{blk},
-			TotalSize:     1,
-			NextPageToken: strconv.Itoa(token + 1),
+			Blocks:    []*ethpb.BeaconBlock{blk},
+			TotalSize: 1,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
@@ -178,7 +171,7 @@ func (bs *BeaconChainServer) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return nil, status.Errorf(codes.NotFound, "block for slot %d does not exists in DB", q.Slot)
+			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
