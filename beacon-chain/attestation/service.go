@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -230,15 +229,12 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 	if err != nil {
 		return err
 	}
-	slot, err := helpers.AttestationDataSlot(beaconState, attestation.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
+
 	log.WithFields(logrus.Fields{
-		"attestationSlot":    slot,
-		"attestationShard":   attestation.Data.Crosslink.Shard,
-		"committeesList":     committee,
-		"lengthOfCommittees": len(committee),
+		"attestationTargetEpoch": attestation.Data.Target.Epoch,
+		"attestationShard":       attestation.Data.Crosslink.Shard,
+		"committeesList":         committee,
+		"lengthOfCommittees":     len(committee),
 	}).Debug("Updating latest attestation")
 
 	// Check each bit of participation bitfield to find out which
@@ -264,21 +260,21 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
 		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].PublicKey)
-		newAttestationSlot := slot
+		attTargetBoundarySlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
 		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
-			currentAttestationSlot = slot
+			currentAttestationSlot = attTargetBoundarySlot
 		}
 		// If the attestation is newer than this attester's one in pool.
-		if newAttestationSlot > currentAttestationSlot {
+		if attTargetBoundarySlot > currentAttestationSlot {
 			a.store.m[pubkey] = attestation
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": slot,
-					"sourceEpoch":     attestation.Data.Source.Epoch,
+					"attTargetBoundarySlot": attTargetBoundarySlot,
+					"sourceEpoch":           attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
 		}

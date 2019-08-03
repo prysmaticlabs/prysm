@@ -15,7 +15,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -426,34 +425,23 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	head, err := rs.db.ChainHead()
-	if err != nil {
-		return err
-	}
-	highestSlot := head.Slot
-
 	headState, err := rs.db.HeadState(rs.ctx)
 	if err != nil {
 		return err
 	}
-	slot, err := helpers.AttestationDataSlot(headState, attestation.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
 
+	attTargetEpoch := attestation.Data.Target.Epoch
+	headFinalizedEpoch := headState.FinalizedCheckpoint.Epoch
 	span.AddAttributes(
-		trace.Int64Attribute("attestation.Data.Slot", int64(slot)),
-		trace.Int64Attribute("finalized state slot", int64(highestSlot-params.BeaconConfig().SlotsPerEpoch)),
+		trace.Int64Attribute("attestation.target.epoch", int64(attTargetEpoch)),
+		trace.Int64Attribute("finalized.epoch", int64(headFinalizedEpoch)),
 	)
-	oneEpochAgo := uint64(0)
-	if highestSlot > params.BeaconConfig().SlotsPerEpoch {
-		oneEpochAgo = highestSlot - params.BeaconConfig().SlotsPerEpoch
-	}
-	if slot < oneEpochAgo {
+
+	if attTargetEpoch < headFinalizedEpoch {
 		log.WithFields(logrus.Fields{
-			"receivedSlot": slot,
-			"epochSlot":    oneEpochAgo},
-		).Debug("Skipping received attestation with slot smaller than one epoch ago")
+			"receivedTargetEpoch": attTargetEpoch,
+			"finalizedEpoch":      headFinalizedEpoch},
+		).Debug("Skipping received attestation with target epoch less than current finalized epoch")
 		return nil
 	}
 

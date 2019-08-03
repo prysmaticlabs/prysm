@@ -367,7 +367,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pb.BeaconState{
-		Slot: 2,
+		Slot:                2,
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
@@ -424,7 +425,10 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{Slot: 2 * params.BeaconConfig().SlotsPerEpoch}
+	state := &pb.BeaconState{
+		Slot:                2 * params.BeaconConfig().SlotsPerEpoch,
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
+	}
 	if err := db.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -466,7 +470,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		t.Error(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Skipping received attestation with slot smaller than one epoch ago")
+	testutil.AssertLogsContain(t, hook, "Skipping received attestation with target epoch less than current finalized epoch")
 }
 
 func TestReceiveExitReq_OK(t *testing.T) {
