@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"os"
 	"time"
@@ -24,8 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	rand2 "golang.org/x/exp/rand"
-	"gonum.org/v1/gonum/stat/distuv"
 )
 
 var (
@@ -43,8 +40,6 @@ func main() {
 	var numberOfDeposits int64
 	var depositAmount int64
 	var depositDelay int64
-	var variableTx bool
-	var txDeviation int64
 	var randomKey bool
 
 	customFormatter := new(prefixed.TextFormatter)
@@ -113,17 +108,6 @@ func main() {
 			Destination: &depositDelay,
 		},
 		cli.BoolFlag{
-			Name:        "variableTx",
-			Usage:       "This enables variable transaction latencies to simulate real-world transactions",
-			Destination: &variableTx,
-		},
-		cli.Int64Flag{
-			Name:        "txDeviation",
-			Usage:       "The standard deviation between transaction times",
-			Value:       2,
-			Destination: &txDeviation,
-		},
-		cli.BoolFlag{
 			Name:        "random-key",
 			Usage:       "Use a randomly generated keystore key",
 			Destination: &randomKey,
@@ -183,8 +167,6 @@ func main() {
 			log.Fatal(err)
 		}
 
-		statDist := buildStatisticalDist(depositDelay, numberOfDeposits, txDeviation)
-
 		validatorKeys := make(map[string]*prysmKeyStore.Key)
 		if randomKey {
 			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
@@ -221,12 +203,6 @@ func main() {
 					"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
 				}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddr, validatorKey.PublicKey.Marshal())
 
-				// If flag is enabled make transaction times variable
-				if variableTx {
-					time.Sleep(time.Duration(math.Abs(statDist.Rand())) * time.Second)
-					continue
-				}
-
 				time.Sleep(time.Duration(depositDelay) * time.Second)
 			}
 		}
@@ -236,18 +212,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func buildStatisticalDist(depositDelay int64, numberOfDeposits int64, txDeviation int64) *distuv.StudentsT {
-	src := rand2.NewSource(uint64(time.Now().Unix()))
-	dist := &distuv.StudentsT{
-		Mu:    float64(depositDelay),
-		Sigma: float64(txDeviation),
-		Nu:    float64(numberOfDeposits - 1),
-		Src:   src,
-	}
-
-	return dist
 }
 
 func loadTextFromFile(filepath string) string {

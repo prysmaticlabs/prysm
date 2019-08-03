@@ -978,12 +978,6 @@ go_repository(
 )
 
 go_repository(
-    name = "org_gonum_v1_gonum",
-    commit = "70a1e933af10e87000d2ccabdd509b87d8626153",
-    importpath = "gonum.org/v1/gonum",
-)
-
-go_repository(
     name = "org_golang_x_exp",
     commit = "438050ddec5e7f808979ed57d041cebbc8e2d8a9",
     importpath = "golang.org/x/exp",
