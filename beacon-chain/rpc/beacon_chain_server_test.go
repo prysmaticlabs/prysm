@@ -879,7 +879,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
+func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -922,9 +922,12 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     1}},
+				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				TotalSize: 1}},
+		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
@@ -990,21 +993,55 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 
-	wanted = "block for epoch 0 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err := bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 
-	wanted = "block for slot 0 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 
-	wanted = "block for root 0x41 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
+	}
+
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 }
