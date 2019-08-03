@@ -1,11 +1,11 @@
 package hashutil
 
 import (
-	"crypto/sha256"
 	"errors"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/minio/sha256-simd"
 	"golang.org/x/crypto/sha3"
 )
 
