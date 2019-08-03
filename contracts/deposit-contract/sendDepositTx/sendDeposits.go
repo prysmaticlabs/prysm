@@ -40,8 +40,6 @@ func main() {
 	var numberOfDeposits int64
 	var depositAmount int64
 	var depositDelay int64
-	var variableTx bool
-	var txDeviation int64
 	var randomKey bool
 
 	customFormatter := new(prefixed.TextFormatter)
@@ -108,17 +106,6 @@ func main() {
 			Value:       5,
 			Usage:       "The time delay between sending the deposits to the contract(in seconds)",
 			Destination: &depositDelay,
-		},
-		cli.BoolFlag{
-			Name:        "variableTx",
-			Usage:       "This enables variable transaction latencies to simulate real-world transactions",
-			Destination: &variableTx,
-		},
-		cli.Int64Flag{
-			Name:        "txDeviation",
-			Usage:       "The standard deviation between transaction times",
-			Value:       2,
-			Destination: &txDeviation,
 		},
 		cli.BoolFlag{
 			Name:        "random-key",
