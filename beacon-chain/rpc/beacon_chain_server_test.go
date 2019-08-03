@@ -326,6 +326,11 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 				{Index: 3, PublicKey: []byte{3}, Balance: 3},
 				{Index: 4, PublicKey: []byte{4}, Balance: 4}},
 			}},
+		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
+			res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
+				{Index: 3, PublicKey: []byte{3}, Balance: 3},
+				{Index: 4, PublicKey: []byte{4}, Balance: 4}},
+			}},
 	}
 
 	for _, test := range tests {
