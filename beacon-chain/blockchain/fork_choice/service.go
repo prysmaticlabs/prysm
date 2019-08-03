@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "forkchoice")
@@ -262,7 +260,6 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	}
 
 	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-	s.OnTick(uint64(time.Now().Unix()))
 	slotTime := preState.GenesisTime + b.Slot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, s.time)
@@ -386,7 +383,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	if baseState == nil {
 		return fmt.Errorf("pre state of target block %d does not exist", tgtSlot)
 	}
-	s.OnTick(uint64(time.Now().Unix()))
+
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, s.time)
@@ -412,9 +409,6 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	if err != nil {
 		return fmt.Errorf("could not get attestation slot: %v", err)
 	}
-	// Delay attestation inclusion until the attested slot is in the past.
-	waitForAttInclDelay(s.ctx, baseState.GenesisTime, aSlot+1)
-	s.OnTick(uint64(time.Now().Unix()))
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
 		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, s.time)
@@ -507,18 +501,4 @@ func logEpochData(beaconState *pb.BeaconState) {
 	log.WithField(
 		"numValidators", len(beaconState.Validators),
 	).Info("Validator registry length")
-}
-
-// waitForAttInclDelay waits until the next slot because attestation can only affect
-// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
-// until the attested slot is in the past.
-func waitForAttInclDelay(ctx context.Context, genesisTime uint64, slot uint64) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
-	defer span.End()
-
-	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclude := time.Unix(int64(genesisTime), 0).Add(duration)
-
-	time.Sleep(time.Until(timeToInclude))
 }

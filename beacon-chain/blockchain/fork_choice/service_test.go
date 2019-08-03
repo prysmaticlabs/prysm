@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -65,7 +67,7 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisBlk := &ethpb.BeaconBlock{StateRoot: genesisStateRoot[:]}
+	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
 	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
 		t.Fatal(err)
@@ -176,6 +178,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 }
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
+	helpers.ClearAllCaches()
 	ctx := context.Background()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -387,7 +390,7 @@ func TestStore_OnBlockErrors(t *testing.T) {
 			blk:           &ethpb.BeaconBlock{},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "pre stacte of slot 0 does not exist",
+			wantErrString: "pre state of slot 0 does not exist",
 		},
 		{
 			name:          "block is from the feature",

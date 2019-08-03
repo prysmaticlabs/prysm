@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -52,6 +56,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return fmt.Errorf("failed to compute state from block head: %v", err)
 	}
+
+	// Update fork choice service's time tracker to current time.
+	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 
 	// Run block state transition and broadcast the block to other peers.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
@@ -109,13 +116,19 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		return fmt.Errorf("failed to compute state from block head: %v", err)
 	}
 
+	// broadcast the attestation to other peers.
 	c.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
 		Hash: root[:],
 	})
 
 	c.opsPoolService.IncomingAttFeed().Send(att)
 
-	// Run attestation transition and broadcast the attestation to other peers.
+	// Delay attestation inclusion until the attested slot is in the past.
+	if err := c.waitForAttInclDelay(ctx, att); err != nil {
+		return errors.Wrap(err, "could not delay attestation inclusion")
+	}
+	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
+
 	if err := c.forkChoiceStore.OnAttestation(att); err != nil {
 		return fmt.Errorf("failed to process block from fork choice service: %v", err)
 	}
@@ -162,5 +175,29 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
+	return nil
+}
+
+// waitForAttInclDelay waits until the next slot because attestation can only affect
+// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
+// until the attested slot is in the past.
+func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
+	defer span.End()
+
+	s, err := c.beaconDB.ForkChoiceState(ctx, a.Data.Target.Root)
+	if err != nil {
+		return fmt.Errorf("could not get state: %v", err)
+	}
+	slot, err := helpers.AttestationDataSlot(s, a.Data)
+	if err != nil {
+		return fmt.Errorf("could not get attestation slot: %v", err)
+	}
+
+	nextSlot := slot + 1
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
+	timeToInclude := time.Unix(int64(s.GenesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToInclude))
 	return nil
 }
