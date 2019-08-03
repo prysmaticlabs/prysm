@@ -94,6 +94,10 @@ func (c *StartShardCache) StartShardInEpoch(epoch uint64) (uint64, error) {
 // AddStartShard adds StartShardByEpoch object to the cache. This method also trims the least
 // recently added StartShardByEpoch object if the cache size has ready the max cache size limit.
 func (c *StartShardCache) AddStartShard(startShard *StartShardByEpoch) error {
+	if !featureconfig.FeatureConfig().EnableStartShardCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.startShardCache.AddIfNotPresent(startShard); err != nil {

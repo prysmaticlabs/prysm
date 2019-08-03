@@ -98,6 +98,10 @@ func (a *AncestorBlockCache) AncestorBySlot(blockHash []byte, height uint64) (*A
 // AddBlockAncestor adds block ancestor object to the cache. This method also trims the least
 // recently added ancestor if the cache size has ready the max cache size limit.
 func (a *AncestorBlockCache) AddBlockAncestor(ancestorInfo *AncestorInfo) error {
+	if !featureconfig.FeatureConfig().EnableAncestorBlockCache {
+		return nil
+	}
+
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
