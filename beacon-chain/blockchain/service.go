@@ -141,7 +141,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return errors.Wrap(err, "could not save genesis block to disk")
 	}
 	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-		return fmt.Errorf("could not set chain head, %v", err)
+		return errors.Wrap(err, "could not set chain head")
 	}
 	if err := c.forkChoiceStore.GensisStore(beaconState); err != nil {
 		return errors.Wrap(err, "could not start gensis store for fork choice")

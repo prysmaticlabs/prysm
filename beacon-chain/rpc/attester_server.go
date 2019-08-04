@@ -99,7 +99,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots up to %d: %v", req.Slot, err)
+		return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
@@ -110,8 +110,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get target block for slot %d: %v",
-				epochStartSlot, err)
+			return nil, errors.Wrapf(err, "could not get target block for slot %d", epochStartSlot)
 		}
 	}
 

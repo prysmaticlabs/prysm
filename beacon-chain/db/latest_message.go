@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
@@ -73,7 +73,7 @@ func (db *BeaconDB) HasLatestMessage(index uint64) bool {
 func createLatestMessage(enc []byte) (*pb.LatestMessage, error) {
 	l := &pb.LatestMessage{}
 	if err := proto.Unmarshal(enc, l); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
+		return nil, errors.Wrap(err, "failed to unmarshal encoding: %v")
 	}
 	return l, nil
 }

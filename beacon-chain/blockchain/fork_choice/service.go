@@ -3,9 +3,9 @@ package forkchoice
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -59,14 +59,14 @@ func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
-		return fmt.Errorf("could not tree hash genesis state: %v", err)
+		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 
 	blkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
-		return fmt.Errorf("could not tree hash genesis block: %v", err)
+		return errors.Wrap(err, "could not tree hash genesis block")
 	}
 
 	s.time = genesisState.GenesisTime
@@ -74,13 +74,13 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
 	if err := s.db.SaveBlock(genesisBlk); err != nil {
-		return fmt.Errorf("could not save genesis block: %v", err)
+		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.db.SaveForkChoiceState(s.ctx, genesisState, blkRoot[:]); err != nil {
-		return fmt.Errorf("could not save genesis state: %v", err)
+		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.db.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
-		return fmt.Errorf("could not save justified checkpt: %v", err)
+		return errors.Wrap(err, "could not save justified checkpt")
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 	b, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
-		return nil, fmt.Errorf("could not get ancestor block: %v", err)
+		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
 
 	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
@@ -126,21 +126,21 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	lastJustifiedState, err := s.db.CheckpointState(s.ctx, s.justifiedCheckpt)
 	if err != nil {
-		return 0, fmt.Errorf("could not get checkpoint state: %v", err)
+		return 0, errors.Wrap(err, "could not get checkpoint state")
 	}
 	if lastJustifiedState == nil {
-		return 0, fmt.Errorf("could not get justified state at epoch %d: %v", s.justifiedCheckpt.Epoch, err)
+		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.justifiedCheckpt.Epoch)
 	}
 
 	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
 	activeIndices, err := helpers.ActiveValidatorIndices(lastJustifiedState, lastJustifiedEpoch)
 	if err != nil {
-		return 0, fmt.Errorf("could not get active indices for last checkpoint state: %v", err)
+		return 0, errors.Wrap(err, "could not get active indices for last checkpoint state")
 	}
 
 	wantedBlk, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
-		return 0, fmt.Errorf("could not get slot for an ancestor block: %v", err)
+		return 0, errors.Wrap(err, "could not get slot for an ancestor block")
 	}
 
 	balances := uint64(0)
@@ -148,12 +148,12 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 		if s.db.HasLatestMessage(i) {
 			msg, err := s.db.LatestMessage(i)
 			if err != nil {
-				return 0, fmt.Errorf("could not get validator %d's latest msg: %v", i, err)
+				return 0, errors.Wrapf(err, "could not get validator %d's latest msg", i)
 			}
 
 			wantedRoot, err := s.Ancestor(msg.Root, wantedBlk.Slot)
 			if err != nil {
-				return 0, fmt.Errorf("could not get ancestor root for slot %d: %v", wantedBlk.Slot, err)
+				return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
 			}
 			if bytes.Equal(wantedRoot, root) {
 				balances += lastJustifiedState.Validators[i].EffectiveBalance
@@ -186,7 +186,7 @@ func (s *Store) Head() ([]byte, error) {
 	for {
 		children, err := s.db.ChildrenBlocksFromParent(head, justifiedSlot)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve children info: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve children info")
 		}
 
 		if len(children) == 0 {
@@ -196,12 +196,12 @@ func (s *Store) Head() ([]byte, error) {
 		head = children[0]
 		highest, err := s.LatestAttestingBalance(head)
 		if err != nil {
-			return nil, fmt.Errorf("could not get latest balance: %v", err)
+			return nil, errors.Wrap(err, "could not get latest balance")
 		}
 		for _, child := range children[1:] {
 			balance, err := s.LatestAttestingBalance(child)
 			if err != nil {
-				return nil, fmt.Errorf("could not get latest balance: %v", err)
+				return nil, errors.Wrap(err, "could not get latest balance")
 			}
 			if balance > highest {
 				highest = balance
@@ -253,10 +253,10 @@ func (s *Store) OnTick(t uint64) {
 func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	preState, err := s.db.ForkChoiceState(s.ctx, b.ParentRoot)
 	if err != nil {
-		return fmt.Errorf("could not get pre state for slot %d: %v", b.Slot, err)
+		return errors.Wrapf(err, "could not get pre state for slot %d", b.Slot, err)
 	}
 	if preState == nil {
-		return fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+		return errors.Wrapf(err, "pre state of slot %d does not exist", b.Slot)
 	}
 
 	// Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
@@ -266,17 +266,17 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	}
 
 	if err := s.db.SaveBlock(b); err != nil {
-		return fmt.Errorf("could not save block from slot %d: %v", b.Slot, err)
+		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
 	// Verify block is a descendent of a finalized block.
 	finalizedBlk, err := s.db.Block(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	if err != nil || finalizedBlk == nil {
-		return fmt.Errorf("could not get finalized block: %v", err)
+		return errors.Wrap(err, "could not get finalized block")
 	}
 	root, err := ssz.SigningRoot(b)
 	if err != nil {
-		return fmt.Errorf("could not get sign root of block %d: %v", b.Slot, err)
+		return errors.Wrapf(err, "could not get sign root of block %d", b.Slot)
 	}
 
 	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
@@ -295,13 +295,13 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	postState, err := state.ExecuteStateTransition(s.ctx, preState, b)
 	if err != nil {
 		if err := s.db.DeleteBlock(b); err != nil {
-			return fmt.Errorf("could not delete bad block from db: %v", err)
+			return errors.Wrap(err, "could not delete bad block from db")
 		}
-		return fmt.Errorf("could not execute state transition: %v", err)
+		return errors.Wrap(err, "could not execute state transition")
 	}
 
 	if err := s.db.SaveForkChoiceState(s.ctx, postState, root[:]); err != nil {
-		return fmt.Errorf("could not save state: %v", err)
+		return errors.Wrap(err, "could not save state")
 	}
 
 	// Update justified check point.
@@ -320,11 +320,11 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	if helpers.IsEpochStart(postState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := saveValidatorIdx(postState, s.db); err != nil {
-			return fmt.Errorf("could not save validator index: %v", err)
+			return errors.Wrap(err, "could not save validator index")
 		}
 		// Delete exited validators of this epoch to public key -> index DB.
 		if err := deleteValidatorIdx(postState, s.db); err != nil {
-			return fmt.Errorf("could not delete validator index: %v", err)
+			return errors.Wrap(err, "could not delete validator index")
 		}
 		logEpochData(postState)
 	}
@@ -377,7 +377,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 	baseState, err := s.db.ForkChoiceState(s.ctx, tgt.Root)
 	if err != nil {
-		return fmt.Errorf("could not get pre state for slot %d: %v", tgtSlot, err)
+		return errors.Wrapf(err, "could not get pre state for slot %d", tgtSlot)
 	}
 	if baseState == nil {
 		return fmt.Errorf("pre state of target block %d does not exist", tgtSlot)
@@ -391,22 +391,22 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	// Store target checkpoint state if not yet seen.
 	exists, err := s.db.HasCheckpoint(tgt)
 	if err != nil {
-		return fmt.Errorf("could not get check point state: %v", err)
+		return errors.Wrap(err, "could not get check point state")
 	}
 	if !exists {
 		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot)
 		if err != nil {
-			return fmt.Errorf("could not process slots up to %d: %v", tgtSlot, err)
+			return errors.Wrapf(err, "could not process slots up to %d", tgtSlot)
 		}
 		if err := s.db.SaveCheckpointState(s.ctx, baseState, tgt); err != nil {
-			return fmt.Errorf("could not save check point state: %v", err)
+			return errors.Wrap(err, "could not save check point state")
 		}
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	aSlot, err := helpers.AttestationDataSlot(baseState, a.Data)
 	if err != nil {
-		return fmt.Errorf("could not get attestation slot: %v", err)
+		return errors.Wrap(err, "could not get attestation slot")
 	}
 	slotTime = baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	if slotTime > s.time {
@@ -416,7 +416,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
 	if err != nil {
-		return fmt.Errorf("could not convert attestation to indexed attestation: %v", err)
+		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
@@ -428,14 +428,14 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		s.db.HasLatestMessage(i)
 		msg, err := s.db.LatestMessage(i)
 		if err != nil {
-			return fmt.Errorf("could not get latest msg for validator %d: %v", i, err)
+			return errors.Wrapf(err, "could not get latest msg for validator %d", i)
 		}
 		if !s.db.HasLatestMessage(i) || tgt.Epoch > msg.Epoch {
 			if err := s.db.SaveLatestMessage(s.ctx, i, &pb.LatestMessage{
 				Epoch: tgt.Epoch,
 				Root:  a.Data.BeaconBlockRoot,
 			}); err != nil {
-				return fmt.Errorf("could not save latest msg for validator %d: %v", i, err)
+				return errors.Wrapf(err, "could not save latest msg for validator %d", i)
 			}
 		}
 	}
@@ -463,7 +463,7 @@ func saveValidatorIdx(state *pb.BeaconState, db *db.BeaconDB) error {
 		}
 		pubKey := state.Validators[idx].PublicKey
 		if err := db.SaveValidatorIndex(pubKey, int(idx)); err != nil {
-			return fmt.Errorf("could not save validator index: %v", err)
+			return errors.Wrap(err, "could not save validator index")
 		}
 	}
 	// Since we are processing next epoch, save the can't processed validator indices
@@ -481,7 +481,7 @@ func deleteValidatorIdx(state *pb.BeaconState, db *db.BeaconDB) error {
 	for _, idx := range exitedValidators {
 		pubKey := state.Validators[idx].PublicKey
 		if err := db.DeleteValidatorIndex(pubKey); err != nil {
-			return fmt.Errorf("could not delete validator index: %v", err)
+			return errors.Wrap(err, "could not delete validator index")
 		}
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
