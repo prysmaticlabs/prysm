@@ -25,9 +25,9 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		operationService: mockOperationService,
+		operationService: &mockOperationService{},
+		chainService:     &mockChainService{},
 		p2p:              &mockBroadcaster{},
 		beaconDB:         db,
 		cache:            cache.NewAttestationCache(),
