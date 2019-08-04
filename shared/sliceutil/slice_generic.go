@@ -1,14 +1,15 @@
 package sliceutil
 
 import (
-	"fmt"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 func interfaceToSlice(slice interface{}) ([]interface{}, error) {
 	s := reflect.ValueOf(slice)
 	if s.Kind() != reflect.Slice {
-		return nil, fmt.Errorf("slice error: not of type slice")
+		return nil, errors.New("slice error: not of type slice")
 	}
 	ret := make([]interface{}, s.Len())
 	for i := 0; i < s.Len(); i++ {
@@ -20,17 +21,15 @@ func interfaceToSlice(slice interface{}) ([]interface{}, error) {
 // GenericIntersection returns a new set with elements that are common in
 // both sets a and b.
 func GenericIntersection(a, b interface{}) (reflect.Value, error) {
-
 	set := reflect.MakeSlice(reflect.TypeOf(a), 0, 0)
-	set1, err1 := interfaceToSlice(a)
-	set2, err2 := interfaceToSlice(b)
-
-	if err1 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err1)
+	set1, err := interfaceToSlice(a)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 
-	if err2 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err2)
+	set2, err := interfaceToSlice(b)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 	if len(set1) == 0 || len(set2) == 0 {
 		return set, nil
@@ -60,15 +59,14 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 func GenericUnion(a, b interface{}) (reflect.Value, error) {
 
 	set := reflect.MakeSlice(reflect.TypeOf(a), 0, 0)
-	set1, err1 := interfaceToSlice(a)
-	set2, err2 := interfaceToSlice(b)
-
-	if err1 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err1)
+	set1, err := interfaceToSlice(a)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 
-	if err2 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err2)
+	set2, err := interfaceToSlice(b)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 
 	if len(set1) == 0 {
@@ -104,15 +102,14 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 // set b.
 func GenericNot(a, b interface{}) (reflect.Value, error) {
 	set := reflect.MakeSlice(reflect.TypeOf(a), 0, 0)
-	set1, err1 := interfaceToSlice(a)
-	set2, err2 := interfaceToSlice(b)
-
-	if err1 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err1)
+	set1, err := interfaceToSlice(a)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 
-	if err2 != nil {
-		return set, fmt.Errorf("slice type is invalid %v", err2)
+	set2, err := interfaceToSlice(b)
+	if err != nil {
+		return set, errors.Wrap(err, "slice type is invalid")
 	}
 
 	if len(set1) == 0 {
