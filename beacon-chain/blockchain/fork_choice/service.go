@@ -294,7 +294,6 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	// Make block root as bad to reject in sync.
 	postState, err := state.ExecuteStateTransition(s.ctx, preState, b)
 	if err != nil {
-		s.db.MarkEvilBlockHash(root)
 		if err := s.db.DeleteBlock(b); err != nil {
 			return fmt.Errorf("could not delete bad block from db: %v", err)
 		}

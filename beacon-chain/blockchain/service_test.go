@@ -14,6 +14,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -180,9 +181,7 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB) *ChainService {
 		OpsPoolService: &mockOperationService{},
 		P2p:            &mockBroadcaster{},
 	}
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
+
 	chainService, err := NewChainService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
@@ -202,6 +201,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
+	helpers.ClearAllCaches()
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)

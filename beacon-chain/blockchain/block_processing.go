@@ -62,12 +62,13 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 
 	// Run block state transition and broadcast the block to other peers.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+		c.beaconDB.MarkEvilBlockHash(root)
 		return fmt.Errorf("failed to process block from fork choice service: %v", err)
 	}
 	log.WithFields(logrus.Fields{
 		"slots": block.Slot,
 		"root":  hex.EncodeToString(root[:]),
-	}).Info("Successful updated fork choice store for block")
+	}).Info("Finished state transition and updated store for block")
 
 	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
@@ -94,7 +95,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
-	}).Info("successful ran fork choice for block")
+	}).Info("Finished fork choice for block")
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
@@ -134,7 +135,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	}
 	log.WithFields(logrus.Fields{
 		"root": hex.EncodeToString(root[:]),
-	}).Info("Successful updated fork choice store for attestation")
+	}).Info("Finished update fork choice store for attestation")
 
 	// Run fork choice for head block and head state.
 	headRoot, err := c.forkChoiceStore.Head()
@@ -153,10 +154,11 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
 		return fmt.Errorf("failed to update head: %v", err)
 	}
+
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
-	}).Info("successful ran fork choice for attestation")
+	}).Info("Finished fork choice for attestation")
 
 	return nil
 }
