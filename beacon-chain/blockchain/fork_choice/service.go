@@ -442,6 +442,11 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	return nil
 }
 
+// FinalizedCheckpt returns the latest finalized check point from fork choice store.
+func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return s.finalizedCheckpt
+}
+
 // saveValidatorIdx saves the validators public key to index mapping in DB, these
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.

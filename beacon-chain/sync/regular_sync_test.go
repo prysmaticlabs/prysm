@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -56,6 +55,14 @@ type mockChainService struct {
 	sFeed *event.Feed
 	cFeed *event.Feed
 	db    *db.BeaconDB
+}
+
+func (ms *mockChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	return &ethpb.BeaconBlock{}, nil
 }
 
 func (ms *mockChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
@@ -394,64 +401,6 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Updated att pool and fork choice")
 }
 
-func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	hook := logTest.NewGlobal()
-	ms := &mockChainService{}
-	os := &mockOperationService{}
-	ctx := context.Background()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{
-		Slot:                2 * params.BeaconConfig().SlotsPerEpoch,
-		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
-	}
-	if err := db.SaveState(ctx, state); err != nil {
-		t.Fatalf("Could not save state: %v", err)
-	}
-	headBlock := &ethpb.BeaconBlock{Slot: state.Slot}
-	if err := db.SaveBlock(headBlock); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	if err := db.UpdateChainHead(ctx, headBlock, state); err != nil {
-		t.Fatalf("failed to update chain head: %v", err)
-	}
-	cfg := &RegularSyncConfig{
-		AttsService:      &mockAttestationService{},
-		ChainService:     ms,
-		OperationService: os,
-		P2P:              &mockP2P{},
-		BeaconDB:         db,
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	request1 := &pb.AttestationResponse{
-		Attestation: &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: 900,
-				},
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
-			},
-		},
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: "",
-	}
-
-	if err := ss.receiveAttestation(msg1); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Skipping received attestation with target epoch less than current finalized epoch")
-}
-
 func TestReceiveExitReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	os := &mockOperationService{}
@@ -667,20 +616,9 @@ func TestHandleStateReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	genesisTime := time.Now()
-	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(context.Background(), unixTime, []*ethpb.Deposit{}, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("could not initialize beacon state to disk: %v", err)
-	}
-	beaconState, err := db.HeadState(ctx)
-	if err != nil {
-		t.Fatalf("could not attempt fetch beacon state: %v", err)
-	}
-
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := hashutil.HashProto(&pb.BeaconState{})
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}

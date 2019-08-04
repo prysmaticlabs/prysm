@@ -43,6 +43,7 @@ type chainService interface {
 	blockchain.AttestationReceiver
 	blockchain.BlockProcessor
 	blockchain.ChainFeeds
+	blockchain.FinalizationRetriever
 }
 
 type attsService interface {
@@ -300,8 +301,11 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		return errors.New("incoming message is not *pb.BeaconStateRequest")
 	}
 
-	// TODO get finalized state
-	fState := &pb.BeaconState{}
+	fState, err := rs.chainService.FinalizedState(ctx)
+	if err != nil {
+		log.Errorf("Could not retrieve finalized state: %v", err)
+		return err
+	}
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
@@ -316,9 +320,11 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		return err
 	}
 
-	// TODO get finalized block
-	finalizedBlk := &ethpb.BeaconBlock{}
-
+	finalizedBlk, err := rs.chainService.FinalizedBlock()
+	if err != nil {
+		log.Errorf("Could not retrieve finalized block: %v", err)
+		return err
+	}
 	log.WithField(
 		"beaconState", fmt.Sprintf("%#x", root),
 	).Debug("Sending finalized state and block to peer")
@@ -412,7 +418,6 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 			Debug("Skipping received attestation")
 		return nil
 	}
-
 
 	go func() {
 		if err := rs.chainService.ReceiveAttestation(ctx, att); err != nil {

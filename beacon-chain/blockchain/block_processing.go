@@ -37,6 +37,13 @@ type BlockProcessor interface {
 	CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error
 }
 
+// FinalizationRetriever defines a common interface for methods in blockchain service which
+// directly retrieves current finalized block and state.
+type FinalizationRetriever interface {
+	FinalizedBlock() (*ethpb.BeaconBlock, error)
+	FinalizedState(ctx context.Context) (*pb.BeaconState, error)
+}
+
 // BlockFailedProcessingErr represents a block failing a state transition function.
 type BlockFailedProcessingErr struct {
 	err error
@@ -202,4 +209,30 @@ func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attesta
 
 	time.Sleep(time.Until(timeToInclude))
 	return nil
+}
+
+// FinalizedBlock returns the latest finalized block tracked in fork choice service.
+func (c *ChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	checkpt := c.forkChoiceStore.FinalizedCheckpt()
+	finalizedBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(checkpt.Root))
+	if err != nil {
+		return nil, err
+	}
+	if finalizedBlk == nil {
+		return nil, fmt.Errorf("finalized block %#x does not exist in db", hex.EncodeToString(checkpt.Root))
+	}
+	return finalizedBlk, nil
+}
+
+// FinalizedState returns the latest finalized state tracked in fork choice service.
+func (c *ChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
+	checkpt := c.forkChoiceStore.FinalizedCheckpt()
+	finalizedState, err := c.beaconDB.ForkChoiceState(ctx, checkpt.Root)
+	if err != nil {
+		return nil, err
+	}
+	if finalizedState == nil {
+		return nil, fmt.Errorf("finalized state %#x does not exist in db", hex.EncodeToString(checkpt.Root))
+	}
+	return finalizedState, nil
 }
