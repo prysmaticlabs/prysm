@@ -390,7 +390,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	if err := ss.receiveAttestation(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending newly received attestation to subscribers")
+	testutil.AssertLogsContain(t, hook, "Updated att pool and fork choice")
 }
 
 func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {

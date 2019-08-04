@@ -26,6 +26,7 @@ go_test(
         "lmd_ghost_yaml_test.go",
         "service_test.go",
     ],
+    data = ["lmd_ghost_test.yaml"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

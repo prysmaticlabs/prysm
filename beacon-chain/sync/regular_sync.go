@@ -4,6 +4,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"runtime/debug"
 	"sync"
@@ -399,14 +400,15 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot)),
+		"attRoot":  hex.EncodeToString(attRoot[:]),
+		"headRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
 	hasAttestation := rs.db.HasAttestation(attRoot)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attRoot[:]))).
+		log.WithField("attRoot", hex.EncodeToString(attRoot[:])).
 			Debug("Skipping received attestation")
 		return nil
 	}
@@ -422,6 +424,11 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	rs.p2p.Reputation(msg.Peer, p2p.RepRewardValidAttestation)
 	sentAttestation.Inc()
 	sendAttestationSpan.End()
+
+	log.WithFields(logrus.Fields{
+		"attRoot":  hex.EncodeToString(attRoot[:]),
+		"headRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+	}).Debug("Updated att pool and fork choice")
 	return nil
 }
 
