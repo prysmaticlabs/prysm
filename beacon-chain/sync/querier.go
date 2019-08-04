@@ -243,9 +243,5 @@ func (q *Querier) IsSynced() (bool, error) {
 		return false, nil
 	}
 
-	if block.Slot >= q.currentHeadSlot {
-		return true, nil
-	}
-
-	return false, err
+	return block.Slot >= q.currentHeadSlot, nil
 }

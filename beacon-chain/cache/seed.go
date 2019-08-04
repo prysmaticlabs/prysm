@@ -93,6 +93,10 @@ func (c *SeedCache) SeedInEpoch(epoch uint64) ([]byte, error) {
 // AddSeed adds SeedByEpoch object to the cache. This method also trims the least
 // recently added SeedByEpoch object if the cache size has ready the max cache size limit.
 func (c *SeedCache) AddSeed(seed *SeedByEpoch) error {
+	if !featureconfig.FeatureConfig().EnableSeedCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.seedCache.AddIfNotPresent(seed); err != nil {
