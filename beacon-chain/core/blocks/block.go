@@ -4,8 +4,6 @@
 package blocks
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"

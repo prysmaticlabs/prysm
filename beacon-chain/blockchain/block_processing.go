@@ -75,7 +75,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	}
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
-		return beaconState, errors.Wrapf(err, "block with slot %d is not ready for processing: %v", block.Slot)
+		return beaconState, errors.Wrapf(err, "block with slot %d is not ready for processing", block.Slot)
 	}
 
 	// We save the block to the DB and broadcast it to our peers.

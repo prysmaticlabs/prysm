@@ -412,7 +412,7 @@ func ProcessAttesterSlashings(
 ) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
 		if err := verifyAttesterSlashing(beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify attester slashing #%d", idx)
+			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
@@ -885,7 +885,7 @@ func ProcessDeposits(
 //     if pubkey not in validator_pubkeys:
 //         # Verify the deposit signature (proof of possession).
 //         # Invalid signatures are allowed by the deposit contract, and hence included on-chain, but must not be processed.
-//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature, get_domain(state, DOMAIN_DEPOSIT)):
+//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature%d, get_domain(state, DOMAIN_DEPOSIT)):
 //             return
 //
 //         # Add validator and balance entries
@@ -996,7 +996,7 @@ func ProcessVoluntaryExits(
 
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit); err != nil {
-			return nil, errors.Wrapf(err, "could not verify exit #%d", idx)
+			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
