@@ -131,7 +131,7 @@ func ComputeCommittee(
 	for i := start; i < end; i++ {
 		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
 		if err != nil {
-			return []uint64{}, fmt.Errorf("could not get shuffled index at index %d: %v", i, err)
+			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
 		}
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}

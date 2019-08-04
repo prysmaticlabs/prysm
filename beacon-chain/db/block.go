@@ -311,7 +311,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBloc
 		mainChainBucket := tx.Bucket(mainChainBucket)
 
 		if blockBucket.Get(blockRoot[:]) == nil {
-			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockRoot, err)
+			return fmt.Errorf("expected block %#x to have already been saved before updating head", blockRoot)
 		}
 
 		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
