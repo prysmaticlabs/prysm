@@ -75,7 +75,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	}
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
-		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
+		return beaconState, errors.Wrapf(err, "block with slot %d is not ready for processing", block.Slot)
 	}
 
 	// We save the block to the DB and broadcast it to our peers.
@@ -142,7 +142,7 @@ func (c *ChainService) VerifyBlockValidity(
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
-		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
+		return errors.Wrap(err, "block does not fulfill pre-processing conditions")
 	}
 	return nil
 }

@@ -522,7 +522,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 	response, err := rs.respondBatchedBlocks(ctx, req.FinalizedRoot, req.CanonicalRoot)
 	cancel()
 	if err != nil {
-		return fmt.Errorf("could not build canonical block list %v", err)
+		return errors.Wrap(err, "could not build canonical block list")
 	}
 	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 

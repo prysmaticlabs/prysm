@@ -32,9 +32,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "87fc6a2b128147a0a3039a2fd0b53cc1f2ed5adb8716f50756544a572999ae9a",
-    strip_prefix = "rules_docker-0.8.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.8.1.tar.gz",
+    sha256 = "e513c0ac6534810eb7a14bf025a0f159726753f97f74ab7863c650d26e01d677",
+    strip_prefix = "rules_docker-0.9.0",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.9.0.tar.gz",
 )
 
 http_archive(
@@ -52,7 +52,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "db638bd2c5f8c2c55403fb41ba9e19c880907ded",
+    commit = "8dc6490f819d330361f46201e3390ce5457564a2",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
