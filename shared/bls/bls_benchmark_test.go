@@ -12,8 +12,8 @@ func BenchmarkSignature_Verify(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	msg := []byte("benchmark")
-	domain := uint64(100)
+	msg := []byte("Some msg")
+	domain := uint64(42)
 	sig := sk.Sign(msg, domain)
 
 	b.ResetTimer()
@@ -26,8 +26,8 @@ func BenchmarkSignature_Verify(b *testing.B) {
 
 func BenchmarkSignature_VerifyAggregate(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
-	msg := []byte("benchmark")
-	domain := uint64(100)
+	msg := []byte("signed message")
+	domain := uint64(0)
 
 	var aggregated *bls.Signature
 	var pks []*bls.PublicKey
