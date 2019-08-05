@@ -22,6 +22,10 @@ func (i index) Less(than llrb.Item) bool {
 	return i < than.(index)
 }
 
+
+
+
+
 //InsertNoReplaceActiveIndicesTree inserts items in Left-Leaning Red-Black (LLRB) tree
 //  If an element has the same order, both elements remain in the tree.
 func (t *ActiveIndicesTree) InsertNoReplaceActiveIndicesTree(activeIndices []uint64) {
@@ -43,13 +47,14 @@ func (t *ActiveIndicesTree) InsertReplaceActiveIndicesTree(activeIndices []uint6
 }
 
 //RetrieveActiveIndicesTree retrieves all items from a Left-Leaning Red-Black (LLRB) tree and returns them
-func (t *ActiveIndicesTree) RetrieveActiveIndicesTree() ([]index, error) {
+func (t *ActiveIndicesTree) RetrieveActiveIndicesTree() ([]uint64, error) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	retrievedIndices := make([]index, 0, t.tree.Len())
+	retrievedIndices := make([]uint64, 0, t.tree.Len())
 	t.tree.AscendGreaterOrEqual(index(0), func(i llrb.Item) bool {
-		retrievedIndices = append(retrievedIndices, i.(index))
+		item := i.(index)
+		retrievedIndices = append(retrievedIndices, uint64(item))
 		return true
 	})
 	if len(retrievedIndices) == 0 {
@@ -58,3 +63,8 @@ func (t *ActiveIndicesTree) RetrieveActiveIndicesTree() ([]index, error) {
 	return retrievedIndices, nil
 
 }
+
+
+
+
+

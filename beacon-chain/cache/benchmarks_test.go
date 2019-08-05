@@ -10,7 +10,7 @@ var epoch = uint64(1)
 var _, treeIndices300K = createIndices(300000)
 
 func createIndices(count int) (*ActiveIndicesByEpoch, []uint64) {
-	indices := make([]uint64, count, count)
+	indices := make([]uint64, 0, count)
 	for i := 0; i < count; i++ {
 		indices = append(indices, uint64(i))
 	}
