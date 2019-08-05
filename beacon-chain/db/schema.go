@@ -32,6 +32,10 @@ var (
 	finalizedBlockLookupKey = []byte("finalized-block")
 	justifiedBlockLookupKey = []byte("justified-block")
 
+	// Watchtower
+	historicAttestationsBucket = []byte("historic-attestations-bucket")
+	historicBlockHeadersBucket = []byte("historic-block-headers-bucket")
+
 	// DB internal use
 	cleanupHistoryBucket = []byte("cleanup-history-bucket")
 )
