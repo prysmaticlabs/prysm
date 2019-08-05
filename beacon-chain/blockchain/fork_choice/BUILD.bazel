@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
+    srcs = [
+        "helpers.go",
+        "service.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/fork_choice",
     visibility = ["//visibility:public"],
     deps = [
@@ -24,6 +27,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "helpers_test.go",
         "lmd_ghost_yaml_test.go",
         "service_test.go",
     ],

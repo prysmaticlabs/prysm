@@ -5,18 +5,21 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	forkchoice "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/fork_choice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/fork_choice"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -46,6 +49,8 @@ type ChainService struct {
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
+	lastHeadSlot         uint64
+	canonicalRoots       map[uint64][]byte
 }
 
 // Config options for the service.
@@ -75,6 +80,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
 		maxRoutines:          cfg.MaxRoutines,
+		canonicalRoots:       make(map[uint64][]byte),
 	}, nil
 }
 
@@ -176,4 +182,40 @@ func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 // when the beacon state is first initialized.
 func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
+}
+
+// FinalizedBlock returns the latest finalized block tracked in fork choice service.
+func (c *ChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	checkpt := c.forkChoiceStore.FinalizedCheckpt()
+	finalizedBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(checkpt.Root))
+	if err != nil {
+		return nil, err
+	}
+	if finalizedBlk == nil {
+		return nil, fmt.Errorf("finalized block %#x does not exist in db", hex.EncodeToString(checkpt.Root))
+	}
+	return finalizedBlk, nil
+}
+
+// FinalizedState returns the latest finalized state tracked in fork choice service.
+func (c *ChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
+	checkpt := c.forkChoiceStore.FinalizedCheckpt()
+	finalizedState, err := c.beaconDB.ForkChoiceState(ctx, checkpt.Root)
+	if err != nil {
+		return nil, err
+	}
+	if finalizedState == nil {
+		return nil, fmt.Errorf("finalized state %#x does not exist in db", hex.EncodeToString(checkpt.Root))
+	}
+	return finalizedState, nil
+}
+
+// HeadRoot returns the root of the head of the chain.
+func (c *ChainService) HeadRoot() []byte {
+	return c.canonicalRoots[c.lastHeadSlot]
+}
+
+// CanonicalRoot returns the canonical root of a given slot.
+func (c *ChainService) CanonicalRoot(slot uint64) []byte {
+	return c.canonicalRoots[slot]
 }

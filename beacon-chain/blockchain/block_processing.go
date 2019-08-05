@@ -8,12 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -99,6 +97,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
 		return errors.Wrap(err, "failed to update head")
 	}
+	c.lastHeadSlot = headBlk.Slot
+	c.canonicalRoots[headBlk.Slot] = headRoot
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
@@ -132,7 +132,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	c.opsPoolService.IncomingAttFeed().Send(att)
 
 	// Delay attestation inclusion until the attested slot is in the past.
-	if err := c.waitForAttInclDelay(ctx, att); err != nil {
+	if err := waitForAttInclDelay(ctx, c.beaconDB, att); err != nil {
 		return errors.Wrap(err, "could not delay attestation inclusion")
 	}
 
@@ -162,7 +162,8 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
 		return errors.Wrap(err, "failed to update head")
 	}
-
+	c.lastHeadSlot = headBlk.Slot
+	c.canonicalRoots[headBlk.Slot] = headRoot
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
@@ -186,54 +187,4 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
-}
-
-// waitForAttInclDelay waits until the next slot because attestation can only affect
-// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
-// until the attested slot is in the past.
-func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
-	defer span.End()
-
-	s, err := c.beaconDB.ForkChoiceState(ctx, a.Data.Target.Root)
-	if err != nil {
-		return errors.Wrap(err, "could not get state")
-	}
-	slot, err := helpers.AttestationDataSlot(s, a.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
-
-	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclude := time.Unix(int64(s.GenesisTime), 0).Add(duration)
-
-	time.Sleep(time.Until(timeToInclude))
-	return nil
-}
-
-// FinalizedBlock returns the latest finalized block tracked in fork choice service.
-func (c *ChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
-	checkpt := c.forkChoiceStore.FinalizedCheckpt()
-	finalizedBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(checkpt.Root))
-	if err != nil {
-		return nil, err
-	}
-	if finalizedBlk == nil {
-		return nil, fmt.Errorf("finalized block %#x does not exist in db", hex.EncodeToString(checkpt.Root))
-	}
-	return finalizedBlk, nil
-}
-
-// FinalizedState returns the latest finalized state tracked in fork choice service.
-func (c *ChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
-	checkpt := c.forkChoiceStore.FinalizedCheckpt()
-	finalizedState, err := c.beaconDB.ForkChoiceState(ctx, checkpt.Root)
-	if err != nil {
-		return nil, err
-	}
-	if finalizedState == nil {
-		return nil, fmt.Errorf("finalized state %#x does not exist in db", hex.EncodeToString(checkpt.Root))
-	}
-	return finalizedState, nil
 }

@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block_processing.go",
+        "helpers.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
