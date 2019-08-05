@@ -499,6 +499,22 @@ func ProcessAttestations(
 	return beaconState, nil
 }
 
+// ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
+// records. The only difference would be that the attestation signature would not be verified.
+func ProcessAttestationsNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	var err error
+	for idx, attestation := range body.Attestations {
+		beaconState, err = ProcessAttestationNoVerify(beaconState, attestation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		}
+	}
+	return beaconState, nil
+}
+
 // ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
 //
 // Spec pseudocode definition:
