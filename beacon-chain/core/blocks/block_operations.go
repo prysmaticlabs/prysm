@@ -551,7 +551,7 @@ func ProcessAttestationsNoVerify(
 //    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
-	beaconState, err := validateAttestation(beaconState, att)
+	beaconState, err := ProcessAttestationNoVerify(beaconState, att)
 	if err != nil {
 		return nil, err
 	}
@@ -568,11 +568,6 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
 func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
-	return validateAttestation(beaconState, att)
-}
-
-// validateAttestation checks if the attestation passes the validation conditions.
-func validateAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
