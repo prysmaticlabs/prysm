@@ -3,7 +3,6 @@ package db
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -11,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
@@ -193,86 +191,6 @@ func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "failed to include the block in the main chain bucket")
 		}
 		return bucket.Delete(signingRoot[:])
-	})
-}
-
-// ChainHead returns the head of the main chain.
-func (db *BeaconDB) ChainHead() (*ethpb.BeaconBlock, error) {
-	var block *ethpb.BeaconBlock
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		blockBkt := tx.Bucket(blockBucket)
-
-		height := chainInfo.Get(mainChainHeightKey)
-		if height == nil {
-			return errors.New("unable to determine chain height")
-		}
-
-		blockRoot := chainInfo.Get(canonicalHeadKey)
-		if blockRoot == nil {
-			return fmt.Errorf("root at the current height not found: %d", height)
-		}
-
-		enc := blockBkt.Get(blockRoot)
-		if enc == nil {
-			return fmt.Errorf("block not found: %x", blockRoot)
-		}
-
-		var err error
-		block, err = createBlock(enc)
-		return err
-	})
-
-	return block, err
-}
-
-// UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
-// Including a new state is optional.
-func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
-	defer span.End()
-
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "unable to determine block signing root")
-	}
-
-	slotBinary := encodeSlotNumber(block.Slot)
-	if block.Slot > db.highestBlockSlot {
-		db.highestBlockSlot = block.Slot
-	}
-
-	if err := db.SaveState(ctx, beaconState); err != nil {
-		return errors.Wrap(err, "failed to save beacon state as canonical")
-	}
-
-	blockEnc, err := proto.Marshal(block)
-	if err != nil {
-		return err
-	}
-
-	return db.update(func(tx *bolt.Tx) error {
-		blockBucket := tx.Bucket(blockBucket)
-		chainInfo := tx.Bucket(chainInfoBucket)
-		mainChainBucket := tx.Bucket(mainChainBucket)
-
-		if blockBucket.Get(blockRoot[:]) == nil {
-			return fmt.Errorf("expected block %#x to have already been saved before updating head", blockRoot)
-		}
-
-		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
-			return err
-		}
-
-		if err := mainChainBucket.Put(slotBinary, blockEnc); err != nil {
-			return err
-		}
-
-		if err := chainInfo.Put(canonicalHeadKey, blockRoot[:]); err != nil {
-			return errors.Wrap(err, "failed to record the block as the head of the main chain")
-		}
-
-		return nil
 	})
 }
 

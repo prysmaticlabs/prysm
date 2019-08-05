@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -23,6 +24,7 @@ import (
 type BeaconChainServer struct {
 	beaconDB *db.BeaconDB
 	pool     operations.Pool
+	head     blockchain.HeadRetriever
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -122,14 +124,23 @@ func (bs *BeaconChainServer) ListBlocks(
 	case *ethpb.ListBlocksRequest_Epoch:
 		startSlot := helpers.StartSlot(q.Epoch)
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-
 		var blks []*ethpb.BeaconBlock
+
 		for i := startSlot; i < endSlot; i++ {
-			b, err := bs.beaconDB.BlocksBySlot(ctx, i)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+			if req.Canonical {
+				r := bs.head.CanonicalRoot(i)
+				b, err := bs.beaconDB.Block(bytesutil.ToBytes32(r))
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "could not retrieve head for slot %d: %v", i, err)
+				}
+				blks = append(blks, b)
+			} else {
+				bs, err := bs.beaconDB.BlocksBySlot(ctx, i)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+				}
+				blks = append(blks, bs...)
 			}
-			blks = append(blks, b...)
 		}
 
 		numBlks := len(blks)
@@ -194,10 +205,21 @@ func (bs *BeaconChainServer) ListBlocks(
 //
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
-func (bs *BeaconChainServer) GetChainHead(
-	ctx context.Context, _ *ptypes.Empty,
-) (*ethpb.ChainHead, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+
+	fCheckpt := bs.head.FinalizedCheckpt()
+	jCheckpt := bs.head.JustifiedCheckpt()
+
+	head := &ethpb.ChainHead{
+		BlockRoot:          bs.head.HeadRoot(),
+		BlockSlot:          bs.head.HeadSlot(),
+		FinalizedBlockRoot: fCheckpt.Root,
+		FinalizedSlot:      fCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		JustifiedBlockRoot: jCheckpt.Root,
+		JustifiedSlot:      jCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch,
+	}
+
+	return head, nil
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at

@@ -49,7 +49,7 @@ type ChainService struct {
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
-	lastHeadSlot         uint64
+	headSlot         uint64
 	canonicalRoots       map[uint64][]byte
 }
 
@@ -124,7 +124,7 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*ethpb.Deposit, eth1data *ethpb.Eth1Data) error {
-	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
+	_, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
@@ -146,9 +146,9 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return errors.Wrap(err, "could not save genesis block to disk")
 	}
-	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-		return errors.Wrap(err, "could not set chain head")
-	}
+	//if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
+	//	return errors.Wrap(err, "could not set chain head")
+	//}
 	if err := c.forkChoiceStore.GensisStore(beaconState); err != nil {
 		return errors.Wrap(err, "could not start gensis store for fork choice")
 	}
@@ -210,9 +210,30 @@ func (c *ChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, err
 	return finalizedState, nil
 }
 
+// FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
+func (c *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return c.forkChoiceStore.FinalizedCheckpt()
+}
+
+// JustifiedCheckpt returns the latest justified checkpoint tracked in fork choice service.
+func (c *ChainService) JustifiedCheckpt() *ethpb.Checkpoint {
+	return c.forkChoiceStore.JustifiedCheckpt()
+}
+
+// HeadSlot returns the slot of the head of the chain.
+func (c *ChainService) HeadSlot() uint64 {
+	return c.headSlot
+}
+
 // HeadRoot returns the root of the head of the chain.
 func (c *ChainService) HeadRoot() []byte {
-	return c.canonicalRoots[c.lastHeadSlot]
+	return c.canonicalRoots[c.headSlot]
+}
+
+// HeadBlock returns the block of the head of the chain.
+func (c *ChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
+	r := bytesutil.ToBytes32(c.canonicalRoots[c.headSlot])
+	return c.beaconDB.Block(r)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

@@ -43,7 +43,7 @@ type chainService interface {
 	blockchain.AttestationReceiver
 	blockchain.BlockProcessor
 	blockchain.ChainFeeds
-	blockchain.FinalizationRetriever
+	blockchain.HeadRetriever
 }
 
 type attsService interface {

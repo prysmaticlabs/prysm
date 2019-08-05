@@ -35,11 +35,17 @@ type BlockProcessor interface {
 	CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error
 }
 
-// FinalizationRetriever defines a common interface for methods in blockchain service which
-// directly retrieves current finalized block and state.
-type FinalizationRetriever interface {
+// HeadRetriever defines a common interface for methods in blockchain service which
+// directly retrieves chain head related data.
+type HeadRetriever interface {
 	FinalizedBlock() (*ethpb.BeaconBlock, error)
 	FinalizedState(ctx context.Context) (*pb.BeaconState, error)
+	FinalizedCheckpt() *ethpb.Checkpoint
+	JustifiedCheckpt() *ethpb.Checkpoint
+	HeadSlot() uint64
+	HeadRoot() []byte
+	HeadBlock() (*ethpb.BeaconBlock, error)
+	CanonicalRoot(slot uint64) []byte
 }
 
 // BlockFailedProcessingErr represents a block failing a state transition function.yea
@@ -90,15 +96,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return errors.Wrap(err, "failed to compute state from block head")
 	}
-	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "failed to compute state from block head")
-	}
-	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
-		return errors.Wrap(err, "failed to update head")
-	}
-	c.lastHeadSlot = headBlk.Slot
+	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
+
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
@@ -155,15 +155,9 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		return errors.Wrap(err, "failed to compute state from block head")
 
 	}
-	headState, err := c.beaconDB.ForkChoiceState(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "failed to compute state from block head")
-	}
-	if err := c.beaconDB.UpdateChainHead(ctx, headBlk, headState); err != nil {
-		return errors.Wrap(err, "failed to update head")
-	}
-	c.lastHeadSlot = headBlk.Slot
+	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
+
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),

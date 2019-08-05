@@ -170,7 +170,7 @@ message ListBlocksRequest {
         // Slot to lookup a block. If the slot is not yet finalized, this
         // criteria may yield multiple valid blocks if the node has seen blocks
         // from another fork. 
-        uint64 slot = 2; 
+        uint64 slot = 2;
 
         // Epoch to lookup blocks. This method may return multiple blocks for a 
         // slot if the epoch has not been finalized and the node has seen blocks
@@ -178,14 +178,17 @@ message ListBlocksRequest {
         uint64 epoch = 3;
     }
 
+    // Optional criteria to filter only the canonical blocks.
+    bool canonical = 4;
+
     // The maximum number of Blocks to return in the response.
     // This field is optional.
-    int32 page_size = 4;
+    int32 page_size = 5;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 5;
+    string page_token = 6;
 }
 
 message ListBlocksResponse {

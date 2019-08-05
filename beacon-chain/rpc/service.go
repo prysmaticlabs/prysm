@@ -39,6 +39,7 @@ type chainService interface {
 	StateInitializedFeed() *event.Feed
 	blockchain.BlockReceiver
 	blockchain.AttestationReceiver
+	blockchain.HeadRetriever
 }
 
 type operationService interface {

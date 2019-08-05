@@ -234,14 +234,14 @@ func (q *Querier) IsSynced() (bool, error) {
 	if q.atGenesis {
 		return true, nil
 	}
-	block, err := q.db.ChainHead()
+	head, err := q.chainService.HeadBlock()
 	if err != nil {
 		return false, err
 	}
 
-	if block == nil {
+	if head == nil {
 		return false, nil
 	}
 
-	return block.Slot >= q.currentHeadSlot, nil
+	return head.Slot >= q.currentHeadSlot, nil
 }
