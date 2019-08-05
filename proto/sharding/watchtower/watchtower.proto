@@ -6,6 +6,7 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 
+
 // Watchtower service API
 // 
 // Watchtower service provides an interface for validators and beacon server to query
