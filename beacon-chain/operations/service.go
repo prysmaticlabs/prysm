@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -227,6 +228,13 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	}
 	if s.beaconDB.HasAttestation(hash) {
 		return nil
+	}
+	state, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	if err := blocks.VerifyAttestation(state, attestation); err != nil {
+		return err
 	}
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
