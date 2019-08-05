@@ -62,7 +62,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 			"deposit":      d,
 			"index":        index,
 			"deposit root": hex.EncodeToString(depositRoot[:]),
-		}).Debug("Ignoring nil deposit insertion")
+		}).Warn("Ignoring nil deposit insertion")
 		return
 	}
 	dc.depositsLock.Lock()
@@ -107,15 +107,9 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	var depositCntrs []*DepositContainer
 	for _, ctnr := range dc.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
-			depositCntrs = append(depositCntrs, ctnr)
+			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
-
-	var deposits []*ethpb.Deposit
-	for _, dep := range depositCntrs {
-		deposits = append(deposits, dep.Deposit)
-	}
-
 	return deposits
 }
 

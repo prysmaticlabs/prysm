@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "@com_github_phoreproject_bls//g1pubs:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 

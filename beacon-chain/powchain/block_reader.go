@@ -2,10 +2,10 @@ package powchain
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
@@ -24,7 +24,7 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
-		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+		return false, big.NewInt(0), errors.Wrap(err, "could not query block with given hash")
 	}
 
 	if err := w.blockCache.AddBlock(block); err != nil {
@@ -49,7 +49,7 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+		return [32]byte{}, errors.Wrap(err, "could not query block with given height")
 	}
 	if err := w.blockCache.AddBlock(block); err != nil {
 		return [32]byte{}, err
@@ -63,7 +63,7 @@ func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (u
 	defer span.End()
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
-		return 0, fmt.Errorf("could not query block with given height: %v", err)
+		return 0, errors.Wrap(err, "could not query block with given height")
 	}
 	return block.Time(), nil
 }

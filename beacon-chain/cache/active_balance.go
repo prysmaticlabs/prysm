@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -60,8 +61,14 @@ func NewActiveBalanceCache() *ActiveBalanceCache {
 }
 
 // ActiveBalanceInEpoch fetches ActiveBalanceByEpoch by epoch. Returns true with a
-// reference to the ActiveBalanceInEpoch info, if exists. Otherwise returns false, nil.
+// reference to the ActiveBalanceInEpoch info, if exists. Otherwise returns FAR_FUTURE_EPOCH, nil.
 func (c *ActiveBalanceCache) ActiveBalanceInEpoch(epoch uint64) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableActiveBalanceCache {
+		// Return a miss result if cache is not enabled.
+		activeBalanceCacheMiss.Inc()
+		return params.BeaconConfig().FarFutureEpoch, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.activeBalanceCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -87,6 +94,10 @@ func (c *ActiveBalanceCache) ActiveBalanceInEpoch(epoch uint64) (uint64, error) 
 // AddActiveBalance adds ActiveBalanceByEpoch object to the cache. This method also trims the least
 // recently added ActiveBalanceByEpoch object if the cache size has ready the max cache size limit.
 func (c *ActiveBalanceCache) AddActiveBalance(activeBalance *ActiveBalanceByEpoch) error {
+	if !featureconfig.FeatureConfig().EnableActiveBalanceCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.activeBalanceCache.AddIfNotPresent(activeBalance); err != nil {

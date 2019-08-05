@@ -2,9 +2,9 @@ package depositcontract
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/pkg/errors"
 )
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
@@ -13,7 +13,7 @@ func UnpackDepositLogData(data []byte) (pubkey []byte, withdrawalCredentials []b
 	reader := bytes.NewReader([]byte(DepositContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("unable to generate contract abi: %v", err)
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to generate contract abi")
 	}
 
 	unpackedLogs := []interface{}{
@@ -24,7 +24,7 @@ func UnpackDepositLogData(data []byte) (pubkey []byte, withdrawalCredentials []b
 		&index,
 	}
 	if err := contractAbi.Unpack(&unpackedLogs, "DepositEvent", data); err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("unable to unpack logs: %v", err)
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to unpack logs")
 	}
 
 	return pubkey, withdrawalCredentials, amount, signature, index, nil

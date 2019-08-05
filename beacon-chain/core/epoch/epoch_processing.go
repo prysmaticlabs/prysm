@@ -6,11 +6,11 @@ package epoch
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -68,7 +68,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	}
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
+		return nil, errors.Wrapf(err, "could not get block root for epoch %d", epoch)
 	}
 
 	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
@@ -84,11 +84,11 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		// then we know this attestation has correctly voted for head.
 		slot, err := helpers.AttestationDataSlot(state, srcAtt.Data)
 		if err != nil {
-			return nil, fmt.Errorf("could not get attestation slot: %v", err)
+			return nil, errors.Wrap(err, "could not get attestation slot")
 		}
 		headRoot, err := helpers.BlockRootAtSlot(state, slot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for slot %d: %v", slot, err)
+			return nil, errors.Wrapf(err, "could not get block root for slot %d", slot)
 		}
 		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
 			headAtts = append(headAtts, srcAtt)
@@ -114,7 +114,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := unslashedAttestingIndices(state, atts)
 	if err != nil {
-		return 0, fmt.Errorf("could not get attesting indices: %v", err)
+		return 0, errors.Wrap(err, "could not get attesting indices")
 	}
 	return helpers.TotalBalance(state, indices), nil
 }
@@ -169,7 +169,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 
 	totalBal, err := helpers.TotalActiveBalance(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get total balance: %v", err)
+		return nil, errors.Wrap(err, "could not get total balance")
 	}
 
 	// Process justifications
@@ -183,8 +183,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	if 3*prevAttestedBal >= 2*totalBal {
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
-				prevEpoch, err)
+			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
 		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(1, true)
@@ -194,8 +193,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	if 3*currAttestedBal >= 2*totalBal {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
-				prevEpoch, err)
+			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
 		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(0, true)
@@ -246,21 +244,21 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for _, e := range epochs {
 		count, err := helpers.CommitteeCount(state, e)
 		if err != nil {
-			return nil, fmt.Errorf("could not get epoch committee count: %v", err)
+			return nil, errors.Wrap(err, "could not get epoch committee count")
 		}
 		startShard, err := helpers.StartShard(state, e)
 		if err != nil {
-			return nil, fmt.Errorf("could not get epoch start shards: %v", err)
+			return nil, errors.Wrap(err, "could not get epoch start shards")
 		}
 		for offset := uint64(0); offset < count; offset++ {
 			shard := (startShard + offset) % params.BeaconConfig().ShardCount
 			committee, err := helpers.CrosslinkCommittee(state, e, shard)
 			if err != nil {
-				return nil, fmt.Errorf("could not get crosslink committee: %v", err)
+				return nil, errors.Wrap(err, "could not get crosslink committee")
 			}
 			crosslink, indices, err := winningCrosslink(state, shard, e)
 			if err != nil {
-				return nil, fmt.Errorf("could not get winning crosslink: %v", err)
+				return nil, errors.Wrap(err, "could not get winning crosslink")
 			}
 			attestedBalance := helpers.TotalBalance(state, indices)
 			totalBalance := helpers.TotalBalance(state, committee)
@@ -294,11 +292,11 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 	}
 	attsRewards, attsPenalties, err := attestationDelta(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attestation delta: %v ", err)
+		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 	clRewards, clPenalties, err := crosslinkDelta(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get crosslink delta: %v ", err)
+		return nil, errors.Wrapf(err, "could not get crosslink delta")
 	}
 	for i := 0; i < len(state.Validators); i++ {
 		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
@@ -351,7 +349,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
-				return nil, fmt.Errorf("could not initiate exit for validator %d: %v", idx, err)
+				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
 		}
 	}
@@ -373,7 +371,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	limit := len(activationQ)
 	churnLimit, err := helpers.ValidatorChurnLimit(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get churn limit: %v", err)
+		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
 	// Prevent churn limit cause index out of bound.
@@ -404,7 +402,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get total active balance: %v", err)
+		return nil, errors.Wrap(err, "could not get total active balance")
 	}
 
 	// Compute slashed balances in the current epoch
@@ -490,7 +488,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Update start shard.
 	delta, err := helpers.ShardDelta(state, currentEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get shard delta: %v", err)
+		return nil, errors.Wrap(err, "could not get shard delta")
 	}
 	state.StartShard = (state.StartShard + delta) %
 		params.BeaconConfig().ShardCount
@@ -504,18 +502,18 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active indices: %v", err)
+		return nil, errors.Wrap(err, "could not get active indices")
 	}
 	idxRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, uint64(1099511627776))
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash active indices: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash active indices")
 	}
 	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
 
 	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
 	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get compact committee root %v", err)
+		return nil, errors.Wrap(err, "could not get compact committee root")
 	}
 	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
 
@@ -537,7 +535,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 		batchRoot, err := ssz.HashTreeRoot(historicalBatch)
 		if err != nil {
-			return nil, fmt.Errorf("could not hash historical batch: %v", err)
+			return nil, errors.Wrap(err, "could not hash historical batch")
 		}
 		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot[:])
 	}
@@ -563,7 +561,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 	for _, att := range atts {
 		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
-			return nil, fmt.Errorf("could not get attester indices: %v", err)
+			return nil, errors.Wrap(err, "could not get attester indices")
 		}
 		setIndices = append(setIndices, indices...)
 	}
@@ -600,7 +598,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get matching attestations: %v", err)
+		return nil, nil, errors.Wrap(err, "could not get matching attestations")
 	}
 
 	// Filter out source attestations by shard.
@@ -615,11 +613,11 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 		stateCrosslink := state.CurrentCrosslinks[shard]
 		stateCrosslinkRoot, err := ssz.HashTreeRoot(stateCrosslink)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not hash tree root crosslink from state: %v", err)
+			return nil, nil, errors.Wrap(err, "could not hash tree root crosslink from state")
 		}
 		attCrosslinkRoot, err := ssz.HashTreeRoot(a.Data.Crosslink)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not hash tree root crosslink from attestation: %v", err)
+			return nil, nil, errors.Wrap(err, "could not hash tree root crosslink from attestation")
 		}
 		currCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], attCrosslinkRoot[:])
 		prevCrosslinkMatches := bytes.Equal(stateCrosslinkRoot[:], a.Data.Crosslink.ParentRoot)
@@ -650,7 +648,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 		crosslinkAtts = attsForCrosslink(c, shardAtts)
 		attestingBalance, err := AttestingBalance(state, crosslinkAtts)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get crosslink's attesting balance: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get crosslink's attesting balance")
 		}
 		if attestingBalance > winnerBalance {
 			winnerCrosslink = c
@@ -679,7 +677,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
-		return 0, fmt.Errorf("could not calculate active balance: %v", err)
+		return 0, errors.Wrap(err, "could not calculate active balance")
 	}
 	effectiveBalance := state.Validators[index].EffectiveBalance
 	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
@@ -752,7 +750,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	prevEpoch := helpers.PrevEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get total active balance: %v", err)
+		return nil, nil, errors.Wrap(err, "could not get total active balance")
 	}
 
 	rewards := make([]uint64, len(state.Validators))
@@ -773,7 +771,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// Construct a attestations list contains source, target and head attestations.
 	atts, err := MatchAttestations(state, prevEpoch)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get source, target and head attestations: %v", err)
+		return nil, nil, errors.Wrap(err, "could not get source, target and head attestations")
 	}
 	var attsPackage [][]*pb.PendingAttestation
 	attsPackage = append(attsPackage, atts.source)
@@ -788,7 +786,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	for i, matchAtt := range attsPackage {
 		indices, err := unslashedAttestingIndices(state, matchAtt)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get attestation indices")
 		}
 
 		attested := make(map[uint64]bool)
@@ -805,7 +803,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range eligible {
 			base, err := baseReward(state, index)
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
+				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
 			if _, ok := attested[index]; ok {
 				rewards[index] += base * attestedBalance / totalBalance
@@ -820,7 +818,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	for _, att := range atts.source {
 		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get attester indices: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get attester indices")
 		}
 		for _, i := range indices {
 			if _, ok := attestersVotedSoruce[i]; ok {
@@ -836,7 +834,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		baseReward, err := baseReward(state, i)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get proposer reward: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get proposer reward")
 		}
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
@@ -852,7 +850,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		targetIndices, err := unslashedAttestingIndices(state, atts.Target)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get attestation indices: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get attestation indices")
 		}
 		attestedTarget := make(map[uint64]bool)
 		for _, index := range targetIndices {
@@ -861,7 +859,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range eligible {
 			base, err := baseReward(state, index)
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
+				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
 			penalties[index] += params.BeaconConfig().BaseRewardsPerEpoch * base
 			if _, ok := attestedTarget[index]; !ok {
@@ -904,21 +902,21 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	epoch := helpers.PrevEpoch(state)
 	count, err := helpers.CommitteeCount(state, epoch)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get epoch committee count: %v", err)
+		return nil, nil, errors.Wrap(err, "could not get epoch committee count")
 	}
 	startShard, err := helpers.StartShard(state, epoch)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get epoch start shard: %v", err)
+		return nil, nil, errors.Wrap(err, "could not get epoch start shard")
 	}
 	for i := uint64(0); i < count; i++ {
 		shard := (startShard + i) % params.BeaconConfig().ShardCount
 		committee, err := helpers.CrosslinkCommittee(state, epoch, shard)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get crosslink's committee: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get crosslink's committee")
 		}
 		_, attestingIndices, err := winningCrosslink(state, shard, epoch)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not get winning crosslink: %v", err)
+			return nil, nil, errors.Wrap(err, "could not get winning crosslink")
 		}
 
 		attested := make(map[uint64]bool)
@@ -932,7 +930,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		for _, index := range committee {
 			base, err := baseReward(state, index)
 			if err != nil {
-				return nil, nil, fmt.Errorf("could not get base reward: %v", err)
+				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
 			if _, ok := attested[index]; ok {
 				rewards[index] += base * attestingBalance / committeeBalance

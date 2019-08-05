@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -59,6 +60,12 @@ func NewAttestationCache() *AttestationCache {
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
+	if !featureconfig.FeatureConfig().EnableAttestationCache {
+		// Return a miss result if cache is not enabled.
+		attestationCacheMiss.Inc()
+		return nil, nil
+	}
+
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
 	}
@@ -107,6 +114,10 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
+	if !featureconfig.FeatureConfig().EnableAttestationCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -116,13 +127,19 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
 	if c.inProgress[s] {
 		return ErrAlreadyInProgress
 	}
-	c.inProgress[s] = true
+	if featureconfig.FeatureConfig().EnableAttestationCache {
+		c.inProgress[s] = true
+	}
 	return nil
 }
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
+	if !featureconfig.FeatureConfig().EnableAttestationCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -135,6 +152,10 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
 
 // Put the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationRequest, res *ethpb.AttestationData) error {
+	if !featureconfig.FeatureConfig().EnableAttestationCache {
+		return nil
+	}
+
 	data := &attestationReqResWrapper{
 		req,
 		res,

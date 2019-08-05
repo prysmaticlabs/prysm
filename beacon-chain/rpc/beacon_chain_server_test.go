@@ -21,7 +21,7 @@ import (
 
 type mockPool struct{}
 
-func (m *mockPool) AttestationPool(ctx context.Context) ([]*ethpb.Attestation, error) {
+func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	return []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -253,14 +253,23 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	bs := &BeaconChainServer{
-		pool: &mockPool{},
+		pool:     &mockPool{},
+		beaconDB: db,
+	}
+	if err := bs.beaconDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
+		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx)
+	want, _ := bs.pool.AttestationPool(ctx, 10)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
@@ -314,6 +323,11 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
 			res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
 				{Index: 2, PublicKey: []byte{2}, Balance: 2},
+				{Index: 3, PublicKey: []byte{3}, Balance: 3},
+				{Index: 4, PublicKey: []byte{4}, Balance: 4}},
+			}},
+		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
+			res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
 				{Index: 3, PublicKey: []byte{3}, Balance: 3},
 				{Index: 4, PublicKey: []byte{4}, Balance: 4}},
 			}},
@@ -870,7 +884,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
+func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
@@ -913,9 +927,12 @@ func TestBeaconChainServer_ListBlocoksPagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        []*ethpb.BeaconBlock{{Slot: 6}},
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     1}},
+				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				TotalSize: 1}},
+		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
+			res: &ethpb.ListBlocksResponse{
+				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
@@ -981,21 +998,55 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 
-	wanted = "block for epoch 0 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err := bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 
-	wanted = "block for slot 0 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 
-	wanted = "block for root 0x41 does not exists in DB"
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
+	}
+
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
+	res, err = bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blocks) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	}
+	if res.TotalSize != 0 {
+		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
+
 	}
 }

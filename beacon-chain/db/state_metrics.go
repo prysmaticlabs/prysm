@@ -1,9 +1,6 @@
 package db
 
 import (
-	"encoding/hex"
-	"strconv"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -11,30 +8,6 @@ import (
 )
 
 var (
-	validatorBalancesGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "state_validator_balances",
-		Help: "Balances of validators, updated on epoch transition",
-	}, []string{
-		"validator",
-	})
-	validatorActivatedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "state_validator_activated_epoch",
-		Help: "Activated epoch of validators, updated on epoch transition",
-	}, []string{
-		"validatorIndex",
-	})
-	validatorExitedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "state_validator_exited_epoch",
-		Help: "Exited epoch of validators, updated on epoch transition",
-	}, []string{
-		"validatorIndex",
-	})
-	validatorSlashedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "state_validator_slashed_epoch",
-		Help: "Slashed epoch of validators, updated on epoch transition",
-	}, []string{
-		"validatorIndex",
-	})
 	lastSlotGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_slot",
 		Help: "Last slot number of the processed state",
@@ -55,43 +28,42 @@ var (
 		Name: "state_active_validators",
 		Help: "Total number of active validators",
 	})
+	slashedValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "state_slashed_validators",
+		Help: "Total slashed validators",
+	})
+	withdrawnValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "state_withdrawn_validators",
+		Help: "Total withdrawn validators",
+	})
+	totalValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "state_total_validators",
+		Help: "All time total validators",
+	})
 )
 
 func reportStateMetrics(state *pb.BeaconState) {
 	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
-	// Validator balances
-	for i, bal := range state.Balances {
-		validatorBalancesGauge.WithLabelValues(
-			"0x" + hex.EncodeToString(state.Validators[i].PublicKey), // Validator
-		).Set(float64(bal))
-	}
 
+	// Validator counts
 	var active float64
-	for i, v := range state.Validators {
-		// Track individual Validator's activation epochs
-		validatorActivatedGauge.WithLabelValues(
-			strconv.Itoa(i), //Validator index
-		).Set(float64(v.ActivationEpoch))
-		// Track individual Validator's exited epochs
-		validatorExitedGauge.WithLabelValues(
-			strconv.Itoa(i), //Validator index
-		).Set(float64(v.ExitEpoch))
-		// Track individual Validator's slashed epochs
-		if v.Slashed {
-			validatorSlashedGauge.WithLabelValues(
-				strconv.Itoa(i), //Validator index
-			).Set(float64(v.WithdrawableEpoch - params.BeaconConfig().EpochsPerSlashingsVector))
-		} else {
-			validatorSlashedGauge.WithLabelValues(
-				strconv.Itoa(i), //Validator index
-			).Set(float64(params.BeaconConfig().FarFutureEpoch))
-		}
-		// Total number of active validators
+	var slashed float64
+	var withdrawn float64
+	for _, v := range state.Validators {
 		if v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch {
 			active++
 		}
+		if v.Slashed {
+			slashed++
+		}
+		if currentEpoch >= v.ExitEpoch {
+			withdrawn++
+		}
 	}
 	activeValidatorsGauge.Set(active)
+	slashedValidatorsGauge.Set(slashed)
+	withdrawnValidatorsGauge.Set(withdrawn)
+	totalValidatorsGauge.Set(float64(len(state.Validators)))
 
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot))
