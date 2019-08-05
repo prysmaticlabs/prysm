@@ -20,10 +20,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["pending_deposits_test.go"],
+    srcs = [
+        "deposits_test.go",
+        "pending_deposits_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
