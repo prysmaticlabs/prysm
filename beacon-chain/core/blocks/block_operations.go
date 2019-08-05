@@ -536,6 +536,28 @@ func ProcessAttestations(
 //    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	beaconState, err := validateAttestation(beaconState, att)
+	if err != nil {
+		return nil, err
+	}
+	indexedAtt, err := ConvertToIndexed(beaconState, att)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert to indexed attestation")
+	}
+	if err := VerifyIndexedAttestation(beaconState, indexedAtt); err != nil {
+		return nil, errors.Wrap(err, "could not verify indexed attestation")
+	}
+	return beaconState, nil
+}
+
+// ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
+// method is used to validate attestations whose signatures have already been verified.
+func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	return validateAttestation(beaconState, att)
+}
+
+// validateAttestation checks if the attestation passes the validation conditions.
+func validateAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
@@ -640,13 +662,6 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 	// To be removed in Phase 1
 	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
-	}
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert to indexed attestation")
-	}
-	if err := VerifyIndexedAttestation(beaconState, indexedAtt); err != nil {
-		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return beaconState, nil
 }
@@ -833,6 +848,16 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("attestation aggregation signature did not verify")
 	}
 	return nil
+}
+
+// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// the signature in that attestation.
+func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) error {
+	indexedAtt, err := ConvertToIndexed(beaconState, att)
+	if err != nil {
+		return errors.Wrap(err, "could not convert to indexed attestation")
+	}
+	return VerifyIndexedAttestation(beaconState, indexedAtt)
 }
 
 // ProcessDeposits is one of the operations performed on each processed
