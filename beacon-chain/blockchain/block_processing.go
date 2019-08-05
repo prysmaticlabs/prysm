@@ -45,6 +45,7 @@ type HeadRetriever interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
 	HeadBlock() (*ethpb.BeaconBlock, error)
+	HeadState() (*pb.BeaconState, error)
 	CanonicalRoot(slot uint64) []byte
 }
 

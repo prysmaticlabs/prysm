@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/fork_choice"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -49,7 +47,7 @@ type ChainService struct {
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
-	headSlot         uint64
+	headSlot             uint64
 	canonicalRoots       map[uint64][]byte
 }
 
@@ -86,7 +84,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.HeadState(c.ctx)
+	beaconState, err := c.HeadState()
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -137,21 +135,11 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return errors.Wrap(err, "could not attempt fetch beacon state")
 	}
 
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		return errors.Wrap(err, "could not hash beacon state")
-	}
-
-	genBlock := b.NewGenesisBlock(stateRoot[:])
-	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return errors.Wrap(err, "could not save genesis block to disk")
-	}
-	//if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-	//	return errors.Wrap(err, "could not set chain head")
-	//}
 	if err := c.forkChoiceStore.GensisStore(beaconState); err != nil {
 		return errors.Wrap(err, "could not start gensis store for fork choice")
 	}
+
+	c.canonicalRoots[beaconState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil
 }
@@ -234,6 +222,12 @@ func (c *ChainService) HeadRoot() []byte {
 func (c *ChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
 	r := bytesutil.ToBytes32(c.canonicalRoots[c.headSlot])
 	return c.beaconDB.Block(r)
+}
+
+// HeadState returns the state of the head of the chain.
+func (c *ChainService) HeadState() (*pb.BeaconState, error) {
+	r := bytesutil.ToBytes32(c.canonicalRoots[c.headSlot])
+	return c.beaconDB.ForkChoiceState(c.ctx, r[:])
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

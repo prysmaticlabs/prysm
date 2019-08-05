@@ -439,12 +439,12 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	return nil
 }
 
-// FinalizedCheckpt returns the latest finalized check point from fork choice store.
-func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
-	return s.finalizedCheckpt
-}
-
 // JustifiedCheckpt returns the latest justified check point from fork choice store.
 func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
 	return s.justifiedCheckpt
+}
+
+// FinalizedCheckpt returns the latest finalized check point from fork choice store.
+func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return s.finalizedCheckpt
 }

@@ -18,7 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -247,12 +249,15 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	if err := chainService.forkChoiceStore.GensisStore(&pb.BeaconState{}); err != nil {
+		t.Fatal(err)
 	}
-	setupGenesisBlock(t, chainService)
+	root := bytesutil.ToBytes32([]byte{'A'})
+	chainService.canonicalRoots[0] = root[:]
+	if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{}, root[:]); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test the start function.
 	chainService.Start()
 

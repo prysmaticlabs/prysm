@@ -44,7 +44,6 @@ type chainService interface {
 
 type operationService interface {
 	operations.Pool
-	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
 	IncomingAttFeed() *event.Feed
 }
 

@@ -67,7 +67,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
-	block, err := bs.beaconDB.ChainHead()
+	block, err := bs.chainService.HeadBlock()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get canonical head block")
 	}

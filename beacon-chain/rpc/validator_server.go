@@ -93,36 +93,27 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get validator index")
 	}
-	head, err := vs.beaconDB.HeadState(ctx)
+	headState, err := vs.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head")
 	}
-	Validators, err := vs.beaconDB.Validators(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
-	}
 
-	activeCount, err := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
+	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active validator count")
 	}
 
-	totalActiveBalance, err := helpers.TotalActiveBalance(head)
+	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active balance")
 	}
 
-	validatorBalances, err := vs.beaconDB.Balances(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve validator balances")
-	}
-
 	avgBalance := float32(totalActiveBalance / activeCount)
-	balance := validatorBalances[index]
+	balance := headState.Balances[index]
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:               uint64(len(Validators)),
+		TotalValidators:               uint64(len(headState.Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
 }
@@ -134,7 +125,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
-	s, err := vs.beaconDB.HeadState(ctx)
+	s, err := vs.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
@@ -226,7 +217,7 @@ func (vs *ValidatorServer) assignment(
 func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
-	beaconState, err := vs.beaconDB.HeadState(ctx)
+	beaconState, err := vs.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
@@ -243,7 +234,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-	beaconState, err := vs.beaconDB.HeadState(ctx)
+	beaconState, err := vs.chainService.HeadState()
 	if err != nil {
 		return false, nil, err
 	}
@@ -460,7 +451,7 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	state, err := vs.beaconDB.HeadState(ctx)
+	state, err := vs.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}

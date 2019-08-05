@@ -35,16 +35,8 @@ type ProposerServer struct {
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 
-	// Retrieve the parent block as the current head of the canonical chain
-	parent, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get canonical head block")
-	}
-
-	parentRoot, err := ssz.SigningRoot(parent)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get parent block signing root")
-	}
+	// Retrieve the parent root as the current head of the canonical chain
+	parentRoot := ps.chainService.HeadRoot()
 
 	// Construct block body
 	// Pack ETH1 deposits which have not been included in the beacon chain
@@ -121,11 +113,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	beaconState, err := ps.beaconDB.HeadState(ctx)
+	beaconState, err := ps.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
-	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
+	atts, err := ps.operationService.AttestationPool(ctx, ps.chainService.HeadRoot(), expectedSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
 	}
@@ -171,19 +163,6 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 			}
 			continue
 		}
-		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
-		if err != nil {
-			// Delete attestation that failed to verify as canonical.
-			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
-				return nil, errors.Wrap(err, "could not delete failed attestation")
-			}
-			return nil, errors.Wrap(err, "could not verify canonical attestation")
-		}
-		// Skip the attestation if it's not canonical.
-		if !canonical {
-			continue
-		}
-
 		validAtts = append(validAtts, att)
 	}
 
@@ -212,10 +191,11 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
-	beaconState, err := ps.beaconDB.HeadState(ctx)
+	beaconState, err := ps.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon state")
 	}
+
 	s, err := state.ExecuteStateTransitionNoVerify(
 		ctx,
 		beaconState,
@@ -252,7 +232,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState, err := ps.beaconDB.HeadState(ctx)
+	beaconState, err := ps.chainService.HeadState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}

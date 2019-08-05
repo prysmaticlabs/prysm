@@ -2,21 +2,17 @@
 package operations
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -32,7 +28,7 @@ var log = logrus.WithField("prefix", "operation")
 // which have been observed by the beacon node but not yet included in
 // a beacon block by a proposer.
 type Pool interface {
-	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
+	AttestationPool(ctx context.Context, headRoot []byte, requestedSlot uint64) ([]*ethpb.Attestation, error)
 }
 
 // OperationFeeds inteface defines the informational feeds from the operations
@@ -127,13 +123,13 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 // AttestationPool returns the attestations that have not seen on the beacon chain,
 // the attestations are returned in slot ascending order and up to MaxAttestations
 // capacity. The attestations get deleted in DB after they have been retrieved.
-func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
+func (s *Service) AttestationPool(ctx context.Context, headRoot []byte, requestedSlot uint64) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
 		return nil, errors.New("could not retrieve attestations from DB")
 	}
-	bState, err := s.beaconDB.HeadState(ctx)
+	bState, err := s.beaconDB.ForkChoiceState(ctx, headRoot)
 	if err != nil {
 		return nil, errors.New("could not retrieve attestations from DB")
 	}
@@ -229,44 +225,10 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if s.beaconDB.HasAttestation(hash) {
 		return nil
 	}
-	state, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	if err := blocks.VerifyAttestation(state, attestation); err != nil {
-		return err
-	}
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
 	return nil
-}
-
-// IsAttCanonical returns true if the input attestation is voting on the canonical chain, false
-// otherwise. The steps to verify are:
-//	1.) retrieve the voted block
-//	2.) retrieve the canonical block by using voted block's slot number
-//	3.) return true if voted block root and the canonical block root are the same
-func (s *Service) IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error) {
-	votedBlk, err := s.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
-	if err != nil {
-		return false, errors.Wrap(err, "could not hash block")
-	}
-	if votedBlk == nil {
-		return false, nil
-	}
-	canonicalBlk, err := s.beaconDB.CanonicalBlockBySlot(ctx, votedBlk.Slot)
-	if err != nil {
-		return false, errors.Wrap(err, "could not hash block")
-	}
-	if canonicalBlk == nil {
-		return false, nil
-	}
-	canonicalRoot, err := ssz.SigningRoot(canonicalBlk)
-	if err != nil {
-		return false, errors.Wrap(err, "could not hash block")
-	}
-	return bytes.Equal(att.Data.BeaconBlockRoot, canonicalRoot[:]), nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
@@ -293,13 +255,6 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 	// in the received block.
 	if err := s.removeAttestationsFromPool(block.Body.Attestations); err != nil {
 		return errors.Wrap(err, "could not remove processed attestations from DB")
-	}
-	state, err := s.beaconDB.HeadState(s.ctx)
-	if err != nil {
-		return errors.New("could not retrieve attestations from DB")
-	}
-	if err := s.removeEpochOldAttestations(state); err != nil {
-		return errors.Wrapf(err, "could not remove old attestations from DB at slot %d", block.Slot)
 	}
 	return nil
 }

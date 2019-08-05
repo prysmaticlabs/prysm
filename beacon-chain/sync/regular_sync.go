@@ -349,37 +349,38 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return errors.New("incoming message is not *pb.ChainHeadRequest")
 	}
 
-	head, err := rs.db.ChainHead()
+	headSlot := rs.chainService.HeadSlot()
+	headBlkRoot := rs.chainService.HeadRoot()
+	finalizedBlkRoot := rs.chainService.FinalizedCheckpt().Root
+
+	s, err := rs.db.ForkChoiceState(ctx, headBlkRoot)
 	if err != nil {
-		log.Errorf("Could not retrieve chain head: %v", err)
+		log.Errorf("Could not get state for head block: %v", err)
 		return err
 	}
-	headBlkRoot, err := ssz.SigningRoot(head)
+	headStateRoot, err := hashutil.HashProto(s)
 	if err != nil {
-		log.Errorf("Could not hash chain head: %v", err)
-	}
-	// TODO get finalized block
-	finalizedBlk := &ethpb.BeaconBlock{}
-	finalizedBlkRoot, err := ssz.SigningRoot(finalizedBlk)
-	if err != nil {
-		log.Errorf("Could not hash finalized block: %v", err)
+		log.Errorf("Could not get state for fnalized block: %v", err)
+		return err
 	}
 
-	stateRoot := rs.db.HeadStateRoot()
-	// TODO get finalized state
-	fState := &pb.BeaconState{}
-	finalizedRoot, err := hashutil.HashProto(fState)
+	s, err = rs.db.ForkChoiceState(ctx, finalizedBlkRoot)
 	if err != nil {
-		log.Errorf("Could not tree hash block: %v", err)
+		log.Errorf("Could not get state for head block: %v", err)
+		return err
+	}
+	finalizedStateRoot, err := hashutil.HashProto(s)
+	if err != nil {
+		log.Errorf("Could not get state for fnalized block: %v", err)
 		return err
 	}
 
 	req := &pb.ChainHeadResponse{
-		CanonicalSlot:             head.Slot,
-		CanonicalStateRootHash32:  stateRoot[:],
-		FinalizedStateRootHash32S: finalizedRoot[:],
-		CanonicalBlockRoot:        headBlkRoot[:],
-		FinalizedBlockRoot:        finalizedBlkRoot[:],
+		CanonicalSlot:             headSlot,
+		CanonicalBlockRoot:        headBlkRoot,
+		CanonicalStateRootHash32:  headStateRoot[:],
+		FinalizedBlockRoot:        finalizedBlkRoot,
+		FinalizedStateRootHash32S: finalizedStateRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()

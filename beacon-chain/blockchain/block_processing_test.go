@@ -141,9 +141,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	//	t.Fatal(err)
+	//}
 
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
@@ -303,10 +303,10 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 	}
 
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	parentHash, _ := setupGenesisBlock(t, chainService)
+	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	//	t.Fatal(err)
+	//}
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
@@ -402,9 +402,9 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	//	t.Fatal(err)
+	//}
 
 	beaconState.Slot++
 
@@ -465,14 +465,14 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		ParentRoot: genesis.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
+	parentHash, _ := setupGenesisBlock(t, chainService)
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	//	t.Fatal(err)
+	//}
 
 	beaconState.Slot++
 	parentRoot, err := ssz.SigningRoot(genesis)

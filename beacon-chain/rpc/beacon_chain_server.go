@@ -93,11 +93,10 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.ChainHead()
-	if err != nil {
-		return nil, err
-	}
-	atts, err := bs.pool.AttestationPool(ctx, headBlock.Slot)
+	headSlot := bs.head.HeadSlot()
+	headRoot := bs.head.HeadRoot()
+
+	atts, err := bs.pool.AttestationPool(ctx, headRoot, headSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
@@ -347,7 +346,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}
 
 	e := req.Epoch
-	s, err := bs.beaconDB.HeadState(ctx)
+	s, err := bs.head.HeadState()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
@@ -463,7 +462,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	s, err := bs.beaconDB.HeadState(ctx)
+	s, err := bs.head.HeadState()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
