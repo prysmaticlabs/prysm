@@ -555,7 +555,6 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 	if err != nil {
 		return nil, err
 	}
-
 	return beaconState, VerifyAttestation(beaconState, att)
 }
 
