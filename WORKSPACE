@@ -52,7 +52,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "db638bd2c5f8c2c55403fb41ba9e19c880907ded",
+    commit = "8dc6490f819d330361f46201e3390ce5457564a2",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
