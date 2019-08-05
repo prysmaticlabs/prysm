@@ -241,7 +241,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "15764f7bb21ae2a9095573c0acb1b331f6b74650",  # v0.2.1
+    commit = "071f7de0736eda0f57cc3b5643ca65af364cd01f",  # v0.3.0
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -278,7 +278,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "4a42085d76199475c2014c4557895d42d2ff85d9",  # v0.1.1
+    commit = "221d8d5e05a0252049203c8f74d4f38b64da9963",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -296,7 +296,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "e65c36f3bb806cf658db0f0b612879899e2d28dc",  # v0.1.0
+    commit = "03491354d59e3025f1807236d55fe0ec7b82cd15",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -381,7 +381,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "6d84e87519636221c138f711917bec9e00f3a295",  # v0.1.1
+    commit = "7c3f577d99debb69c3b68be35fe14d9445a6569c",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
@@ -733,7 +733,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "874e3d3fa068272afc6006b29c51ec8529b1b5ea",  # v0.1.1
+    commit = "a12e621d84028a4e0f165da8e2ca6be4f5af0502",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -758,7 +758,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_record",
     build_file_proto_mode = "disable_global",
-    commit = "4837430afd8f3864d4805d7a1675521abb1096b4",  # v0.1.0
+    commit = "3f535b1abcdf698e11ac16f618c2e64c4e5a114a",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-record",
 )
 
@@ -1064,13 +1064,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "8890e1b22b5f3b903a3d4a45497caf8ebf9bd00d",  # v0.0.9
+    commit = "3390f7d16df07cee9e54c1700adeace090fede32",  # v0.2.0
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_testing",
-    commit = "6d4ca71943f35271918e28f9a9950002e17b4f16",  # v0.0.4
+    commit = "1fa303da162dc57872d8fc553497f7602aa11c10",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-testing",
 )
 
