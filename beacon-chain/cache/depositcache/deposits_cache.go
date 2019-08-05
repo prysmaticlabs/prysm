@@ -104,7 +104,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*DepositContainer
+	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
 			deposits = append(deposits, ctnr.Deposit)
