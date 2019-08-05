@@ -555,14 +555,8 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert to indexed attestation")
-	}
-	if err := VerifyIndexedAttestation(beaconState, indexedAtt); err != nil {
-		return nil, errors.Wrap(err, "could not verify indexed attestation")
-	}
-	return beaconState, nil
+
+	return beaconState, VerifyAttestation(beaconState, att)
 }
 
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
