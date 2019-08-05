@@ -124,6 +124,9 @@ func (s *Signature) Marshal() []byte {
 func AggregateSignatures(sigs []*Signature) *Signature {
 	var ss []*g1.Signature
 	for _, v := range sigs {
+		if v == nil {
+			continue
+		}
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: g1.AggregateSignatures(ss)}
