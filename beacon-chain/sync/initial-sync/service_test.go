@@ -54,7 +54,47 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
-type mockChainService struct{}
+type mockChainService struct {
+	headBlock *ethpb.BeaconBlock
+	headState *pb.BeaconState
+}
+
+func (ms *mockChainService) CanonicalRoot(slot uint64) []byte {
+	return nil
+}
+
+func (ms *mockChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
+	return nil, nil
+}
+
+func (ms *mockChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	return nil, nil
+
+}
+
+func (ms *mockChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) JustifiedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) HeadSlot() uint64 {
+	return 0
+}
+
+func (ms *mockChainService) HeadRoot() []byte {
+	return nil
+}
+
+func (ms *mockChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
+	return ms.headBlock, nil
+}
+
+func (ms *mockChainService) HeadState() (*pb.BeaconState, error) {
+	return ms.headState, nil
+}
 
 func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
@@ -92,7 +132,7 @@ func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *e
 	return nil
 }
 
-func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
+func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) (*ethpb.BeaconBlock, *pb.BeaconState) {
 	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
@@ -106,26 +146,24 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Errorf("unable to marshal the beacon state: %v", err)
-		return
+		return nil, nil
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := beaconDB.SaveBlock(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
-	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-		t.Fatalf("could not set chain head, %v", err)
-	}
+	return genBlock, beaconState
 }
 
 func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	setUpGenesisStateAndBlock(db, t)
+	b, s := setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
-		ChainService: &mockChainService{},
+		ChainService: &mockChainService{headState: s, headBlock: b},
 		BeaconDB:     db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
@@ -172,13 +210,13 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	setUpGenesisStateAndBlock(db, t)
+	b, s := setUpGenesisStateAndBlock(db, t)
 	ctx := context.Background()
 
 	cfg := &Config{
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
-		ChainService: &mockChainService{},
+		ChainService: &mockChainService{headBlock: b, headState: s},
 		BeaconDB:     db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)

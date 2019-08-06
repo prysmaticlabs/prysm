@@ -95,13 +95,6 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	rsCfg := DefaultRegularSyncConfig()
-	rsCfg.ChainService = &mockChainService{
-		db: db,
-	}
-	rsCfg.BeaconDB = db
-	rsCfg.P2P = &mockP2P{}
-	rs := NewRegularSyncService(context.Background(), rsCfg)
 	genesisBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
@@ -119,9 +112,16 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	if err := db.SaveState(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.UpdateChainHead(ctx, genesisBlock, genesisState); err != nil {
-		t.Fatal(err)
+
+	rsCfg := DefaultRegularSyncConfig()
+	rsCfg.ChainService = &mockChainService{
+		db:        db,
+		headBlock: genesisBlock,
+		headState: genesisState,
 	}
+	rsCfg.BeaconDB = db
+	rsCfg.P2P = &mockP2P{}
+	rs := NewRegularSyncService(context.Background(), rsCfg)
 
 	parents, parentRoots := setupBlockParents(t, genesisRoot)
 	blocksMissingParent := setupBlocksMissingParent(parents, parentRoots)

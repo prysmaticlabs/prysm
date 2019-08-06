@@ -146,9 +146,9 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	if err := beaconDB.SaveBlock(newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	//if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
+	//	t.Fatal(err)
+	//}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
@@ -186,15 +186,16 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
+	headRoot := []byte{'A'}
+	if err := beaconDB.SaveForkChoiceState(context.Background(), &pb.BeaconState{
 		Slot: 64,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, []byte{'A'}); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
-	attestations, err := service.AttestationPool(context.Background(), 64)
+	attestations, err := service.AttestationPool(context.Background(), headRoot, 64)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -233,14 +234,15 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	}
 
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
+	headRoot := []byte{'A'}
+	if err := beaconDB.SaveForkChoiceState(context.Background(), &pb.BeaconState{
 		Slot: 200,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 2,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headRoot); err != nil {
 		t.Fatal(err)
 	}
-	attestations, err := service.AttestationPool(context.Background(), 200)
+	attestations, err := service.AttestationPool(context.Background(), headRoot, 200)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -279,15 +281,16 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{
+	headRoot := []byte{'A'}
+	if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	retrievedAtts, err := s.AttestationPool(context.Background(), 15)
+	retrievedAtts, err := s.AttestationPool(context.Background(), headRoot, 15)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -299,7 +302,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Fatalf("Could not remove attestations: %v", err)
 	}
 
-	retrievedAtts, _ = s.AttestationPool(context.Background(), 15)
+	retrievedAtts, _ = s.AttestationPool(context.Background(), headRoot, 15)
 	if len(retrievedAtts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
 	}
@@ -325,16 +328,16 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-
-	if err := db.SaveState(context.Background(), &pb.BeaconState{
+	headRoot := []byte{'A'}
+	if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	atts, _ := s.AttestationPool(context.Background(), 15)
+	atts, _ := s.AttestationPool(context.Background(), headRoot, 15)
 	if len(atts) != len(attestations) {
 		t.Errorf("Attestation pool should be %d but got a length of %d",
 			len(attestations), len(atts))
@@ -351,82 +354,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	atts, _ = s.AttestationPool(context.Background(), 15)
+	atts, _ = s.AttestationPool(context.Background(), headRoot, 15)
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
-	}
-}
-
-func TestIsCanonical_CanGetCanonical(t *testing.T) {
-	t.Skip()
-	// TODO(#2307): This will be irrelevant after the revamp of our DB package post v0.6.
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	if err := s.beaconDB.SaveBlock(cb1); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.UpdateChainHead(context.Background(), cb1, &pb.BeaconState{}); err != nil {
-		t.Fatal(err)
-	}
-	r1, err := ssz.SigningRoot(cb1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
-	canonical, err := s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !canonical {
-		t.Error("Attestation should be canonical")
-	}
-
-	cb2 := &ethpb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
-	if err := s.beaconDB.SaveBlock(cb2); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.UpdateChainHead(context.Background(), cb2, &pb.BeaconState{}); err != nil {
-		t.Fatal(err)
-	}
-	canonical, err = s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation should not be canonical")
-	}
-}
-
-func TestIsCanonical_NilBlocks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	canonical, err := s.IsAttCanonical(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation shouldn't be canonical")
-	}
-
-	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	if err := s.beaconDB.SaveBlock(cb1); err != nil {
-		t.Fatal(err)
-	}
-	r1, err := ssz.SigningRoot(cb1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
-	canonical, err = s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation shouldn't be canonical")
 	}
 }

@@ -238,14 +238,6 @@ func TestSyncedInGenesis(t *testing.T) {
 func TestSyncedInRestarts(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	cfg := &QuerierConfig{
-		P2P:                &mockP2P{},
-		ResponseBufferSize: 100,
-		ChainService:       &mockChainService{},
-		BeaconDB:           db,
-		PowChain:           &afterGenesisPowChain{},
-	}
-	sq := NewQuerierService(context.Background(), cfg)
 
 	bState := &pb.BeaconState{Slot: 0}
 	blk := &ethpb.BeaconBlock{Slot: 0}
@@ -255,9 +247,14 @@ func TestSyncedInRestarts(t *testing.T) {
 	if err := db.SaveBlock(blk); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
-	if err := db.UpdateChainHead(context.Background(), blk, bState); err != nil {
-		t.Fatalf("Could not update chainhead: %v", err)
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		ChainService:       &mockChainService{headState: bState, headBlock: blk},
+		BeaconDB:           db,
+		PowChain:           &afterGenesisPowChain{},
 	}
+	sq := NewQuerierService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {

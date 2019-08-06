@@ -52,17 +52,48 @@ func (mp *mockP2P) Reputation(_ peer.ID, val int) {
 }
 
 type mockChainService struct {
-	sFeed *event.Feed
-	cFeed *event.Feed
-	db    *db.BeaconDB
+	sFeed     *event.Feed
+	cFeed     *event.Feed
+	db        *db.BeaconDB
+	headBlock *ethpb.BeaconBlock
+	headState *pb.BeaconState
+}
+
+func (ms *mockChainService) CanonicalRoot(slot uint64) []byte {
+	return nil
 }
 
 func (ms *mockChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+	return ms.headState, nil
 }
 
 func (ms *mockChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
-	return &ethpb.BeaconBlock{}, nil
+	return nil, nil
+
+}
+
+func (ms *mockChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) JustifiedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) HeadSlot() uint64 {
+	return 0
+}
+
+func (ms *mockChainService) HeadRoot() []byte {
+	return nil
+}
+
+func (ms *mockChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
+	return ms.headBlock, nil
+}
+
+func (ms *mockChainService) HeadState() (*pb.BeaconState, error) {
+	return ms.headState, nil
 }
 
 func (ms *mockChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
@@ -115,7 +146,7 @@ func setupService(db *db.BeaconDB) *RegularSync {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		ChainService:            &mockChainService{},
+		ChainService:            &mockChainService{headState: &pb.BeaconState{}, headBlock: &ethpb.BeaconBlock{}},
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
 	}
@@ -346,8 +377,6 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ms := &mockChainService{}
-	os := &mockOperationService{}
 	ctx := context.Background()
 
 	db := internal.SetupDB(t)
@@ -365,13 +394,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	if err := db.SaveBlock(beaconBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.UpdateChainHead(ctx, beaconBlock, beaconState); err != nil {
-		t.Fatal(err)
-	}
+
 	cfg := &RegularSyncConfig{
-		ChainService:     ms,
+		ChainService:     &mockChainService{headBlock: beaconBlock, headState: beaconState},
 		AttsService:      &mockAttestationService{},
-		OperationService: os,
+		OperationService: &mockOperationService{},
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
 	}
