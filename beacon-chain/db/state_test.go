@@ -30,13 +30,6 @@ func TestInitializeState_OK(t *testing.T) {
 	if err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	b, err := db.ChainHead()
-	if err != nil {
-		t.Fatalf("Failed to get chain head: %v", err)
-	}
-	if b.GetSlot() != 0 {
-		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
-	}
 
 	beaconState, err := db.HeadState(ctx)
 	if err != nil {

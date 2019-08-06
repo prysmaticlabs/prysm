@@ -3,13 +3,10 @@ package db
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestNilDB_OK(t *testing.T) {
@@ -229,159 +226,6 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 	blocks, _ := db.BlocksBySlot(ctx, 3)
 	if len(blocks) != 3 {
 		t.Errorf("Wanted %d blocks, received %d", 3, len(blocks))
-	}
-}
-
-func TestUpdateChainHead_NoBlock(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
-	}
-	beaconState, err := db.HeadState(ctx)
-	if err != nil {
-		t.Fatalf("failed to get beacon state: %v", err)
-	}
-
-	block := &ethpb.BeaconBlock{Slot: 1}
-	if err := db.UpdateChainHead(ctx, block, beaconState); err == nil {
-		t.Fatalf("expected UpdateChainHead to fail if the block does not exist: %v", err)
-	}
-}
-
-func TestUpdateChainHead_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 10)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
-	}
-
-	block, err := db.ChainHead()
-	if err != nil {
-		t.Fatalf("failed to get genesis block: %v", err)
-	}
-	bHash, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatalf("failed to get hash of b: %v", err)
-	}
-
-	beaconState, err := db.HeadState(ctx)
-	if err != nil {
-		t.Fatalf("failed to get beacon state: %v", err)
-	}
-
-	block2 := &ethpb.BeaconBlock{
-		Slot:       1,
-		ParentRoot: bHash[:],
-	}
-	b2Hash, err := ssz.SigningRoot(block2)
-	if err != nil {
-		t.Fatalf("failed to hash b2: %v", err)
-	}
-	if err := db.SaveBlock(block2); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
-		t.Fatalf("failed to record the new head of the main chain: %v", err)
-	}
-
-	b2Prime, err := db.CanonicalBlockBySlot(ctx, 1)
-	if err != nil {
-		t.Fatalf("failed to retrieve slot 1: %v", err)
-	}
-	b2Sigma, err := db.ChainHead()
-	if err != nil {
-		t.Fatalf("failed to retrieve head: %v", err)
-	}
-
-	b2PrimeHash, err := ssz.SigningRoot(b2Prime)
-	if err != nil {
-		t.Fatalf("failed to hash b2Prime: %v", err)
-	}
-	b2SigmaHash, err := ssz.SigningRoot(b2Sigma)
-	if err != nil {
-		t.Fatalf("failed to hash b2Sigma: %v", err)
-	}
-
-	if b2Hash != b2PrimeHash {
-		t.Fatalf("expected %x and %x to be equal", b2Hash, b2PrimeHash)
-	}
-	if b2Hash != b2SigmaHash {
-		t.Fatalf("expected %x and %x to be equal", b2Hash, b2SigmaHash)
-	}
-}
-
-func TestChainProgress_OK(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	err := db.InitializeState(context.Background(), genesisTime, deposits, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
-	}
-
-	beaconState, err := db.HeadState(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get beacon state: %v", err)
-	}
-	cycleLength := params.BeaconConfig().SlotsPerEpoch
-
-	block1 := &ethpb.BeaconBlock{Slot: 1}
-	if err := db.SaveBlock(block1); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	if err := db.UpdateChainHead(ctx, block1, beaconState); err != nil {
-		t.Fatalf("failed to record the new head: %v", err)
-	}
-	heighestBlock, err := db.ChainHead()
-	if err != nil {
-		t.Fatalf("failed to get chain head: %v", err)
-	}
-	if heighestBlock.Slot != block1.Slot {
-		t.Fatalf("expected height to equal %d, got %d", block1.Slot, heighestBlock.Slot)
-	}
-
-	block2 := &ethpb.BeaconBlock{Slot: cycleLength}
-	if err := db.SaveBlock(block2); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
-		t.Fatalf("failed to record the new head: %v", err)
-	}
-	heighestBlock, err = db.ChainHead()
-	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
-	}
-	if heighestBlock.Slot != block2.Slot {
-		t.Fatalf("expected height to equal %d, got %d", block2.Slot, heighestBlock.Slot)
-	}
-
-	block3 := &ethpb.BeaconBlock{Slot: 3}
-	if err := db.SaveBlock(block3); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	if err := db.UpdateChainHead(ctx, block3, beaconState); err != nil {
-		t.Fatalf("failed to update head: %v", err)
-	}
-	heighestBlock, err = db.ChainHead()
-	if err != nil {
-		t.Fatalf("failed to get chain head: %v", err)
-	}
-	if heighestBlock.Slot != block3.Slot {
-		t.Fatalf("expected height to equal %d, got %d", block3.Slot, heighestBlock.Slot)
 	}
 }
 
