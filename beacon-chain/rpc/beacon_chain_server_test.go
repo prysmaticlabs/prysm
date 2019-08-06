@@ -21,7 +21,7 @@ import (
 
 type mockPool struct{}
 
-func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
+func (m *mockPool) AttestationPool(ctx context.Context, headRoot []byte, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	return []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -255,21 +255,21 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+
+	if err := db.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
 		pool:     &mockPool{},
+		head:     &mockChainService{headBlock: &ethpb.BeaconBlock{Slot: 10}, headState: &pbp2p.BeaconState{Slot: 10}},
 		beaconDB: db,
-	}
-	if err := bs.beaconDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
-		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx, 10)
+	want, _ := bs.pool.AttestationPool(ctx, []byte{}, 10)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
@@ -571,13 +571,7 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
 	}
 
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
-	bs := &BeaconChainServer{beaconDB: db}
+	bs := &BeaconChainServer{head: &mockChainService{headState: &pbp2p.BeaconState{Validators: validators}}}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
 	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
@@ -623,6 +617,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
+		head:     &mockChainService{headState: s},
 		beaconDB: db,
 	}
 
@@ -680,6 +675,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 	}
 
 	bs := &BeaconChainServer{
+		head:     &mockChainService{headState: s},
 		beaconDB: db,
 	}
 
@@ -738,6 +734,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 
 	bs := &BeaconChainServer{
+		head:     &mockChainService{headState: s},
 		beaconDB: db,
 	}
 
@@ -857,6 +854,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
+		head:     &mockChainService{headState: s},
 		beaconDB: db,
 	}
 

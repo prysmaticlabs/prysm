@@ -95,7 +95,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
-	ctx := context.Background()
+	//ctx := context.Background()
 	defer internal.TeardownDB(t, db)
 	helpers.ClearAllCaches()
 
@@ -111,11 +111,10 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err := db.SaveBlock(block); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("Could not update head: %v", err)
-	}
+
 	validatorServer := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mockChainService{headState: beaconState, headBlock: block},
 	}
 	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
@@ -136,13 +135,13 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	db.UpdateChainHead(ctx, genesis, state)
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mockChainService{headState: beaconState, headBlock: genesis},
 	}
 
 	pubKey := make([]byte, 96)
@@ -161,7 +160,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
@@ -174,9 +172,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
@@ -196,7 +192,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mockChainService{headState: state, headBlock: genesis},
 	}
 
 	// Test the first validator in registry.
@@ -240,7 +237,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
@@ -252,9 +248,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
@@ -274,7 +268,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mockChainService{headState: state, headBlock: genesis},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -306,12 +301,10 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	}
 
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{Validators: []*ethpb.Validator{
+	state := &pbp2p.BeaconState{Validators: []*ethpb.Validator{
 		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: pubKey},
 	},
 		Slot: 5000,
-	}); err != nil {
-		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -336,6 +329,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -379,16 +373,14 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -398,6 +390,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 				int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -432,16 +425,14 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			ActivationEpoch:   0,
 			ExitEpoch:         exitEpoch,
 			WithdrawableEpoch: withdrawableEpoch},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -464,6 +455,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -490,15 +482,14 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	// Withdrawable exit because current epoch is after validator withdrawable epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: 10000,
 		Validators: []*ethpb.Validator{{
 			WithdrawableEpoch: epoch - 1,
 			ExitEpoch:         epoch - 2,
 			PublicKey:         pubKey},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
+
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -521,6 +512,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -547,15 +539,13 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -578,6 +568,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -604,14 +595,12 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	// Exit because only exit epoch is =< current epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -634,6 +623,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -657,15 +647,13 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: 0,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -688,6 +676,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		chainService: &mockChainService{headState: state},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -706,19 +695,16 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState := &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
-	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                ctx,
-		chainService:       newMockChainService(),
+		chainService:       &mockChainService{headState: state},
 		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
@@ -770,7 +756,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -785,9 +771,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			},
 		},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
@@ -816,7 +800,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
-		chainService:       newMockChainService(),
+		chainService:       &mockChainService{headState: state},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 	}
@@ -866,7 +850,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: 0,
@@ -882,9 +866,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 				PublicKey:       pubKeys[2]},
 		},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             []byte{'A'},
 		Signature:             []byte("hi"),
@@ -925,7 +907,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
-		chainService:       newMockChainService(),
+		chainService:       &mockChainService{headState: state},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 	}
@@ -969,9 +951,9 @@ func BenchmarkAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(context.Background(), genesis, state); err != nil {
-		b.Fatalf("Could not save genesis state: %v", err)
-	}
+	//if err := db.UpdateChainHead(context.Background(), genesis, state); err != nil {
+	//	b.Fatalf("Could not save genesis state: %v", err)
+	//}
 	var wg sync.WaitGroup
 	errs := make(chan error, validatorCount)
 	for i := 0; i < int(validatorCount); i++ {

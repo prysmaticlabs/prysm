@@ -38,7 +38,7 @@ func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Me
 	return nil
 }
 
-func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
+func (ms *mockOperationService) AttestationPool(_ context.Context, headRoot []byte, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}
@@ -78,12 +78,12 @@ type mockChainService struct {
 	stateFeed            *event.Feed
 	attestationFeed      *event.Feed
 	stateInitializedFeed *event.Feed
-	canonicalBlocks      map[uint64][]byte
-	targets              map[uint64]*pb.AttestationTarget
+	headBlock            *ethpb.BeaconBlock
+	headState            *pb.BeaconState
 }
 
-func (m *mockChainService) StateInitializedFeed() *event.Feed {
-	return m.stateInitializedFeed
+func (ms *mockChainService) StateInitializedFeed() *event.Feed {
+	return ms.stateInitializedFeed
 }
 
 func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
@@ -94,8 +94,45 @@ func (ms *mockChainService) ReceiveAttestation(ctx context.Context, att *ethpb.A
 	return nil
 }
 
-func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
+func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockChainService) CanonicalRoot(slot uint64) []byte {
+	return nil
+}
+
+func (ms *mockChainService) FinalizedState(ctx context.Context) (*pb.BeaconState, error) {
+	return nil, nil
+}
+
+func (ms *mockChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
+	return nil, nil
+
+}
+
+func (ms *mockChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) JustifiedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (ms *mockChainService) HeadSlot() uint64 {
+	return 0
+}
+
+func (ms *mockChainService) HeadRoot() []byte {
+	return nil
+}
+
+func (ms *mockChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
+	return ms.headBlock, nil
+}
+
+func (ms *mockChainService) HeadState() (*pb.BeaconState, error) {
+	return ms.headState, nil
 }
 
 func newMockChainService() *mockChainService {

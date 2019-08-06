@@ -33,23 +33,23 @@ func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatalf("Could not instantiate genesis state: %v", err)
-	}
+	//numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	//_, _ := testutil.SetupInitialDeposits(t, numDeposits)
+	//beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	//if err != nil {
+	//	t.Fatalf("Could not instantiate genesis state: %v", err)
+	//}
 
-	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	//if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	//	t.Fatalf("Could not save genesis state: %v", err)
+	//}
 
 	proposerServer := &ProposerServer{
 		chainService:    mockChain,
@@ -71,10 +71,8 @@ func TestProposeBlock_OK(t *testing.T) {
 func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
+	//ctx := context.Background()
 	helpers.ClearAllCaches()
-
-	mockChain := &mockChainService{}
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -92,19 +90,15 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
 	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
 	proposerServer := &ProposerServer{
-		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
+		chainService:    &mockChainService{headBlock: genesis, headState: beaconState},
 	}
 
 	req := &ethpb.BeaconBlock{
@@ -228,13 +222,6 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	proposerServer := &ProposerServer{
-		operationService: &mockOperationService{
-			pendingAttestations: []*ethpb.Attestation{att},
-		},
-		chainService: &mockChainService{},
-		beaconDB:     db,
-	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -247,8 +234,12 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatalf("failed to save block %v", err)
 	}
 
-	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v", err)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{
+			pendingAttestations: []*ethpb.Attestation{att},
+		},
+		chainService: &mockChainService{headState: beaconState, headBlock: blk},
+		beaconDB:     db,
 	}
 
 	atts, err := proposerServer.attestations(context.Background(), stateSlot)
@@ -390,11 +381,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		},
 	}
 	expectedNumberOfAttestations := 3
-	proposerServer := &ProposerServer{
-		operationService: opService,
-		chainService:     &mockChainService{},
-		beaconDB:         db,
-	}
 
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
@@ -408,8 +394,10 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatalf("failed to save block %v", err)
 	}
 
-	if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v", err)
+	proposerServer := &ProposerServer{
+		operationService: opService,
+		beaconDB:         db,
+		chainService:     &mockChainService{headState: beaconState, headBlock: blk},
 	}
 
 	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay+1)
@@ -654,7 +642,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
-		chainService:    newMockChainService(),
+		chainService:    &mockChainService{headState: beaconState},
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -789,7 +777,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
-		chainService:    newMockChainService(),
+		chainService:    &mockChainService{headState: beaconState},
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -898,7 +886,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
-		chainService:    newMockChainService(),
+		chainService:    &mockChainService{headState: beaconState},
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -998,7 +986,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
-		chainService:    newMockChainService(),
+		chainService:    &mockChainService{headState: beaconState},
 	}
 
 	// It should also return the recent deposits after their follow window.
