@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "attestation.go",
         "block.go",
+        "block_header.go",
         "block_operations.go",
         "db.go",
         "deposit_contract.go",
@@ -44,6 +45,7 @@ go_test(
     size = "medium",
     srcs = [
         "attestation_test.go",
+        "block_header_test.go",
         "block_operations_test.go",
         "block_test.go",
         "db_test.go",
