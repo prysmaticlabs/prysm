@@ -8,6 +8,8 @@ var aInfo300K, _ = createIndices(300000)
 var aInfo1M, _ = createIndices(1000000)
 var epoch = uint64(1)
 var _, treeIndices300K = createIndices(300000)
+var byteIndices300k = convertUint64ToByteSlice(treeIndices300K);
+
 
 func createIndices(count int) (*ActiveIndicesByEpoch, []uint64) {
 	indices := make([]uint64, 0, count)
@@ -84,4 +86,33 @@ func BenchmarkTreeAddRetrieve(b *testing.B) {
 			}
 		}
 	})
+}
+
+
+func BenchmarkBloomFilter(b *testing.B) {
+	bf := NewBloomFilter()
+
+
+	b.Run("BLOOMADD300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			bf.AddActiveIndicesBloomFilter(byteIndices300k)
+		}
+	})
+
+
+	b.Run("BLOOMTEST300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if !bf.TestActiveIndicesBloomFilter(byteIndices300k) {
+				break;
+			}
+		}
+		bf.ClearBloomFilter()
+	})
+
+
+
 }
