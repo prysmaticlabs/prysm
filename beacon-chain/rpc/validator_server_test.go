@@ -165,17 +165,15 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
 
 	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
+	errs := make(chan error, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
@@ -193,7 +191,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	vs := &ValidatorServer{
 		beaconDB:     db,
-		chainService: &mockChainService{headState: state, headBlock: genesis},
+		chainService: &mockChainService{headState: beaconState, headBlock: genesis},
 	}
 
 	// Test the first validator in registry.
@@ -209,13 +207,16 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > beaconState.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, beaconState.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 
+	headState, _ := vs.chainService.HeadState()
+	headState.Slot = 0
+
 	// Test the last validator in registry.
-	lastValidatorIndex := depChainStart - 1
+	lastValidatorIndex := len(deposits) - 1
 	req = &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.PublicKey},
 		EpochStart: 0,
@@ -228,9 +229,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].Slot > beaconState.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].Slot, beaconState.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -242,17 +243,16 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
 
 	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
+	errs := make(chan error, len(deposits))
+	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
 			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
