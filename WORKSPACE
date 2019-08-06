@@ -1064,7 +1064,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "3390f7d16df07cee9e54c1700adeace090fede32",  # v0.2.0
+    commit = "9698a72f451154e0563fc7883ab11ae94937dd4f",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
