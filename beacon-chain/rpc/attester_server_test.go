@@ -36,9 +36,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		Slot:       999,
 		ParentRoot: []byte{'a'},
 	}
-	if err := db.SaveBlock(head); err != nil {
-		t.Fatal(err)
-	}
+
 	root, err := ssz.SigningRoot(head)
 	if err != nil {
 		t.Fatal(err)
@@ -50,17 +48,6 @@ func TestSubmitAttestation_OK(t *testing.T) {
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		}
-	}
-
-	state := &pbp2p.BeaconState{
-		Slot:             params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	if err := db.SaveState(context.Background(), state); err != nil {
-		t.Fatal(err)
 	}
 
 	req := &ethpb.Attestation{
@@ -126,16 +113,6 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-
-	if err := db.SaveBlock(targetBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
 
 	attesterServer := &AttesterServer{
 		beaconDB:     db,
@@ -240,16 +217,6 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-
-	if err := db.SaveBlock(epochBoundaryBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
 
 	attesterServer := &AttesterServer{
 		beaconDB:     db,

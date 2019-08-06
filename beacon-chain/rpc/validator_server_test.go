@@ -104,13 +104,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(context.Background(), beaconState); err != nil {
-		t.Fatal(err)
-	}
 	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block: %v", err)
-	}
 
 	validatorServer := &ValidatorServer{
 		beaconDB:     db,
@@ -131,9 +125,6 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -162,9 +153,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -240,9 +228,6 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -942,10 +927,6 @@ func BenchmarkAssignment(b *testing.B) {
 	defer db.Close()
 	os.RemoveAll(db.DatabasePath)
 
-	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		b.Fatalf("Could not save genesis block: %v", err)
-	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	state, err := genesisState(validatorCount)
 	if err != nil {

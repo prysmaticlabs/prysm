@@ -256,10 +256,6 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	if err := db.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
-		t.Fatal(err)
-	}
-
 	bs := &BeaconChainServer{
 		pool:     &mockPool{},
 		head:     &mockChainService{headBlock: &ethpb.BeaconBlock{Slot: 10}, headState: &pbp2p.BeaconState{Slot: 10}},

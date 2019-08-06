@@ -35,22 +35,15 @@ func TestProposeBlock_OK(t *testing.T) {
 	mockChain := &mockChainService{}
 	//ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
 	proposerServer := &ProposerServer{
 		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
+
 	req := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: []byte("parent-hash"),
-	}
-	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
-		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
@@ -75,10 +68,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
 	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
@@ -217,10 +206,6 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
-	}
-
-	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
 	}
 
 	proposerServer := &ProposerServer{
@@ -378,11 +363,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-
-	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-
 	proposerServer := &ProposerServer{
 		operationService: opService,
 		beaconDB:         db,
