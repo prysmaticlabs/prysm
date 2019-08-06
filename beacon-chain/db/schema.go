@@ -44,6 +44,14 @@ func encodeSlotNumberRoot(number uint64, root [32]byte) []byte {
 	return append(bytesutil.Bytes8(number), root[:]...)
 }
 
+func encodeEpochValidatorID(epoch uint64, validatorID uint64) []byte {
+	return append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorID)...)
+}
+
+func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []byte {
+	return append(append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorID)...), sig...)
+}
+
 // encodeSlotNumber encodes a slot number as little-endian uint32.
 func encodeSlotNumber(number uint64) []byte {
 	return bytesutil.Bytes8(number)
