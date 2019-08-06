@@ -43,7 +43,7 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 // saves it to the DB when found.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
-		state, err := db.HeadState(context.Background())
+		state, err := db.LastForkChoiceState(context.Background())
 		if err != nil {
 			return 0, err
 		}

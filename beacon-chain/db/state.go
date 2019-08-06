@@ -531,3 +531,24 @@ func (db *BeaconDB) ForkChoiceState(ctx context.Context, blockRoot []byte) (*pb.
 	})
 	return s, err
 }
+
+// LastForkChoiceState gets the last saved beacon state using beacon block root as key.
+func (db *BeaconDB) LastForkChoiceState(ctx context.Context) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.ForkChoiceState")
+	defer span.End()
+
+	var s *pb.BeaconState
+	var err error
+	err = db.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(forkChoiceStateBucket)
+
+		_, enc := bucket.Cursor().Last()
+		if enc == nil {
+			return nil
+		}
+
+		s, err = createState(enc)
+		return err
+	})
+	return s, err
+}

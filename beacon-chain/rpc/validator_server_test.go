@@ -62,7 +62,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 		Validators: []*ethpb.Validator{{PublicKey: []byte{0}}, {PublicKey: []byte{'A'}}, {PublicKey: []byte{'B'}}},
 	}
 
-	if err := db.SaveState(context.Background(), s); err != nil {
+	if err := db.SaveForkChoiceState(context.Background(), s, []byte{'A'}); err != nil {
 		t.Fatal(err)
 	}
 

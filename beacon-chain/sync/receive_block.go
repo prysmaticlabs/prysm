@@ -74,7 +74,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 // At the end of the recursive call, we'll have a block which has no children in the map, and at that point
 // we can apply the fork choice rule for ETH 2.0.
 func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2p.Message) error {
-	block, _, isValid, err := rs.validateAndProcessBlock(ctx, msg)
+	block, isValid, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2
 
 func (rs *RegularSync) validateAndProcessBlock(
 	ctx context.Context, blockMsg p2p.Message,
-) (*ethpb.BeaconBlock, *pb.BeaconState, bool, error) {
+) (*ethpb.BeaconBlock, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
 
@@ -116,7 +116,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
-		return nil, nil, false, err
+		return nil, false, err
 	}
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).
@@ -126,13 +126,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
-		return nil, nil, false, err
-	}
-
-	beaconState, err := rs.db.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Failed to get beacon state: %v", err)
-		return nil, nil, false, err
+		return nil, false, err
 	}
 
 	// We check if we have the block's parents saved locally.
@@ -147,7 +141,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
 		}
-		return nil, nil, false, nil
+		return nil, false, nil
 	}
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debug(
@@ -158,7 +152,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		log.Errorf("Could not process beacon block: %v", err)
 		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
-		return nil, nil, false, err
+		return nil, false, err
 	}
 
 	rs.p2p.Reputation(blockMsg.Peer, p2p.RepRewardValidBlock)
@@ -169,7 +163,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	}
 
 	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
-	return block, beaconState, true, nil
+	return block, true, nil
 }
 
 func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {

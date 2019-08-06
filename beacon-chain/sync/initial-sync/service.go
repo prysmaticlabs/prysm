@@ -26,6 +26,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -77,6 +78,7 @@ type powChainService interface {
 type chainService interface {
 	blockchain.BlockReceiver
 	blockchain.BlockProcessor
+	blockchain.HeadRetriever
 }
 
 // SyncService is the interface for the Sync service.
@@ -184,12 +186,21 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 		return err
 	}
 
-	stateRoot := s.db.HeadStateRoot()
+	headState, err := s.chainService.HeadState()
+	if err != nil {
+		log.Errorf("Could not get head state: %v", err)
+		return err
+	}
+	headStateRoot, err := hashutil.HashProto(headState)
+	if err != nil {
+		log.Errorf("Could not hash head state: %v", err)
+		return err
+	}
 
-	if stateRoot != bytesutil.ToBytes32(chainHead.CanonicalStateRootHash32) {
+	if headStateRoot != bytesutil.ToBytes32(chainHead.CanonicalStateRootHash32) {
 		log.Errorf(
 			"Canonical state root %#x does not match highest observed root from peer %#x",
-			stateRoot,
+			headStateRoot,
 			chainHead.CanonicalStateRootHash32,
 		)
 

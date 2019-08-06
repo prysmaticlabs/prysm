@@ -52,7 +52,7 @@ func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
 	if err := db.SaveValidatorIndex(p1, 3); err != nil {
 		t.Fatalf("Failed to save validator index: %v", err)
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{}); err != nil {
+	if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{}, []byte{'A'}); err != nil {
 		t.Fatalf("Failed to save state: %v", err)
 	}
 	index, err := db.ValidatorIndex(p1)

@@ -99,7 +99,7 @@ func (q *Querier) Start() {
 	q.chainStarted = hasChainStarted
 	q.atGenesis = !hasChainStarted
 
-	bState, err := q.db.HeadState(q.ctx)
+	bState, err := q.db.LastForkChoiceState(q.ctx)
 	if err != nil {
 		queryLog.Errorf("Unable to retrieve beacon state %v", err)
 	}

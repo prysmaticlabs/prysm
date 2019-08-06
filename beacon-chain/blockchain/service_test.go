@@ -224,13 +224,6 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if beaconState == nil || beaconState.Slot != 0 {
-		t.Error("Expected canonical state feed to send a state with genesis block")
-	}
 	if err := chainService.Stop(); err != nil {
 		t.Fatalf("Unable to stop chain service: %v", err)
 	}

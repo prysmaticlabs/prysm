@@ -19,12 +19,8 @@ const noMsgData = "message contains no data"
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
-	beaconState, err := s.db.HeadState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to get beacon state")
-	}
 
-	if block.Slot < helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch) {
+	if block.Slot < helpers.StartSlot(s.chainService.FinalizedCheckpt().Epoch) {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer

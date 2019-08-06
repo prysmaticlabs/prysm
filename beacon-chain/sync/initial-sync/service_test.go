@@ -73,7 +73,7 @@ func (ms *mockChainService) FinalizedBlock() (*ethpb.BeaconBlock, error) {
 }
 
 func (ms *mockChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return nil
+	return &ethpb.Checkpoint{}
 }
 
 func (ms *mockChainService) JustifiedCheckpt() *ethpb.Checkpoint {
