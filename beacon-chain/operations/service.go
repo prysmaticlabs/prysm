@@ -223,18 +223,18 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	defer span.End()
 
 	attestation := message.(*ethpb.Attestation)
-	root, err := ssz.HashTreeRoot(attestation.Data)
+	hash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		return err
 	}
 	incomingAttBits := attestation.AggregationBits
-	if !bytes.Equal(incomingAttBits.Bytes(), []byte{}) && s.beaconDB.HasAttestation(root) {
-		dbAtt, err := s.beaconDB.Attestation(root)
+	if s.beaconDB.HasAttestation(hash) {
+		dbAtt, err := s.beaconDB.Attestation(hash)
 		if err != nil {
 			return err
 		}
 
-		if !incomingAttBits.Contains(dbAtt.AggregationBits) {
+		if !dbAtt.AggregationBits.Contains(incomingAttBits) {
 			newAggregationBits := dbAtt.AggregationBits.Or(incomingAttBits)
 			incomingAttSig, err := bls.SignatureFromBytes(attestation.Signature)
 			if err != nil {

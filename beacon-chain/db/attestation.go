@@ -6,9 +6,9 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
 
@@ -22,7 +22,7 @@ func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *ethpb.Atte
 		return err
 	}
 
-	root, err := ssz.HashTreeRoot(attestation.Data)
+	hash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *ethpb.Atte
 	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		return a.Put(root[:], encodedAtt)
+		return a.Put(hash[:], encodedAtt)
 	})
 }
 
@@ -53,24 +53,24 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
 func (db *BeaconDB) DeleteAttestation(attestation *ethpb.Attestation) error {
-	root, err := ssz.HashTreeRoot(attestation)
+	hash, err := hashutil.HashProto(attestation)
 	if err != nil {
 		return err
 	}
 
 	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
-		return a.Delete(root[:])
+		return a.Delete(hash[:])
 	})
 }
 
-// Attestation retrieves an attestation record from the db using the attestation.data root.
-func (db *BeaconDB) Attestation(root [32]byte) (*ethpb.Attestation, error) {
+// Attestation retrieves an attestation record from the db using the hash of attestation.data.
+func (db *BeaconDB) Attestation(hash [32]byte) (*ethpb.Attestation, error) {
 	var attestation *ethpb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		enc := a.Get(root[:])
+		enc := a.Get(hash[:])
 		if enc == nil {
 			return nil
 		}
@@ -106,13 +106,13 @@ func (db *BeaconDB) Attestations() ([]*ethpb.Attestation, error) {
 	return attestations, err
 }
 
-// AttestationTarget retrieves an attestation target record from the db using the attestation.data root.
-func (db *BeaconDB) AttestationTarget(root [32]byte) (*pb.AttestationTarget, error) {
+// AttestationTarget retrieves an attestation target record from the db using the hash of attestation.data.
+func (db *BeaconDB) AttestationTarget(hash [32]byte) (*pb.AttestationTarget, error) {
 	var attTgt *pb.AttestationTarget
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationTargetBucket)
 
-		enc := a.Get(root[:])
+		enc := a.Get(hash[:])
 		if enc == nil {
 			return nil
 		}
@@ -126,13 +126,13 @@ func (db *BeaconDB) AttestationTarget(root [32]byte) (*pb.AttestationTarget, err
 }
 
 // HasAttestation checks if the attestation exists.
-func (db *BeaconDB) HasAttestation(root [32]byte) bool {
+func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 	exists := false
 	// #nosec G104
 	db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		exists = a.Get(root[:]) != nil
+		exists = a.Get(hash[:]) != nil
 		return nil
 	})
 	return exists
