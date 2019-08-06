@@ -951,9 +951,7 @@ func BenchmarkAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
-	//if err := db.UpdateChainHead(context.Background(), genesis, state); err != nil {
-	//	b.Fatalf("Could not save genesis state: %v", err)
-	//}
+
 	var wg sync.WaitGroup
 	errs := make(chan error, validatorCount)
 	for i := 0; i < int(validatorCount); i++ {

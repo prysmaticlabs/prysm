@@ -183,9 +183,6 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
 	}
-	//if err := s.db.UpdateChainHead(ctx, block, state); err != nil {
-	//	return err
-	//}
 
 	stateRoot := s.db.HeadStateRoot()
 

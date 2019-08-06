@@ -141,10 +141,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-	//	t.Fatal(err)
-	//}
-
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
 	beaconState.Slot++
@@ -304,9 +300,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 
 	parentHash, _ := setupGenesisBlock(t, chainService)
-	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
-	//	t.Fatal(err)
-	//}
+
 	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
@@ -402,9 +396,6 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-	//	t.Fatal(err)
-	//}
 
 	beaconState.Slot++
 
@@ -470,10 +461,6 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	//if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
-	//	t.Fatal(err)
-	//}
-
 	beaconState.Slot++
 	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {

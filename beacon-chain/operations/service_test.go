@@ -146,9 +146,6 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	if err := beaconDB.SaveBlock(newBlock); err != nil {
 		t.Fatal(err)
 	}
-	//if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
-	//	t.Fatal(err)
-	//}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {

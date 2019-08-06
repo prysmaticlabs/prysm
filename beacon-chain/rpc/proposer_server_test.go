@@ -40,17 +40,6 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	//numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	//_, _ := testutil.SetupInitialDeposits(t, numDeposits)
-	//beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	//if err != nil {
-	//	t.Fatalf("Could not instantiate genesis state: %v", err)
-	//}
-
-	//if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-	//	t.Fatalf("Could not save genesis state: %v", err)
-	//}
-
 	proposerServer := &ProposerServer{
 		chainService:    mockChain,
 		beaconDB:        db,
