@@ -36,7 +36,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, errors.Wrap(err, "could not hash attestation")
 	}
 
-	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
+	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
 

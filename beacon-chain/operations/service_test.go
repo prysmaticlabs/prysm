@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -114,13 +115,13 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: false,
+	}
 	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-			Data:       att.Data,
-			CustodyBit: false,
-		}
 		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
 		if err != nil {
 			t.Error(err)
@@ -157,9 +158,136 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	att.Data.Crosslink.ParentRoot = encoded[:]
 	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
-	if err := service.HandleAttestations(context.Background(), att); err != nil {
+	if err := service.HandleAttestation(context.Background(), att); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestIncomingAttestation_Aggregates(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	broadcaster := &mockBroadcaster{}
+	service := NewOpsPoolService(context.Background(), &Config{
+		BeaconDB: beaconDB,
+		P2P:      broadcaster,
+	})
+
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target: &ethpb.Checkpoint{Epoch: 0},
+			Crosslink: &ethpb.Crosslink{
+				Shard:      0,
+				StartEpoch: 0,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0x00, 0x00},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+	}
+
+	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	if err != nil {
+		t.Error(err)
+	}
+	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: false,
+	}
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	sigs := make([]*bls.Signature, len(attestingIndices))
+	for i, indice := range attestingIndices {
+		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		if err != nil {
+			t.Error(err)
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
+		{
+			Shard:      0,
+			StartEpoch: 0,
+		},
+	}
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	newBlock := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	if err := beaconDB.SaveBlock(newBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	att.Data.Crosslink.ParentRoot = encoded[:]
+	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	if err := service.HandleAttestation(context.Background(), att); err != nil {
+		t.Error(err)
+	}
+
+	att = &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target: &ethpb.Checkpoint{Epoch: 0},
+			Crosslink: &ethpb.Crosslink{
+				Shard:      0,
+				StartEpoch: 0,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x02, 0x02},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+	}
+	sigs = make([]*bls.Signature, len(attestingIndices))
+	for i, indice := range attestingIndices {
+		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		if err != nil {
+			t.Error(err)
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Data.Crosslink.ParentRoot = encoded[:]
+	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	if err := service.HandleAttestation(context.Background(), att); err != nil {
+		t.Error(err)
+	}
+
+	attRoot, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		t.Error(err)
+	}
+	dbAtt, err := service.beaconDB.Attestation(attRoot)
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log(dbAtt)
+	t.Log(att)
+	dbAttBits := dbAtt.AggregationBits.Bytes()[:]
+	attBits := att.AggregationBits.Bytes()[:]
+	if !bytes.Equal(dbAttBits, attBits) {
+		t.Error("Expected aggregation bits to be equal.")
+	}
+
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {

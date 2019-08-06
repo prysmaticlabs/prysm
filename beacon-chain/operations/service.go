@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -194,7 +195,7 @@ func (s *Service) saveOperations() {
 		case exit := <-s.incomingValidatorExits:
 			handler.SafelyHandleMessage(s.ctx, s.HandleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			handler.SafelyHandleMessage(s.ctx, s.HandleAttestations, attestation)
+			handler.SafelyHandleMessage(s.ctx, s.HandleAttestation, attestation)
 		}
 	}
 }
@@ -216,18 +217,39 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	return nil
 }
 
-// HandleAttestations processes a received attestation message.
-func (s *Service) HandleAttestations(ctx context.Context, message proto.Message) error {
-	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestations")
+// HandleAttestation processes a received attestation message.
+func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
 
 	attestation := message.(*ethpb.Attestation)
-	hash, err := hashutil.HashProto(attestation)
+	root, err := ssz.HashTreeRoot(attestation.Data)
 	if err != nil {
 		return err
 	}
-	if s.beaconDB.HasAttestation(hash) {
-		return nil
+	incomingAttBits := attestation.AggregationBits
+	if !bytes.Equal(incomingAttBits.Bytes(), []byte{}) && s.beaconDB.HasAttestation(root) {
+		dbAtt, err := s.beaconDB.Attestation(root)
+		if err != nil {
+			return err
+		}
+
+		if !incomingAttBits.Contains(dbAtt.AggregationBits) {
+			newAggregationBits := dbAtt.AggregationBits.Or(incomingAttBits)
+			incomingAttSig, err := bls.SignatureFromBytes(attestation.Signature)
+			if err != nil {
+				return err
+			}
+			dbSig, err := bls.SignatureFromBytes(dbAtt.Signature)
+			if err != nil {
+				return err
+			}
+			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
+			attestation.Signature = aggregatedSig.Marshal()
+			attestation.AggregationBits = newAggregationBits
+		} else {
+			return nil
+		}
 	}
 	state, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
