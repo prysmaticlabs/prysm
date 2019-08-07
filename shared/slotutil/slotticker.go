@@ -2,6 +2,8 @@ package slotutil
 
 import (
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // SlotTicker is a special ticker for the beacon chain block.
@@ -34,7 +36,7 @@ func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, secondsPerSlot, time.Since, time.Until, time.After)
+	ticker.start(genesisTime, secondsPerSlot, roughtime.Since, roughtime.Until, time.After)
 	return ticker
 }
 
