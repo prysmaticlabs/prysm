@@ -234,9 +234,11 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	}
 
 	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
-	if err != nil {
-		return err
+	if attestationSlot > bState.Slot {
+		bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
@@ -347,7 +349,7 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
-		hash, err := hashutil.HashProto(attestation)
+		hash, err := hashutil.HashProto(attestation.Data)
 		if err != nil {
 			return err
 		}

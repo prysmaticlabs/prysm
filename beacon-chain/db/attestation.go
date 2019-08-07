@@ -53,7 +53,7 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
 func (db *BeaconDB) DeleteAttestation(attestation *ethpb.Attestation) error {
-	hash, err := hashutil.HashProto(attestation)
+	hash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		return err
 	}

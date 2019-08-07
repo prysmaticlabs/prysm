@@ -532,15 +532,16 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Attestation not in db")
 }
 
-func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
+func TestHandleAnnounceAttestation_RequestsAttestationData(t *testing.T) {
 	os := &mockOperationService{}
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	att := &ethpb.Attestation{
+		Data:            &ethpb.AttestationData{},
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
-	hash, err := hashutil.HashProto(att)
+	hash, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -574,15 +575,16 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	}
 }
 
-func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
+func TestHandleAnnounceAttestation_DoNothingIfAlreadySeen(t *testing.T) {
 	os := &mockOperationService{}
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	att := &ethpb.Attestation{
+		Data:            &ethpb.AttestationData{},
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
-	hash, err := hashutil.HashProto(att)
+	hash, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -618,9 +620,10 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	att := &ethpb.Attestation{
+		Data:            &ethpb.AttestationData{},
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
-	attRoot, err := hashutil.HashProto(att)
+	attRoot, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}

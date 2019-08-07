@@ -131,7 +131,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
 		{
 			Shard:      0,
@@ -150,6 +149,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
 	if err != nil {
@@ -178,7 +178,6 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
 		{
 			Shard:      0,
@@ -226,6 +225,7 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 	att1.Signature = privKeys[committee[0]].Sign(hashTreeRoot[:], domain).Marshal()
 
+	fmt.Println(committee)
 	att2 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -254,6 +254,7 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
 	if err := service.HandleAttestation(context.Background(), att1); err != nil {
 		t.Error(err)
@@ -307,7 +308,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
 		{
 			Shard:      0,
@@ -411,6 +411,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
 	if err := service.HandleAttestation(context.Background(), att1); err != nil {
 		t.Error(err)
