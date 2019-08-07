@@ -991,8 +991,10 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "b495094dc72c7043b549f511a798391201624b14",
+    commit = "c5146d944578a777ce791f889b36584d82413a10",
     importpath = "github.com/phoreproject/bls",
+    remote = "https://github.com/protolambda/bls",
+    vcs = "git",
 )
 
 go_repository(
