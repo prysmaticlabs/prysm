@@ -2,12 +2,13 @@ package db
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
@@ -69,6 +70,16 @@ func (db *BeaconDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeade
 		if err := bucket.Put(key, enc); err != nil {
 			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
 		}
+		// prune history to max size every 10th epoch
+		if epoch%10 == 0 {
+			if featureconfig.FeatureConfig().HashSlingingSlasher {
+				weakSubjectivityPeriod := uint64(54000)
+				db.pruneHistory(epoch, weakSubjectivityPeriod)
+			} else {
+				defaultHistoryStorage := uint64(20)
+				db.pruneHistory(epoch, defaultHistoryStorage)
+			}
+		}
 		return bucket.Put(key, enc)
 	})
 }
@@ -96,7 +107,7 @@ func (db *BeaconDB) pruneHistory(currentEpoch uint64, historySize uint64) error 
 		}
 		max := bytesutil.Bytes8(currentEpoch - historySize)
 
-		for k, _ := c.Next(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
+		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
 			}

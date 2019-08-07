@@ -66,6 +66,11 @@ var (
 		Name:  "enable-total-balance-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	// HashSlingingSlasherFlag run a slashing proof server instance.
+	HashSlingingSlasherFlag = cli.BoolFlag{
+		Name:  "hash-slinging-slasher",
+		Usage: "Enable 54000 epochs of attestation and blockheaders storage for generating slashing proofs in the weak subjectivity period.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -85,4 +90,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableSeedCacheFlag,
 	EnableStartShardCacheFlag,
 	EnableTotalBalanceCacheFlag,
+	HashSlingingSlasherFlag,
 }

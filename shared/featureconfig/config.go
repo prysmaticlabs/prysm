@@ -29,6 +29,7 @@ type FeatureFlagConfig struct {
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
+	HashSlingingSlasher           bool // HashSlingingSlasher run a history storage instance for generating slashing proofs (storage requirements are high!).
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -98,6 +99,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe total balance cache")
 		cfg.EnableTotalBalanceCache = true
+	}
+	if ctx.GlobalBool(HashSlingingSlasherFlag.Name) {
+		log.Warn("Data storage requirements can be vary high")
+		cfg.HashSlingingSlasher = true
 	}
 	InitFeatureConfig(cfg)
 }

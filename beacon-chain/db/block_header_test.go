@@ -177,3 +177,78 @@ func TestHasHistoryBlkHdr_OK(t *testing.T) {
 		}
 	}
 }
+
+func TestPruneHistoryBlkHdr_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	tests := []struct {
+		epoch uint64
+		vID   uint64
+		bh    *ethpb.BeaconBlockHeader
+	}{
+		{
+			epoch: uint64(0),
+			vID:   uint64(0),
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+		},
+		{
+			epoch: uint64(0),
+			vID:   uint64(1),
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+		},
+		{
+			epoch: uint64(1),
+			vID:   uint64(0),
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
+		},
+		{
+			epoch: uint64(2),
+			vID:   uint64(0),
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 4th")},
+		},
+		{
+			epoch: uint64(3),
+			vID:   uint64(0),
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 5th")},
+		},
+	}
+
+	for _, tt := range tests {
+		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		if err != nil {
+			t.Fatalf("save block header failed: %v", err)
+		}
+
+		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		if err != nil {
+			t.Fatalf("failed to get block header: %v", err)
+		}
+
+		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
+			t.Fatalf("get should return bh: %v", bha)
+		}
+	}
+	currentEpoch := uint64(3)
+	historyToKeep := uint64(2)
+	err := db.pruneHistory(currentEpoch, historyToKeep)
+	if err != nil {
+		t.Fatalf("failed to prune: %v", err)
+	}
+
+	for _, tt := range tests {
+		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		if err != nil {
+			t.Fatalf("failed to get block header: %v", err)
+		}
+		if tt.epoch > currentEpoch-historyToKeep {
+			if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
+				t.Fatalf("get should return bh: %v", bha)
+			}
+		} else {
+			if bha != nil {
+				t.Fatalf("block header should have been pruned: %v", bha)
+			}
+		}
+
+	}
+}

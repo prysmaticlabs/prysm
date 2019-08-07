@@ -73,6 +73,20 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block")
 	}
+	validatorID, err = b.ValidateBlockSignature(state, block.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not verify and process randao")
+	}
+	epoch := helpers.SlotToEpoch(block.Slot)
+	header = &ethpb.BeaconBlockHeader{
+		Slot:       block.Slot,
+		ParentRoot: block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
+		Signature:  emptySig,
+	}
+	c.beaconDB.SaveBlockHeader(epoch, validatorID, header)
+
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
