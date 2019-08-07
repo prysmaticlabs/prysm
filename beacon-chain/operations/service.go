@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -58,6 +59,7 @@ type Service struct {
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	p2p                        p2p.Broadcaster
 	error                      error
+	attestationLock            sync.Mutex
 }
 
 // Config options for the service.
@@ -221,14 +223,23 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
+	s.attestationLock.Lock()
+	defer s.attestationLock.Unlock()
 
 	attestation := message.(*ethpb.Attestation)
 
-	state, err := s.beaconDB.HeadState(ctx)
+	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return err
 	}
-	if err := blocks.VerifyAttestation(state, attestation); err != nil {
+
+	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
+	bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
+	if err != nil {
+		return err
+	}
+
+	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
 		return err
 	}
 
@@ -256,7 +267,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
 			dbAtt.Signature = aggregatedSig.Marshal()
 			dbAtt.AggregationBits = newAggregationBits
-			fmt.Printf("Aggregated attestation at data hash %#x\n", hash)
 			if err := s.beaconDB.SaveAttestation(ctx, dbAtt); err != nil {
 				return err
 			}
