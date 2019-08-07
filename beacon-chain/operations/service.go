@@ -241,6 +241,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		}
 	}
 
+
 	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
 		return err
 	}
