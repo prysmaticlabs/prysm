@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -120,17 +121,22 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestation")
 	defer span.End()
 
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		return errors.Wrap(err, "failed to hash proto for attestation")
+	}
 	root, err := ssz.SigningRoot(att)
 	if err != nil {
-		return errors.Wrap(err, "failed to compute state from block head")
+		return errors.Wrap(err, "failed to sign root attestation")
 	}
 
+	if err := c.beaconDB.SaveAttestation(ctx, att); err != nil {
+		return errors.Wrap(err, "failed to save attestation")
+	}
 	// broadcast the attestation to other peers.
 	c.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
-		Hash: root[:],
+		Hash: hash[:],
 	})
-
-	c.opsPoolService.IncomingAttFeed().Send(att)
 
 	// Delay attestation inclusion until the attested slot is in the past.
 	if err := waitForAttInclDelay(ctx, c.beaconDB, att); err != nil {

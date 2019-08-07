@@ -164,7 +164,6 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 
 // Start begins the block processing goroutine.
 func (rs *RegularSync) Start() {
-	log.Error("STARTING10")
 	go rs.run()
 }
 
@@ -372,7 +371,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 	}
 	finalizedStateRoot, err := hashutil.HashProto(s)
 	if err != nil {
-		log.Errorf("Could not get state for fnalized block: %v", err)
+		log.Errorf("Could not get state for finalized block: %v", err)
 		return err
 	}
 
@@ -527,21 +526,21 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 	attestationReq.Inc()
 
 	req := msg.Data.(*pb.AttestationRequest)
-	root := bytesutil.ToBytes32(req.Hash)
-	att, err := rs.db.Attestation(root)
+	hash := bytesutil.ToBytes32(req.Hash)
+	att, err := rs.db.Attestation(hash)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", att == nil))
 	if att == nil {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(hash[:]))).
 			Debug("Attestation not in db")
 		return nil
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
+		"attestationHash": fmt.Sprintf("%#x", bytesutil.Trunc(hash[:])),
 		"peer":            msg.Peer},
 	).Debug("Sending attestation to peer")
 	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
