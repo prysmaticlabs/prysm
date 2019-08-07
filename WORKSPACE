@@ -507,7 +507,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spaolacci_murmur3",
-    commit = "f09979ecbc725b9e6d41a297405f65e7e8804acc",  # v1.1.0
+    commit = "539464a789e9b9f01bc857458ffe2c5c1a2ed382",  # v1.1.0
     importpath = "github.com/spaolacci/murmur3",
 )
 
@@ -1259,4 +1259,28 @@ go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
     commit = "11bc5ee7ad5de4bf1380f3103eebdd40db99a666",
     importpath = "github.com/prysmaticlabs/ethereumapis",
+)
+
+go_repository(
+    name = "com_github_petar_gollrb",
+    commit = "33fb24c13b99c46c93183c291836c573ac382536",
+    importpath = "github.com/petar/GoLLRB",
+)
+
+go_repository(
+    name = "com_github_willf_bloom",
+    commit = "25ba46ef8744ddeba999dcd048dbb8b0fa87edb3",
+    importpath = "github.com/willf/bloom",
+)
+
+go_repository(
+    name = "com_github_irfansharif_cfilter",
+    commit = "d07d951ff29d52840ca5e798a17e80db4de8c820",
+    importpath = "github.com/irfansharif/cfilter",
+)
+
+go_repository(
+    name = "com_github_willf_bitset",
+    commit = "77892cd8d53fa6524772426bc444dd2e3b4fb18f",
+    importpath = "github.com/willf/bitset",
 )
