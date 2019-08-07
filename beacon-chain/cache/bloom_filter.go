@@ -21,7 +21,7 @@ const (
 	k = 5
 )
 
-// NewBloomFiltercreates a new Bloom Filter for storing and testing active indices
+// NewBloomFilter creates a new Bloom Filter for storing and testing active indices
 func NewBloomFilter() *ActiveIndicesBloomFilter {
 	return &ActiveIndicesBloomFilter{filter: bloom.New(m, k)}
 }

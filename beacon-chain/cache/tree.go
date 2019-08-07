@@ -13,6 +13,7 @@ type ActiveIndicesTree struct {
 	lock sync.RWMutex
 }
 
+// NewActiveIndicesTree defines a LLRB tree thats stores active validator indices
 func NewActiveIndicesTree() *ActiveIndicesTree {
 	return &ActiveIndicesTree{tree: llrb.New()}
 }
