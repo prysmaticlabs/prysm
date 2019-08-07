@@ -223,6 +223,15 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	defer span.End()
 
 	attestation := message.(*ethpb.Attestation)
+
+	state, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	if err := blocks.VerifyAttestation(state, attestation); err != nil {
+		return err
+	}
+
 	hash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		return err
@@ -245,21 +254,18 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 				return err
 			}
 			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
-			attestation.Signature = aggregatedSig.Marshal()
-			attestation.AggregationBits = newAggregationBits
+			dbAtt.Signature = aggregatedSig.Marshal()
+			dbAtt.AggregationBits = newAggregationBits
+			if err := s.beaconDB.SaveAttestation(ctx, dbAtt); err != nil {
+				return err
+			}
 		} else {
 			return nil
 		}
-	}
-	state, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	if err := blocks.VerifyAttestation(state, attestation); err != nil {
-		return err
-	}
-	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
-		return err
+	} else {
+		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
+			return err
+		}
 	}
 	return nil
 }
