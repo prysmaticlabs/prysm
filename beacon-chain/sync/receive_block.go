@@ -15,9 +15,6 @@ import (
 // receiveBlockAnnounce accepts a block hash, determines if we do not contain
 // the block in our local DB, and then request the full block data.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
-	log.WithField("peer", msg.Peer).
-		Warn("Received block announcement")
-
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
 	defer span.End()
 	recBlockAnnounce.Inc()

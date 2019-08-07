@@ -164,6 +164,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 
 // Start begins the block processing goroutine.
 func (rs *RegularSync) Start() {
+	log.Error("STARTING10")
 	go rs.run()
 }
 
@@ -562,8 +563,6 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationAnnouncement")
 	defer span.End()
 	data, ok := msg.Data.(*pb.AttestationAnnounce)
-	log.WithField("peer", msg.Peer).
-		Warn("Received attestation announcement")
 
 	if !ok {
 		log.Errorf("message is of the incorrect type")

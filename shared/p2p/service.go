@@ -461,6 +461,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 		Payload:     b,
 		Timestamp:   types.TimestampNow(),
 	}
+
 	return w.WriteMsg(envelope)
 }
 
