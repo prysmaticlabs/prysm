@@ -2,7 +2,7 @@ package cache
 
 import (
 	"sync"
-	
+
 	"github.com/irfansharif/cfilter"
 )
 
@@ -10,16 +10,16 @@ import (
 // Cuckoo filter is a Bloom filter replacement for approximated set-membership queries. Cuckoo filters support adding and removing items dynamically while achieving even higher performance than Bloom filters
 type ActiveIndicesCFilter struct {
 	filter *cfilter.CFilter
-	lock sync.RWMutex
+	lock   sync.RWMutex
 }
 
 // NewCFilter a new cuckoo filter for storing and lookup active indices
 func NewCFilter() *ActiveIndicesCFilter {
-	return &ActiveIndicesCFilter{filter : cfilter.New()}
+	return &ActiveIndicesCFilter{filter: cfilter.New()}
 }
 
 // InsertActiveIndicesCFilter adds a byte representation of active indices to a cuckoo filter
-func (cf *ActiveIndicesCFilter) InsertActiveIndicesCFilter(byteIndices [][]byte)  {
+func (cf *ActiveIndicesCFilter) InsertActiveIndicesCFilter(byteIndices [][]byte) {
 	cf.lock.Lock()
 	defer cf.lock.Unlock()
 	for _, i := range byteIndices {
@@ -38,7 +38,3 @@ func (cf *ActiveIndicesCFilter) LookupActiveIndicesCFilter(byteIndices [][]byte)
 	}
 	return true
 }
-
-
-
-
