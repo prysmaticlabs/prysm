@@ -113,7 +113,6 @@ func BenchmarkBloomFilter(b *testing.B) {
 	})
 }
 
-// think about delete func (cf *CFilter) Delete(item []byte) bool {
 func BenchmarkCFilter(b *testing.B) {
 	cf := NewCFilter()
 
@@ -135,7 +134,6 @@ func BenchmarkCFilter(b *testing.B) {
 				break;
 			}
 		}
-		// think about delete func (cf *CFilter) Delete(item []byte) bool {
 	})
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/petar/GoLLRB/llrb"
 )
-
+// ActiveIndicesTree defines active validator indices in LLRB tree
 type ActiveIndicesTree struct {
 	tree *llrb.LLRB
 	lock sync.RWMutex
