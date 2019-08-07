@@ -83,7 +83,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestIncomingAttestation_OK(t *testing.T) {
+func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
@@ -163,7 +163,7 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	}
 }
 
-func TestIncomingAttestation_Aggregates(t *testing.T) {
+func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
@@ -292,7 +292,7 @@ func TestIncomingAttestation_Aggregates(t *testing.T) {
 	}
 }
 
-func TestIncomingAttestation_DoesNotSaveAggregatedAttestation(t *testing.T) {
+func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}

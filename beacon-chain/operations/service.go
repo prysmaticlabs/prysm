@@ -256,6 +256,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
 			dbAtt.Signature = aggregatedSig.Marshal()
 			dbAtt.AggregationBits = newAggregationBits
+			fmt.Printf("Aggregated attestation at data hash %#x\n", hash)
 			if err := s.beaconDB.SaveAttestation(ctx, dbAtt); err != nil {
 				return err
 			}
