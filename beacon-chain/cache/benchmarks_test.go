@@ -88,7 +88,6 @@ func BenchmarkTreeAddRetrieve(b *testing.B) {
 	})
 }
 
-
 func BenchmarkBloomFilter(b *testing.B) {
 	bf := NewBloomFilter()
 
@@ -112,7 +111,32 @@ func BenchmarkBloomFilter(b *testing.B) {
 		}
 		bf.ClearBloomFilter()
 	})
-
-
-
 }
+
+// think about delete func (cf *CFilter) Delete(item []byte) bool {
+func BenchmarkCFilter(b *testing.B) {
+	cf := NewCFilter()
+
+
+	b.Run("CFILTERADD300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cf.InsertActiveIndicesCFilter(byteIndices300k)
+		}
+	})
+
+
+	b.Run("CFILTERLOOKUP300K", func(b *testing.B) {
+		b.N = 10
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if !cf.LookupActiveIndicesCFilter(byteIndices300k) {
+				break;
+			}
+		}
+		// think about delete func (cf *CFilter) Delete(item []byte) bool {
+	})
+}
+
+
