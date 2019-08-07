@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -130,16 +131,16 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestations from DB")
+		return nil, errors.New("could not retrieve attestations from DB")
 	}
 	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestations from DB")
+		return nil, errors.New("could not retrieve attestations from DB")
 	}
 
 	bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots up to %d: %v", requestedSlot, err)
+		return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
 	}
 
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
@@ -228,6 +229,13 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if s.beaconDB.HasAttestation(hash) {
 		return nil
 	}
+	state, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	if err := blocks.VerifyAttestation(state, attestation); err != nil {
+		return err
+	}
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
@@ -288,10 +296,10 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 	}
 	state, err := s.beaconDB.HeadState(s.ctx)
 	if err != nil {
-		return fmt.Errorf("could not retrieve attestations from DB")
+		return errors.New("could not retrieve attestations from DB")
 	}
 	if err := s.removeEpochOldAttestations(state); err != nil {
-		return fmt.Errorf("could not remove old attestations from DB at slot %d: %v", block.Slot, err)
+		return errors.Wrapf(err, "could not remove old attestations from DB at slot %d", block.Slot)
 	}
 	return nil
 }
