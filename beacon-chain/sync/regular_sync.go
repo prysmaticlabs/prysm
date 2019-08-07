@@ -569,8 +569,8 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 		log.Errorf("message is of the incorrect type")
 		return errors.New("incoming message is not of type *pb.AttestationAnnounce")
 	}
-	log.WithFields(logrus.Fields{"peer": msg.Peer, "root": hex.EncodeToString(data.Hash)}).
-		Error("Receive handle attestation announcement")
+
+	recAttestationAnnounce.Inc()
 
 	hasAttestation := rs.db.HasAttestation(bytesutil.ToBytes32(data.Hash))
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
