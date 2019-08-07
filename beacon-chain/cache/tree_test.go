@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"errors"
 	"reflect"
 	"testing"
 
@@ -66,7 +65,7 @@ func TestInsertReplaceActiveIndicesTree(t *testing.T) {
 
 func TestRetrieveActiveIndicesTree(t *testing.T) {
 
-	var ErrRetrievedIndicesEmpty = errors.New("retrievedIndices are empty")
+	var ErrRetrievedIndicesEmptyText = "retrievedIndices are empty"
 	activeIndicesTree := NewActiveIndicesTree()
 	activeIndices := []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -92,8 +91,8 @@ func TestRetrieveActiveIndicesTree(t *testing.T) {
 	if retrievedIndices != nil {
 		t.Errorf("retrievedIndices expected to be nil")
 	}
-	if !reflect.DeepEqual(err, ErrRetrievedIndicesEmpty) {
-		t.Errorf("Wanted: %v, got: %v", ErrRetrievedIndicesEmpty, err)
+	if err.Error() != ErrRetrievedIndicesEmptyText {
+		t.Errorf("Wanted: %s, got: %s", ErrRetrievedIndicesEmptyText, err)
 	}
 
 }
