@@ -18,7 +18,6 @@
 package roughtime
 
 import (
-	"fmt"
 	"time"
 	"encoding/base64"
 
@@ -54,12 +53,10 @@ func init() {
 	}
 	rtTime, _ := rt.Now()
 	offset = rtTime.Sub(time.Now())
-	fmt.Println("init:", time.Now(), rtTime, offset)
 }
 
 // Since returns the duration since t, based on the roughtime response
 func Since(t time.Time) time.Duration {
-	fmt.Println("since:", time.Now(), time.Now().Add(offset), time.Now().Add(offset).Sub(t))
 	return time.Now().Add(offset).Sub(t)
 }
 
