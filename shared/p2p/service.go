@@ -461,7 +461,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 		Payload:     b,
 		Timestamp:   types.TimestampNow(),
 	}
-
+	log.Warn("SEND", topic, peerID)
 	return w.WriteMsg(envelope)
 }
 
@@ -530,7 +530,7 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
-
+	log.Warn("BROADCAST", topic)
 	if err := s.gsub.Publish(topic, data); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
 	}

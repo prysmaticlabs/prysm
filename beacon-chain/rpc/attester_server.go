@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -34,10 +33,6 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
-
-	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{Hash: root[:]})
-
-	as.operationService.IncomingAttFeed().Send(att)
 
 	go func() {
 		if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {

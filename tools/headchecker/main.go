@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"reflect"
-	"strconv"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -36,12 +35,12 @@ func main() {
 	compare := flag.Bool("compare", false, "Enable head comparisons between all end points")
 	flag.Parse()
 
-	for i, endpt := range endpts {
+	for _, endpt := range endpts {
 		conn, err := grpc.Dial(endpt, grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("fail to dial: %v", err)
 		}
-		clients[endpt+strconv.Itoa(i)] = pb.NewBeaconChainClient(conn)
+		clients[endpt] = pb.NewBeaconChainClient(conn)
 	}
 
 	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
