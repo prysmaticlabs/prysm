@@ -18,12 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// blockTree constructs the following tree
+// blockTree1 constructs the following tree
 //    /- B1
 // B0           /- B5 - B7
 //    \- B3 - B4 - B6 - B8
 // (B1, and B3 are all from the same slots)
-func blockTree(db *db.BeaconDB) ([][]byte, error) {
+func blockTree1(db *db.BeaconDB) ([][]byte, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
 	r0, _ := ssz.SigningRoot(b0)
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
@@ -49,6 +49,77 @@ func blockTree(db *db.BeaconDB) ([][]byte, error) {
 		}
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
+}
+
+// blockTree2 constructs the following tree
+// Scenario graph: shorturl.at/loyP6
+//
+//digraph G {
+//    rankdir=LR;
+//    node [shape="none"];
+//
+//    subgraph blocks {
+//        rankdir=LR;
+//        node [shape="box"];
+//        a->b;
+//        a->c;
+//        b->d;
+//        b->e;
+//        c->f;
+//        c->g;
+//        d->h
+//        d->i
+//        d->j
+//        d->k
+//        h->l
+//        h->m
+//        g->n
+//        g->o
+//        e->p
+//    }
+//}
+func blockTree2(db *db.BeaconDB) ([][]byte, error) {
+	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
+	r0, _ := ssz.SigningRoot(b0)
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	r1, _ := ssz.SigningRoot(b1)
+	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:]}
+	r2, _ := ssz.SigningRoot(b2)
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r1[:]}
+	r3, _ := ssz.SigningRoot(b3)
+	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r1[:]}
+	r4, _ := ssz.SigningRoot(b4)
+	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: r2[:]}
+	r5, _ := ssz.SigningRoot(b5)
+	b6 := &ethpb.BeaconBlock{Slot: 6, ParentRoot: r2[:]}
+	r6, _ := ssz.SigningRoot(b6)
+	b7 := &ethpb.BeaconBlock{Slot: 7, ParentRoot: r3[:]}
+	r7, _ := ssz.SigningRoot(b7)
+	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r3[:]}
+	r8, _ := ssz.SigningRoot(b8)
+	b9 := &ethpb.BeaconBlock{Slot: 9, ParentRoot: r3[:]}
+	r9, _ := ssz.SigningRoot(b9)
+	b10 := &ethpb.BeaconBlock{Slot: 10, ParentRoot: r3[:]}
+	r10, _ := ssz.SigningRoot(b10)
+	b11 := &ethpb.BeaconBlock{Slot: 11, ParentRoot: r4[:]}
+	r11, _ := ssz.SigningRoot(b11)
+	b12 := &ethpb.BeaconBlock{Slot: 12, ParentRoot: r6[:]}
+	r12, _ := ssz.SigningRoot(b12)
+	b13 := &ethpb.BeaconBlock{Slot: 13, ParentRoot: r6[:]}
+	r13, _ := ssz.SigningRoot(b13)
+	b14 := &ethpb.BeaconBlock{Slot: 14, ParentRoot: r7[:]}
+	r14, _ := ssz.SigningRoot(b14)
+	b15 := &ethpb.BeaconBlock{Slot: 15, ParentRoot: r7[:]}
+	r15, _ := ssz.SigningRoot(b15)
+	for _, b := range []*ethpb.BeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15} {
+		if err := db.SaveBlock(b); err != nil {
+			return nil, err
+		}
+		if err := db.SaveForkChoiceState(context.Background(), &pb.BeaconState{}, b.ParentRoot); err != nil {
+			return nil, err
+		}
+	}
+	return [][]byte{r0[:], r1[:], r2[:], r3[:], r4[:], r5[:], r6[:], r7[:], r8[:], r9[:], r10[:], r11[:], r12[:], r13[:], r14[:], r15[:]}, nil
 }
 
 func TestStore_GensisStoreOk(t *testing.T) {
@@ -111,7 +182,7 @@ func TestStore_AncestorOk(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +222,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +254,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +319,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +348,7 @@ func TestStore_GetHead(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +432,7 @@ func TestStore_OnBlockErrors(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree(db)
+	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +503,7 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	_, err := blockTree(db)
+	_, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,5 +613,53 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func BenchmarkForkChoiceTree2(b *testing.B) {
+	ctx := context.Background()
+	db := internal.SetupDB(b)
+	defer internal.TeardownDB(b, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree2(db)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Benchmark fork choice with 1024 validators
+	validators := make([]*ethpb.Validator, 1024)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
+	}
+
+	s := &pb.BeaconState{Validators: validators}
+	if err := store.GensisStore(s); err != nil {
+		b.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.db.SaveCheckpointState(ctx, s, store.justifiedCheckpt); err != nil {
+		b.Fatal(err)
+	}
+
+
+	// Spread out the votes evenly for all the leaf nodes. 8 to 15
+	nodeIndex := 8
+	for i := 0; i < len(validators); i++ {
+		if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[nodeIndex]}); err != nil {
+			b.Fatal(err)
+		}
+		if i % 77 == 0 {
+			nodeIndex++
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := store.Head()
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
