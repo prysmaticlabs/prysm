@@ -51,7 +51,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(shardWithdrawalKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return errors.Wrap(err, "unable to store key %v")
 	}
 	log.WithField(
 		"path",
@@ -63,7 +63,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return errors.Wrap(err,"unable to store key %v")
 	}
 	log.WithField(
 		"path",
