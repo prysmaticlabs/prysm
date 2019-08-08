@@ -216,10 +216,12 @@ func (w *Web3Service) setGenesisTime(timeStamp uint64) {
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
 func (w *Web3Service) processPastLogs() error {
+	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
 		},
+		ToBlock: requestedBlock,
 	}
 
 	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
@@ -230,7 +232,7 @@ func (w *Web3Service) processPastLogs() error {
 	for _, log := range logs {
 		w.ProcessLog(log)
 	}
-	w.lastRequestedBlock.Set(w.blockHeight)
+	w.lastRequestedBlock.Set(requestedBlock)
 
 	currentState, err := w.beaconDB.HeadState(w.ctx)
 	if err != nil {
@@ -249,7 +251,7 @@ func (w *Web3Service) processPastLogs() error {
 func (w *Web3Service) requestBatchedLogs() error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
-	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
+	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
