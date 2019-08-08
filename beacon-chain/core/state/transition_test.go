@@ -360,7 +360,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.BlockRoots = blockRoots
@@ -549,7 +549,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	beaconState.BlockRoots = blockRoots
