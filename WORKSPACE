@@ -1261,12 +1261,10 @@ go_repository(
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
-# TODO: Update this dependency after https://github.com/cloudflare/roughtime/pull/13 is merged.
 go_repository(
     name = "com_github_cloudflare_roughtime",
     commit = "6b7e31ac9cb2d6048096585d2e8563ee60b28f84",
     importpath = "github.com/cloudflare/roughtime",
-    remote = "https://github.com/kivutar/roughtime",
     vcs = "git",
 )
 
