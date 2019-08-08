@@ -116,7 +116,7 @@ func (q *Querier) Start() {
 			return
 		}
 	}
-	//q.run()
+	q.run()
 }
 
 // Stop kills the sync querier goroutine.
