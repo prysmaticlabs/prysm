@@ -241,7 +241,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		}
 	}
 
-
 	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
 		return err
 	}
@@ -250,6 +249,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	if err != nil {
 		return err
 	}
+
 	incomingAttBits := attestation.AggregationBits
 	if s.beaconDB.HasAttestation(hash) {
 		dbAtt, err := s.beaconDB.Attestation(hash)

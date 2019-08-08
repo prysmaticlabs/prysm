@@ -263,11 +263,11 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 		t.Error(err)
 	}
 
-	attHash, err := hashutil.HashProto(att2.Data)
+	attDataHash, err := hashutil.HashProto(att2.Data)
 	if err != nil {
 		t.Error(err)
 	}
-	dbAtt, err := service.beaconDB.Attestation(attHash)
+	dbAtt, err := service.beaconDB.Attestation(attDataHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -396,11 +396,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{att3Sig1, att3Sig2}).Marshal()
 	att3.Signature = aggregatedSig[:]
 
-	attHash, err := hashutil.HashProto(att2.Data)
-	if err != nil {
-		t.Error(err)
-	}
-
 	newBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
@@ -423,7 +418,12 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att1); err != nil {
 		t.Error(err)
 	}
-	dbAtt, err := service.beaconDB.Attestation(attHash)
+
+	attDataHash, err := hashutil.HashProto(att2.Data)
+	if err != nil {
+		t.Error(err)
+	}
+	dbAtt, err := service.beaconDB.Attestation(attDataHash)
 	if err != nil {
 		t.Error(err)
 	}

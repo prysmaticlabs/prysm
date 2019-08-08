@@ -28,11 +28,11 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
-	aHash, err := hashutil.HashProto(a.Data)
+	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
-	aPrime, err := db.Attestation(aHash)
+	aPrime, err := db.Attestation(aDataHash)
 	if err != nil {
 		t.Fatalf("Failed to call Attestation: %v", err)
 	}
