@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "attestation")
 // and updating attestations in batches.
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
-	BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error
+	BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 }
 
 type attestationStore struct {
@@ -191,9 +191,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *ethp
 	return a.updateAttestation(beaconState, attestation)
 }
 
-// BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
+// BatchUpdateLatestAttestations updates multiple attestations and adds them into the attestation store
 // if they are valid.
-func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*ethpb.Attestation) error {
+func (a *Service) BatchUpdateLatestAttestations(ctx context.Context, attestations []*ethpb.Attestation) error {
 
 	if attestations == nil {
 		return nil
