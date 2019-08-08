@@ -24,7 +24,7 @@ func init() {
 		PublicKeyType: "ed25519",
 		PublicKey:     pk,
 		Addresses: []config.ServerAddress{
-			config.ServerAddress{
+			{
 				Protocol: "udp",
 				Address:  "roughtime.cloudflare.com:2002",
 			},
