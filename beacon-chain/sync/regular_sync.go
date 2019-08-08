@@ -405,7 +405,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 
 	resp := msg.Data.(*pb.AttestationResponse)
 	attestation := resp.Attestation
-	attestationRoot, err := hashutil.HashProto(attestation)
+	attestationDataHash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 		return err
@@ -416,10 +416,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attestationRoot)
+	hasAttestation := rs.db.HasAttestation(attestationDataHash)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attestationRoot[:]))).
+		log.WithField("attestationDataHash", fmt.Sprintf("%#x", bytesutil.Trunc(attestationDataHash[:]))).
 			Debug("Received, skipping attestation")
 		return nil
 	}
@@ -550,14 +550,14 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) error {
 	}
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", att == nil))
 	if att == nil {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).
+		log.WithField("attestationDataHash", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).
 			Debug("Attestation not in db")
 		return nil
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"peer":            msg.Peer},
+		"attestationDataHash": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
+		"peer":                msg.Peer},
 	).Debug("Sending attestation to peer")
 	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
 		Attestation: att,

@@ -192,7 +192,7 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
+				Shard:      1,
 				StartEpoch: 0,
 			},
 		},
@@ -225,7 +225,6 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 	att1.Signature = privKeys[committee[0]].Sign(hashTreeRoot[:], domain).Marshal()
 
-	fmt.Println(committee)
 	att2 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},

@@ -623,7 +623,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 		Data:            &ethpb.AttestationData{},
 		AggregationBits: []byte{'A', 'B', 'C'},
 	}
-	attRoot, err := hashutil.HashProto(att.Data)
+	attDataHash, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
@@ -640,7 +640,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	ss := NewRegularSyncService(context.Background(), cfg)
 
 	req := &pb.AttestationRequest{
-		Hash: attRoot[:],
+		Hash: attDataHash[:],
 	}
 	msg := p2p.Message{
 		Ctx:  context.Background(),
