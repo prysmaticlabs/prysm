@@ -1265,7 +1265,6 @@ go_repository(
     name = "com_github_cloudflare_roughtime",
     commit = "6b7e31ac9cb2d6048096585d2e8563ee60b28f84",
     importpath = "github.com/cloudflare/roughtime",
-    vcs = "git",
 )
 
 go_repository(
