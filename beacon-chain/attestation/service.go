@@ -146,7 +146,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 	attestation := msg.(*ethpb.Attestation)
 	a.pooledAttestations = append(a.pooledAttestations, attestation)
 	if len(a.pooledAttestations) > a.poolLimit {
-		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
+		if err := a.BatchUpdateLatestAttestations(ctx, a.pooledAttestations); err != nil {
 			return err
 		}
 		state, err := a.beaconDB.HeadState(ctx)
