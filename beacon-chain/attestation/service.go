@@ -244,7 +244,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
-
 		if i >= uint64(len(committee)) {
 			// This should never happen.
 			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
@@ -263,7 +262,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		attTargetBoundarySlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
-		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
 			currentAttestationSlot = attTargetBoundarySlot
 		}
@@ -278,6 +276,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 				},
 			).Debug("Attestation store updated")
 		}
+		a.store.Unlock()
 	}
 	return nil
 }
