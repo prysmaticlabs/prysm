@@ -205,7 +205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "48789cbaf046ec783a407a76c50a9cdd7507875b",
+    commit = "36ed6616276a5b6721bb1eb2e45eb5eb4e04c695",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -991,7 +991,7 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "b495094dc72c7043b549f511a798391201624b14",
+    commit = "fb0e03c433000562a8f27e0e820667fd6c13d62b",
     importpath = "github.com/phoreproject/bls",
 )
 

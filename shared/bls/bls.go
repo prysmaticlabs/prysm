@@ -4,6 +4,7 @@
 package bls
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -72,7 +73,9 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
-	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
 	return &Signature{val: sig}
 }
 
@@ -97,7 +100,9 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
-	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
 // VerifyAggregate verifies each public key against a message.
@@ -111,7 +116,9 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uin
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
 	}
-	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
 }
 
 // Marshal a signature into a byte slice.
