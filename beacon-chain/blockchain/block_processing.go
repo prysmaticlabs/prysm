@@ -99,6 +99,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return errors.Wrap(err, "failed to compute state from block head")
 	}
 	c.headSlot = headBlk.Slot
+
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
 	c.canonicalRoots[headBlk.Slot] = headRoot
 
 	log.WithFields(logrus.Fields{
@@ -162,6 +165,9 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		return errors.Wrap(err, "failed to compute state from block head")
 
 	}
+
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
 

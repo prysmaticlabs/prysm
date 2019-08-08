@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -48,6 +49,7 @@ type ChainService struct {
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
 	headSlot             uint64
+	canonicalRootsLock   sync.RWMutex
 	canonicalRoots       map[uint64][]byte
 }
 
@@ -215,22 +217,34 @@ func (c *ChainService) HeadSlot() uint64 {
 
 // HeadRoot returns the root of the head of the chain.
 func (c *ChainService) HeadRoot() []byte {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
+
 	return c.canonicalRoots[c.headSlot]
 }
 
 // HeadBlock returns the block of the head of the chain.
 func (c *ChainService) HeadBlock() (*ethpb.BeaconBlock, error) {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
 	r := bytesutil.ToBytes32(c.canonicalRoots[c.headSlot])
+
 	return c.beaconDB.Block(r)
 }
 
 // HeadState returns the state of the head of the chain.
 func (c *ChainService) HeadState() (*pb.BeaconState, error) {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
 	r := bytesutil.ToBytes32(c.canonicalRoots[c.headSlot])
+
 	return c.beaconDB.ForkChoiceState(c.ctx, r[:])
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
 func (c *ChainService) CanonicalRoot(slot uint64) []byte {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
+
 	return c.canonicalRoots[slot]
 }
