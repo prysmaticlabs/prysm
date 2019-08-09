@@ -440,7 +440,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att2); err != nil {
 		t.Error(err)
 	}
-	dbAtt, err = service.beaconDB.Attestation(attHash)
+	dbAtt, err = service.beaconDB.Attestation(attDataHash)
 	if err != nil {
 		t.Error(err)
 	}
@@ -456,7 +456,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att3); err != nil {
 		t.Error(err)
 	}
-	dbAtt, err = service.beaconDB.Attestation(attHash)
+	dbAtt, err = service.beaconDB.Attestation(attDataHash)
 	if err != nil {
 		t.Error(err)
 	}
