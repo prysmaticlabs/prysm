@@ -28,7 +28,7 @@ func init() {
 	// A list of reliable roughtime servers with their public keys.
 	// From https://github.com/cloudflare/roughtime/blob/master/ecosystem.json
 	servers := []config.Server{
-		config.Server{
+		{
 			Name:          "Caesium",
 			PublicKeyType: "ed25519",
 			PublicKey:     mustDecodeString("iBVjxg/1j7y1+kQUTBYdTabxCppesU/07D4PMDJk2WA="),
@@ -39,7 +39,7 @@ func init() {
 				},
 			},
 		},
-		config.Server{
+		{
 			Name:          "Chainpoint-Roughtime",
 			PublicKeyType: "ed25519",
 			PublicKey:     mustDecodeString("bbT+RPS7zKX6w71ssPibzmwWqU9ffRV5oj2OresSmhE="),
@@ -50,7 +50,7 @@ func init() {
 				},
 			},
 		},
-		config.Server{
+		{
 			Name:          "Cloudflare-Roughtime",
 			PublicKeyType: "ed25519",
 			PublicKey:     mustDecodeString("gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="),
