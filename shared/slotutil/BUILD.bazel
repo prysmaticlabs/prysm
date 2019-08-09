@@ -5,6 +5,7 @@ go_library(
     srcs = ["slotticker.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/slotutil",
     visibility = ["//visibility:public"],
+    deps = ["//shared/roughtime:go_default_library"],
 )
 
 go_test(
