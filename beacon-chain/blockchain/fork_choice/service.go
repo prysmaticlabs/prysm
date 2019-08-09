@@ -193,19 +193,23 @@ func (s *Store) Head() ([]byte, error) {
 			return head, nil
 		}
 
+		// if a block has one child, then we don't have to lookup anything to
+		// know that this child will be the best child.
 		head = children[0]
-		highest, err := s.LatestAttestingBalance(head)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get latest balance")
-		}
-		for _, child := range children[1:] {
-			balance, err := s.LatestAttestingBalance(child)
+		if len(children) > 1 {
+			highest, err := s.LatestAttestingBalance(head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get latest balance")
 			}
-			if balance > highest {
-				highest = balance
-				head = child
+			for _, child := range children[1:] {
+				balance, err := s.LatestAttestingBalance(child)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get latest balance")
+				}
+				if balance > highest {
+					highest = balance
+					head = child
+				}
 			}
 		}
 	}
