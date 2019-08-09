@@ -295,6 +295,7 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	helpers.ClearAllCaches()
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
