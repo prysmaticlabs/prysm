@@ -8,11 +8,31 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "beacondb")
+
+type Database interface {
+	NewDB(string)
+	ClearDB(string) error
+	SaveAttestation(*ethpb.Attestation) error
+	SaveAttestations([]*ethpb.Attestation) error
+	SaveBlock(*ethpb.BeaconBlock) error
+	SaveBlocks([]*ethpb.BeaconBlock) error
+	SaveState(*ethpb.BeaconState, [32]byte /* block root */) error
+	SaveJustifiedState(*ethpb.BeaconState) error
+	SaveFinalizedState(*ethpb.BeaconState) error
+	Attestation([32]byte) (*ethpb.Attestation, error)
+	Block(filter *QueryFilter) (*ethpb.BeaconBlock, error)
+	State(filter *QueryFiler) (*ethpb.BeaconState, error)
+	JustifiedState() (*ethpb.BeaconState, error)
+	FinalizedState([32]byte) (*ethpb.BeaconState, error)
+	SaveChainHead(*ethpb.BeaconBlock, *pb.BeaconState) error
+	HeadState() (*ethpb.BeaconState, error)
+}
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
