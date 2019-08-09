@@ -33,8 +33,8 @@ type Database interface {
 	LatestMessage(validatorIdx uint64) (*pb.LatestMessage, error)
 	HasLatestMessage(validatorIdx uint64) bool
 	SaveLatestMessage(ctx context.Context, validatorIdx uint64, msg *pb.LatestMessage) error
-	State(filter QueryFilter) (*pb.BeaconState, error)
-	HeadState() (*pb.BeaconState, error)
+	State(ctx context.Context, filter QueryFilter) (*pb.BeaconState, error)
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 }
 
