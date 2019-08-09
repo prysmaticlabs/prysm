@@ -47,3 +47,10 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
 	return nil
 }
+
+//func (b *BeaconDB) put(bucket []byte, key []byte, value []byte) error {
+//	return b.db.Update(func(tx *bolt.Tx) error {
+//		bkt := tx.Bucket(bucket)
+//		return bkt.Put(key, value)
+//	})
+//}
