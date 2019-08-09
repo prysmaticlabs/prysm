@@ -97,6 +97,7 @@ type mockPOWChainService struct {
 	blockTimeByHeight   map[int]uint64
 	blockNumberByHeight map[uint64]*big.Int
 	eth1Data            *ethpb.Eth1Data
+	genesisEth1Block    *big.Int
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
@@ -104,7 +105,11 @@ func (m *mockPOWChainService) HasChainStarted() bool {
 }
 
 func (m *mockPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
-	return uint64(time.Unix(0, 0).Unix()), big.NewInt(0)
+	blk := m.genesisEth1Block
+	if blk == nil {
+		blk = big.NewInt(0)
+	}
+	return uint64(time.Unix(0, 0).Unix()), blk
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed
