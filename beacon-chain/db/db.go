@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"os"
 	"path"
 	"sync"
@@ -17,19 +18,22 @@ import (
 var log = logrus.WithField("prefix", "beacondb")
 
 type Database interface {
-	NewDB(dirPath string)
 	ClearDB() error
-	SaveAttestation(att *ethpb.Attestation) error
-	SaveAttestations(atts []*ethpb.Attestation) error
-	SaveBlock(block *ethpb.BeaconBlock) error
-	SaveBlocks(blocks []*ethpb.BeaconBlock) error
-	SaveState(state *pb.BeaconState, blockRoot [32]byte) error
 	Attestation(attRoot [32]byte) (*ethpb.Attestation, error)
+	HasAttestation(attRoot [32]byte) bool
+	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
+	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	Block(filter *QueryFilter) (*ethpb.BeaconBlock, error)
+	HasBlock(blockRoot [32]byte) bool
 	ChildBlockRootsByParent(parentRoot [32]byte, filter *QueryFilter) ([][]byte, error)
+	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
+	LatestMessage(validatorIdx uint64) (*pb.LatestMessage, error)
+	HasLatestMessage(validatorIdx uint64) bool
+	SaveLatestMessage(ctx context.Context, validatorIdx uint64, msg *pb.LatestMessage) error
 	State(filter *QueryFilter) (*pb.BeaconState, error)
-	SaveChainHead(block *ethpb.BeaconBlock, state *pb.BeaconState) error
 	HeadState() (*pb.BeaconState, error)
+	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 }
 
 type QueryFilter struct{}
