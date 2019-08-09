@@ -23,26 +23,26 @@ type Database interface {
 	ClearDB() error
 	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, filter *QueryFilter) ([]*ethpb.Attestation, error)
-	HasAttestation(attRoot [32]byte) bool
-	DeleteAttestation(attRoot [32]byte) error
+	HasAttestation(ctx context.Context, attRoot [32]byte) bool
+	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, filter *QueryFilter) ([]*ethpb.BeaconBlock, error)
-	HasBlock(blockRoot [32]byte) bool
+	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	ChildBlockRootsByParent(ctx context.Context, parentRoot [32]byte, filter *QueryFilter) ([][]byte, error)
-	DeleteBlock(blockRoot [32]byte) error
+	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
-	LatestMessage(ctx context.Context, validatorIdx uint64) (*pb.LatestMessage, error)
-	HasLatestMessage(validatorIdx uint64) bool
-	SaveLatestMessage(ctx context.Context, validatorIdx uint64, msg *pb.LatestMessage) error
+	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
+	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
+	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, msg *pb.ValidatorLatestVote) error
 	State(ctx context.Context, filter *QueryFilter) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error)
-	HasValidatorIndex(publicKey [48]byte) bool
-	DeleteValidatorIndex(publicKey [48]byte) error
+	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
+	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
 }
 
@@ -59,7 +59,7 @@ type QueryFilter struct {
 	StartEpoch uint64
 	EndEpoch   uint64
 	// Optional criteria to retrieve a genesis value.
-	Genesis bool
+	IsGenesis bool
 }
 
 // BeaconDB manages the data layer of the beacon chain implementation.

@@ -77,7 +77,7 @@ message AttestationTarget {
   bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
-message LatestMessage {
+message ValidatorLatestVote {
   // The epoch of when the latest message was voted.
   uint64 epoch = 1;
   // The root of the latest message votes.
