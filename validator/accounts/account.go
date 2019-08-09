@@ -63,7 +63,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
-		return errors.Wrap(err,"unable to store key %v")
+		return errors.Wrap(err, "unable to store key %v")
 	}
 	log.WithField(
 		"path",
