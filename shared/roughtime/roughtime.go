@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/cloudflare/roughtime"
+	rt "github.com/cloudflare/roughtime"
 	"roughtime.googlesource.com/roughtime.git/go/config"
 )
 
@@ -13,32 +13,66 @@ import (
 // the roughtime server
 var offset time.Duration
 
-func init() {
-	// This is the public key used to check roughtime.cloudflare.com:2002 responses
-	// See https://github.com/cloudflare/roughtime/blob/master/README.md
-	pk, err := base64.StdEncoding.DecodeString("gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo=")
+// Decode or panic
+func mustDecodeString(in string) []byte {
+	pk, err := base64.StdEncoding.DecodeString(in)
 	if err != nil {
 		panic(err)
 	}
+	return pk
+}
 
-	server := &config.Server{
-		Name:          "",
-		PublicKeyType: "ed25519",
-		PublicKey:     pk,
-		Addresses: []config.ServerAddress{
-			{
-				Protocol: "udp",
-				Address:  "roughtime.cloudflare.com:2002",
+func init() {
+	t0 := time.Now()
+
+	// A list of reliable roughtime servers with their public keys.
+	// From https://github.com/cloudflare/roughtime/blob/master/ecosystem.json
+	servers := []config.Server{
+		config.Server{
+			Name:          "Caesium",
+			PublicKeyType: "ed25519",
+			PublicKey:     mustDecodeString("iBVjxg/1j7y1+kQUTBYdTabxCppesU/07D4PMDJk2WA="),
+			Addresses: []config.ServerAddress{
+				{
+					Protocol: "udp",
+					Address:  "caesium.tannerryan.ca:2002",
+				},
+			},
+		},
+		config.Server{
+			Name:          "Chainpoint-Roughtime",
+			PublicKeyType: "ed25519",
+			PublicKey:     mustDecodeString("bbT+RPS7zKX6w71ssPibzmwWqU9ffRV5oj2OresSmhE="),
+			Addresses: []config.ServerAddress{
+				{
+					Protocol: "udp",
+					Address:  "roughtime.chainpoint.org:2002",
+				},
+			},
+		},
+		config.Server{
+			Name:          "Cloudflare-Roughtime",
+			PublicKeyType: "ed25519",
+			PublicKey:     mustDecodeString("gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo="),
+			Addresses: []config.ServerAddress{
+				{
+					Protocol: "udp",
+					Address:  "roughtime.cloudflare.com:2002",
+				},
 			},
 		},
 	}
 
-	rt, err := roughtime.Get(server, roughtime.DefaultQueryAttempts, roughtime.DefaultQueryTimeout, nil)
+	results := rt.Do(servers, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
+
+	// Compute the average difference between the system's time and the
+	// Roughtime responses from the servers, rejecting responses whose radii
+	// are larger than 2 seconds.
+	var err error
+	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
 	if err != nil {
 		panic(err)
 	}
-	rtTime, _ := rt.Now()
-	offset = rtTime.Sub(time.Now())
 }
 
 // Since returns the duration since t, based on the roughtime response
