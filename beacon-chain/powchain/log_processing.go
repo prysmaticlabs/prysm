@@ -26,10 +26,10 @@ var (
 	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
 
-// ETH2GenesisTime retrieves the genesis time of the beacon chain
+// ETH2GenesisTime retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() uint64 {
-	return w.eth2GenesisTime
+func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
+	return w.eth2GenesisTime, w.chainStartBlockNumber
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -58,7 +58,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
 				w.setGenesisTime(timeStamp)
-				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash)
+				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash, blk.Number())
 			}
 		}
 		return
@@ -160,8 +160,9 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 // ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte) {
+func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, blockNumber *big.Int) {
 	w.chainStarted = true
+	w.chainStartBlockNumber = blockNumber
 
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()
