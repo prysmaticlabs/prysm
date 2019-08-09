@@ -8,31 +8,34 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "beacondb")
 
 type Database interface {
-	NewDB(string)
-	ClearDB(string) error
-	SaveAttestation(*ethpb.Attestation) error
-	SaveAttestations([]*ethpb.Attestation) error
-	SaveBlock(*ethpb.BeaconBlock) error
-	SaveBlocks([]*ethpb.BeaconBlock) error
-	SaveState(*ethpb.BeaconState, [32]byte /* block root */) error
-	SaveJustifiedState(*ethpb.BeaconState) error
-	SaveFinalizedState(*ethpb.BeaconState) error
-	Attestation([32]byte) (*ethpb.Attestation, error)
+	NewDB(dirPath string)
+	ClearDB(dirPath string) error
+	SaveAttestation(att *ethpb.Attestation) error
+	SaveAttestations(atts []*ethpb.Attestation) error
+	SaveBlock(block *ethpb.BeaconBlock) error
+	SaveBlocks(blocks []*ethpb.BeaconBlock) error
+	SaveState(state *pb.BeaconState, blockRoot [32]byte) error
+	SaveJustifiedState(state *pb.BeaconState) error
+	SaveFinalizedState(state *pb.BeaconState) error
+	Attestation(attRoot [32]byte) (*ethpb.Attestation, error)
 	Block(filter *QueryFilter) (*ethpb.BeaconBlock, error)
-	State(filter *QueryFiler) (*ethpb.BeaconState, error)
-	JustifiedState() (*ethpb.BeaconState, error)
-	FinalizedState([32]byte) (*ethpb.BeaconState, error)
-	SaveChainHead(*ethpb.BeaconBlock, *pb.BeaconState) error
-	HeadState() (*ethpb.BeaconState, error)
+	State(filter *QueryFilter) (*pb.BeaconState, error)
+	JustifiedState() (*pb.BeaconState, error)
+	FinalizedState(stateRoot [32]byte) (*pb.BeaconState, error)
+	SaveChainHead(block *ethpb.BeaconBlock, state *pb.BeaconState) error
+	HeadState() (*pb.BeaconState, error)
 }
+
+type QueryFilter struct{}
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
