@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// KVStore defines an implementation of the Prysm Database interface
+// using BoltDB as the underlying persistent kv-store for eth2.
 type KVStore struct {
 	db           *bolt.DB
 	DatabasePath string
@@ -52,7 +54,7 @@ func (k *KVStore) ClearDB() error {
 	return os.RemoveAll(k.DatabasePath)
 }
 
-// Close closes the underlying boltdb database.
+// Close closes the underlying BoltDB database.
 func (k *KVStore) Close() error {
 	return k.db.Close()
 }
