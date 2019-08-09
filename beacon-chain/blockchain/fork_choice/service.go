@@ -39,7 +39,8 @@ func NewForkChoiceService(ctx context.Context, db *db.BeaconDB) *Store {
 	}
 }
 
-// GensisStore to be filled
+// GensisStore initializes the store struct before beacon chain
+// starts to advance.
 //
 // Spec pseudocode definition:
 //   def get_genesis_store(genesis_state: BeaconState) -> Store:
@@ -79,13 +80,13 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.db.SaveCheckpointState(s.ctx, genesisState, s.justifiedCheckpt); err != nil {
-		return errors.Wrap(err, "could not save justified checkpt")
+		return errors.Wrap(err, "could not save justified checkpoint")
 	}
 
 	return nil
 }
 
-// Ancestor to be filled
+// Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
 //   def get_ancestor(store: Store, root: Hash, slot: Slot) -> Hash:
@@ -111,7 +112,7 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 	return s.Ancestor(b.ParentRoot, slot)
 }
 
-// LatestAttestingBalance to be filled
+// LatestAttestingBalance returns the staked balance of a block from the input block root.
 //
 // Spec pseudocode definition:
 //   def get_latest_attesting_balance(store: Store, root: Hash) -> Gwei:
@@ -134,12 +135,12 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
 	activeIndices, err := helpers.ActiveValidatorIndices(lastJustifiedState, lastJustifiedEpoch)
 	if err != nil {
-		return 0, errors.Wrap(err, "could not get active indices for last checkpoint state")
+		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
 
 	wantedBlk, err := s.db.Block(bytesutil.ToBytes32(root))
 	if err != nil {
-		return 0, errors.Wrap(err, "could not get slot for an ancestor block")
+		return 0, errors.Wrap(err, "could not get target block")
 	}
 
 	balances := uint64(0)
@@ -162,7 +163,7 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	return balances, nil
 }
 
-// Head to be filled
+// Head returns the head of the beacon chain.
 //
 // Spec pseudocode definition:
 //   def get_head(store: Store) -> Hash:
@@ -210,7 +211,7 @@ func (s *Store) Head() ([]byte, error) {
 	}
 }
 
-// OnTick to be filled
+// OnTick tracks the last unix time of when a block or an attestation arrives.
 //
 // Spec pseudocode definition:
 //   def on_tick(store: Store, time: uint64) -> None:
@@ -219,7 +220,8 @@ func (s *Store) OnTick(t uint64) {
 	s.time = t
 }
 
-// OnBlock to be filled
+// OnBlock is called whenever a block is received. It runs state transition on the block and
+// update fork choice store struct.
 //
 // Spec pseudocode definition:
 //   def on_block(store: Store, block: BeaconBlock) -> None:
@@ -275,7 +277,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	}
 	root, err := ssz.SigningRoot(b)
 	if err != nil {
-		return errors.Wrapf(err, "could not get sign root of block %d", b.Slot)
+		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
 	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
@@ -329,7 +331,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnAttestation to be filled
+// OnAttestation is called whenever an attestation is received, it updates validators latest vote.
 //
 // Spec pseudocode definition:
 //   def on_attestation(store: Store, attestation: Attestation) -> None:

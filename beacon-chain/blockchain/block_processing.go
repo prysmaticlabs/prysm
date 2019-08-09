@@ -67,7 +67,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 
 	root, err := ssz.SigningRoot(block)
 	if err != nil {
-		return errors.Wrap(err, "failed to get signing root on received block")
+		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
 	// Update fork choice service's time tracker to current time.
@@ -76,7 +76,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	// Run block state transition and broadcast the block to other peers.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
 		c.beaconDB.MarkEvilBlockHash(root)
-		return errors.Wrap(err, "failed to process block from fork choice service")
+		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
 		"slots": block.Slot,
@@ -92,11 +92,11 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	// Run fork choice for head block and head state.
 	headRoot, err := c.forkChoiceStore.Head()
 	if err != nil {
-		return errors.Wrap(err, "failed to get head from fork choice service")
+		return errors.Wrap(err, "could not get head from fork choice service")
 	}
 	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
 	if err != nil {
-		return errors.Wrap(err, "failed to compute state from block head")
+		return errors.Wrap(err, "could not compute state from block head")
 	}
 	c.headSlot = headBlk.Slot
 
@@ -112,7 +112,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return errors.Wrap(err, "could not process block deposits, attestations, and other operations")
+		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
 	return nil
@@ -126,15 +126,15 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
-		return errors.Wrap(err, "failed to hash proto for attestation")
+		return errors.Wrap(err, "could not hash proto for attestation")
 	}
 	root, err := ssz.SigningRoot(att)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign root attestation")
+		return errors.Wrap(err, "could not sign root attestation")
 	}
 
 	if err := c.beaconDB.SaveAttestation(ctx, att); err != nil {
-		return errors.Wrap(err, "failed to save attestation")
+		return errors.Wrap(err, "could not save attestation")
 	}
 	// broadcast the attestation to other peers.
 	c.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
@@ -149,7 +149,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 
 	if err := c.forkChoiceStore.OnAttestation(att); err != nil {
-		return errors.Wrap(err, "failed to process block from fork choice service")
+		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
 		"root": hex.EncodeToString(root[:]),
@@ -158,11 +158,11 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	// Run fork choice for head block and head state.
 	headRoot, err := c.forkChoiceStore.Head()
 	if err != nil {
-		return errors.Wrap(err, "failed to get head from fork choice service")
+		return errors.Wrap(err, "could not get head from fork choice service")
 	}
 	headBlk, err := c.beaconDB.Block(bytesutil.ToBytes32(headRoot))
 	if err != nil {
-		return errors.Wrap(err, "failed to compute state from block head")
+		return errors.Wrap(err, "could not compute state from block head")
 
 	}
 
