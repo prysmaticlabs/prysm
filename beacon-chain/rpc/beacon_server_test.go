@@ -39,8 +39,8 @@ type faultyPOWChainService struct {
 func (f *faultyPOWChainService) HasChainStarted() bool {
 	return false
 }
-func (f *faultyPOWChainService) ETH2GenesisTime() uint64 {
-	return 0
+func (f *faultyPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+	return 0, big.NewInt(0)
 }
 
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
@@ -103,8 +103,8 @@ func (m *mockPOWChainService) HasChainStarted() bool {
 	return true
 }
 
-func (m *mockPOWChainService) ETH2GenesisTime() uint64 {
-	return uint64(time.Unix(0, 0).Unix())
+func (m *mockPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+	return uint64(time.Unix(0, 0).Unix()), big.NewInt(0)
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed

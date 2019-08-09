@@ -458,18 +458,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
-	p := &mockPOWChainService{
-		latestBlockNumber: nil,
-	}
-	ps := ProposerServer{powChainService: p}
-
-	_, err := ps.deposits(context.Background(), &ethpb.Eth1Data{})
-	if err.Error() != "latest PoW block number is unknown" {
-		t.Errorf("Received unexpected error: %v", err)
-	}
-}
-
 func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	ctx := context.Background()
 
