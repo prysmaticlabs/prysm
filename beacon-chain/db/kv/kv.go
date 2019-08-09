@@ -37,7 +37,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		//return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
 		//	histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
-		// TODO: Update buckets.
+		// TODO(#3164): Update buckets.
 		return nil
 	}); err != nil {
 		return nil, err
