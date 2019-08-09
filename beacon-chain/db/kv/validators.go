@@ -2,6 +2,10 @@ package kv
 
 import (
 	"context"
+	"encoding/binary"
+
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -19,9 +23,17 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 }
 
 // SaveValidatorLatestVote by validator index.
-// TODO(#3164): Implement.
 func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error {
-	return nil
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	enc, err := proto.Marshal(vote)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsBucket)
+		return bucket.Put(buf, enc)
+	})
 }
 
 // ValidatorIndex by public key.
@@ -43,14 +55,11 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 }
 
 // SaveValidatorIndex by public key in the db.
-// TODO(#3164): Implement.
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
-	return nil
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsBucket)
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, validatorIdx)
+		return bucket.Put(publicKey[:], buf)
+	})
 }
-
-//func (b *BeaconDB) put(bucket []byte, key []byte, value []byte) error {
-//	return b.db.Update(func(tx *bolt.Tx) error {
-//		bkt := tx.Bucket(bucket)
-//		return bkt.Put(key, value)
-//	})
-//}
