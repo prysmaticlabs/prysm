@@ -182,7 +182,7 @@ func (rs *RegularSync) run() {
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedBlockRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	stateRequestSub := rs.p2p.Subscribe(&pb.BeaconStateRequest{}, rs.stateRequestBuf)
-	attestationSub := rs.p2p.Subscribe(&pb.BeaconAttestation{}, rs.attestationBuf)
+	attestationSub := rs.p2p.Subscribe(&ethpb.Attestation{}, rs.attestationBuf)
 	exitSub := rs.p2p.Subscribe(&ethpb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
@@ -387,8 +387,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	defer span.End()
 	recAttestation.Inc()
 
-	resp := msg.Data.(*pb.BeaconAttestation)
-	attestation := resp.Attestation
+	attestation := msg.Data.(*ethpb.Attestation)
 	attestationRoot, err := hashutil.HashProto(attestation)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)

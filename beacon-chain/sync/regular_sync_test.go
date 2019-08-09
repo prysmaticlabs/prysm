@@ -390,15 +390,13 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &pb.BeaconAttestation{
-		Attestation: &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: 1,
-				},
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
+	request1 := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
+				Shard: 1,
 			},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 
@@ -447,15 +445,13 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &pb.BeaconAttestation{
-		Attestation: &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: 900,
-				},
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
+	request1 := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
+				Shard: 900,
 			},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 

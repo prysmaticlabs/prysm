@@ -81,10 +81,6 @@ message BeaconStateResponse {
   ethereum.eth.v1alpha1.BeaconBlock finalized_block = 2;
 }
 
-message BeaconAttestation {
-  ethereum.eth.v1alpha1.Attestation attestation = 1;
-}
-
 message FinalizedStateAnnounce {
   bytes block_root = 1;
   bytes state_root = 2;
