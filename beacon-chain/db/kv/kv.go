@@ -9,17 +9,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// KVStore defines an implementation of the Prysm Database interface
+// Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
-type KVStore struct {
+type Store struct {
 	db           *bolt.DB
 	DatabasePath string
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
-// an open connection db object as a property of the KVStore struct.
-func NewKVStore(dirPath string) (*KVStore, error) {
+// an open connection db object as a property of the Store struct.
+func NewKVStore(dirPath string) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func NewKVStore(dirPath string) (*KVStore, error) {
 		return nil, err
 	}
 
-	kv := &KVStore{db: boltDB, DatabasePath: dirPath}
+	kv := &Store{db: boltDB, DatabasePath: dirPath}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		//return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
@@ -47,7 +47,7 @@ func NewKVStore(dirPath string) (*KVStore, error) {
 }
 
 // ClearDB removes the previously stored directory at the data directory.
-func (k *KVStore) ClearDB() error {
+func (k *Store) ClearDB() error {
 	if _, err := os.Stat(k.DatabasePath); os.IsNotExist(err) {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (k *KVStore) ClearDB() error {
 }
 
 // Close closes the underlying BoltDB database.
-func (k *KVStore) Close() error {
+func (k *Store) Close() error {
 	return k.db.Close()
 }
 

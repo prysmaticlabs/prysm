@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-var _ = Database(&kv.KVStore{})
+var _ = Database(&kv.Store{})
 
 // setupDB instantiates and returns a BeaconDB instance.
 func setupDB(t testing.TB) *BeaconDB {
