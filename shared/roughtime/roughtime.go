@@ -14,6 +14,8 @@ import (
 var offset time.Duration
 
 func init() {
+	// This is the public key used to check roughtime.cloudflare.com:2002 responses
+	// See https://github.com/cloudflare/roughtime/blob/master/README.md
 	pk, err := base64.StdEncoding.DecodeString("gD63hSj3ScS+wuOeGrubXlq35N1c5Lby/S+T7MNTjxo=")
 	if err != nil {
 		panic(err)
