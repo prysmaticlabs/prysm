@@ -21,42 +21,35 @@ var log = logrus.WithField("prefix", "beacondb")
 // be implemented by any key-value or relational database in practice.
 type Database interface {
 	ClearDB() error
-	Attestation(attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestations(ctx context.Context, filter *QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(attRoot [32]byte) bool
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
-	Block(filter QueryFilter) (*ethpb.BeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
+	Blocks(ctx context.Context, filter *QueryFilter) ([]*ethpb.BeaconBlock, error)
 	HasBlock(blockRoot [32]byte) bool
-	ChildBlockRootsByParent(parentRoot [32]byte, filter QueryFilter) ([][]byte, error)
+	ChildBlockRootsByParent(ctx context.Context, parentRoot [32]byte, filter *QueryFilter) ([][]byte, error)
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
-	LatestMessage(validatorIdx uint64) (*pb.LatestMessage, error)
+	LatestMessage(ctx context.Context, validatorIdx uint64) (*pb.LatestMessage, error)
 	HasLatestMessage(validatorIdx uint64) bool
 	SaveLatestMessage(ctx context.Context, validatorIdx uint64, msg *pb.LatestMessage) error
-	State(ctx context.Context, filter QueryFilter) (*pb.BeaconState, error)
+	State(ctx context.Context, filter *QueryFilter) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 }
 
 // QueryFilter defines a generic interface for type-asserting
 // specific filters to use in querying DB objects.
-type QueryFilter interface{}
-
-// SlotFilter provides capabilities for filtering objects by slot.
-type SlotFilter struct {
-	startSlot uint64
-	endSlot   uint64
-}
-
-// RootFilter provides capabilities for filtering objects by root.
-type RootFilter struct {
-	hash [32]byte
-}
-
-// EpochFilter provides capabilities for filtering objects by epoch.
-type EpochFilter struct {
-	startEpoch uint64
-	endEpoch   uint64
+type QueryFilter struct {
+	Root       [32]byte
+	StartSlot  uint64
+	EndSlot    uint64
+	StartEpoch uint64
+	EndEpoch   uint64
+	// Optional criteria to retrieve a genesis value.
+	Genesis bool
 }
 
 // BeaconDB manages the data layer of the beacon chain implementation.
