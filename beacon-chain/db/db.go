@@ -18,19 +18,16 @@ var log = logrus.WithField("prefix", "beacondb")
 
 type Database interface {
 	NewDB(dirPath string)
-	ClearDB(dirPath string) error
+	ClearDB() error
 	SaveAttestation(att *ethpb.Attestation) error
 	SaveAttestations(atts []*ethpb.Attestation) error
 	SaveBlock(block *ethpb.BeaconBlock) error
 	SaveBlocks(blocks []*ethpb.BeaconBlock) error
 	SaveState(state *pb.BeaconState, blockRoot [32]byte) error
-	SaveJustifiedState(state *pb.BeaconState) error
-	SaveFinalizedState(state *pb.BeaconState) error
 	Attestation(attRoot [32]byte) (*ethpb.Attestation, error)
 	Block(filter *QueryFilter) (*ethpb.BeaconBlock, error)
+	ChildBlockRootsByParent(parentRoot [32]byte, filter *QueryFilter) ([][]byte, error)
 	State(filter *QueryFilter) (*pb.BeaconState, error)
-	JustifiedState() (*pb.BeaconState, error)
-	FinalizedState(stateRoot [32]byte) (*pb.BeaconState, error)
 	SaveChainHead(block *ethpb.BeaconBlock, state *pb.BeaconState) error
 	HeadState() (*pb.BeaconState, error)
 }
