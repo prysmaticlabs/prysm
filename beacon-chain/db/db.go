@@ -29,8 +29,8 @@ type Database interface {
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, filter *QueryFilter) ([]*ethpb.BeaconBlock, error)
+	BlockRoots(ctx context.Context, filter *QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
-	ChildBlockRootsByParent(ctx context.Context, parentRoot [32]byte, filter *QueryFilter) ([][]byte, error)
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
