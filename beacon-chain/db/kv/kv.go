@@ -35,8 +35,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 	kv := &Store{db: boltDB, DatabasePath: dirPath}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
-		//return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
-		//	histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 		// TODO(#3164): Update buckets.
 		return nil
 	}); err != nil {
@@ -57,13 +55,4 @@ func (k *Store) ClearDB() error {
 // Close closes the underlying BoltDB database.
 func (k *Store) Close() error {
 	return k.db.Close()
-}
-
-func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
-	for _, bucket := range buckets {
-		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
-			return err
-		}
-	}
-	return nil
 }
