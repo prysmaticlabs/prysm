@@ -586,7 +586,13 @@ func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) error {
 	hasAttestation := rs.db.HasAttestation(bytesutil.ToBytes32(data.Hash))
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		return nil
+		dbAttestation, err := rs.db.Attestation(bytesutil.ToBytes32(data.Hash))
+		if err != nil {
+			return err
+		}
+		if dbAttestation.AggregationBits.Contains(data.AggregationBits) {
+			return nil
+		}
 	}
 
 	log.WithField("peer", msg.Peer).
