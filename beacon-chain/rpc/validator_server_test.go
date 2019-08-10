@@ -255,7 +255,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	state.Slot = 5
+	state.Slot = 5 // Set state to non-epoch start slot.
 	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
