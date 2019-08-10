@@ -61,9 +61,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, fmt.Errorf("could not save attestation target")
 	}
 
-	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
-		Hash: h[:],
-	})
+	as.p2p.Broadcast(ctx, att)
 
 	return &pb.AttestResponse{Root: h[:]}, nil
 }
