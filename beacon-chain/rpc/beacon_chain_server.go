@@ -462,15 +462,15 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	s, err := bs.head.HeadState()
+	wantedSlot := (req.Epoch + 1) * params.BeaconConfig().SlotsPerEpoch - 1
+	s, err := bs.beaconDB.ForkChoiceState(ctx, bs.head.CanonicalRoot(wantedSlot))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve state for slot %d: %v", wantedSlot, err)
 	}
 
-	currentEpoch := helpers.SlotToEpoch(s.Slot)
-	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
+	finalized := req.Epoch <= s.FinalizedCheckpoint.Epoch
 
-	atts, err := epoch.MatchAttestations(s, currentEpoch)
+	atts, err := epoch.MatchAttestations(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
 	}
@@ -485,7 +485,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	}
 
 	return &ethpb.ValidatorParticipation{
-		Epoch:                   currentEpoch,
+		Epoch:                   req.Epoch,
 		Finalized:               finalized,
 		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
 		VotedEther:              attestedBalances,

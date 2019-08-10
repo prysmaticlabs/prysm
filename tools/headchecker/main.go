@@ -28,6 +28,8 @@ func (e *endpoint) Set(value string) error {
 }
 
 func main() {
+	params.UseDemoBeaconConfig()
+
 	var endpts endpoint
 	clients := make(map[string]pb.BeaconChainClient)
 
@@ -79,6 +81,15 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 	}
 
 	log.Infof("Compare all heads for head slot :%d", head1.BlockSlot)
+	if head1.BlockSlot % params.BeaconConfig().SlotsPerEpoch == 0 {
+		p, err := clients[endpt1].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
+			Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
+		if err != nil {
+			log.Fatal(err)
+		}
+		logParticipation(endpt1, p)
+	}
+
 	for endpt2, client := range clients {
 		head2, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 		if err != nil {
@@ -88,6 +99,15 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			log.Error("Uh oh! Head miss-matched!")
 			logHead(endpt1, head1)
 			logHead(endpt2, head2)
+
+			if head1.BlockSlot % params.BeaconConfig().SlotsPerEpoch == 0 {
+				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
+					Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
+				if err != nil {
+					log.Fatal(err)
+				}
+				logParticipation(endpt2, p)
+			}
 		}
 	}
 }
@@ -102,6 +122,17 @@ func logHead(endpt string, head *pb.ChainHead) {
 			"FinalizedSlot": head.FinalizedSlot,
 			"Finalizedroot": hex.EncodeToString(head.FinalizedBlockRoot),
 		}).Info("Head from beacon node ", endpt)
+}
+
+func logParticipation(endpt string, p *pb.ValidatorParticipation) {
+	log.WithFields(
+		logrus.Fields{
+			"Finalized":      p.Finalized,
+			"Epoch":      p.Epoch,
+			"VotedEther": p.VotedEther,
+			"TotalEther": p.EligibleEther,
+			"ParticipationRate": p.GlobalParticipationRate,
+		}).Info("Participation rate from beacon node ", endpt)
 }
 
 func randomEndpt(clients map[string]pb.BeaconChainClient) string {
