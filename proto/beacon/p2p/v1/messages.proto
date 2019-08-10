@@ -6,6 +6,8 @@ import "proto/beacon/p2p/v1/types.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "google/protobuf/timestamp.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
 
 enum Topic {
   UNKNOWN = 0;
@@ -20,9 +22,7 @@ enum Topic {
   BEACON_STATE_HASH_ANNOUNCE = 9;
   BEACON_STATE_REQUEST = 10;
   BEACON_STATE_RESPONSE = 11;
-  ATTESTATION_ANNOUNCE = 12;
-  ATTESTATION_REQUEST = 13;
-  ATTESTATION_RESPONSE = 14;
+  BEACON_ATTESTATION = 12;
 }
 
 message Envelope {
@@ -81,19 +81,6 @@ message BeaconStateRequest {
 message BeaconStateResponse {
   BeaconState finalized_state = 1;
   ethereum.eth.v1alpha1.BeaconBlock finalized_block = 2;
-}
-
-message AttestationAnnounce {
-  bytes hash = 1;
-}
-
-message AttestationRequest {
-  bytes hash = 1;
-}
-
-message AttestationResponse {
-  bytes hash = 1;
-  ethereum.eth.v1alpha1.Attestation attestation = 2;
 }
 
 message FinalizedStateAnnounce {
