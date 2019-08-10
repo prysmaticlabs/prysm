@@ -58,6 +58,11 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 	as.p2p.Broadcast(ctx, att)
 
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		return nil, err
+	}
+
 	return &pb.AttestResponse{Root: hash[:]}, nil
 }
 
