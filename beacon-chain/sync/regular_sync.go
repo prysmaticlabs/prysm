@@ -388,7 +388,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	recAttestation.Inc()
 
 	attestation := msg.Data.(*ethpb.Attestation)
-	attestationRoot, err := hashutil.HashProto(attestation)
+	attestationDataHash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 		return err
@@ -399,12 +399,18 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attestationRoot)
+	hasAttestation := rs.db.HasAttestation(attestationDataHash)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", bytesutil.Trunc(attestationRoot[:]))).
-			Debug("Received, skipping attestation")
-		return nil
+		dbAttestation, err := rs.db.Attestation(attestationDataHash)
+		if err != nil {
+			return err
+		}
+		if dbAttestation.AggregationBits.Contains(attestation.AggregationBits) {
+			log.WithField("attestationDataHash", fmt.Sprintf("%#x", bytesutil.Trunc(attestationDataHash[:]))).
+				Debug("Received, skipping attestation")
+			return nil
+		}
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.

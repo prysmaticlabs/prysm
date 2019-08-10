@@ -364,7 +364,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		})
 	}
 
-	if err := service.BatchUpdateLatestAttestation(ctx, attestations); err != nil {
+	if err := service.BatchUpdateLatestAttestations(ctx, attestations); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 }

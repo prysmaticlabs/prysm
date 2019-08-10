@@ -31,12 +31,7 @@ type AttesterServer struct {
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
-	h, err := hashutil.HashProto(att)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash attestation")
-	}
-
-	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
+	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +58,12 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 	as.p2p.Broadcast(ctx, att)
 
-	return &pb.AttestResponse{Root: h[:]}, nil
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.AttestResponse{Root: hash[:]}, nil
 }
 
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
