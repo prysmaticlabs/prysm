@@ -237,6 +237,64 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
+	helpers.ClearAllCaches()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
+
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	state.Slot = 5 // Set state to non-epoch start slot.
+	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < len(deposits); i++ {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+
+	// Test the first validator in registry.
+	req := &pb.AssignmentRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		EpochStart: 0,
+	}
+	res, err := vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.ValidatorAssignment) != 1 {
+		t.Error("Expected 1 assignment")
+	}
+}
+
 func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
