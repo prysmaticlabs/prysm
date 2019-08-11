@@ -4,8 +4,6 @@
 package state
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -148,7 +146,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 	bodyRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+		return nil, errors.Wrapf(err, "could not hash tree root %v", bodyRoot)
 	}
 
 	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
@@ -186,7 +184,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	for i, deposit := range deposits {
 		state, err = b.ProcessDeposit(state, deposit, validatorMap)
 		if err != nil {
-			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
+			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
 	}
 	// Process genesis activations
@@ -211,7 +209,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not get compact committee root %v", err)
+		return nil, errors.Wrap(err, "could not get compact committee root")
 	}
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]

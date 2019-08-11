@@ -9,11 +9,14 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -88,13 +91,73 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		P2P:      broadcaster,
 	})
 
-	attestation := &ethpb.Attestation{
-		AggregationBits: []byte{'A'},
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target: &ethpb.Checkpoint{Epoch: 0},
 			Crosslink: &ethpb.Crosslink{
-				Shard: 100,
-			}}}
-	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
+				Shard:      0,
+				StartEpoch: 0,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+	}
+
+	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	if err != nil {
+		t.Error(err)
+	}
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	sigs := make([]*bls.Signature, len(attestingIndices))
+	for i, indice := range attestingIndices {
+		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+			Data:       att.Data,
+			CustodyBit: false,
+		}
+		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		if err != nil {
+			t.Error(err)
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
+		{
+			Shard:      0,
+			StartEpoch: 0,
+		},
+	}
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	newBlock := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	if err := beaconDB.SaveBlock(newBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	att.Data.Crosslink.ParentRoot = encoded[:]
+	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	if err := service.HandleAttestations(context.Background(), att); err != nil {
 		t.Error(err)
 	}
 }

@@ -4,8 +4,7 @@
 package blocks
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +43,7 @@ func HeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error)
 	}
 	root, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash block body %v", err)
+		return nil, errors.Wrap(err, "could not tree hash block body")
 	}
 	header.BodyRoot = root[:]
 	return header, nil
