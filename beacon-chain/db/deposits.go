@@ -76,7 +76,9 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int, beforeI
 	defer db.depositsLock.RUnlock()
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range db.deposits {
-		if (beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1) && ctnr.Index <= beforeIndex {
+		isBeforeBlock := beforeBlk.Cmp(ctnr.Block) > -1
+		isBeforeIndex := ctnr.Index <= beforeIndex
+		if (beforeBlk == nil || isBeforeBlock) && isBeforeIndex {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
