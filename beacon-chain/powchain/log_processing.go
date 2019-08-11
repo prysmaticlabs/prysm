@@ -84,6 +84,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 	}
 
 	if int64(index) != w.lastReceivedMerkleIndex+1 {
+		missedDepositLogsCount.Inc()
 		if err := w.requestMissingLogs(depositLog.BlockNumber, int64(index-1)); err != nil {
 			return errors.Wrap(err, "Could not get correct merkle index")
 		}
