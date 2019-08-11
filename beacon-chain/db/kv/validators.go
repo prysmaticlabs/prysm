@@ -17,9 +17,17 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 }
 
 // HasValidatorLatestVote verifies if a validator index has a latest vote stored in the db.
-// TODO(#3164): Implement.
 func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool {
-	return false
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	exists := false
+	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorsBucket)
+		exists = bkt.Get(buf) != nil
+		return nil
+	})
+	return exists
 }
 
 // SaveValidatorLatestVote by validator index.
