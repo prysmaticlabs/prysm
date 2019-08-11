@@ -25,7 +25,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var skipSlotCache, _ = lru.New(5)
+var skipSlotCache, _ = lru.New(128)
 
 type skipSlotCacheValue struct {
 	highestSlot uint64
