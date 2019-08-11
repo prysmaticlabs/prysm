@@ -42,14 +42,14 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
 			if depositLog.BlockHash == [32]byte{} {
-				return errors.New("Got empty blockhash from powchain service")
+				return errors.New("got empty blockhash from powchain service")
 			}
 			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
 			if err != nil {
-				return errors.Wrap(err, "Could not get eth1 block")
+				return errors.Wrap(err, "could not get eth1 block")
 			}
 			if blk == nil {
-				return errors.Wrap(err, "Got empty block from powchain service")
+				return errors.Wrap(err, "got empty block from powchain service")
 			}
 			timeStamp := blk.Time()
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
