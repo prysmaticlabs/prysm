@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -391,15 +390,13 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &pb.AttestationResponse{
-		Attestation: &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: 1,
-				},
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
+	request1 := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
+				Shard: 1,
 			},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 
@@ -448,15 +445,13 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	request1 := &pb.AttestationResponse{
-		Attestation: &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: 900,
-				},
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
+	request1 := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Crosslink: &ethpb.Crosslink{
+				Shard: 900,
 			},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 
@@ -500,156 +495,6 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		t.Error(err)
 	}
 	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
-}
-
-func TestHandleAttReq_HashNotFound(t *testing.T) {
-	hook := logTest.NewGlobal()
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              &mockP2P{},
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	req := &pb.AttestationRequest{
-		Hash: []byte{'A'},
-	}
-	msg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
-	}
-
-	if err := ss.handleAttestationRequestByHash(msg); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Attestation not in db")
-}
-
-func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	att := &ethpb.Attestation{
-		AggregationBits: []byte{'A', 'B', 'C'},
-	}
-	hash, err := hashutil.HashProto(att)
-	if err != nil {
-		t.Fatalf("Could not hash attestation: %v", err)
-	}
-	sender := &mockP2P{}
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              sender,
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	if err := ss.handleAttestationAnnouncement(p2p.Message{
-		Ctx:  context.Background(),
-		Data: &pb.AttestationAnnounce{Hash: hash[:]},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if sender.sentMsg == nil {
-		t.Fatal("send was not called")
-	}
-
-	msg, ok := sender.sentMsg.(*pb.AttestationRequest)
-	if !ok {
-		t.Fatal("sent p2p message is wrong type")
-	}
-
-	if bytesutil.ToBytes32(msg.Hash) != hash {
-		t.Fatal("message didnt include the proper hash")
-	}
-}
-
-func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	att := &ethpb.Attestation{
-		AggregationBits: []byte{'A', 'B', 'C'},
-	}
-	hash, err := hashutil.HashProto(att)
-	if err != nil {
-		t.Fatalf("Could not hash attestation: %v", err)
-	}
-	if err := db.SaveAttestation(context.Background(), att); err != nil {
-		t.Fatalf("Could not save attestation: %v", err)
-	}
-	sender := &mockP2P{}
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              sender,
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	if err := ss.handleAttestationAnnouncement(p2p.Message{
-		Ctx:  context.Background(),
-		Data: &pb.AttestationAnnounce{Hash: hash[:]},
-	}); err != nil {
-		t.Error(err)
-	}
-
-	if sender.sentMsg != nil {
-		t.Error("send was called, but it should not have been called")
-	}
-
-}
-
-func TestHandleAttReq_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	att := &ethpb.Attestation{
-		AggregationBits: []byte{'A', 'B', 'C'},
-	}
-	attRoot, err := hashutil.HashProto(att)
-	if err != nil {
-		t.Fatalf("Could not hash attestation: %v", err)
-	}
-	if err := db.SaveAttestation(context.Background(), att); err != nil {
-		t.Fatalf("Could not save attestation: %v", err)
-	}
-
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              &mockP2P{},
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	req := &pb.AttestationRequest{
-		Hash: attRoot[:],
-	}
-	msg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
-	}
-
-	if err := ss.handleAttestationRequestByHash(msg); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Sending attestation to peer")
 }
 
 func TestHandleStateReq_NOState(t *testing.T) {

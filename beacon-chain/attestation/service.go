@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "attestation")
 // and updating attestations in batches.
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
-	BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error
+	BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 }
 
 type attestationStore struct {
@@ -146,7 +146,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 	attestation := msg.(*ethpb.Attestation)
 	a.pooledAttestations = append(a.pooledAttestations, attestation)
 	if len(a.pooledAttestations) > a.poolLimit {
-		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
+		if err := a.BatchUpdateLatestAttestations(ctx, a.pooledAttestations); err != nil {
 			return err
 		}
 		state, err := a.beaconDB.HeadState(ctx)
@@ -191,9 +191,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *ethp
 	return a.updateAttestation(beaconState, attestation)
 }
 
-// BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
+// BatchUpdateLatestAttestations updates multiple attestations and adds them into the attestation store
 // if they are valid.
-func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*ethpb.Attestation) error {
+func (a *Service) BatchUpdateLatestAttestations(ctx context.Context, attestations []*ethpb.Attestation) error {
 
 	if attestations == nil {
 		return nil
@@ -244,7 +244,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
-
 		if i >= uint64(len(committee)) {
 			// This should never happen.
 			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
@@ -263,7 +262,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		attTargetBoundarySlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
-		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
 			currentAttestationSlot = attTargetBoundarySlot
 		}
@@ -278,6 +276,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 				},
 			).Debug("Attestation store updated")
 		}
+		a.store.Unlock()
 	}
 	return nil
 }

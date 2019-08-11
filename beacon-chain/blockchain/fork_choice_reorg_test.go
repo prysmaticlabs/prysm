@@ -23,7 +23,7 @@ func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconS
 	return m.targets[idx], nil
 }
 
-func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error {
+func (m *mockAttestationHandler) BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	return nil
 }
 
