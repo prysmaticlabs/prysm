@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,11 +28,11 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
-	aHash, err := hashutil.HashProto(a)
+	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
-	aPrime, err := db.Attestation(aHash)
+	aPrime, err := db.Attestation(aDataHash)
 	if err != nil {
 		t.Fatalf("Failed to call Attestation: %v", err)
 	}
@@ -73,8 +74,12 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
 
+	sort.Slice(retrievedAttestations, func(i, j int) bool {
+		return retrievedAttestations[i].Data.Crosslink.Shard < retrievedAttestations[j].Data.Crosslink.Shard
+	})
+
 	if !reflect.DeepEqual(retrievedAttestations, attestations) {
-		t.Log("Retrieved attestations did not match generated attestations")
+		t.Fatal("Retrieved attestations did not match generated attestations")
 	}
 }
 
@@ -94,11 +99,11 @@ func TestDeleteAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
-	aHash, err := hashutil.HashProto(a)
+	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
-	aPrime, err := db.Attestation(aHash)
+	aPrime, err := db.Attestation(aDataHash)
 	if err != nil {
 		t.Fatalf("Could not call Attestation: %v", err)
 	}
@@ -111,7 +116,7 @@ func TestDeleteAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not delete attestation: %v", err)
 	}
 
-	if db.HasAttestation(aHash) {
+	if db.HasAttestation(aDataHash) {
 		t.Error("Deleted attestation still there")
 	}
 }
@@ -141,19 +146,19 @@ func TestHasAttestation_OK(t *testing.T) {
 			},
 		},
 	}
-	aHash, err := hashutil.HashProto(a)
+	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
 		t.Fatalf("Failed to hash Attestation: %v", err)
 	}
 
-	if db.HasAttestation(aHash) {
+	if db.HasAttestation(aDataHash) {
 		t.Fatal("Expected HasAttestation to return false")
 	}
 
 	if err := db.SaveAttestation(context.Background(), a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
-	if !db.HasAttestation(aHash) {
+	if !db.HasAttestation(aDataHash) {
 		t.Fatal("Expected HasAttestation to return true")
 	}
 }

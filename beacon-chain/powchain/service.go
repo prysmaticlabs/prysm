@@ -3,7 +3,6 @@ package powchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"runtime/debug"
@@ -15,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -88,6 +88,7 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
+	chainStartBlockNumber   *big.Int
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -125,14 +126,14 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(config.DepositContract, config.ContractBackend)
 	if err != nil {
-		return nil, fmt.Errorf("could not create deposit contract caller %v", err)
+		return nil, errors.Wrap(err, "could not create deposit contract caller")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("could not setup deposit trie: %v", err)
+		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
 	return &Web3Service{
 		ctx:                     ctx,
@@ -258,7 +259,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 	defer w.processingLock.RUnlock()
 	countByte, err := w.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
-		return false, fmt.Errorf("could not get deposit count %v", err)
+		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
 	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
@@ -273,7 +274,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 func (w *Web3Service) initDataFromContract() error {
 	root, err := w.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
 	if err != nil {
-		return fmt.Errorf("could not retrieve deposit root %v", err)
+		return errors.Wrap(err, "could not retrieve deposit root")
 	}
 	w.depositRoot = root[:]
 	return nil

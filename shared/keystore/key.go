@@ -21,13 +21,13 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
@@ -154,7 +154,7 @@ func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 func NewKey(rand io.Reader) (*Key, error) {
 	secretKey, err := bls.RandKey(rand)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate random key: %v", err)
+		return nil, errors.Wrap(err, "could not generate random key")
 	}
 	return newKeyFromBLS(secretKey)
 }

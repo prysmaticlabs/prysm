@@ -4,10 +4,12 @@
 package bls
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 
 	g1 "github.com/phoreproject/bls/g1pubs"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -30,7 +32,7 @@ type PublicKey struct {
 func RandKey(r io.Reader) (*SecretKey, error) {
 	k, err := g1.RandKey(r)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize secret key: %v", err)
+		return nil, errors.Wrap(err, "could not initialize secret key")
 	}
 	return &SecretKey{val: k}, nil
 }
@@ -49,7 +51,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal bytes into public key: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
 	return &PublicKey{val: k}, nil
 }
@@ -59,7 +61,7 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal bytes into signature: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal bytes into signature")
 	}
 	return &Signature{val: s}, nil
 }
@@ -71,7 +73,9 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
-	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
 	return &Signature{val: sig}
 }
 
@@ -96,7 +100,9 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
-	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
 // VerifyAggregate verifies each public key against a message.
@@ -110,7 +116,9 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uin
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
 	}
-	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), domain)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
 }
 
 // Marshal a signature into a byte slice.
@@ -123,6 +131,9 @@ func (s *Signature) Marshal() []byte {
 func AggregateSignatures(sigs []*Signature) *Signature {
 	var ss []*g1.Signature
 	for _, v := range sigs {
+		if v == nil {
+			continue
+		}
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: g1.AggregateSignatures(ss)}

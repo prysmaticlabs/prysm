@@ -6,6 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -60,6 +61,12 @@ func NewEth1DataVoteCache() *Eth1DataVoteCache {
 // Eth1DataVote fetches eth1 data vote count by the eth1data hash. Returns vote count,
 // if exists. Otherwise returns false, nil.
 func (c *Eth1DataVoteCache) Eth1DataVote(eth1DataHash [32]byte) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		// Return a miss result if cache is not enabled.
+		eth1DataVoteCacheMiss.Inc()
+		return 0, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(eth1DataHash[:]))
@@ -85,6 +92,10 @@ func (c *Eth1DataVoteCache) Eth1DataVote(eth1DataHash [32]byte) (uint64, error) 
 // AddEth1DataVote adds eth1 data vote object to the cache. This method also trims the least
 // recently added Eth1DataVoteByEpoch object if the cache size has ready the max cache size limit.
 func (c *Eth1DataVoteCache) AddEth1DataVote(eth1DataVote *Eth1DataVote) error {
+	if !featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.eth1DataVoteCache.Add(eth1DataVote); err != nil {
@@ -98,6 +109,10 @@ func (c *Eth1DataVoteCache) AddEth1DataVote(eth1DataVote *Eth1DataVote) error {
 // IncrementEth1DataVote increments the existing eth1 data object's vote count by 1,
 // and returns the vote count.
 func (c *Eth1DataVoteCache) IncrementEth1DataVote(eth1DataHash [32]byte) (uint64, error) {
+	if !featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		return 0, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.eth1DataVoteCache.GetByKey(string(eth1DataHash[:]))

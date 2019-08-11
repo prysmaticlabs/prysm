@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "attestation")
 // and updating attestations in batches.
 type TargetHandler interface {
 	LatestAttestationTarget(state *pb.BeaconState, validatorIndex uint64) (*pb.AttestationTarget, error)
-	BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error
+	BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 }
 
 type attestationStore struct {
@@ -146,7 +146,7 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 	attestation := msg.(*ethpb.Attestation)
 	a.pooledAttestations = append(a.pooledAttestations, attestation)
 	if len(a.pooledAttestations) > a.poolLimit {
-		if err := a.BatchUpdateLatestAttestation(ctx, a.pooledAttestations); err != nil {
+		if err := a.BatchUpdateLatestAttestations(ctx, a.pooledAttestations); err != nil {
 			return err
 		}
 		state, err := a.beaconDB.HeadState(ctx)
@@ -191,9 +191,9 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *ethp
 	return a.updateAttestation(beaconState, attestation)
 }
 
-// BatchUpdateLatestAttestation updates multiple attestations and adds them into the attestation store
+// BatchUpdateLatestAttestations updates multiple attestations and adds them into the attestation store
 // if they are valid.
-func (a *Service) BatchUpdateLatestAttestation(ctx context.Context, attestations []*ethpb.Attestation) error {
+func (a *Service) BatchUpdateLatestAttestations(ctx context.Context, attestations []*ethpb.Attestation) error {
 
 	if attestations == nil {
 		return nil
@@ -229,15 +229,12 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 	if err != nil {
 		return err
 	}
-	slot, err := helpers.AttestationDataSlot(beaconState, attestation.Data)
-	if err != nil {
-		return fmt.Errorf("could not get attestation slot: %v", err)
-	}
+
 	log.WithFields(logrus.Fields{
-		"attestationSlot":    slot,
-		"attestationShard":   attestation.Data.Crosslink.Shard,
-		"committeesList":     committee,
-		"lengthOfCommittees": len(committee),
+		"attestationTargetEpoch": attestation.Data.Target.Epoch,
+		"attestationShard":       attestation.Data.Crosslink.Shard,
+		"committeesList":         committee,
+		"lengthOfCommittees":     len(committee),
 	}).Debug("Updating latest attestation")
 
 	// Check each bit of participation bitfield to find out which
@@ -247,7 +244,6 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		if !attestation.AggregationBits.BitAt(i) {
 			continue
 		}
-
 		if i >= uint64(len(committee)) {
 			// This should never happen.
 			log.Warnf("bitfield points to an invalid index in the committee: bitfield %08b", attestation.AggregationBits)
@@ -263,31 +259,24 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
 		pubkey := bytesutil.ToBytes48(beaconState.Validators[committee[i]].PublicKey)
-		newAttestationSlot := slot
+		attTargetBoundarySlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 		currentAttestationSlot := uint64(0)
 		a.store.Lock()
-		defer a.store.Unlock()
 		if _, exists := a.store.m[pubkey]; exists {
-			currentAttestationSlot = slot
+			currentAttestationSlot = attTargetBoundarySlot
 		}
 		// If the attestation is newer than this attester's one in pool.
-		if newAttestationSlot > currentAttestationSlot {
+		if attTargetBoundarySlot > currentAttestationSlot {
 			a.store.m[pubkey] = attestation
 
 			log.WithFields(
 				logrus.Fields{
-					"attestationSlot": slot,
-					"sourceEpoch":     attestation.Data.Source.Epoch,
+					"attTargetBoundarySlot": attTargetBoundarySlot,
+					"sourceEpoch":           attestation.Data.Source.Epoch,
 				},
 			).Debug("Attestation store updated")
-
-			blockRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
-			votedBlock, err := a.beaconDB.Block(blockRoot)
-			if err != nil {
-				return err
-			}
-			reportVoteMetrics(committee[i], votedBlock)
 		}
+		a.store.Unlock()
 	}
 	return nil
 }

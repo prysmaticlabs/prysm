@@ -3,16 +3,15 @@ package testutil
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"sync"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -75,7 +74,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 func GenerateDepositProof(t testing.TB, deposits []*ethpb.Deposit) ([]*ethpb.Deposit, [32]byte) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := hashutil.DepositHash(deposits[i].Data)
+		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}
@@ -135,7 +134,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		return []byte{}, fmt.Errorf("could not get beacon proposer index: %v", err)
+		return []byte{}, errors.Wrap(err, "could not get beacon proposer index")
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)

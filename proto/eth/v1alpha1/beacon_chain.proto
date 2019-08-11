@@ -20,6 +20,7 @@ service BeaconChain {
     // TODO(preston): Batch requests?
 
     // Retrieve attestations by block root, slot, or epoch. 
+    // Attestations are sorted by crosslink shard by default.
     // 
     // The server may return an empty list when no attestations match the given 
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter 
@@ -138,10 +139,27 @@ message ListAttestationsRequest {
         // Filter attestations by epoch number.
         uint64 epoch = 3;
     }
+
+    // The maximum number of Attestations to return in the response.
+    // This field is optional.
+    int32 page_size = 4;
+
+    // A pagination token returned from a previous call to `ListAttestations`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 5;
 }
 
 message ListAttestationsResponse {
     repeated Attestation attestations = 1;
+
+    // A pagination token returned from a previous call to `ListAttestations`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count of Attestations matching the request filter.
+    int32 total_size = 3;
 }
 
 message ListBlocksRequest {
@@ -159,10 +177,27 @@ message ListBlocksRequest {
         // from another fork.
         uint64 epoch = 3;
     }
+
+    // The maximum number of Blocks to return in the response.
+    // This field is optional.
+    int32 page_size = 4;
+
+    // A pagination token returned from a previous call to `ListBlocks`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 5;
 }
 
 message ListBlocksResponse {
     repeated BeaconBlock blocks = 1;
+
+    // A pagination token returned from a previous call to `ListBlocks`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count of Blocks matching the request filter.
+    int32 total_size = 3;
 }
 
 // Information about the head of the beacon chain.

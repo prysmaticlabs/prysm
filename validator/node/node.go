@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -140,7 +141,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, password strin
 		CertFlag:             cert,
 	})
 	if err != nil {
-		return fmt.Errorf("could not initialize client service: %v", err)
+		return errors.Wrap(err, "could not initialize client service")
 	}
 	return s.services.RegisterService(v)
 }

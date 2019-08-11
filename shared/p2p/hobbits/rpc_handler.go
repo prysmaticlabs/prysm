@@ -69,7 +69,8 @@ type AttestationResponse struct {
 }
 
 func (h *HobbitsNode) status(id peer.ID, message HobbitsMessage) error {
-	// does something with the status of the other node
+	// TODO does something with the status of the other node
+
 	responseBody := Status{
 		UserAgent: []byte(fmt.Sprintf("prysm node %s", h.NodeId)),
 		Timestamp: uint64(time.Now().Unix()),

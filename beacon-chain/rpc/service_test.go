@@ -35,7 +35,7 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Message) error {
+func (ms *mockOperationService) HandleAttestation(_ context.Context, _ proto.Message) error {
 	return nil
 }
 
@@ -43,7 +43,7 @@ func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *ethpb.Att
 	return true, nil
 }
 
-func (ms *mockOperationService) PendingAttestations(_ context.Context) ([]*ethpb.Attestation, error) {
+func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	if ms.pendingAttestations != nil {
 		return ms.pendingAttestations, nil
 	}

@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -24,10 +26,10 @@ var (
 	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
 
-// ETH2GenesisTime retrieves the genesis time of the beacon chain
+// ETH2GenesisTime retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
-func (w *Web3Service) ETH2GenesisTime() uint64 {
-	return w.eth2GenesisTime
+func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
+	return w.eth2GenesisTime, w.chainStartBlockNumber
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -56,7 +58,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
 			if triggered {
 				w.setGenesisTime(timeStamp)
-				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash)
+				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash, blk.Number())
 			}
 		}
 		return
@@ -93,7 +95,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		WithdrawalCredentials: withdrawalCredentials,
 	}
 
-	depositHash, err := hashutil.DepositHash(depositData)
+	depositHash, err := ssz.HashTreeRoot(depositData)
 	if err != nil {
 		log.Errorf("Unable to determine hashed value of deposit %v", err)
 		return
@@ -158,8 +160,9 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 // ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte) {
+func (w *Web3Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, blockNumber *big.Int) {
 	w.chainStarted = true
+	w.chainStartBlockNumber = blockNumber
 
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := w.ChainStartDepositHashes()
@@ -232,7 +235,7 @@ func (w *Web3Service) processPastLogs() error {
 
 	currentState, err := w.beaconDB.HeadState(w.ctx)
 	if err != nil {
-		return fmt.Errorf("could not get head state: %v", err)
+		return errors.Wrap(err, "could not get head state")
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex > 0 {
@@ -276,7 +279,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 func (w *Web3Service) ChainStartDepositHashes() ([][]byte, error) {
 	hashes := make([][]byte, len(w.chainStartDeposits))
 	for i, dep := range w.chainStartDeposits {
-		hash, err := hashutil.DepositHash(dep.Data)
+		hash, err := ssz.HashTreeRoot(dep.Data)
 		if err != nil {
 			return nil, err
 		}

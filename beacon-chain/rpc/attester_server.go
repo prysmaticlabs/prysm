@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -31,22 +31,8 @@ type AttesterServer struct {
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
-	h, err := hashutil.HashProto(att)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash attestation: %v", err)
-	}
-
-	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
+	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
 		return nil, err
-	}
-
-	headState, err := as.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	slot, err := helpers.AttestationDataSlot(headState, att.Data)
-	if err != nil {
-		return nil, fmt.Errorf("could not get attestation slot: %v", err)
 	}
 
 	// Update attestation target for RPC server to run necessary fork choice.
@@ -59,8 +45,10 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	if head == nil {
 		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
 	}
+	// TODO(#3088): Remove this when fork-choice is updated to the new one.
+	attestationSlot := att.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	attTarget := &pbp2p.AttestationTarget{
-		Slot:            slot,
+		Slot:            attestationSlot,
 		BeaconBlockRoot: att.Data.BeaconBlockRoot,
 		ParentRoot:      head.ParentRoot,
 	}
@@ -68,11 +56,14 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, fmt.Errorf("could not save attestation target")
 	}
 
-	as.p2p.Broadcast(ctx, &pbp2p.AttestationAnnounce{
-		Hash: h[:],
-	})
+	as.p2p.Broadcast(ctx, att)
 
-	return &pb.AttestResponse{Root: h[:]}, nil
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.AttestResponse{Root: hash[:]}, nil
 }
 
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
@@ -111,22 +102,22 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	// is the validator's view of the head block of the beacon chain during the slot.
 	headBlock, err := as.beaconDB.ChainHead()
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
+		return nil, errors.Wrap(err, "failed to retrieve chain head")
 	}
 	headRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
+		return nil, errors.Wrap(err, "could not tree hash beacon block")
 	}
 
 	// Let head state be the state of head block processed through empty slots up to assigned slot.
 	headState, err := as.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch head state: %v", err)
+		return nil, errors.Wrap(err, "could not fetch head state")
 	}
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slot: %v", err)
+		return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
@@ -137,8 +128,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get target block for slot %d: %v",
-				epochStartSlot, err)
+			return nil, errors.Wrapf(err, "could not get target block for slot %d", epochStartSlot)
 		}
 	}
 

@@ -40,7 +40,6 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	beaconState := &pb.BeaconState{
-		Slot:             1,
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -62,7 +61,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 			Crosslink: &ethpb.Crosslink{
 				Shard: 1,
 			},
-			Target: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{Epoch: 1},
 			Source: &ethpb.Checkpoint{},
 		},
 	}
@@ -365,7 +364,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 		})
 	}
 
-	if err := service.BatchUpdateLatestAttestation(ctx, attestations); err != nil {
+	if err := service.BatchUpdateLatestAttestations(ctx, attestations); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 }

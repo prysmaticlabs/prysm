@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -61,6 +62,12 @@ func NewSeedCache() *SeedCache {
 // SeedInEpoch fetches SeedByEpoch by epoch. Returns true with a
 // reference to the SeedInEpoch info, if exists. Otherwise returns false, nil.
 func (c *SeedCache) SeedInEpoch(epoch uint64) ([]byte, error) {
+	if !featureconfig.FeatureConfig().EnableSeedCache {
+		// Return a miss result if cache is not enabled.
+		seedCacheMiss.Inc()
+		return nil, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.seedCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -86,6 +93,10 @@ func (c *SeedCache) SeedInEpoch(epoch uint64) ([]byte, error) {
 // AddSeed adds SeedByEpoch object to the cache. This method also trims the least
 // recently added SeedByEpoch object if the cache size has ready the max cache size limit.
 func (c *SeedCache) AddSeed(seed *SeedByEpoch) error {
+	if !featureconfig.FeatureConfig().EnableSeedCache {
+		return nil
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.seedCache.AddIfNotPresent(seed); err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,13 +20,13 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 
 	token, err := strconv.Atoi(pageToken)
 	if err != nil {
-		return 0, 0, "", fmt.Errorf("could not convert page token: %v", err)
+		return 0, 0, "", errors.Wrap(err, "could not convert page token")
 	}
 
 	// Start page can not be greater than validator size.
 	start := token * pageSize
 	if start >= totalSize {
-		return 0, 0, "", fmt.Errorf("page start %d >= validator list %d", start, totalSize)
+		return 0, 0, "", fmt.Errorf("page start %d >= list %d", start, totalSize)
 	}
 
 	// End page can not go out of bound.

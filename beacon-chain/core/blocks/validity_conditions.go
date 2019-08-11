@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -33,7 +34,7 @@ func IsValidBlock(
 	h := common.BytesToHash(state.Eth1Data.BlockHash)
 	powBlock, err := GetPOWBlock(ctx, h)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)
+		return errors.Wrap(err, "unable to retrieve POW chain reference block")
 	}
 
 	// Pre-Processing Condition 2:

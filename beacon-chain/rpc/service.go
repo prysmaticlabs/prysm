@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -45,15 +46,15 @@ type chainService interface {
 }
 
 type operationService interface {
-	PendingAttestations(ctx context.Context) ([]*ethpb.Attestation, error)
+	operations.Pool
 	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
-	HandleAttestations(context.Context, proto.Message) error
+	HandleAttestation(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {
 	HasChainStarted() bool
-	ETH2GenesisTime() uint64
+	ETH2GenesisTime() (uint64, *big.Int)
 	ChainStartFeed() *event.Feed
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
@@ -199,6 +200,7 @@ func (s *Service) Start() {
 	}
 	beaconChainServer := &BeaconChainServer{
 		beaconDB: s.beaconDB,
+		pool:     s.operationService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

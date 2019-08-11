@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -32,6 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/minio/sha256-simd"
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"golang.org/x/crypto/pbkdf2"

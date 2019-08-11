@@ -51,7 +51,7 @@ func (h *HobbitsNode) OpenConns() error {
 					break
 				}
 
-				fmt.Println(err)
+				log.Trace(err)
 
 				time.Sleep(5 * time.Second)
 			}
@@ -142,7 +142,6 @@ func (h *HobbitsNode) Broadcast(ctx context.Context, msg proto.Message) {
 }
 
 // Send builds and sends a message to a Hobbits peer
-// It conforms to the p2p composite interface
 func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID) error {
 	var function func(msg proto.Message) (HobbitsMessage, error)
 
@@ -168,8 +167,7 @@ func (h *HobbitsNode) Send(ctx context.Context, msg proto.Message, peer peer.ID)
 	return nil
 }
 
-// ReputationManager conforms to the p2p composite interface
-// Outside the scope of the Hobbits protocol
+// ReputationManager conforms to the p2p composite interface and is outside the scope of the Hobbits protocol
 func (h *HobbitsNode) Reputation(peer peer.ID, val int) {
 }
 

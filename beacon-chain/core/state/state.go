@@ -4,15 +4,12 @@
 package state
 
 import (
-	"errors"
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -149,7 +146,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 	bodyRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v err: %v", bodyRoot, err)
+		return nil, errors.Wrapf(err, "could not hash tree root %v", bodyRoot)
 	}
 
 	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
@@ -163,7 +160,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	validatorMap := make(map[[32]byte]int)
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
-		hash, err := hashutil.DepositHash(deposit.Data)
+		hash, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +184,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	for i, deposit := range deposits {
 		state, err = b.ProcessDeposit(state, deposit, validatorMap)
 		if err != nil {
-			return nil, fmt.Errorf("could not process validator deposit %d: %v", i, err)
+			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
 	}
 	// Process genesis activations
@@ -204,15 +201,15 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	// Populate latest_active_index_roots
 	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active validator indices: %v", err)
+		return nil, errors.Wrap(err, "could not get active validator indices")
 	}
 	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root active indices: %v", err)
+		return nil, errors.Wrap(err, "could not hash tree root active indices")
 	}
 	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not get compact committee root %v", err)
+		return nil, errors.Wrap(err, "could not get compact committee root")
 	}
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]

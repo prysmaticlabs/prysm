@@ -3,11 +3,11 @@ package accounts
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -51,7 +51,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(shardWithdrawalKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return errors.Wrap(err, "unable to store key %v")
 	}
 	log.WithField(
 		"path",
@@ -63,7 +63,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return errors.Wrap(err, "unable to store key %v")
 	}
 	log.WithField(
 		"path",
@@ -72,11 +72,11 @@ func NewValidatorAccount(directory string, password string) error {
 
 	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
 	if err != nil {
-		return fmt.Errorf("unable to generate deposit data: %v", err)
+		return errors.Wrap(err, "unable to generate deposit data")
 	}
 	serializedData, err := ssz.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("could not serialize deposit data: %v", err)
+		return errors.Wrap(err, "could not serialize deposit data")
 	}
 	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`

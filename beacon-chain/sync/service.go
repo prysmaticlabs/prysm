@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -101,22 +100,15 @@ func (ss *Service) Status() error {
 	if !ss.querierFinished && !ss.Querier.atGenesis {
 		return errors.New("querier is still running")
 	}
-
-	if !ss.Querier.chainStarted {
-		return nil
-	}
-
-	if ss.Querier.atGenesis {
-		return nil
-	}
-
-	blk, err := ss.Querier.db.ChainHead()
+	synced, err := ss.Querier.IsSynced()
 	if err != nil {
-		return fmt.Errorf("could not retrieve chain head %v", err)
+		return err
 	}
-	if blk == nil {
-		return errors.New("no chain head exists in db")
+
+	if synced {
+		return nil
 	}
+
 	if !ss.InitialSync.NodeIsSynced() {
 		return errors.New("not initially synced")
 	}
