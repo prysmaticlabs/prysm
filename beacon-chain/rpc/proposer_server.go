@@ -267,8 +267,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight, int(canonicalEth1Data.DepositCount+1))
-	fmt.Printf("AllDeposits(ctx, %d, %d)\n", latestEth1DataHeight.Uint64(), canonicalEth1Data.DepositCount+1)
+	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight, int(canonicalEth1Data.DepositCount-1))
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
