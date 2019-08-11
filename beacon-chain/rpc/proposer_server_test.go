@@ -506,7 +506,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	eth1Height, err := bs.latestEth1Height(ctx, beaconState, &ethpb.Eth1Data{})
+	_, eth1Height, err := bs.canonicalEth1Data(ctx, beaconState, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{Eth1Data: vote},
 	}
 
-	eth1Height, err = bs.latestEth1Height(ctx, beaconState, vote)
+	_, eth1Height, err = bs.canonicalEth1Data(ctx, beaconState, vote)
 	if err != nil {
 		t.Fatal(err)
 	}

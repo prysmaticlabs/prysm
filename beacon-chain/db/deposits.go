@@ -67,16 +67,16 @@ func (db *BeaconDB) PubkeyInChainstart(ctx context.Context, pubkey string) bool 
 	return false
 }
 
-// AllDeposits returns a list of deposits all historical deposits until the given block number
-// (inclusive). If no block number is specified then this method returns all historical deposits.
-func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
+// AllDeposits returns a list of deposits all historical deposits, after a specific index (inclusive), until the given
+// block number (inclusive). If no block number is specified then this method returns all historical deposits.
+func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int, afterIndex int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
 	defer span.End()
 	db.depositsLock.RLock()
 	defer db.depositsLock.RUnlock()
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range db.deposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
+		if (beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1) && ctnr.Index >= afterIndex {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
