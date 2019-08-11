@@ -108,7 +108,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -228,7 +228,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
-		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		PreviousCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),

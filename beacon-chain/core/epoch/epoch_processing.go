@@ -68,7 +68,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 	}
 	targetRoot, err := helpers.BlockRoot(state, epoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get block root for epoch %d: %v", epoch, err)
+		return nil, errors.Wrapf(err, "could not get block root for epoch %d", epoch)
 	}
 
 	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
@@ -88,7 +88,7 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		}
 		headRoot, err := helpers.BlockRootAtSlot(state, slot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for slot %d: %v", slot, err)
+			return nil, errors.Wrapf(err, "could not get block root for slot %d", slot)
 		}
 		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
 			headAtts = append(headAtts, srcAtt)
@@ -183,8 +183,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	if 3*prevAttestedBal >= 2*totalBal {
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for previous epoch %d: %v",
-				prevEpoch, err)
+			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
 		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(1, true)
@@ -194,8 +193,7 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 	if 3*currAttestedBal >= 2*totalBal {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get block root for current epoch %d: %v",
-				prevEpoch, err)
+			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
 		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
 		state.JustificationBits.SetBitAt(0, true)
@@ -294,11 +292,11 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 	}
 	attsRewards, attsPenalties, err := attestationDelta(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attestation delta: %v ", err)
+		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 	clRewards, clPenalties, err := crosslinkDelta(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get crosslink delta: %v ", err)
+		return nil, errors.Wrapf(err, "could not get crosslink delta")
 	}
 	for i := 0; i < len(state.Validators); i++ {
 		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
@@ -351,7 +349,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
-				return nil, fmt.Errorf("could not initiate exit for validator %d: %v", idx, err)
+				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
 		}
 	}
@@ -515,7 +513,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
 	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get compact committee root %v", err)
+		return nil, errors.Wrap(err, "could not get compact committee root")
 	}
 	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
 

@@ -6,15 +6,18 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -56,6 +59,7 @@ type Service struct {
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	p2p                        p2p.Broadcaster
 	error                      error
+	attestationLock            sync.Mutex
 }
 
 // Config options for the service.
@@ -130,16 +134,16 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	var attestations []*ethpb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestations from DB")
+		return nil, errors.New("could not retrieve attestations from DB")
 	}
 	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve attestations from DB")
+		return nil, errors.New("could not retrieve attestations from DB")
 	}
 
 	bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not process slots up to %d: %v", requestedSlot, err)
+		return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
 	}
 
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
@@ -193,7 +197,7 @@ func (s *Service) saveOperations() {
 		case exit := <-s.incomingValidatorExits:
 			handler.SafelyHandleMessage(s.ctx, s.HandleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			handler.SafelyHandleMessage(s.ctx, s.HandleAttestations, attestation)
+			handler.SafelyHandleMessage(s.ctx, s.HandleAttestation, attestation)
 		}
 	}
 }
@@ -215,21 +219,67 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	return nil
 }
 
-// HandleAttestations processes a received attestation message.
-func (s *Service) HandleAttestations(ctx context.Context, message proto.Message) error {
-	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestations")
+// HandleAttestation processes a received attestation message.
+func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
+	s.attestationLock.Lock()
+	defer s.attestationLock.Unlock()
 
 	attestation := message.(*ethpb.Attestation)
-	hash, err := hashutil.HashProto(attestation)
+
+	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return err
 	}
-	if s.beaconDB.HasAttestation(hash) {
-		return nil
+
+	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
+	if attestationSlot > bState.Slot {
+		bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
+		if err != nil {
+			return err
+		}
 	}
-	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
+
+	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
 		return err
+	}
+
+	hash, err := hashutil.HashProto(attestation.Data)
+	if err != nil {
+		return err
+	}
+
+	incomingAttBits := attestation.AggregationBits
+	if s.beaconDB.HasAttestation(hash) {
+		dbAtt, err := s.beaconDB.Attestation(hash)
+		if err != nil {
+			return err
+		}
+
+		if !dbAtt.AggregationBits.Contains(incomingAttBits) {
+			newAggregationBits := dbAtt.AggregationBits.Or(incomingAttBits)
+			incomingAttSig, err := bls.SignatureFromBytes(attestation.Signature)
+			if err != nil {
+				return err
+			}
+			dbSig, err := bls.SignatureFromBytes(dbAtt.Signature)
+			if err != nil {
+				return err
+			}
+			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
+			dbAtt.Signature = aggregatedSig.Marshal()
+			dbAtt.AggregationBits = newAggregationBits
+			if err := s.beaconDB.SaveAttestation(ctx, dbAtt); err != nil {
+				return err
+			}
+		} else {
+			return nil
+		}
+	} else {
+		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -288,10 +338,10 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 	}
 	state, err := s.beaconDB.HeadState(s.ctx)
 	if err != nil {
-		return fmt.Errorf("could not retrieve attestations from DB")
+		return errors.New("could not retrieve attestations from DB")
 	}
 	if err := s.removeEpochOldAttestations(state); err != nil {
-		return fmt.Errorf("could not remove old attestations from DB at slot %d: %v", block.Slot, err)
+		return errors.Wrapf(err, "could not remove old attestations from DB at slot %d", block.Slot)
 	}
 	return nil
 }
@@ -300,7 +350,7 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
-		hash, err := hashutil.HashProto(attestation)
+		hash, err := hashutil.HashProto(attestation.Data)
 		if err != nil {
 			return err
 		}

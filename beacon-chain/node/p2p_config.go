@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
@@ -24,9 +25,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
 	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
 	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
-	pb.Topic_ATTESTATION_ANNOUNCE:                &pb.AttestationAnnounce{},
-	pb.Topic_ATTESTATION_REQUEST:                 &pb.AttestationRequest{},
-	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
+	pb.Topic_BEACON_ATTESTATION:                  &ethpb.Attestation{},
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {

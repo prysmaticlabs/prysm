@@ -48,13 +48,13 @@ type chainService interface {
 type operationService interface {
 	operations.Pool
 	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
-	HandleAttestations(context.Context, proto.Message) error
+	HandleAttestation(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {
 	HasChainStarted() bool
-	ETH2GenesisTime() uint64
+	ETH2GenesisTime() (uint64, *big.Int)
 	ChainStartFeed() *event.Feed
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
