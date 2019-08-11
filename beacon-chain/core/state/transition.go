@@ -32,10 +32,20 @@ type skipSlotCacheValue struct {
 	state       *pb.BeaconState
 }
 
-var skipSlotCacheHighestSlot = promauto.NewGauge(prometheus.GaugeOpts{
-	Name: "skip_slot_cache_highest_slot",
-	Help: "The highest slot registered in the skip slot cache",
-})
+var (
+	skipSlotCacheHighestSlot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "skip_slot_cache_highest_slot",
+		Help: "The highest slot registered in the skip slot cache.",
+	})
+	skipSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "skip_slot_cache_hit",
+		Help: "The total number of cache hits on the skip slot cache.",
+	})
+	skipSlotCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "skip_slot_cache_miss",
+		Help: "The total number of cache misses on the skip slot cache.",
+	})
+)
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
@@ -203,6 +213,9 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	cached, ok := skipSlotCache.Get(root)
 	if ok && cached.(*skipSlotCacheValue).highestSlot <= slot {
 		state = cached.(*skipSlotCacheValue).state
+		skipSlotCacheHit.Inc()
+	} else {
+		skipSlotCacheMiss.Inc()
 	}
 
 	for state.Slot < slot {
