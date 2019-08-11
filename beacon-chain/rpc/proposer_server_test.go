@@ -1096,11 +1096,11 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deposits) != 2 {
+	if len(deposits) != 3 {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(deposits),
-			int(params.BeaconConfig().MaxDeposits),
+			3,
 		)
 	}
 }
