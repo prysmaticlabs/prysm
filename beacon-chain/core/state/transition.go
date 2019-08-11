@@ -11,6 +11,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -29,6 +31,11 @@ type skipSlotCacheValue struct {
 	highestSlot uint64
 	state       *pb.BeaconState
 }
+
+var skipSlotCacheHighestSlot = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "skip_slot_cache_highest_slot",
+	Help: "The highest slot registered in the skip slot cache",
+})
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
@@ -202,6 +209,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		if ctx.Err() != nil {
 			// Cache last best value.
 			skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
+			skipSlotCacheHighestSlot.Set(float64(state.Slot))
 			return nil, ctx.Err()
 		}
 		state, err := ProcessSlot(ctx, state)
@@ -219,6 +227,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 
 	// Clone result state so that caches are not mutated.
 	skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
+	skipSlotCacheHighestSlot.Set(float64(state.Slot))
 
 	return state, nil
 }
