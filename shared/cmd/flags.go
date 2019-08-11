@@ -137,6 +137,6 @@ var (
 
 	Hobbits = cli.BoolFlag{
 		Name: "hobbits",
-		Usage: "Toggles a Hobbits node.",
+		Usage: "Toggles a Hobbits p2p node.",
 	}
 )
