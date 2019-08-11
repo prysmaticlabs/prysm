@@ -122,7 +122,7 @@ func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 	}
 	db.deposits = deposits
 
-	d := db.AllDeposits(context.Background(), nil, 0)
+	d := db.AllDeposits(context.Background(), nil /* before block */, 0 /* before index */)
 	if len(d) != len(deposits) {
 		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), len(deposits))
 	}
