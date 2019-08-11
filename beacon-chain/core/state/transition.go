@@ -205,27 +205,22 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	// Restart from cached value, if one exists.
-	var stateRoot [32]byte
 	root, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
 	}
-	fmt.Printf("State.Slot=%d, TreeHashRoot(state) = %#x\n", state.Slot, root)
 	cached, ok := skipSlotCache.Get(root)
-	if ok {
-		skipSlotCacheHit.Inc()
-		fmt.Printf("Cache hit with highest slot %d\n", cached.(*skipSlotCacheValue).highestSlot)
-	} else {
-		skipSlotCacheMiss.Inc()
-	}
 	if ok && cached.(*skipSlotCacheValue).highestSlot <= slot {
 		state = cached.(*skipSlotCacheValue).state
+		skipSlotCacheHit.Inc()
+	} else {
+		skipSlotCacheMiss.Inc()
 	}
 
 	for state.Slot < slot {
 		if ctx.Err() != nil {
 			// Cache last best value.
-			skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
+			skipSlotCache.Add(root, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
 			skipSlotCacheHighestSlot.Set(float64(state.Slot))
 			return nil, ctx.Err()
 		}
@@ -243,7 +238,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	// Clone result state so that caches are not mutated.
-	skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
+	skipSlotCache.Add(root, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
 	skipSlotCacheHighestSlot.Set(float64(state.Slot))
 
 	return state, nil
