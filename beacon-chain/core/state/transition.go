@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -21,6 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+var skipSlotCache, _ = lru.New(5)
+
+type skipSlotCacheValue struct {
+	highestSlot uint64
+	state       *pb.BeaconState
+}
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
@@ -178,8 +186,22 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	if state.Slot > slot {
 		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 	}
+
+	// Restart from cached value, if one exists.
+	var stateRoot [32]byte
+	root, err := ssz.HashTreeRoot(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
+	}
+	cached, ok := skipSlotCache.Get(root)
+	if ok && cached.(*skipSlotCacheValue).highestSlot <= slot {
+		state = cached.(*skipSlotCacheValue).state
+	}
+
 	for state.Slot < slot {
 		if ctx.Err() != nil {
+			// Cache last best value.
+			skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
 			return nil, ctx.Err()
 		}
 		state, err := ProcessSlot(ctx, state)
@@ -194,6 +216,10 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		}
 		state.Slot++
 	}
+
+	// Clone result state so that caches are not mutated.
+	skipSlotCache.Add(stateRoot, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
+
 	return state, nil
 }
 
