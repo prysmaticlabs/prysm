@@ -73,16 +73,14 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block")
 	}
-	validatorID, epoch, err = b.ValidateBlockSignature(beaconState, block.Body)
+	validatorID, epoch, err := b.ValidateBlockSignature(beaconState, block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
-	header = &ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  params.BeaconConfig().ZeroHash[:],
-		BodyRoot:   bodyRoot[:],
-		Signature:  emptySig,
+
+	header, err := b.HeaderFromBlock(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not extract header from block")
 	}
 	c.beaconDB.SaveBlockHeader(epoch, validatorID, header)
 
