@@ -359,14 +359,13 @@ func ProcessProposerSlashings(
 		}
 		proposer := beaconState.Validators[slashing.ProposerIndex]
 		if err = verifyProposerSlashing(beaconState, proposer, slashing); err != nil {
-			return nil, fmt.Errorf("could not verify proposer slashing %d: %v", idx, err)
+			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		beaconState, err = v.SlashValidator(
 			beaconState, slashing.ProposerIndex, 0, /* proposer is whistleblower */
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not slash proposer index %d: %v",
-				slashing.ProposerIndex, err)
+			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.ProposerIndex)
 		}
 	}
 	return beaconState, nil
@@ -428,7 +427,7 @@ func ProcessAttesterSlashings(
 ) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
 		if err := verifyAttesterSlashing(beaconState, slashing); err != nil {
-			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
+			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
@@ -509,7 +508,23 @@ func ProcessAttestations(
 	for idx, attestation := range body.Attestations {
 		beaconState, err = ProcessAttestation(beaconState, attestation)
 		if err != nil {
-			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
+			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		}
+	}
+	return beaconState, nil
+}
+
+// ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
+// records. The only difference would be that the attestation signature would not be verified.
+func ProcessAttestationsNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	var err error
+	for idx, attestation := range body.Attestations {
+		beaconState, err = ProcessAttestationNoVerify(beaconState, attestation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
 	}
 	return beaconState, nil
@@ -551,6 +566,16 @@ func ProcessAttestations(
 //    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //    validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	beaconState, err := ProcessAttestationNoVerify(beaconState, att)
+	if err != nil {
+		return nil, err
+	}
+	return beaconState, VerifyAttestation(beaconState, att)
+}
+
+// ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
+// method is used to validate attestations whose signatures have already been verified.
+func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	data := att.Data
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
@@ -655,13 +680,6 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 	// To be removed in Phase 1
 	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
 		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
-	}
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert to indexed attestation")
-	}
-	if err := VerifyIndexedAttestation(beaconState, indexedAtt); err != nil {
-		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return beaconState, nil
 }
@@ -850,6 +868,16 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 	return nil
 }
 
+// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// the signature in that attestation.
+func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) error {
+	indexedAtt, err := ConvertToIndexed(beaconState, att)
+	if err != nil {
+		return errors.Wrap(err, "could not convert to indexed attestation")
+	}
+	return VerifyIndexedAttestation(beaconState, indexedAtt)
+}
+
 // ProcessDeposits is one of the operations performed on each processed
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
@@ -868,7 +896,7 @@ func ProcessDeposits(
 	for _, deposit := range deposits {
 		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
 	}
 	return beaconState, nil
@@ -901,7 +929,7 @@ func ProcessDeposits(
 //     if pubkey not in validator_pubkeys:
 //         # Verify the deposit signature (proof of possession).
 //         # Invalid signatures are allowed by the deposit contract, and hence included on-chain, but must not be processed.
-//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature, get_domain(state, DOMAIN_DEPOSIT)):
+//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature%d, get_domain(state, DOMAIN_DEPOSIT)):
 //             return
 //
 //         # Add validator and balance entries
@@ -921,7 +949,7 @@ func ProcessDeposits(
 //         increase_balance(state, index, amount)
 func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
-		return nil, fmt.Errorf("could not verify deposit from %#x: %v", bytesutil.Trunc(deposit.Data.PublicKey), err)
+		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
@@ -1012,7 +1040,7 @@ func ProcessVoluntaryExits(
 
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit); err != nil {
-			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
+			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
@@ -1099,7 +1127,7 @@ func ProcessTransfers(
 
 	for idx, transfer := range transfers {
 		if err := verifyTransfer(beaconState, transfer); err != nil {
-			return nil, fmt.Errorf("could not verify transfer %d: %v", idx, err)
+			return nil, errors.Wrapf(err, "could not verify transfer %d", idx)
 		}
 		// Process the transfer between accounts.
 		beaconState = helpers.DecreaseBalance(beaconState, transfer.SenderIndex, transfer.Amount+transfer.Fee)

@@ -1177,6 +1177,53 @@ func TestProcessAttestations_OK(t *testing.T) {
 	}
 }
 
+func TestProcessAttestationsNoVerify_OK(t *testing.T) {
+	// Attestation passes with an empty signature
+	helpers.ClearAllCaches()
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target: &ethpb.Checkpoint{Epoch: 0},
+			Crosslink: &ethpb.Crosslink{
+				Shard:      0,
+				StartEpoch: 0,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+	}
+
+	zeroSig := [96]byte{}
+	att.Signature = zeroSig[:]
+
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
+		{
+			Shard:      0,
+			StartEpoch: 0,
+		},
+	}
+	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
+	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+
+	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	att.Data.Crosslink.ParentRoot = encoded[:]
+	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	if _, err := blocks.ProcessAttestationNoVerify(beaconState, att); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
 func TestConvertToIndexed_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {

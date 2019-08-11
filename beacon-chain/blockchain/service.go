@@ -164,7 +164,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, errors.Wrap(err, "failed to save attestation target")
 	}
 	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-		return nil, fmt.Errorf("could not set chain head, %v", err)
+		return nil, errors.Wrap(err, "could not set chain head")
 	}
 	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block as justified block")
