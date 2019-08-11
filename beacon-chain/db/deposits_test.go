@@ -128,7 +128,7 @@ func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 	}
 }
 
-func TestBeaconDB_AllDeposits_FiltersAfterIndex(t *testing.T) {
+func TestBeaconDB_AllDeposits_FiltersBeforeIndex(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -172,8 +172,8 @@ func TestBeaconDB_AllDeposits_FiltersAfterIndex(t *testing.T) {
 	db.deposits = deposits
 
 	d := db.AllDeposits(context.Background(), nil, 5)
-	if len(d) != 3 {
-		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), 3)
+	if len(d) != 5 {
+		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), 5)
 	}
 }
 

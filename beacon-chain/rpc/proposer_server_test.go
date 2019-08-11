@@ -780,7 +780,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{DepositCount: 2})
 	if err != nil {
 		t.Fatal(err)
 	}

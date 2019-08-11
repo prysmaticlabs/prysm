@@ -267,7 +267,8 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight, int(canonicalEth1Data.DepositCount))
+	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight, int(canonicalEth1Data.DepositCount+1))
+	fmt.Printf("AllDeposits(ctx, %d, %d)\n", latestEth1DataHeight.Uint64(), canonicalEth1Data.DepositCount+1)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
@@ -275,6 +276,10 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}
 		depositData = append(depositData, depHash[:])
+	}
+
+	if len(depositData) == 0 {
+		return []*ethpb.Deposit{}, nil
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
