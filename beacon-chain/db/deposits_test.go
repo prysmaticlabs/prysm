@@ -122,58 +122,9 @@ func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 	}
 	db.deposits = deposits
 
-	d := db.AllDeposits(context.Background(), nil /* before block */, 0 /* before index */)
+	d := db.AllDeposits(context.Background(), nil)
 	if len(d) != len(deposits) {
 		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), len(deposits))
-	}
-}
-
-func TestBeaconDB_AllDeposits_FiltersBeforeIndex(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-
-	deposits := []*DepositContainer{
-		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
-			Index:   1,
-		},
-		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
-			Index:   2,
-		},
-		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
-			Index:   3,
-		},
-		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
-			Index:   4,
-		},
-		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
-			Index:   5,
-		},
-		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
-			Index:   6,
-		},
-		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
-			Index:   7,
-		},
-	}
-	db.deposits = deposits
-
-	d := db.AllDeposits(context.Background(), nil, 5)
-	if len(d) != 5 {
-		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), 5)
 	}
 }
 
@@ -213,7 +164,7 @@ func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testi
 	}
 	db.deposits = deposits
 
-	d := db.AllDeposits(context.Background(), big.NewInt(11), 0)
+	d := db.AllDeposits(context.Background(), big.NewInt(11))
 	expected := 5
 	if len(d) != expected {
 		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), expected)

@@ -506,7 +506,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	_, eth1Height, err := bs.canonicalEth1Data(ctx, beaconState, &ethpb.Eth1Data{})
+	eth1Height, err := bs.latestEth1Height(ctx, beaconState, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{Eth1Data: vote},
 	}
 
-	_, eth1Height, err = bs.canonicalEth1Data(ctx, beaconState, vote)
+	eth1Height, err = bs.latestEth1Height(ctx, beaconState, vote)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -780,7 +780,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{DepositCount: 2})
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
