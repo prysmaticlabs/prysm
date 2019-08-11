@@ -72,7 +72,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
-		return errors.Wrapf(err, "Could not unpack log: %v")
+		return errors.Wrap(err, "Could not unpack log")
 	}
 	// If we have already seen this Merkle index, skip processing the log.
 	// This can happen sometimes when we receive the same log twice from the
