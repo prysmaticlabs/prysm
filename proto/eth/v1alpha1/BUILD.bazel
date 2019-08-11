@@ -11,6 +11,7 @@ ssz_proto_files(
         "beacon_chain.proto",
         "node.proto",
         "validator.proto",
+        "slasher.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
