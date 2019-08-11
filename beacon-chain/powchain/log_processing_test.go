@@ -391,7 +391,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
+		HTTPLogger:      testAcc.Backend,
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &db.BeaconDB{},
 		BlockFetcher:    &goodFetcher{},
@@ -430,7 +430,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	logsToBeProcessed := append(logs[:depositsWanted-4], logs[depositsWanted-2:]...)
+	logsToBeProcessed := append(logs[:depositsWanted-3], logs[depositsWanted-2:]...)
 	// we purposely miss processing the middle two logs so that the service, re-requests them
 	for _, log := range logsToBeProcessed {
 		if err := web3Service.ProcessLog(log); err != nil {

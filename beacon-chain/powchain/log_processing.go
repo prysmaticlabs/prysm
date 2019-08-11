@@ -35,8 +35,8 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
 func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
-	w.processingLock.Lock()
-	defer w.processingLock.Unlock()
+	w.processingLock.RLock()
+	defer w.processingLock.RUnlock()
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		if err := w.ProcessDepositLog(depositLog); err != nil {
