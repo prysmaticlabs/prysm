@@ -34,7 +34,7 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
 
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
-func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
+func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 	w.processingLock.Lock()
 	defer w.processingLock.Unlock()
 	// Process logs according to their event signature.
@@ -42,17 +42,14 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessDepositLog(depositLog)
 		if !w.chainStarted {
 			if depositLog.BlockHash == [32]byte{} {
-				log.Error("Got empty blockhash from powchain service")
-				return
+				return errors.New("got empty blockhash from powchain service")
 			}
 			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
 			if err != nil {
-				log.Errorf("Could not get eth1 block %v", err)
-				return
+				return errors.Wrap(err, "could not get eth1 block")
 			}
 			if blk == nil {
-				log.Errorf("Got empty block from powchain service %v", err)
-				return
+				return errors.Wrap(err, "got empty block from powchain service")
 			}
 			timeStamp := blk.Time()
 			triggered := state.IsValidGenesisState(w.activeValidatorCount, timeStamp)
@@ -61,9 +58,10 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 				w.ProcessChainStart(uint64(w.eth2GenesisTime), depositLog.BlockHash, blk.Number())
 			}
 		}
-		return
+		return nil
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
+	return nil
 }
 
 // ProcessDepositLog processes the log which had been received from
@@ -229,7 +227,9 @@ func (w *Web3Service) processPastLogs() error {
 	}
 
 	for _, log := range logs {
-		w.ProcessLog(log)
+		if err := w.ProcessLog(log); err != nil {
+			return errors.Wrap(err, "could not process log")
+		}
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
 
@@ -266,7 +266,9 @@ func (w *Web3Service) requestBatchedLogs() error {
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
 		for _, log := range logs {
-			w.ProcessLog(log)
+			if err := w.ProcessLog(log); err != nil {
+				return errors.Wrap(err, "could not process log")
+			}
 		}
 	}
 
