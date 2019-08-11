@@ -211,11 +211,14 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
 	}
 	cached, ok := skipSlotCache.Get(root)
-	if ok && cached.(*skipSlotCacheValue).highestSlot <= slot {
-		state = cached.(*skipSlotCacheValue).state
+	if ok {
 		skipSlotCacheHit.Inc()
+		fmt.Printf("Cache hit with highest slot %d, looking for %d\n", cached.(*skipSlotCacheValue).highestSlot, slot)
 	} else {
 		skipSlotCacheMiss.Inc()
+	}
+	if ok && cached.(*skipSlotCacheValue).highestSlot <= slot {
+		state = cached.(*skipSlotCacheValue).state
 	}
 
 	for state.Slot < slot {
