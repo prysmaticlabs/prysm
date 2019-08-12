@@ -37,22 +37,12 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if v != nil {
-				if hasFilterSpecified {
-					if meetsFilterCriteria(k, f) {
-						att := &ethpb.Attestation{}
-						if err := proto.Unmarshal(v, att); err != nil {
-							return err
-						}
-						atts = append(atts, att)
-					}
-				} else {
-					att := &ethpb.Attestation{}
-					if err := proto.Unmarshal(v, att); err != nil {
-						return err
-					}
-					atts = append(atts, att)
+			if v != nil && (!hasFilterSpecified || meetsFilterCriteria(k, f)) {
+				att := &ethpb.Attestation{}
+				if err := proto.Unmarshal(v, att); err != nil {
+					return err
 				}
+				atts = append(atts, att)
 			}
 		}
 		return nil
