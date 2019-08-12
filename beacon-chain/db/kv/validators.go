@@ -56,8 +56,9 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 }
 
 // ValidatorIndex by public key.
-func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error) {
+func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	var validatorIdx uint64
+	var ok bool
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		enc := bkt.Get(publicKey[:])
@@ -67,9 +68,10 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 		var err error
 		buf := bytes.NewBuffer(enc)
 		validatorIdx, err = binary.ReadUvarint(buf)
+		ok = true
 		return err
 	})
-	return validatorIdx, err
+	return validatorIdx, ok, err
 }
 
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.

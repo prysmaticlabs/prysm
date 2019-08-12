@@ -43,7 +43,7 @@ type Database interface {
 	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
-	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error)
+	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
