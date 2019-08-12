@@ -480,7 +480,6 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "could not retrieve attested balances: %v", err)
 	}
 
-
 	totalBalances, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve total balances: %v", err)

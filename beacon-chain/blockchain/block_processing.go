@@ -131,9 +131,6 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 
-	if err := c.beaconDB.SaveAttestation(ctx, att); err != nil {
-		return errors.Wrap(err, "could not save attestation")
-	}
 	// broadcast the attestation to other peers.
 	c.p2p.Broadcast(ctx, att)
 
