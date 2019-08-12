@@ -43,7 +43,11 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 		return nil, fmt.Errorf("expected byte slice of length 32, received: %d", len(priv))
 	}
 	k := bytesutil.ToBytes32(priv)
-	return &SecretKey{val: g1.DeserializeSecretKey(k)}, nil
+	val := g1.DeserializeSecretKey(k)
+	if val.GetFRElement() == nil {
+		return nil, errors.New("invalid private key")
+	}
+	return &SecretKey{val}, nil
 }
 
 // PublicKeyFromBytes creates a BLS public key from a byte slice.
