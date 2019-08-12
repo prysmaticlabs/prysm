@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -446,10 +447,25 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
 
-	currentEpoch := helpers.SlotToEpoch(s.Slot)
-	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
+	boundarySlot := req.Epoch*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().SlotsPerEpoch - 1
+	if boundarySlot < s.Slot {
+		b, err := bs.beaconDB.BlocksBySlot(ctx, boundarySlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
+		}
+		r, err := ssz.SigningRoot(b)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not singing root on block: %v", err)
+		}
+		s, err = bs.beaconDB.HistoricalStateFromSlot(ctx, boundarySlot, r)
+		if err != nil || s == nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve historical state: %v", err)
+		}
+	}
 
-	atts, err := epoch.MatchAttestations(s, currentEpoch)
+	finalized := req.Epoch >= s.FinalizedCheckpoint.Epoch
+
+	atts, err := epoch.MatchAttestations(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
 	}
@@ -464,7 +480,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	}
 
 	return &ethpb.ValidatorParticipation{
-		Epoch:                   currentEpoch,
+		Epoch:                   req.Epoch,
 		Finalized:               finalized,
 		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
 		VotedEther:              attestedBalances,
