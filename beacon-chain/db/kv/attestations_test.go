@@ -89,25 +89,42 @@ func TestStore_AttestationRetrieval_FiltersCorrectly(t *testing.T) {
 	if err := db.SaveAttestations(ctx, atts); err != nil {
 		t.Fatal(err)
 	}
-	retrievedAtts, err := db.Attestations(ctx, &filters.QueryFilter{Shard: 5})
+	retrievedAtts, err := db.Attestations(ctx, filters.NewFilter().SetShard(5))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(retrievedAtts) != 2 {
 		t.Errorf("Expected 2 attestations with shard 5, received %d", len(retrievedAtts))
 	}
-	retrievedAtts, err = db.Attestations(ctx, &filters.QueryFilter{StartEpoch: 1})
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().SetStartEpoch(1))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(retrievedAtts) != 2 {
 		t.Errorf("Expected 2 attestations with start epoch 1, received %d", len(retrievedAtts))
 	}
-	retrievedAtts, err = db.Attestations(ctx, &filters.QueryFilter{ParentRoot: []byte("parent3")})
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent3")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(retrievedAtts) != 1 {
-		t.Errorf("Expected 1 attestations with parent root %v, received %d", []byte("parent3"), len(retrievedAtts))
+		t.Errorf("Expected 1 attestation with parent root %v, received %d", []byte("parent3"), len(retrievedAtts))
+	}
+	// More complex filter, multiple attributes.
+	//f := filters.NewFilter().SetShard(5).SetStartEpoch(1)
+	//retrievedAtts, err = db.Attestations(ctx, f)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//if len(retrievedAtts) != 1 {
+	//	t.Errorf("Expected 1 attestation for a complex filter, received %d", len(retrievedAtts))
+	//}
+	// No filter, should return all attestations.
+	retrievedAtts, err = db.Attestations(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 3 {
+		t.Errorf("Expected 3 attestation, received %d", len(retrievedAtts))
 	}
 }

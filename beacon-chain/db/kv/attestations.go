@@ -32,13 +32,12 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 // Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	atts := make([]*ethpb.Attestation, 0)
-	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{})
+	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{}) && f != nil
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			meetsFilterCritiera := attestationFilterCriteria(k, f)
-			if v != nil && (!hasFilterSpecified || meetsFilterCritiera) {
+			if v != nil && (!hasFilterSpecified || attestationFilterCriteria(k, f)) {
 				att := &ethpb.Attestation{}
 				if err := proto.Unmarshal(v, att); err != nil {
 					return err
@@ -145,46 +144,21 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 
 func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	ok := false
-	parentKey := append([]byte("parent-root"), f.ParentRoot...)
-	rootKey := append([]byte("root"), f.Root...)
-	shardKey := append([]byte("shard"), uint64ToBytes(f.Shard)...)
-	startSlot := append([]byte("start-slot"), uint64ToBytes(f.StartSlot)...)
-	endSlot := append([]byte("end-slot"), uint64ToBytes(f.EndSlot)...)
-	startEpoch := append([]byte("start-epoch"), uint64ToBytes(f.StartEpoch)...)
-	endEpoch := append([]byte("end-epoch"), uint64ToBytes(f.EndEpoch)...)
-	if len(f.ParentRoot) > 0 && bytes.Contains(key, parentKey) {
-		ok = true
-	}
-	if len(f.Root) > 0 && bytes.Contains(key, rootKey) {
-		ok = true
-	}
-	// TODO: What if we want to query for shard 0?
-	if bytes.Contains(key, shardKey) {
-		ok = true
-	}
-	if !f.IsGenesis && f.StartSlot > 0 && bytes.Contains(key, startSlot) {
-		ok = true
-	}
-	if f.IsGenesis && f.StartSlot == 0 && bytes.Contains(key, startSlot) {
-		ok = true
-	}
-	if !f.IsGenesis && f.EndSlot > 0 && bytes.Contains(key, endSlot) {
-		ok = true
-	}
-	if f.IsGenesis && f.EndSlot == 0 && bytes.Contains(key, endSlot) {
-		ok = true
-	}
-	if !f.IsGenesis && f.StartEpoch > 0 && bytes.Contains(key, startEpoch) {
-		ok = true
-	}
-	if f.IsGenesis && f.StartEpoch == 0 && bytes.Contains(key, startEpoch) {
-		ok = true
-	}
-	if !f.IsGenesis && f.EndEpoch > 0 && bytes.Contains(key, endEpoch) {
-		ok = true
-	}
-	if f.IsGenesis && f.EndEpoch == 0 && bytes.Contains(key, endEpoch) {
-		ok = true
+	for k, v := range f.Filters() {
+		switch k {
+		case filters.Root:
+			root := v.([]byte)
+			ok = bytes.Contains(key, append([]byte("root"), root[:]...))
+		case filters.ParentRoot:
+			root := v.([]byte)
+			ok = bytes.Contains(key, append([]byte("parent-root"), root[:]...))
+		case filters.StartEpoch:
+			ok = bytes.Contains(key, append([]byte("start-epoch"), uint64ToBytes(v.(uint64))...))
+		case filters.EndEpoch:
+			ok = bytes.Contains(key, append([]byte("end-epoch"), uint64ToBytes(v.(uint64))...))
+		case filters.Shard:
+			ok = bytes.Contains(key, append([]byte("shard"), uint64ToBytes(v.(uint64))...))
+		}
 	}
 	return ok
 }
