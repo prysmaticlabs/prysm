@@ -66,9 +66,15 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 }
 
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.
-// TODO(#3164): Implement.
 func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
-	return false
+	exists := false
+	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorsBucket)
+		exists = bkt.Get(publicKey[:]) != nil
+		return nil
+	})
+	return exists
 }
 
 // DeleteValidatorIndex clears a validator index from the db by the validator's public key.
