@@ -35,11 +35,11 @@ type Database interface {
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
+	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
 	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
-	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool

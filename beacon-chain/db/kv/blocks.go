@@ -48,3 +48,9 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
 	return nil
 }
+
+// SaveHeadBlockRoot to the db.
+// TODO(#3164): Implement.
+func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	return nil
+}
