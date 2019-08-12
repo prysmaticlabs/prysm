@@ -35,13 +35,18 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 }
 
 // HasAttestation checks if an attestation by root exists in the db.
-// TODO(#3164): Implement.
 func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 	exists := false
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		exists = bkt.Get(attRoot[:]) != nil
+		c := bkt.Cursor()
+		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
+			if v != nil {
+				exists = true
+				return nil
+			}
+		}
 		return nil
 	})
 	return exists
@@ -50,8 +55,14 @@ func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 // DeleteAttestation by root.
 func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(attestationsBucket)
-		return bucket.Delete(attRoot[:])
+		bkt := tx.Bucket(attestationsBucket)
+		c := bkt.Cursor()
+		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
+			if v != nil {
+				return bkt.Delete(k)
+			}
+		}
+		return nil
 	})
 }
 
@@ -76,7 +87,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attestationsBucket)
 		for _, att := range atts {
-			attRoot, err := ssz.HashTreeRoot(att)
+			key, err := generateAttestationKey(att)
 			if err != nil {
 				return err
 			}
@@ -84,7 +95,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 			if err != nil {
 				return err
 			}
-			if err := bucket.Put(attRoot[:], enc); err != nil {
+			if err := bucket.Put(key, enc); err != nil {
 				return err
 			}
 		}
