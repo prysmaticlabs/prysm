@@ -1,12 +1,12 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -22,11 +22,7 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 		if enc == nil {
 			return nil
 		}
-		var err error
-		if err := proto.Unmarshal(enc, latestVote); err != nil {
-			return errors.Wrap(err, "failed to unmarshal encoding")
-		}
-		return err
+		return proto.Unmarshal(enc, latestVote)
 	})
 	return latestVote, err
 }
@@ -60,9 +56,20 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 }
 
 // ValidatorIndex by public key.
-// TODO(#3164): Implement.
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error) {
-	return 0, nil
+	var validatorIdx uint64
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorsBucket)
+		enc := bkt.Get(publicKey[:])
+		if enc == nil {
+			return nil
+		}
+		var err error
+		buf := bytes.NewBuffer(enc)
+		validatorIdx, err = binary.ReadUvarint(buf)
+		return err
+	})
+	return validatorIdx, err
 }
 
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.
@@ -78,9 +85,11 @@ func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool 
 }
 
 // DeleteValidatorIndex clears a validator index from the db by the validator's public key.
-// TODO(#3164): Implement.
 func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
-	return nil
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsBucket)
+		return bucket.Delete(publicKey[:])
+	})
 }
 
 // SaveValidatorIndex by public key in the db.
