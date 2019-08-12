@@ -1,7 +1,9 @@
 package kv
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -16,11 +18,13 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 	att := &ethpb.Attestation{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		enc := bkt.Get(attRoot[:])
-		if enc == nil {
-			return nil
+		c := bkt.Cursor()
+		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
+			if v != nil {
+				return proto.Unmarshal(v, att)
+			}
 		}
-		return proto.Unmarshal(enc, att)
+		return nil
 	})
 	return att, err
 }
@@ -53,7 +57,7 @@ func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
 
 // SaveAttestation to the db.
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	attRoot, err := ssz.HashTreeRoot(att)
+	key, err := generateAttestationKey(att)
 	if err != nil {
 		return err
 	}
@@ -63,12 +67,11 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attestationsBucket)
-		return bucket.Put(attRoot[:], enc)
+		return bucket.Put(key, enc)
 	})
 }
 
 // SaveAttestations via batch updates to the db.
-// TODO(#3164): Implement.
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attestationsBucket)
@@ -87,4 +90,30 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		}
 		return nil
 	})
+}
+
+func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
+	buf := make([]byte, 0)
+	buf = append(buf, []byte("shard")...)
+	shardEncoded := make([]byte, 8)
+	binary.LittleEndian.PutUint64(shardEncoded, att.Data.Crosslink.Shard)
+	buf = append(buf, shardEncoded...)
+
+	buf = append(buf, []byte("parent-root")...)
+	buf = append(buf, att.Data.Crosslink.ParentRoot...)
+	buf = append(buf, []byte("start-epoch")...)
+	startEpochEncoded := make([]byte, 8)
+	binary.LittleEndian.PutUint64(startEpochEncoded, att.Data.Crosslink.StartEpoch)
+	buf = append(buf, startEpochEncoded...)
+	buf = append(buf, []byte("end-epoch")...)
+	endEpochEncoded := make([]byte, 8)
+	binary.LittleEndian.PutUint64(endEpochEncoded, att.Data.Crosslink.EndEpoch)
+	buf = append(buf, endEpochEncoded...)
+	buf = append(buf, []byte("root")...)
+	attRoot, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		return nil, err
+	}
+	buf = append(buf, attRoot[:]...)
+	return buf, nil
 }
