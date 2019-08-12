@@ -35,11 +35,13 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
 func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
-	w.processingLock.Lock()
-	defer w.processingLock.Unlock()
+	w.processingLock.RLock()
+	defer w.processingLock.RUnlock()
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
-		w.ProcessDepositLog(depositLog)
+		if err := w.ProcessDepositLog(depositLog); err != nil {
+			return errors.Wrap(err, "Could not process deposit log")
+		}
 		if !w.chainStarted {
 			if depositLog.BlockHash == [32]byte{} {
 				return errors.New("got empty blockhash from powchain service")
@@ -67,11 +69,10 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 // ProcessDepositLog processes the log which had been received from
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
-func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
+func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
-		log.Errorf("Could not unpack log: %v", err)
-		return
+		return errors.Wrap(err, "Could not unpack log")
 	}
 	// If we have already seen this Merkle index, skip processing the log.
 	// This can happen sometimes when we receive the same log twice from the
@@ -79,7 +80,14 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
 	if int64(index) <= w.lastReceivedMerkleIndex {
-		return
+		return nil
+	}
+
+	if int64(index) != w.lastReceivedMerkleIndex+1 {
+		missedDepositLogsCount.Inc()
+		if err := w.requestMissingLogs(depositLog.BlockNumber, int64(index-1)); err != nil {
+			return errors.Wrap(err, "Could not get correct merkle index")
+		}
 	}
 	w.lastReceivedMerkleIndex = int64(index)
 
@@ -95,19 +103,16 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	depositHash, err := ssz.HashTreeRoot(depositData)
 	if err != nil {
-		log.Errorf("Unable to determine hashed value of deposit %v", err)
-		return
+		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
 
 	if err := w.depositTrie.InsertIntoTrie(depositHash[:], int(index)); err != nil {
-		log.Errorf("Unable to insert deposit into trie %v", err)
-		return
+		return errors.Wrap(err, "Unable to insert deposit into trie")
 	}
 
 	proof, err := w.depositTrie.MerkleProof(int(index))
 	if err != nil {
-		log.Errorf("Unable to generate merkle proof for deposit %v", err)
-		return
+		return errors.Wrap(err, "Unable to generate merkle proof for deposit")
 	}
 
 	deposit := &ethpb.Deposit{
@@ -154,6 +159,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
+	return nil
 }
 
 // ProcessChainStart processes the log which had been received from
@@ -273,6 +279,39 @@ func (w *Web3Service) requestBatchedLogs() error {
 	}
 
 	w.lastRequestedBlock.Set(requestedBlock)
+	return nil
+}
+
+// requestMissingLogs requests any logs that were missed by requesting from previous blocks
+// until the current block(exclusive).
+func (w *Web3Service) requestMissingLogs(blkNumber uint64, wantedIndex int64) error {
+	// We request from the last requested block till the current block(exclusive)
+	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+		FromBlock: big.NewInt(0).Add(w.lastRequestedBlock, big.NewInt(1)),
+		ToBlock:   beforeCurrentBlk,
+	}
+	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
+	if err != nil {
+		return err
+	}
+
+	// Only process log slices which are larger than zero.
+	if len(logs) > 0 {
+		for _, log := range logs {
+			if err := w.ProcessLog(log); err != nil {
+				return errors.Wrap(err, "could not process log")
+			}
+		}
+	}
+
+	if w.lastReceivedMerkleIndex != wantedIndex {
+		return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
+			"Wanted %d but got %d", wantedIndex, w.lastReceivedMerkleIndex)
+	}
 	return nil
 }
 
