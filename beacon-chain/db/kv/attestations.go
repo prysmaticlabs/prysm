@@ -3,14 +3,26 @@ package kv
 import (
 	"context"
 
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Attestation retrieval by root.
-// TODO(#3164): Implement.
 func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error) {
-	return nil, nil
+	att := &ethpb.Attestation{}
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
+		enc := bkt.Get(attRoot[:])
+		if enc == nil {
+			return nil
+		}
+		return proto.Unmarshal(enc, att)
+	})
+	return att, err
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
@@ -32,9 +44,19 @@ func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
 }
 
 // SaveAttestation to the db.
-// TODO(#3164): Implement.
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	return nil
+	attRoot, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		return err
+	}
+	enc, err := proto.Marshal(att)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(attestationsBucket)
+		return bucket.Put(attRoot[:], enc)
+	})
 }
 
 // SaveAttestations via batch updates to the db.
