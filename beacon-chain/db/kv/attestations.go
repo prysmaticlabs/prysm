@@ -70,5 +70,21 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 // SaveAttestations via batch updates to the db.
 // TODO(#3164): Implement.
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
-	return nil
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(attestationsBucket)
+		for _, att := range atts {
+			attRoot, err := ssz.HashTreeRoot(att)
+			if err != nil {
+				return err
+			}
+			enc, err := proto.Marshal(att)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(attRoot[:], enc); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
