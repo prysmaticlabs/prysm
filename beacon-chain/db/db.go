@@ -29,6 +29,7 @@ type Database interface {
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
+	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
@@ -40,6 +41,7 @@ type Database interface {
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
 	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
