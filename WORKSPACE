@@ -45,9 +45,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "6ddad812eb6a8aa0902492c0b6fa12ce11c27fce50a38fcfd1dcdf04f57a1a1a",
-    strip_prefix = "rules_k8s-5648b17d5f9b612cc47031a6fa961e6752fe50e8",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/5648b17d5f9b612cc47031a6fa961e6752fe50e8.tar.gz",
+    sha256 = "c29481f98c7bb8e982e0488b35b2c5ccc99de56166f6711a9244a0720de9fdd7",
+    strip_prefix = "rules_k8s-b815470f49deb431d2ce6c2d29df2d5cb5eb1f35",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/b815470f49deb431d2ce6c2d29df2d5cb5eb1f35.tar.gz",
 )
 
 git_repository(
@@ -140,9 +140,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "462dcc769f29e9eee16499edb818e2fc2ffc24efea28300d53bbc098d27d322c",
-    strip_prefix = "repo-infra-f85734f673056977d8ba04b0386394b684ca2acb",
-    url = "https://github.com/kubernetes/repo-infra/archive/f85734f673056977d8ba04b0386394b684ca2acb.tar.gz",
+    sha256 = "f6d65480241ec0fd7a0d01f432938b97d7395aeb8eefbe859bb877c9b4eafa56",
+    strip_prefix = "repo-infra-9f4571ad7242bf3ec4b47365062498c2528f9a5f",
+    url = "https://github.com/kubernetes/repo-infra/archive/9f4571ad7242bf3ec4b47365062498c2528f9a5f.tar.gz",
 )
 
 http_archive(
@@ -1033,7 +1033,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_connmgr",
-    commit = "152025a671fcc297333095f8e4afc98d90b30df7",  # v0.1.0
+    commit = "b46e9bdbcd8436b4fe4b30a53ec913c07e5e09c9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-connmgr",
 )
 
@@ -1064,7 +1064,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "3390f7d16df07cee9e54c1700adeace090fede32",  # v0.2.0
+    commit = "d204016fc64589d0ec2ba965dd686d768d7ab34a",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1118,7 +1118,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_eventbus",
-    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",  # v0.0.3
+    commit = "d34a18eba211bd65b32a4a7a06390fc441257cbd",  # v0.1.0
     importpath = "github.com/libp2p/go-eventbus",
 )
 
@@ -1219,7 +1219,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_go_cmp",
-    commit = "6f77996f0c42f7b84e5a2b252227263f93432e9b",  # v0.3.0
+    commit = "2d0692c2e9617365a95b295612ac0d4415ba4627",  # v0.3.1
     importpath = "github.com/google/go-cmp",
 )
 
