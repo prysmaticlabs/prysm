@@ -145,34 +145,34 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 
 func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	ok := false
-	shardKey := append([]byte("shard"), uint64ToBytes(f.Shard)...)
 	parentKey := append([]byte("parent-root"), f.ParentRoot...)
 	rootKey := append([]byte("root"), f.Root...)
+	shardKey := append([]byte("shard"), uint64ToBytes(f.Shard)...)
 	startSlot := append([]byte("start-slot"), uint64ToBytes(f.StartSlot)...)
 	endSlot := append([]byte("end-slot"), uint64ToBytes(f.EndSlot)...)
 	startEpoch := append([]byte("start-epoch"), uint64ToBytes(f.StartEpoch)...)
 	endEpoch := append([]byte("end-epoch"), uint64ToBytes(f.EndEpoch)...)
-	if f.Shard > 0 && bytes.Contains(key, shardKey) {
-		ok = true
-	}
 	if len(f.ParentRoot) > 0 && bytes.Contains(key, parentKey) {
 		ok = true
 	}
 	if len(f.Root) > 0 && bytes.Contains(key, rootKey) {
 		ok = true
 	}
-	if f.StartSlot > 0 && bytes.Contains(key, startSlot) {
+	// TODO: What if we want to query for shard 0?
+	if bytes.Contains(key, shardKey) {
 		ok = true
 	}
-	if f.EndSlot > 0 && bytes.Contains(key, endSlot) {
+	if bytes.Contains(key, startSlot) {
 		ok = true
 	}
-	if f.StartEpoch > 0 && bytes.Contains(key, startEpoch) {
+	if bytes.Contains(key, endSlot) {
 		ok = true
 	}
-	if f.EndEpoch > 0 && bytes.Contains(key, endEpoch) {
+	if bytes.Contains(key, startEpoch) {
 		ok = true
 	}
-	// TODO: Check is genesis.
+	if bytes.Contains(key, endEpoch) {
+		ok = true
+	}
 	return ok
 }
