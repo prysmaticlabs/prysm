@@ -32,15 +32,23 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 }
 
 // HasAttestation checks if an attestation by root exists in the db.
-// TODO(#3164): Implement.
 func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
-	return false
+	exists := false
+	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
+		exists = bkt.Get(attRoot[:]) != nil
+		return nil
+	})
+	return exists
 }
 
 // DeleteAttestation by root.
-// TODO(#3164): Implement.
 func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
-	return nil
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(attestationsBucket)
+		return bucket.Delete(attRoot[:])
+	})
 }
 
 // SaveAttestation to the db.
