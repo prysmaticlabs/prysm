@@ -38,6 +38,10 @@ var (
 		Name: "powchain_block_number",
 		Help: "The current block number in the proof-of-work chain",
 	})
+	missedDepositLogsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_missed_deposit_logs",
+		Help: "The number of times a missed deposit log is detected",
+	})
 )
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
