@@ -12,6 +12,8 @@ type QueryFilter struct {
 	// Epoch filter criteria.
 	StartEpoch uint64
 	EndEpoch   uint64
+	//  Misc filter criteria.
+	Shard uint64
 	// Optional criteria to retrieve a genesis value.
 	IsGenesis bool
 }

@@ -89,5 +89,18 @@ func TestStore_AttestationRetrieval_FiltersCorrectly(t *testing.T) {
 	if err := db.SaveAttestations(ctx, atts); err != nil {
 		t.Fatal(err)
 	}
-	db.Attestations(ctx, &filters.QueryFilter{})
+	retrievedAtts, err := db.Attestations(ctx, &filters.QueryFilter{Shard: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 2 {
+		t.Errorf("Expected 2 attestations with shard 5, received %d", len(retrievedAtts))
+	}
+	retrievedAtts, err = db.Attestations(ctx, &filters.QueryFilter{ParentRoot: []byte("parent3")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected 1 attestations with parent root %v, received %d", []byte("parent3"), len(retrievedAtts))
+	}
 }

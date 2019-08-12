@@ -3,11 +3,12 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"reflect"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
@@ -31,21 +32,31 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 // Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	atts := make([]*ethpb.Attestation, 0)
+	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{})
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if v != nil {
-				att := &ethpb.Attestation{}
-				if err := proto.Unmarshal(v, att); err != nil {
-					return err
+				if hasFilterSpecified {
+					if meetsFilterCriteria(k, f) {
+						att := &ethpb.Attestation{}
+						if err := proto.Unmarshal(v, att); err != nil {
+							return err
+						}
+						atts = append(atts, att)
+					}
+				} else {
+					att := &ethpb.Attestation{}
+					if err := proto.Unmarshal(v, att); err != nil {
+						return err
+					}
+					atts = append(atts, att)
 				}
-				atts = append(atts, att)
 			}
 		}
 		return nil
 	})
-	fmt.Println(atts)
 	return atts, err
 }
 
@@ -139,4 +150,38 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 	}
 	buf = append(buf, attRoot[:]...)
 	return buf, nil
+}
+
+func meetsFilterCriteria(key []byte, f *filters.QueryFilter) bool {
+	ok := false
+	shardKey := append([]byte("shard"), uint64ToBytes(f.Shard)...)
+	parentKey := append([]byte("parent-root"), f.ParentRoot...)
+	rootKey := append([]byte("root"), f.Root...)
+	startSlot := append([]byte("start-slot"), uint64ToBytes(f.StartSlot)...)
+	endSlot := append([]byte("end-slot"), uint64ToBytes(f.EndSlot)...)
+	startEpoch := append([]byte("start-epoch"), uint64ToBytes(f.StartEpoch)...)
+	endEpoch := append([]byte("end-epoch"), uint64ToBytes(f.EndEpoch)...)
+	if f.Shard > 0 && bytes.Contains(key, shardKey) {
+		ok = true
+	}
+	if len(f.ParentRoot) > 0 && bytes.Contains(key, parentKey) {
+		ok = true
+	}
+	if len(f.Root) > 0 && bytes.Contains(key, rootKey) {
+		ok = true
+	}
+	if f.StartSlot > 0 && bytes.Contains(key, startSlot) {
+		ok = true
+	}
+	if f.EndSlot > 0 && bytes.Contains(key, endSlot) {
+		ok = true
+	}
+	if f.StartEpoch > 0 && bytes.Contains(key, startEpoch) {
+		ok = true
+	}
+	if f.EndEpoch > 0 && bytes.Contains(key, endEpoch) {
+		ok = true
+	}
+	// TODO: Check is genesis.
+	return ok
 }
