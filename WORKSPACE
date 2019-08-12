@@ -1033,7 +1033,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_connmgr",
-    commit = "152025a671fcc297333095f8e4afc98d90b30df7",  # v0.1.0
+    commit = "b46e9bdbcd8436b4fe4b30a53ec913c07e5e09c9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-connmgr",
 )
 
@@ -1064,7 +1064,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "3390f7d16df07cee9e54c1700adeace090fede32",  # v0.2.0
+    commit = "d204016fc64589d0ec2ba965dd686d768d7ab34a",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1118,7 +1118,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_eventbus",
-    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",  # v0.0.3
+    commit = "d34a18eba211bd65b32a4a7a06390fc441257cbd",  # v0.1.0
     importpath = "github.com/libp2p/go-eventbus",
 )
 
