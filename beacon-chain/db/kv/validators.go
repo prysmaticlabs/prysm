@@ -6,14 +6,29 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // ValidatorLatestVote retrieval by validator index.
-// TODO(#3164): Implement.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
-	return nil, nil
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	var latestVote *pb.ValidatorLatestVote
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorsBucket)
+		enc := bkt.Get(buf)
+		if enc == nil {
+			return nil
+		}
+		var err error
+		if err := proto.Unmarshal(enc, latestVote); err != nil {
+			return errors.Wrap(err, "failed to unmarshal encoding")
+		}
+		return err
+	})
+	return latestVote, err
 }
 
 // HasValidatorLatestVote verifies if a validator index has a latest vote stored in the db.
