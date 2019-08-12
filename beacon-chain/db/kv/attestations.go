@@ -3,11 +3,11 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
@@ -29,9 +29,15 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
-// TODO(#3164): Implement.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
-	return nil, nil
+	return nil, k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
+		c := bkt.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
+		return nil
+	})
 }
 
 // HasAttestation checks if an attestation by root exists in the db.
