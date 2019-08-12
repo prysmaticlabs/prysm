@@ -9,10 +9,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -23,28 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
-)
-
-var skipSlotCache, _ = lru.New(128)
-
-type skipSlotCacheValue struct {
-	highestSlot uint64
-	state       *pb.BeaconState
-}
-
-var (
-	skipSlotCacheHighestSlot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "skip_slot_cache_highest_slot",
-		Help: "The highest slot registered in the skip slot cache.",
-	})
-	skipSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "skip_slot_cache_hit",
-		Help: "The total number of cache hits on the skip slot cache.",
-	})
-	skipSlotCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "skip_slot_cache_miss",
-		Help: "The total number of cache misses on the skip slot cache.",
-	})
 )
 
 // ExecuteStateTransition defines the procedure for a state transition function.
@@ -222,9 +197,8 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	for state.Slot < slot {
 		if ctx.Err() != nil {
 			// Cache last best value.
-			if highestSlot <= state.Slot {
+			if highestSlot < state.Slot {
 				skipSlotCache.Add(root, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
-				skipSlotCacheHighestSlot.Set(float64(state.Slot))
 			}
 			return nil, ctx.Err()
 		}
@@ -242,9 +216,8 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	// Clone result state so that caches are not mutated.
-	if highestSlot <= state.Slot {
+	if highestSlot < state.Slot {
 		skipSlotCache.Add(root, &skipSlotCacheValue{highestSlot: state.Slot, state: proto.Clone(state).(*pb.BeaconState)})
-		skipSlotCacheHighestSlot.Set(float64(state.Slot))
 	}
 
 	return state, nil
