@@ -65,23 +65,26 @@ func (db *BeaconDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeade
 		return errors.Wrap(err, "failed to encode block")
 	}
 
-	return db.update(func(tx *bolt.Tx) error {
+	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Put(key, enc); err != nil {
 			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
 		}
-		// prune history to max size every 10th epoch
-		if epoch%10 == 0 {
-			if featureconfig.FeatureConfig().HashSlingingSlasher {
-				weakSubjectivityPeriod := uint64(54000)
-				db.pruneHistory(epoch, weakSubjectivityPeriod)
-			} else {
-				defaultHistoryStorage := uint64(20)
-				db.pruneHistory(epoch, defaultHistoryStorage)
-			}
-		}
-		return bucket.Put(key, enc)
+
+		return err
 	})
+
+	// prune history to max size every 10th epoch
+	if epoch%10 == 0 {
+		if featureconfig.FeatureConfig().HashSlingingSlasher {
+			weakSubjectivityPeriod := uint64(54000)
+			err = db.pruneHistory(epoch, weakSubjectivityPeriod)
+		} else {
+			defaultHistoryStorage := uint64(20)
+			err = db.pruneHistory(epoch, defaultHistoryStorage)
+		}
+	}
+	return err
 }
 
 // DeleteBlockHeader deletes a block header using the slot and its root as keys in their respective buckets.
@@ -102,7 +105,7 @@ func (db *BeaconDB) pruneHistory(currentEpoch uint64, historySize uint64) error 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		if currentEpoch-historySize < 0 {
+		if currentEpoch-historySize <= 0 {
 			return nil
 		}
 		max := bytesutil.Bytes8(currentEpoch - historySize)
