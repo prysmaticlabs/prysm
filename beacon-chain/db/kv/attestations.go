@@ -37,7 +37,8 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if v != nil && (!hasFilterSpecified || meetsFilterCriteria(k, f)) {
+			meetsFilterCritiera := attestationFilterCriteria(k, f)
+			if v != nil && (!hasFilterSpecified || meetsFilterCritiera) {
 				att := &ethpb.Attestation{}
 				if err := proto.Unmarshal(v, att); err != nil {
 					return err
@@ -142,7 +143,7 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 	return buf, nil
 }
 
-func meetsFilterCriteria(key []byte, f *filters.QueryFilter) bool {
+func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	ok := false
 	shardKey := append([]byte("shard"), uint64ToBytes(f.Shard)...)
 	parentKey := append([]byte("parent-root"), f.ParentRoot...)
