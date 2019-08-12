@@ -96,6 +96,13 @@ func TestStore_AttestationRetrieval_FiltersCorrectly(t *testing.T) {
 	if len(retrievedAtts) != 2 {
 		t.Errorf("Expected 2 attestations with shard 5, received %d", len(retrievedAtts))
 	}
+	retrievedAtts, err = db.Attestations(ctx, &filters.QueryFilter{StartEpoch: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 2 {
+		t.Errorf("Expected 2 attestations with start epoch 1, received %d", len(retrievedAtts))
+	}
 	retrievedAtts, err = db.Attestations(ctx, &filters.QueryFilter{ParentRoot: []byte("parent3")})
 	if err != nil {
 		t.Fatal(err)

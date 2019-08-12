@@ -162,16 +162,28 @@ func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	if bytes.Contains(key, shardKey) {
 		ok = true
 	}
-	if bytes.Contains(key, startSlot) {
+	if !f.IsGenesis && f.StartSlot > 0 && bytes.Contains(key, startSlot) {
 		ok = true
 	}
-	if bytes.Contains(key, endSlot) {
+	if f.IsGenesis && f.StartSlot == 0 && bytes.Contains(key, startSlot) {
 		ok = true
 	}
-	if bytes.Contains(key, startEpoch) {
+	if !f.IsGenesis && f.EndSlot > 0 && bytes.Contains(key, endSlot) {
 		ok = true
 	}
-	if bytes.Contains(key, endEpoch) {
+	if f.IsGenesis && f.EndSlot == 0 && bytes.Contains(key, endSlot) {
+		ok = true
+	}
+	if !f.IsGenesis && f.StartEpoch > 0 && bytes.Contains(key, startEpoch) {
+		ok = true
+	}
+	if f.IsGenesis && f.StartEpoch == 0 && bytes.Contains(key, startEpoch) {
+		ok = true
+	}
+	if !f.IsGenesis && f.EndEpoch > 0 && bytes.Contains(key, endEpoch) {
+		ok = true
+	}
+	if f.IsGenesis && f.EndEpoch == 0 && bytes.Contains(key, endEpoch) {
 		ok = true
 	}
 	return ok
