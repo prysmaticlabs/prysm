@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
