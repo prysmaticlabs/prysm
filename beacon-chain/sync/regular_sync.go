@@ -383,24 +383,29 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	defer span.End()
 	recAttestation.Inc()
 
-
 	att := msg.Data.(*ethpb.Attestation)
-	attRoot, err := hashutil.HashProto(att)
+	attDataHash, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"attRoot":  hex.EncodeToString(attRoot[:]),
-		"headRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attDataHash": hex.EncodeToString(attDataHash[:]),
+		"headRoot":    hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attRoot)
+	hasAttestation := rs.db.HasAttestation(attDataHash)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		log.WithField("attRoot", hex.EncodeToString(attRoot[:])).
-			Debug("Skipping received attestation")
-		return nil
+		dbAttestation, err := rs.db.Attestation(attDataHash)
+		if err != nil {
+			return err
+		}
+		if dbAttestation.AggregationBits.Contains(att.AggregationBits) {
+			log.WithField("attestationDataHash", fmt.Sprintf("%#x", bytesutil.Trunc(attDataHash[:]))).
+				Debug("Received, skipping attestation")
+			return nil
+		}
 	}
 
 	go func() {
@@ -416,8 +421,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	sendAttestationSpan.End()
 
 	log.WithFields(logrus.Fields{
-		"attRoot":  hex.EncodeToString(attRoot[:]),
-		"headRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attDataHash": hex.EncodeToString(attDataHash[:]),
+		"headRoot":    hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Updated att pool and fork choice")
 	return nil
 }

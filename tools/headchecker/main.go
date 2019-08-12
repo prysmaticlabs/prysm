@@ -81,7 +81,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 	}
 
 	log.Infof("Compare all heads for head slot :%d", head1.BlockSlot)
-	if head1.BlockSlot % params.BeaconConfig().SlotsPerEpoch == 0 {
+	if head1.BlockSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		p, err := clients[endpt1].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
 			Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
 		if err != nil {
@@ -100,7 +100,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			logHead(endpt1, head1)
 			logHead(endpt2, head2)
 
-			if head1.BlockSlot % params.BeaconConfig().SlotsPerEpoch == 0 {
+			if head1.BlockSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
 				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
 					Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
 				if err != nil {
@@ -127,10 +127,10 @@ func logHead(endpt string, head *pb.ChainHead) {
 func logParticipation(endpt string, p *pb.ValidatorParticipation) {
 	log.WithFields(
 		logrus.Fields{
-			"Finalized":      p.Finalized,
-			"Epoch":      p.Epoch,
-			"VotedEther": p.VotedEther,
-			"TotalEther": p.EligibleEther,
+			"Finalized":         p.Finalized,
+			"Epoch":             p.Epoch,
+			"VotedEther":        p.VotedEther,
+			"TotalEther":        p.EligibleEther,
 			"ParticipationRate": p.GlobalParticipationRate,
 		}).Info("Participation rate from beacon node ", endpt)
 }

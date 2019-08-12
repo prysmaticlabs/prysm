@@ -462,7 +462,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	wantedSlot := (req.Epoch + 1) * params.BeaconConfig().SlotsPerEpoch - 1
+	wantedSlot := (req.Epoch+1)*params.BeaconConfig().SlotsPerEpoch - 1
 	s, err := bs.beaconDB.ForkChoiceState(ctx, bs.head.CanonicalRoot(wantedSlot))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve state for slot %d: %v", wantedSlot, err)

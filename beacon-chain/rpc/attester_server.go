@@ -34,6 +34,10 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
 
+	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
+		return nil, err
+	}
+
 	go func() {
 		if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {
 			log.Errorf("failed to update attestation for fork choice")

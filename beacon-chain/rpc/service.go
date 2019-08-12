@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -44,6 +45,7 @@ type chainService interface {
 
 type operationService interface {
 	operations.Pool
+	HandleAttestation(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
 

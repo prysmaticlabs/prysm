@@ -854,7 +854,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 		beaconDB: db,
 	}
 
-	if err := bs.beaconDB.SaveState(context.Background(), s); err != nil {
+	if err := bs.beaconDB.SaveForkChoiceState(context.Background(), s, []byte{'A'}); err != nil {
 		t.Fatal(err)
 	}
 

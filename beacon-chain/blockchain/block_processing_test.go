@@ -329,7 +329,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 
 	err = chainService.ReceiveBlock(context.Background(), block)
-	wanted := "failed to process block from fork choice service"
+	wanted := "could not process block from fork choice service"
 	if !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected %v, received %v", wanted, err)
 	}
@@ -484,7 +484,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err == nil {
 		t.Fatal("no error for wrong block state root")
 	}
-	if !strings.Contains(err.Error(), "failed to process block from fork choice service") {
+	if !strings.Contains(err.Error(), "could not process block from fork choice service") {
 		t.Fatal(err)
 	}
 }
