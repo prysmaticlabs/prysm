@@ -36,6 +36,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 }
 
 // HasAttestation checks if an attestation by root exists in the db.
+// TODO(#3164): Implement.
 func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 	exists := false
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
