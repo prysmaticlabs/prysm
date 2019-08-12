@@ -287,7 +287,7 @@ func ProcessRandao(
 
 	var currentEpoch uint64
 	var err error
-	if _, currentEpoch, err = ValidateBlockSignature(beaconState, body); err != nil {
+	if _, currentEpoch, err = ValidateBlockRandao(beaconState, body); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
@@ -303,9 +303,9 @@ func ProcessRandao(
 	return beaconState, nil
 }
 
-// ValidateBlockSignature given a block and a state this function validates
+// ValidateBlockRandao given a block and a state this function validates
 // that valid proposer for the current state signed it and returns its id.
-func ValidateBlockSignature(
+func ValidateBlockRandao(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (proposerID uint64, epoch uint64, err error) {
