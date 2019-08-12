@@ -7,8 +7,6 @@ import (
 	"os"
 	"path"
 	"testing"
-
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 // setupDB instantiates and returns a Store instance.
@@ -17,7 +15,7 @@ func setupDB(t testing.TB) *Store {
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
 	}
-	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	path := path.Join(tempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(path); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
@@ -36,4 +34,14 @@ func teardownDB(t testing.TB, db *Store) {
 	if err := os.RemoveAll(db.DatabasePath); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
+}
+
+func tempDir() string {
+	d := os.Getenv("TEST_TMPDIR")
+
+	// If the test is not run via bazel, the environment var won't be set.
+	if d == "" {
+		return os.TempDir()
+	}
+	return d
 }
