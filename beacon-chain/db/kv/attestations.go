@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -96,20 +95,17 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 	buf := make([]byte, 0)
 	buf = append(buf, []byte("shard")...)
-	shardEncoded := make([]byte, 8)
-	binary.LittleEndian.PutUint64(shardEncoded, att.Data.Crosslink.Shard)
-	buf = append(buf, shardEncoded...)
+	buf = append(buf, uint64ToBytes(att.Data.Crosslink.Shard)...)
 
 	buf = append(buf, []byte("parent-root")...)
 	buf = append(buf, att.Data.Crosslink.ParentRoot...)
+
 	buf = append(buf, []byte("start-epoch")...)
-	startEpochEncoded := make([]byte, 8)
-	binary.LittleEndian.PutUint64(startEpochEncoded, att.Data.Crosslink.StartEpoch)
-	buf = append(buf, startEpochEncoded...)
+	buf = append(buf, uint64ToBytes(att.Data.Crosslink.StartEpoch)...)
+
 	buf = append(buf, []byte("end-epoch")...)
-	endEpochEncoded := make([]byte, 8)
-	binary.LittleEndian.PutUint64(endEpochEncoded, att.Data.Crosslink.EndEpoch)
-	buf = append(buf, endEpochEncoded...)
+	buf = append(buf, uint64ToBytes(att.Data.Crosslink.EndEpoch)...)
+
 	buf = append(buf, []byte("root")...)
 	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {
