@@ -102,6 +102,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
+	if err := c.beaconDB.SaveHeadBlockRoot(headRoot); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
 
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
@@ -163,6 +166,9 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
+	if err := c.beaconDB.SaveHeadBlockRoot(headRoot); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
 
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,

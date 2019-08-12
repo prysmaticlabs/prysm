@@ -464,7 +464,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 
 	wantedSlot := (req.Epoch+1)*params.BeaconConfig().SlotsPerEpoch - 1
 	s, err := bs.beaconDB.ForkChoiceState(ctx, bs.head.CanonicalRoot(wantedSlot))
-	if err != nil {
+	if err != nil || s == nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve state for slot %d: %v", wantedSlot, err)
 	}
 
@@ -474,10 +474,12 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
 	}
+
 	attestedBalances, err := epoch.AttestingBalance(s, atts.Target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve attested balances: %v", err)
 	}
+
 
 	totalBalances, err := helpers.TotalActiveBalance(s)
 	if err != nil {

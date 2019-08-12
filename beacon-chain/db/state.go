@@ -110,6 +110,22 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	defer db.stateLock.RUnlock()
 	lockSpan.End()
 
+	var beaconState *pb.BeaconState
+	var err error
+	err = db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		root := chainInfo.Get(canonicalHeadKey)
+		if root == nil {
+			return nil
+		}
+
+		beaconState, err = db.ForkChoiceState(ctx, root)
+		return err
+	})
+	if beaconState != nil {
+		return beaconState, nil
+	}
+
 	// Return in-memory cached state, if available.
 	if db.serializedState != nil {
 		_, span := trace.StartSpan(ctx, "proto.Marshal")
@@ -122,15 +138,13 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		return newState, nil
 	}
 
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
+	err = db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		enc := chainInfo.Get(stateLookupKey)
 		if enc == nil {
 			return nil
 		}
 
-		var err error
 		beaconState, err = createState(enc)
 
 		if beaconState != nil && beaconState.Slot > db.highestBlockSlot {

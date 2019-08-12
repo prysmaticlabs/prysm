@@ -262,6 +262,14 @@ func (db *BeaconDB) ClearBlockCache() {
 	blockCacheSize.Set(float64(len(db.blocks)))
 }
 
+// SaveHeadBlockRoot saves head block root.
+func (db *BeaconDB) SaveHeadBlockRoot(root []byte) error {
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(canonicalHeadKey, root[:])
+	})
+}
+
 // ChildrenBlocksFromParent retrieves the children block roots from a parent block root.
 // It has an optional filter slot to filter out children blocks below input slot.
 func (db *BeaconDB) ChildrenBlocksFromParent(parentRoot []byte, slot uint64) ([][]byte, error) {

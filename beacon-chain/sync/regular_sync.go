@@ -410,7 +410,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 
 	go func() {
 		if err := rs.chainService.ReceiveAttestation(ctx, att); err != nil {
-			log.Errorf("failed to update attestation for fork choice")
+			log.Errorf("failed to update attestation for fork choice: %v", err)
 		}
 	}()
 

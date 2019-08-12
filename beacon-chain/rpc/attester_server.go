@@ -40,7 +40,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 	go func() {
 		if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {
-			log.Errorf("failed to update attestation for fork choice")
+			log.Errorf("failed to update attestation for fork choice: %v", err)
 		}
 	}()
 

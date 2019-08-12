@@ -2,10 +2,12 @@ package db
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -293,5 +295,30 @@ func TestClearBlockCache_OK(t *testing.T) {
 	db.ClearBlockCache()
 	if len(db.blocks) != 0 {
 		t.Error("incorrect block cache length")
+	}
+}
+
+func TestSaveHeadBlockRoot_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	s := &pb.BeaconState{Slot: 1}
+	headRoot := []byte{'A'}
+
+	if err := db.SaveForkChoiceState(context.Background(), s, headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveHeadBlockRoot(headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	savedS, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(s, savedS) {
+		t.Error("incorrect saved head state")
 	}
 }

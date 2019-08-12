@@ -87,6 +87,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		return nil, errors.Wrap(err, "could not get compute state root")
 	}
 	blk.StateRoot = stateRoot
+
 	return blk, nil
 }
 
