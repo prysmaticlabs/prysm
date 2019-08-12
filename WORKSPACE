@@ -919,7 +919,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "cdaaf98f9226c39dc162b8e55083b2fbc67b4674",  # v0.43.0
+    commit = "2b2aeece7979f19ee2809459e0411b337d02661a",  # v0.44.0
     importpath = "cloud.google.com/go",
 )
 
