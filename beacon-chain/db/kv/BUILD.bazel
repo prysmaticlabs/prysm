@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -6,6 +6,7 @@ go_library(
         "attestations.go",
         "blocks.go",
         "kv.go",
+        "schema.go",
         "state.go",
         "validators.go",
     ],
@@ -16,6 +17,21 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "kv_test.go",
+        "validators_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )
