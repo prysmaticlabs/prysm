@@ -30,14 +30,23 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 
 // Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
-	return nil, k.db.View(func(tx *bolt.Tx) error {
+	atts := make([]*ethpb.Attestation, 0)
+	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			fmt.Printf("key=%s, value=%s\n", k, v)
+			if v != nil {
+				att := &ethpb.Attestation{}
+				if err := proto.Unmarshal(v, att); err != nil {
+					return err
+				}
+				atts = append(atts, att)
+			}
 		}
 		return nil
 	})
+	fmt.Println(atts)
+	return atts, err
 }
 
 // HasAttestation checks if an attestation by root exists in the db.
