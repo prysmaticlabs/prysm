@@ -15,7 +15,7 @@ import (
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, validatorIdx)
-	var latestVote *pb.ValidatorLatestVote
+	latestVote := &pb.ValidatorLatestVote{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		enc := bkt.Get(buf)
