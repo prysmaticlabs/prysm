@@ -188,12 +188,12 @@ func TestIsSlotValid(t *testing.T) {
 	}
 
 	testCases := []testCaseStruct{
-		testCaseStruct{
+		{
 			slot:        5,
 			genesisTime: roughtime.Now(),
 			result:      false,
 		},
-		testCaseStruct{
+		{
 			slot: 5,
 			genesisTime: roughtime.Now().Add(
 				-time.Duration(params.BeaconConfig().SecondsPerSlot*5) * time.Second,
