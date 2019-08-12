@@ -7,14 +7,12 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	buf := uint64ToBytes(validatorIdx)
 	latestVote := &pb.ValidatorLatestVote{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
@@ -29,10 +27,9 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 
 // HasValidatorLatestVote verifies if a validator index has a latest vote stored in the db.
 func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	buf := uint64ToBytes(validatorIdx)
 	exists := false
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		exists = bkt.Get(buf) != nil
@@ -43,8 +40,7 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 
 // SaveValidatorLatestVote by validator index.
 func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, validatorIdx)
+	buf := uint64ToBytes(validatorIdx)
 	enc, err := proto.Marshal(vote)
 	if err != nil {
 		return err
@@ -68,8 +64,11 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 		var err error
 		buf := bytes.NewBuffer(enc)
 		validatorIdx, err = binary.ReadUvarint(buf)
+		if err != nil {
+			return err
+		}
 		ok = true
-		return err
+		return nil
 	})
 	return validatorIdx, ok, err
 }
@@ -77,7 +76,7 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.
 func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
 	exists := false
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		exists = bkt.Get(publicKey[:]) != nil
@@ -98,8 +97,13 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
-		buf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(buf, validatorIdx)
+		buf := uint64ToBytes(validatorIdx)
 		return bucket.Put(publicKey[:], buf)
 	})
+}
+
+func uint64ToBytes(i uint64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, i)
+	return buf
 }
