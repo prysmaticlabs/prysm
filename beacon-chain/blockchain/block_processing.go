@@ -88,7 +88,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		SlotNumber: block.Slot,
 	})
 
-	// Run fork choice for head block and head state.
+	// Run fork choice for head block and head block.
 	headRoot, err := c.forkChoiceStore.Head()
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
@@ -97,10 +97,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
-	c.headSlot = headBlk.Slot
 
 	c.canonicalRootsLock.Lock()
 	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
 
 	log.WithFields(logrus.Fields{
@@ -148,7 +148,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		"root": hex.EncodeToString(root[:]),
 	}).Info("Finished update fork choice store for attestation")
 
-	// Run fork choice for head block and head state.
+	// Run fork choice for head block and head block.
 	headRoot, err := c.forkChoiceStore.Head()
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
