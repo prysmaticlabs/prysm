@@ -10,15 +10,15 @@ import (
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 	e := &ssz.SszNetworkEncoder{UseSnappyCompression: false}
-	msg := &testpb.TestMessage{
-		Foo: "fooooo",
-		Bar: "baaaar",
+	msg := &testpb.TestSimpleMessage{
+		Foo: []byte("fooooo"),
+		Bar: 9001,
 	}
 	encoded, err := e.Encode(msg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded := &testpb.TestMessage{}
+	decoded := &testpb.TestSimpleMessage{}
 	if err := e.DecodeTo(encoded, decoded); err != nil {
 		t.Fatal(err)
 	}
