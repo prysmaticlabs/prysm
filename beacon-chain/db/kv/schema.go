@@ -12,6 +12,11 @@ var (
 	validatorsBucket   = []byte("validators")
 	stateBucket        = []byte("state")
 
-	// Bucket specific keys.
+	// Attestation key indices.
+	attestationShardIdx = []byte("shard")
+	slotIdx             = []byte("slot")
+	parentRootIdx       = []byte("parent-root")
+
+	// Block keys.
 	headBlockRootKey = []byte("head-root")
 )

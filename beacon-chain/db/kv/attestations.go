@@ -17,13 +17,11 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 	att := &ethpb.Attestation{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
-			if v != nil {
-				return proto.Unmarshal(v, att)
-			}
+		enc := bkt.Get(attRoot[:])
+		if enc == nil {
+			return nil
 		}
-		return nil
+		return proto.Unmarshal(enc, att)
 	})
 	return att, err
 }
