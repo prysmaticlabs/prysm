@@ -11,4 +11,7 @@ var (
 	blocksBucket       = []byte("blocks")
 	validatorsBucket   = []byte("validators")
 	stateBucket        = []byte("state")
+
+	// Bucket specific keys.
+	headBlockRootKey = []byte("head-root")
 )
