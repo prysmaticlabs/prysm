@@ -877,7 +877,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		Finalized: true,
+		Finalized:               true,
 	}
 
 	if !reflect.DeepEqual(res, wanted) {
