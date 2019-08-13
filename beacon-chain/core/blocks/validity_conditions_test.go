@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,31 +63,31 @@ func TestIsValidBlock_NoParent(t *testing.T) {
 }
 
 func TestIsValidBlock_InvalidSlot(t *testing.T) {
-	beaconState := &pb.BeaconState{}
-
 	ctx := context.Background()
-
-	db := &mockDB{}
-	powClient := &mockPOWClient{}
-
-	beaconState.Slot = 3
-
+	beaconState := &pb.BeaconState{
+		Slot: 3,
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: []byte{2},
+			BlockHash:   []byte{3},
+		},
+	}
+	db := &mockDB{
+		hasBlock: true,
+	}
+	powClient := &mockPOWClient{
+		blockExists: true,
+	}
 	block := &ethpb.BeaconBlock{
 		Slot: 4,
 	}
+	genesisTime := time.Now()
 
-	genesisTime := time.Unix(0, 0)
-
-	block.Slot = 3
-	db.hasBlock = true
-
-	beaconState.Eth1Data = &ethpb.Eth1Data{
-		DepositRoot: []byte{2},
-		BlockHash:   []byte{3},
-	}
-	if err := IsValidBlock(ctx, beaconState, block,
-		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
+	err := IsValidBlock(ctx, beaconState, block, db.HasBlock, powClient.BlockByHash, genesisTime)
+	if err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.Slot)
+	}
+	if !strings.HasPrefix(err.Error(), "slot of block is too high: ") {
+		t.Fatalf("expected the error about too high slot, but got an error: %v", err)
 	}
 }
 
@@ -174,5 +177,33 @@ func TestIsValidBlock_GoodBlock(t *testing.T) {
 	if err := IsValidBlock(ctx, beaconState, block,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestIsSlotValid(t *testing.T) {
+	type testCaseStruct struct {
+		slot        uint64
+		genesisTime time.Time
+		result      bool
+	}
+
+	testCases := []testCaseStruct{
+		{
+			slot:        5,
+			genesisTime: roughtime.Now(),
+			result:      false,
+		},
+		{
+			slot: 5,
+			genesisTime: roughtime.Now().Add(
+				-time.Duration(params.BeaconConfig().SecondsPerSlot*5) * time.Second,
+			),
+			result: true,
+		},
+	}
+	for _, testCase := range testCases {
+		if testCase.result != IsSlotValid(testCase.slot, testCase.genesisTime) {
+			t.Fatalf("invalid IsSlotValid result for %v", testCase)
+		}
 	}
 }
