@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
@@ -56,9 +57,9 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	secondsPerSlot := time.Duration((slot)*params.BeaconConfig().SecondsPerSlot) * time.Second
-	validTimeThreshold := genesisTime.Add(secondsPerSlot)
-	now := time.Now()
+	secondsSinceGenesis := time.Duration(slot*params.BeaconConfig().SecondsPerSlot) * time.Second
+	validTimeThreshold := genesisTime.Add(secondsSinceGenesis)
+	now := roughtime.Now()
 	isValid := now.After(validTimeThreshold)
 
 	return isValid
