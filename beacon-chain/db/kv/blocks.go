@@ -45,9 +45,21 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 }
 
 // HasBlock checks if a block by root exists in the db.
-// TODO(#3164): Implement.
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
-	return false
+	exists := false
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		c := bkt.Cursor()
+		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
+			if v != nil {
+				exists = true
+				return nil
+			}
+		}
+		return nil
+	})
+	return exists
 }
 
 // DeleteBlock by block root.
