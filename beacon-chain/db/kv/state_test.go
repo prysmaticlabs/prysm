@@ -62,4 +62,17 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 	if !reflect.DeepEqual(s, savedHeadS) {
 		t.Error("did not retrieve saved state")
 	}
+
+	if err := db.SaveHeadBlockRoot(context.Background(), [32]byte{'B'}); err != nil {
+		t.Fatal(err)
+	}
+
+	savedHeadS, err = db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if savedHeadS != nil {
+		t.Error("unsaved head state should've been nil")
+	}
 }

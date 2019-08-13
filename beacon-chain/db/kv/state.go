@@ -24,18 +24,17 @@ func (k *Store) State(ctx context.Context, blockRoot []byte) (*pb.BeaconState, e
 
 		return err
 	})
-
 	return s, err
 }
 
 // HeadState returns the latest canonical state in beacon chain.
 func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
-	// TODO(3064): Blocked by implementation of `SaveHeadBlockRoot`
-	headBlkRoot := []byte{}
-
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
+		bucket := tx.Bucket(blocksBucket)
+		headBlkRoot := bucket.Get(headBlockRootKey)
+
+		bucket = tx.Bucket(stateBucket)
 		enc := bucket.Get(headBlkRoot)
 		if enc == nil {
 			return nil
@@ -46,7 +45,6 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		return err
 	})
-
 	return s, err
 }
 
