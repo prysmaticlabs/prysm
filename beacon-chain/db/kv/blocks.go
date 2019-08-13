@@ -54,7 +54,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		bkt := tx.Bucket(blocksBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			// TODO: Include range filters for slots.
+			// TODO(#3064): Include range filters for slots.
 			if v != nil && (!hasFilterSpecified || ensureBlockFilterCriteria(k, f)) {
 				block := &ethpb.BeaconBlock{}
 				if err := proto.Unmarshal(v, block); err != nil {
