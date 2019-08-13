@@ -50,7 +50,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	}
 }
 
-func TestStore_AttestationRetrieval_FiltersCorrectly(t *testing.T) {
+func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	atts := []*ethpb.Attestation{
@@ -111,14 +111,14 @@ func TestStore_AttestationRetrieval_FiltersCorrectly(t *testing.T) {
 		t.Errorf("Expected 1 attestation with parent root %v, received %d", []byte("parent3"), len(retrievedAtts))
 	}
 	// More complex filter, multiple attributes.
-	//f := filters.NewFilter().SetShard(5).SetStartEpoch(1)
-	//retrievedAtts, err = db.Attestations(ctx, f)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if len(retrievedAtts) != 1 {
-	//	t.Errorf("Expected 1 attestation for a complex filter, received %d", len(retrievedAtts))
-	//}
+	f := filters.NewFilter().SetShard(5).SetStartEpoch(1)
+	retrievedAtts, err = db.Attestations(ctx, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected 1 attestation for a complex filter, received %d", len(retrievedAtts))
+	}
 	// No filter, should return all attestations.
 	retrievedAtts, err = db.Attestations(ctx, nil)
 	if err != nil {

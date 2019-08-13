@@ -143,22 +143,32 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 }
 
 func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
-	ok := false
+	numCriteriaMet := 0
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.Root:
 			root := v.([]byte)
-			ok = bytes.Contains(key, append([]byte("root"), root[:]...))
+			if bytes.Contains(key, append([]byte("root"), root[:]...)) {
+				numCriteriaMet++
+			}
 		case filters.ParentRoot:
 			root := v.([]byte)
-			ok = bytes.Contains(key, append([]byte("parent-root"), root[:]...))
+			if bytes.Contains(key, append([]byte("parent-root"), root[:]...)) {
+				numCriteriaMet++
+			}
 		case filters.StartEpoch:
-			ok = bytes.Contains(key, append([]byte("start-epoch"), uint64ToBytes(v.(uint64))...))
+			if bytes.Contains(key, append([]byte("start-epoch"), uint64ToBytes(v.(uint64))...)) {
+				numCriteriaMet++
+			}
 		case filters.EndEpoch:
-			ok = bytes.Contains(key, append([]byte("end-epoch"), uint64ToBytes(v.(uint64))...))
+			if bytes.Contains(key, append([]byte("end-epoch"), uint64ToBytes(v.(uint64))...)) {
+				numCriteriaMet++
+			}
 		case filters.Shard:
-			ok = bytes.Contains(key, append([]byte("shard"), uint64ToBytes(v.(uint64))...))
+			if bytes.Contains(key, append([]byte("shard"), uint64ToBytes(v.(uint64))...)) {
+				numCriteriaMet++
+			}
 		}
 	}
-	return ok
+	return numCriteriaMet == len(f.Filters())
 }
