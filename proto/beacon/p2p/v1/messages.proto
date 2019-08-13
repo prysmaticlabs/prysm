@@ -12,17 +12,17 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 enum Topic {
   UNKNOWN = 0;
   BEACON_BLOCK_ANNOUNCE = 1 [deprecated=true];
-  BEACON_BLOCK_REQUEST = 2;
+  BEACON_BLOCK_REQUEST = 2 [deprecated=true];
   BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3 [deprecated=true];
-  BEACON_BLOCK_RESPONSE = 4;
-  BATCHED_BEACON_BLOCK_REQUEST = 5;
-  BATCHED_BEACON_BLOCK_RESPONSE = 6;
+  BEACON_BLOCK_RESPONSE = 4 [deprecated=true];
+  BATCHED_BEACON_BLOCK_REQUEST = 5 [deprecated=true];
+  BATCHED_BEACON_BLOCK_RESPONSE = 6 [deprecated=true];
   CHAIN_HEAD_REQUEST = 7 [deprecated=true];
   CHAIN_HEAD_RESPONSE = 8 [deprecated=true];
   BEACON_STATE_HASH_ANNOUNCE = 9 [deprecated=true];
   BEACON_STATE_REQUEST = 10 [deprecated=true];
   BEACON_STATE_RESPONSE = 11 [deprecated=true];
-  BEACON_ATTESTATION = 12;
+  BEACON_ATTESTATION = 12 [deprecated=true];
 }
 
 message Envelope {
@@ -38,6 +38,7 @@ message BeaconBlockAnnounce {
 }
 
 message BeaconBlockRequest {
+  option deprecated = true;
   bytes hash = 1;
 }
 
@@ -61,6 +62,7 @@ message BatchedBeaconBlockRequest {
 }
 
 message BatchedBeaconBlockResponse {
+  option deprecated = true;
   repeated ethereum.eth.v1alpha1.BeaconBlock batched_blocks = 1;
 }
 
