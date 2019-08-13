@@ -21,7 +21,7 @@ import (
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
-	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
+	p2pmock "github.com/prysmaticlabs/prysm/shared/deprecated-p2p/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
