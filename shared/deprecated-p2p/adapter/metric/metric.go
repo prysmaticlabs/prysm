@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 )
 
 var (
