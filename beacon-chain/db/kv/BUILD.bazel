@@ -36,11 +36,8 @@ go_test(
     deps = [
         "//beacon-chain/db/filters:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-<<<<<<< HEAD
-        "//shared/bytesutil:go_default_library",
-=======
         "//proto/eth/v1alpha1:go_default_library",
->>>>>>> 655f5830f475b981dbe1b1b84ba70d476971fbd7
+        "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
