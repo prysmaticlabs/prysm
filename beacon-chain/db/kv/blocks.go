@@ -7,7 +7,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -28,19 +27,21 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 }
 
 // HeadBlock returns the latest canonical block in eth2.
-// TODO(#3164): Implement.
 func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
-	buf := uint64ToBytes(validatorIdx)
-	latestVote := &pb.ValidatorLatestVote{}
+	headBlock := &ethpb.BeaconBlock{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
-		enc := bkt.Get(buf)
+		headRoot := bkt.Get(headBlockRootKey)
+		if headRoot == nil {
+			return nil
+		}
+		enc := bkt.Get(headRoot)
 		if enc == nil {
 			return nil
 		}
-		return proto.Unmarshal(enc, latestVote)
+		return proto.Unmarshal(enc, headBlock)
 	})
-	return latestVote, err
+	return headBlock, err
 }
 
 // Blocks retrieves a list of beacon blocks by filter criteria.
