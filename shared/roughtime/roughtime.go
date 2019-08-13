@@ -77,10 +77,15 @@ func init() {
 
 // Since returns the duration since t, based on the roughtime response
 func Since(t time.Time) time.Duration {
-	return time.Now().Add(offset).Sub(t)
+	return Now().Sub(t)
 }
 
 // Until returns the duration until t, based on the roughtime response
 func Until(t time.Time) time.Duration {
-	return t.Sub(time.Now().Add(offset))
+	return t.Sub(Now())
+}
+
+// Now returns the current local time given the roughtime offset.
+func Now() time.Time {
+	return time.Now().Add(offset)
 }
