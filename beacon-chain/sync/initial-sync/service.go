@@ -194,7 +194,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 			return errors.Wrap(err, "could not apply block state transition")
 		}
 	}
-	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
+	if err := s.chainService.CleanupBlockOperations(ctx, state, block); err != nil {
 		return err
 	}
 	if err := s.db.UpdateChainHead(ctx, block, state); err != nil {

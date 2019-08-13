@@ -147,7 +147,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err != nil {
 		return errors.Wrap(err, "could not apply block state transition")
 	}
-	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
+	if err := s.chainService.CleanupBlockOperations(ctx, state, block); err != nil {
 		return err
 	}
 	return s.db.UpdateChainHead(ctx, block, state)
