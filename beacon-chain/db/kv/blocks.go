@@ -51,9 +51,17 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteBlock by block root.
-// TODO(#3164): Implement.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	return nil
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		c := bkt.Cursor()
+		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
+			if v != nil {
+				return bkt.Delete(k)
+			}
+		}
+		return nil
+	})
 }
 
 // SaveBlock to the db.
