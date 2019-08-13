@@ -57,7 +57,6 @@ go_test(
     embed = [":go_default_library"],
     race = "on",
     deps = [
-        "//beacon-chain/db/kv:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -69,6 +68,7 @@ go_test(
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@com_github_prysmaticlabs_prysm//beacon-chain/db/kv:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

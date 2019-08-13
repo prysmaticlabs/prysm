@@ -19,21 +19,30 @@ go_library(
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestations_test.go",
+        "blocks_test.go",
         "kv_test.go",
         "state_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/db/filters:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+<<<<<<< HEAD
         "//shared/bytesutil:go_default_library",
+=======
+        "//proto/eth/v1alpha1:go_default_library",
+>>>>>>> 655f5830f475b981dbe1b1b84ba70d476971fbd7
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
