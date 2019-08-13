@@ -11,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
-// Block retrival by root.
+// Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
 	att := &ethpb.BeaconBlock{}
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -106,9 +106,30 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 }
 
 // SaveBlocks via batch updates to the db.
-// TODO(#3164): Implement.
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
-	return nil
+	encodedValues := make([][]byte, len(blocks))
+	keys := make([][]byte, len(blocks))
+	for i := 0; i < len(blocks); i++ {
+		enc, err := proto.Marshal(blocks[i])
+		if err != nil {
+			return err
+		}
+		key, err := generateBlockKey(blocks[i])
+		if err != nil {
+			return err
+		}
+		encodedValues[i] = enc
+		keys[i] = key
+	}
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		for i := 0; i < len(blocks); i++ {
+			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // SaveHeadBlockRoot to the db.
