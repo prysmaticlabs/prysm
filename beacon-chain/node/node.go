@@ -192,7 +192,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-	beaconp2p, err := configureP2P(ctx)
+	beaconp2p, err := deprecatedConfigureP2P(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not register p2p service")
 	}

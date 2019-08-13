@@ -13,7 +13,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-var topicMappings = map[pb.Topic]proto.Message{
+// Deprecated: Do not use. See #3147.
+var deprecatedTopicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
@@ -28,7 +29,8 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_ATTESTATION:                  &ethpb.Attestation{},
 }
 
-func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+// Deprecated: Do not use. See #3147.
+func deprecatedConfigureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	contractAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
@@ -65,7 +67,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		adapters = append(adapters, metric.New())
 	}
 
-	for k, v := range topicMappings {
+	for k, v := range deprecatedTopicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}
 
