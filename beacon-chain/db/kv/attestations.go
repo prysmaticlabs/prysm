@@ -99,18 +99,24 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 
 // SaveAttestations via batch updates to the db.
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+	encodedValues := make([][]byte, len(atts))
+	keys := make([][]byte, len(atts))
+	for i := 0; i < len(atts); i++ {
+		enc, err := proto.Marshal(atts[i])
+		if err != nil {
+			return err
+		}
+		key, err := generateAttestationKey(atts[i])
+		if err != nil {
+			return err
+		}
+		encodedValues[i] = enc
+		keys[i] = key
+	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attestationsBucket)
-		for _, att := range atts {
-			key, err := generateAttestationKey(att)
-			if err != nil {
-				return err
-			}
-			enc, err := proto.Marshal(att)
-			if err != nil {
-				return err
-			}
-			if err := bucket.Put(key, enc); err != nil {
+		for i := 0; i < len(atts); i++ {
+			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}
 		}
