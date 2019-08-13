@@ -10,11 +10,11 @@ import (
 )
 
 // State returns the saved state using input block root.
-func (k *Store) State(ctx context.Context, blockRoot []byte) (*pb.BeaconState, error) {
+func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error) {
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
-		enc := bucket.Get(blockRoot)
+		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
@@ -49,7 +49,7 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block root that was used to generate the state.
-func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot []byte) error {
+func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
 	enc, err := proto.Marshal(state)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
-		return bucket.Put(blockRoot, enc)
+		return bucket.Put(blockRoot[:], enc)
 	})
 }
 

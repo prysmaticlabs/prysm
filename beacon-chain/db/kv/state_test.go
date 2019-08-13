@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestState_CanSaveRetrieve(t *testing.T) {
@@ -14,7 +13,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	defer teardownDB(t, db)
 
 	s := &pb.BeaconState{Slot: 100}
-	r := []byte{'A'}
+	r := [32]byte{'A'}
 
 	if err := db.SaveState(context.Background(), s, r); err != nil {
 		t.Fatal(err)
@@ -29,7 +28,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 		t.Error("did not retrieve saved state")
 	}
 
-	savedS, err = db.State(context.Background(), []byte{'B'})
+	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,13 +43,13 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 	defer teardownDB(t, db)
 
 	s := &pb.BeaconState{Slot: 100}
-	headRoot := bytesutil.ToBytes32([]byte{'A'})
+	headRoot := [32]byte{'A'}
 
 	if err := db.SaveHeadBlockRoot(context.Background(), headRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveState(context.Background(), s, headRoot[:]); err != nil {
+	if err := db.SaveState(context.Background(), s, headRoot); err != nil {
 		t.Fatal(err)
 	}
 
