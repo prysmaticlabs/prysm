@@ -32,7 +32,7 @@ type BlockReceiver interface {
 type BlockProcessor interface {
 	VerifyBlockValidity(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error
 	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
-	CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error
+	CleanupBlockOperations(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) error
 }
 
 // BlockFailedProcessingErr represents a block failing a state transition function.
@@ -111,7 +111,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+	if err := c.CleanupBlockOperations(ctx, beaconState, block); err != nil {
 		return beaconState, errors.Wrap(err, "could not process block deposits, attestations, and other operations")
 	}
 
@@ -177,7 +177,7 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 // such as attestations, exits, and deposits. We update the latest seen attestation by validator
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
-func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (c *ChainService) CleanupBlockOperations(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) error {
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
@@ -188,9 +188,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	}
 
 	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(ctx, dep)
-	}
+	c.beaconDB.PrunePendingDeposits(ctx, int(beaconState.Eth1DepositIndex))
 	return nil
 }
 
