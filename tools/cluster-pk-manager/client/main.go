@@ -47,8 +47,7 @@ func main() {
 	for i, privateKey := range resp.PrivateKeys.PrivateKeys {
 		pk, err := bls.SecretKeyFromBytes(privateKey)
 		if err != nil {
-			fmt.Printf("Received invalid secret key, ignoreing. %v\n", err)
-			continue
+			panic(err)
 		}
 
 		k := &keystore.Key{
