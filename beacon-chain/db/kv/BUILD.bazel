@@ -27,6 +27,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestations_test.go",
+        "blocks_test.go",
         "kv_test.go",
         "validators_test.go",
     ],

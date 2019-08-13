@@ -54,7 +54,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		bkt := tx.Bucket(blocksBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if v != nil && (!hasFilterSpecified || ensureAttestationFilterCriteria(k, f)) {
+			// TODO: Include range filters for slots.
+			if v != nil && (!hasFilterSpecified || ensureBlockFilterCriteria(k, f)) {
 				block := &ethpb.BeaconBlock{}
 				if err := proto.Unmarshal(v, block); err != nil {
 					return err
@@ -182,4 +183,29 @@ func generateBlockKey(block *ethpb.BeaconBlock) ([]byte, error) {
 	}
 	buf = append(buf, blockRoot[:]...)
 	return buf, nil
+}
+
+// ensureBlockFilterCriteria uses a set of specified filters
+// to ensure the byte key used for db lookups contains the correct values
+// requested by the filter. For example, if a key looks like:
+// root-0x23923-parent-root-0x49349 and our filter criteria wants the key to
+// contain parent root 0x49349 and root 0x99283, the key will NOT meet all the filter
+// criteria and the function will return false.
+func ensureBlockFilterCriteria(key []byte, f *filters.QueryFilter) bool {
+	numCriteriaMet := 0
+	for k, v := range f.Filters() {
+		switch k {
+		case filters.Root:
+			root := v.([]byte)
+			if bytes.Contains(key, append([]byte("root"), root[:]...)) {
+				numCriteriaMet++
+			}
+		case filters.ParentRoot:
+			root := v.([]byte)
+			if bytes.Contains(key, append([]byte("parent-root"), root[:]...)) {
+				numCriteriaMet++
+			}
+		}
+	}
+	return numCriteriaMet == len(f.Filters())
 }
