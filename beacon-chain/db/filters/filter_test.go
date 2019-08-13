@@ -8,8 +8,8 @@ func TestQueryFilter_ChainsCorrectly(t *testing.T) {
 	f := NewFilter().
 		SetStartSlot(2).
 		SetEndSlot(4).
-		SetParentRoot([32]byte{3, 4, 5}).
-		SetRoot([32]byte{}).
+		SetParentRoot([]byte{3, 4, 5}).
+		SetRoot([]byte{}).
 		SetShard(0)
 	filterSet := f.Filters()
 	if len(filterSet) != 5 {
