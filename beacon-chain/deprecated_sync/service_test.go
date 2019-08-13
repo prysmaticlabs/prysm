@@ -1,4 +1,4 @@
-package sync
+package deprecated_sync
 
 import (
 	"context"

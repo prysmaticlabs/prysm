@@ -1,4 +1,4 @@
-package sync
+package deprecated_sync
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
