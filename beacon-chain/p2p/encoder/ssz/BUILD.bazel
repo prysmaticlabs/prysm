@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["encoder.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder/ssz",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/p2p/encoder:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
+)
