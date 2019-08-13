@@ -11,7 +11,7 @@
 // Pub/sub topic has a specific message type that is used for that topic.
 //
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
-package deprecated_p2p
+package p2p
 
 import peer "github.com/libp2p/go-libp2p-peer"
 

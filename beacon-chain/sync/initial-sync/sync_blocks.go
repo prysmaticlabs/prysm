@@ -41,7 +41,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *ethpb.BeaconBlock
 
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
-func (s *InitialSync) processBatchedBlocks(msg deprecated_p2p.Message, chainHead *pb.ChainHeadResponse) error {
+func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
@@ -50,7 +50,7 @@ func (s *InitialSync) processBatchedBlocks(msg deprecated_p2p.Message, chainHead
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
-		s.p2p.Reputation(msg.Peer, deprecated_p2p.RepPenalityInitialSyncFailure)
+		s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 		return nil
 	}
 

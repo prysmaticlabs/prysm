@@ -48,7 +48,7 @@ type ChainService struct {
 	genesisTime          time.Time
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
-	p2p                  deprecated_p2p.Broadcaster
+	p2p                  p2p.Broadcaster
 	canonicalBlocks      map[uint64][]byte
 	canonicalBlocksLock  sync.RWMutex
 	receiveBlockLock     sync.Mutex
@@ -63,7 +63,7 @@ type Config struct {
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
-	P2p            deprecated_p2p.Broadcaster
+	P2p            p2p.Broadcaster
 	MaxRoutines    int64
 }
 

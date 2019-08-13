@@ -90,7 +90,7 @@ type Service struct {
 	canonicalStateChan  chan *pbp2p.BeaconState
 	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
-	p2p                 deprecated_p2p.Broadcaster
+	p2p                 p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -103,7 +103,7 @@ type Config struct {
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      syncService
-	Broadcaster      deprecated_p2p.Broadcaster
+	Broadcaster      p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer

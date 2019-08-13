@@ -33,7 +33,7 @@ func main() {
 	}
 
 	addr := os.Args[1]
-	pi, err := deprecated_p2p.MakePeer(addr)
+	pi, err := p2p.MakePeer(addr)
 	if err != nil {
 		log.Fatalf("Error: Failed to make peer from string: %v", err)
 	}

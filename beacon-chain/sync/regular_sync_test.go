@@ -36,7 +36,7 @@ type mockP2P struct {
 	sentMsg proto.Message
 }
 
-func (mp *mockP2P) Subscribe(msg proto.Message, channel chan deprecated_p2p.Message) event.Subscription {
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
@@ -156,7 +156,7 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 		Hash: announceHash[:],
 	}
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Peer: "",
 		Data: hashAnnounce,
@@ -234,7 +234,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		Attestation: attestation,
 	}
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Peer: "",
 		Data: responseBlock,
@@ -311,7 +311,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		},
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Peer: "",
 		Data: responseBlock1,
@@ -340,7 +340,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		},
 	}
 
-	msg2 := deprecated_p2p.Message{
+	msg2 := p2p.Message{
 		Ctx:  context.Background(),
 		Peer: "",
 		Data: responseBlock2,
@@ -400,7 +400,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 		},
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
 		Peer: "",
@@ -455,7 +455,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		},
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
 		Peer: "",
@@ -486,7 +486,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		Epoch: 100,
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
 		Peer: "",
@@ -515,7 +515,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 		FinalizedStateRootHash32S: []byte{'a'},
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
 		Peer: "",
@@ -566,7 +566,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 		FinalizedStateRootHash32S: stateRoot[:],
 	}
 
-	msg1 := deprecated_p2p.Message{
+	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
 		Peer: "",

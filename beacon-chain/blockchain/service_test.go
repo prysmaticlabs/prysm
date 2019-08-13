@@ -143,7 +143,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
 	mb.broadcastCalled = true
 }
 
-var _ = deprecated_p2p.Broadcaster(&mockBroadcaster{})
+var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})

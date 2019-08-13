@@ -17,7 +17,7 @@ import (
 
 // receiveBlockAnnounce accepts a block hash, determines if we do not contain
 // the block in our local DB, and then request the full block data.
-func (rs *RegularSync) receiveBlockAnnounce(msg deprecated_p2p.Message) error {
+func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
 	defer span.End()
 	recBlockAnnounce.Inc()
@@ -63,7 +63,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg deprecated_p2p.Message) error {
 
 // receiveBlock processes a block message from the p2p layer and requests for its
 // parents recursively if they are not yet contained in the local node's persistent storage.
-func (rs *RegularSync) receiveBlock(msg deprecated_p2p.Message) error {
+func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
 	defer span.End()
 	recBlock.Inc()
@@ -76,7 +76,7 @@ func (rs *RegularSync) receiveBlock(msg deprecated_p2p.Message) error {
 // we recursively call processBlock which applies block state transitions and updates the chain service.
 // At the end of the recursive call, we'll have a block which has no children in the map, and at that point
 // we can apply the fork choice rule for ETH 2.0.
-func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg deprecated_p2p.Message) error {
+func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg p2p.Message) error {
 	block, _, isValid, err := rs.validateAndProcessBlock(ctx, msg)
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func (rs *RegularSync) processBlockAndFetchAncestors(ctx context.Context, msg de
 }
 
 func (rs *RegularSync) validateAndProcessBlock(
-	ctx context.Context, blockMsg deprecated_p2p.Message,
+	ctx context.Context, blockMsg p2p.Message,
 ) (*ethpb.BeaconBlock, *pb.BeaconState, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.validateAndProcessBlock")
 	defer span.End()
@@ -202,10 +202,10 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
 		log.WithError(err).Error("Could not run fork choice on block")
-		rs.p2p.Reputation(blockMsg.Peer, deprecated_p2p.RepPenalityInvalidBlock)
+		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		return nil, nil, false, err
 	}
-	rs.p2p.Reputation(blockMsg.Peer, deprecated_p2p.RepRewardValidBlock)
+	rs.p2p.Reputation(blockMsg.Peer, p2p.RepRewardValidBlock)
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
@@ -215,7 +215,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 	return block, beaconState, true, nil
 }
 
-func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg deprecated_p2p.Message) {
+func (rs *RegularSync) insertPendingBlock(ctx context.Context, blockRoot [32]byte, blockMsg p2p.Message) {
 	rs.blocksAwaitingProcessingLock.Lock()
 	defer rs.blocksAwaitingProcessingLock.Unlock()
 	// Do not reinsert into the map if block root was previously added.
@@ -234,7 +234,7 @@ func (rs *RegularSync) clearPendingBlock(blockRoot [32]byte) {
 	blocksAwaitingProcessingGauge.Dec()
 }
 
-func (rs *RegularSync) hasChild(blockRoot [32]byte) (deprecated_p2p.Message, bool) {
+func (rs *RegularSync) hasChild(blockRoot [32]byte) (p2p.Message, bool) {
 	rs.blocksAwaitingProcessingLock.Lock()
 	defer rs.blocksAwaitingProcessingLock.Unlock()
 	child, ok := rs.blocksAwaitingProcessing[blockRoot]

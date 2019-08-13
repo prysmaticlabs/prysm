@@ -22,7 +22,7 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p              deprecated_p2p.Broadcaster
+	p2p              p2p.Broadcaster
 	beaconDB         *db.BeaconDB
 	operationService operationService
 	cache            *cache.AttestationCache

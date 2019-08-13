@@ -159,7 +159,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Data: response,
 	}
 
@@ -196,7 +196,7 @@ func TestQuerier_BestPeerAssignment(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Data: response,
 		Peer: "TestQuerier_BestPeerAssignment",
 	}
@@ -270,7 +270,7 @@ func TestSyncedInRestarts(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Data: response,
 	}
 

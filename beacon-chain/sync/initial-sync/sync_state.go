@@ -12,7 +12,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *InitialSync) processState(msg deprecated_p2p.Message, chainHead *pb.ChainHeadResponse) error {
+func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadResponse) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)

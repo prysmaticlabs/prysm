@@ -213,7 +213,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
-	var p2pService *deprecated_p2p.Server
+	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService() error {
-	var p2pService *deprecated_p2p.Server
+	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		return err
 	}
 
-	var p2pService *deprecated_p2p.Server
+	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var p2pService *deprecated_p2p.Server
+	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}

@@ -33,10 +33,10 @@ func TestMessageMetrics_OK(t *testing.T) {
 			},
 		},
 	}
-	h := adapter(func(deprecated_p2p.Message) { time.Sleep(10 * time.Millisecond) })
-	h(deprecated_p2p.Message{Ctx: context.Background(), Data: data})
-	h = adapter(func(deprecated_p2p.Message) { time.Sleep(100 * time.Microsecond) })
-	h(deprecated_p2p.Message{Ctx: context.Background(), Data: data})
+	h := adapter(func(p2p.Message) { time.Sleep(10 * time.Millisecond) })
+	h(p2p.Message{Ctx: context.Background(), Data: data})
+	h = adapter(func(p2p.Message) { time.Sleep(100 * time.Microsecond) })
+	h(p2p.Message{Ctx: context.Background(), Data: data})
 
 	metrics := getMetrics(t)
 	testMetricExists(t, metrics, fmt.Sprintf("p2p_message_sent_total{message=\"%T\"} 2", data))

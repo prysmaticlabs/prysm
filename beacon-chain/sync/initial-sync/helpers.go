@@ -34,7 +34,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *ethpb.Beaco
 
 // safelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func safelyHandleMessage(fn func(deprecated_p2p.Message) error, msg deprecated_p2p.Message) {
+func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			printedMsg := noMsgData

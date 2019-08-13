@@ -38,9 +38,9 @@ var (
 )
 
 // New create and initialize a metric adapter for the p2p service.
-func New() deprecated_p2p.Adapter {
-	return func(next deprecated_p2p.Handler) deprecated_p2p.Handler {
-		return func(msg deprecated_p2p.Message) {
+func New() p2p.Adapter {
+	return func(next p2p.Handler) p2p.Handler {
+		return func(msg p2p.Message) {
 			start := time.Now()
 			messageName := fmt.Sprintf("%T", msg.Data)
 

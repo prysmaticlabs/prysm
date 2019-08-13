@@ -77,7 +77,7 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	evilBlockHash := []byte("evil-block")
 	blockRoot := bytesutil.ToBytes32(evilBlockHash)
 	db.MarkEvilBlockHash(blockRoot)
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Ctx: context.Background(),
 		Data: &pb.BeaconBlockAnnounce{
 			Hash: blockRoot[:],
@@ -127,7 +127,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	blocksMissingParent := setupBlocksMissingParent(parents, parentRoots)
 
 	for _, block := range blocksMissingParent {
-		msg := deprecated_p2p.Message{
+		msg := p2p.Message{
 			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},
@@ -145,7 +145,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		)
 	}
 	for _, block := range parents {
-		msg := deprecated_p2p.Message{
+		msg := p2p.Message{
 			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},

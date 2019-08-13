@@ -23,7 +23,7 @@ import (
 type mockP2P struct {
 }
 
-func (mp *mockP2P) Subscribe(msg proto.Message, channel chan deprecated_p2p.Message) event.Subscription {
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
@@ -153,7 +153,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	// block first. This is swapping the first and last blocks in the list.
 	batchedBlocks[0], batchedBlocks[batchSize-1] = batchedBlocks[batchSize-1], batchedBlocks[0]
 
-	msg := deprecated_p2p.Message{
+	msg := p2p.Message{
 		Ctx: context.Background(),
 		Data: &pb.BatchedBeaconBlockResponse{
 			BatchedBlocks: batchedBlocks,
@@ -223,9 +223,9 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ deprecated_p2p.Message) error {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
-	}, deprecated_p2p.Message{
+	}, p2p.Message{
 		Data: &ethpb.BeaconBlock{},
 	})
 
@@ -235,9 +235,9 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func(_ deprecated_p2p.Message) error {
+	safelyHandleMessage(func(_ p2p.Message) error {
 		panic("bad!")
-	}, deprecated_p2p.Message{})
+	}, p2p.Message{})
 
 	entry := hook.LastEntry()
 	if entry.Data["msg"] != "message contains no data" {

@@ -28,7 +28,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_ATTESTATION:                  &ethpb.Attestation{},
 }
 
-func configureP2P(ctx *cli.Context) (*deprecated_p2p.Server, error) {
+func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	contractAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
@@ -43,7 +43,7 @@ func configureP2P(ctx *cli.Context) (*deprecated_p2p.Server, error) {
 		staticPeers = append(staticPeers, peers...)
 	}
 
-	s, err := deprecated_p2p.NewServer(&deprecated_p2p.ServerConfig{
+	s, err := p2p.NewServer(&p2p.ServerConfig{
 		NoDiscovery:            ctx.GlobalBool(cmd.NoDiscovery.Name),
 		StaticPeers:            staticPeers,
 		BootstrapNodeAddr:      ctx.GlobalString(cmd.BootstrapNode.Name),
@@ -60,7 +60,7 @@ func configureP2P(ctx *cli.Context) (*deprecated_p2p.Server, error) {
 		return nil, err
 	}
 
-	adapters := []deprecated_p2p.Adapter{}
+	adapters := []p2p.Adapter{}
 	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
 		adapters = append(adapters, metric.New())
 	}

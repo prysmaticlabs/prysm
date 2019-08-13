@@ -1,4 +1,4 @@
-package deprecated_p2p
+package p2p
 
 import (
 	"testing"
