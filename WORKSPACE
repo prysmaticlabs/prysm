@@ -1282,7 +1282,7 @@ go_repository(
 go_repository(
     name = "com_github_willf_bitset",
     commit = "77892cd8d53fa6524772426bc444dd2e3b4fb18f",
-    imporpath = "github.com/willf/bitset",
+    importpath = "github.com/willf/bitset",
 )
 
 go_repository(
