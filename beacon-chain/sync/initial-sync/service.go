@@ -26,8 +26,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -66,9 +66,9 @@ func DefaultConfig() *Config {
 }
 
 type p2pAPI interface {
-	p2p.Sender
-	p2p.ReputationManager
-	p2p.Subscriber
+	deprecated_p2p.Sender
+	deprecated_p2p.ReputationManager
+	deprecated_p2p.Subscriber
 }
 
 type powChainService interface {
@@ -97,8 +97,8 @@ type InitialSync struct {
 	chainService        chainService
 	db                  *db.BeaconDB
 	powchain            powChainService
-	batchedBlockBuf     chan p2p.Message
-	stateBuf            chan p2p.Message
+	batchedBlockBuf     chan deprecated_p2p.Message
+	stateBuf            chan deprecated_p2p.Message
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
@@ -113,8 +113,8 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
+	stateBuf := make(chan deprecated_p2p.Message, cfg.StateBufferSize)
+	batchedBlockBuf := make(chan deprecated_p2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
 		ctx:                 ctx,
@@ -290,13 +290,13 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			log.WithFields(fields).Info("Received batched blocks from peer")
 			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
 				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
-				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
+				s.p2p.Reputation(msg.Peer, deprecated_p2p.RepPenalityInitialSyncFailure)
 				continue
 			}
 			if !s.nodeIsSynced {
 				return errors.New("node still not in sync after receiving batch blocks")
 			}
-			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
+			s.p2p.Reputation(msg.Peer, deprecated_p2p.RepRewardValidBlock)
 			return nil
 		}
 	}

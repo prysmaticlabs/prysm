@@ -21,8 +21,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -90,7 +90,7 @@ type Service struct {
 	canonicalStateChan  chan *pbp2p.BeaconState
 	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
-	p2p                 p2p.Broadcaster
+	p2p                 deprecated_p2p.Broadcaster
 }
 
 // Config options for the beacon node RPC server.
@@ -103,7 +103,7 @@ type Config struct {
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      syncService
-	Broadcaster      p2p.Broadcaster
+	Broadcaster      deprecated_p2p.Broadcaster
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer

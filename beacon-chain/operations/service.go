@@ -19,10 +19,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -57,7 +57,7 @@ type Service struct {
 	incomingAtt                chan *ethpb.Attestation
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
-	p2p                        p2p.Broadcaster
+	p2p                        deprecated_p2p.Broadcaster
 	error                      error
 	attestationLock            sync.Mutex
 }
@@ -65,7 +65,7 @@ type Service struct {
 // Config options for the service.
 type Config struct {
 	BeaconDB *db.BeaconDB
-	P2P      p2p.Broadcaster
+	P2P      deprecated_p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will

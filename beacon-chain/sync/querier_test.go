@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -159,7 +159,7 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := p2p.Message{
+	msg := deprecated_p2p.Message{
 		Data: response,
 	}
 
@@ -196,7 +196,7 @@ func TestQuerier_BestPeerAssignment(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := p2p.Message{
+	msg := deprecated_p2p.Message{
 		Data: response,
 		Peer: "TestQuerier_BestPeerAssignment",
 	}
@@ -270,7 +270,7 @@ func TestSyncedInRestarts(t *testing.T) {
 		CanonicalStateRootHash32: []byte{'a', 'b'},
 	}
 
-	msg := p2p.Message{
+	msg := deprecated_p2p.Message{
 		Data: response,
 	}
 

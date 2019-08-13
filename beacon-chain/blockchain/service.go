@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -48,7 +48,7 @@ type ChainService struct {
 	genesisTime          time.Time
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
-	p2p                  p2p.Broadcaster
+	p2p                  deprecated_p2p.Broadcaster
 	canonicalBlocks      map[uint64][]byte
 	canonicalBlocksLock  sync.RWMutex
 	receiveBlockLock     sync.Mutex
@@ -63,7 +63,7 @@ type Config struct {
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
-	P2p            p2p.Broadcaster
+	P2p            deprecated_p2p.Broadcaster
 	MaxRoutines    int64
 }
 

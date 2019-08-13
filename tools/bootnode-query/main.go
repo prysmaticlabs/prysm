@@ -16,7 +16,7 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	addr := os.Args[1]
-	pi, err := p2p.MakePeer(addr)
+	pi, err := deprecated_p2p.MakePeer(addr)
 	if err != nil {
 		log.Fatalf("Error: Failed to make peer from string: %v", err)
 	}

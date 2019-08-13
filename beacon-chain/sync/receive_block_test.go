@@ -9,7 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -77,7 +77,7 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	evilBlockHash := []byte("evil-block")
 	blockRoot := bytesutil.ToBytes32(evilBlockHash)
 	db.MarkEvilBlockHash(blockRoot)
-	msg := p2p.Message{
+	msg := deprecated_p2p.Message{
 		Ctx: context.Background(),
 		Data: &pb.BeaconBlockAnnounce{
 			Hash: blockRoot[:],
@@ -127,7 +127,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	blocksMissingParent := setupBlocksMissingParent(parents, parentRoots)
 
 	for _, block := range blocksMissingParent {
-		msg := p2p.Message{
+		msg := deprecated_p2p.Message{
 			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},
@@ -145,7 +145,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		)
 	}
 	for _, block := range parents {
-		msg := p2p.Message{
+		msg := deprecated_p2p.Message{
 			Data: &pb.BeaconBlockResponse{
 				Block: block,
 			},
