@@ -17,10 +17,10 @@ const (
 	gossipSubHistoryGossip = 3 // number of windows to gossip about
 
 	// fanout ttl
-	gossipSubFanoutTTL = 60 // TTL for fanout maps for topics we are not subscribed to but have published to, in seconds
+	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
 
 	// heartbeat interval
-	gossipSubHeartbeatInterval = 1 // frequency of heartbeat, in seconds
+	gossipSubHeartbeatInterval = 1000000000 // frequency of heartbeat, in nano seconds
 
 	// misc
 	randomSubD = 6 // random gossip target
