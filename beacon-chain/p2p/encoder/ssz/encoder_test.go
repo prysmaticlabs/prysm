@@ -10,6 +10,15 @@ import (
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 	e := &ssz.SszNetworkEncoder{UseSnappyCompression: false}
+	testRoundTrip(t, e)
+}
+
+func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
+	e := &ssz.SszNetworkEncoder{UseSnappyCompression: true}
+	testRoundTrip(t, e)
+}
+
+func testRoundTrip(t *testing.T, e *ssz.SszNetworkEncoder) {
 	msg := &testpb.TestSimpleMessage{
 		Foo: []byte("fooooo"),
 		Bar: 9001,
@@ -26,8 +35,4 @@ func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
 	}
-}
-
-func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
-
 }
