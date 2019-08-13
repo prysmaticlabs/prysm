@@ -53,14 +53,7 @@ func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
-			if v != nil {
-				exists = true
-				return nil
-			}
-		}
-		return nil
+		exists = bkt.Get(attRoot[:]) != nil
 	})
 	return exists
 }
@@ -81,7 +74,7 @@ func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
 
 // SaveAttestation to the db.
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	key, err := generateAttestationKey(att)
+	root, err := ssz.SigningRoot(att)
 	if err != nil {
 		return err
 	}
@@ -90,8 +83,19 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(attestationsBucket)
-		return bucket.Put(key, enc)
+		bkt := tx.Bucket(attestationsBucket)
+		shardKey := append(attestationShardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...)
+		shardRoots := bkt.Get(shardKey)
+		if shardRoots == nil {
+			if err := bkt.Put(shardKey, root[:]); err != nil {
+				return err
+			}
+		} else {
+			if err := bkt.Put(shardKey, append(shardRoots, root[:]...)); err != nil {
+				return err
+			}
+		}
+		return bkt.Put(root[:], enc)
 	})
 }
 
