@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -10,6 +11,30 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestStore_HeadBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	block := &ethpb.BeaconBlock{
+		Slot:       20,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	blockRoot, err := ssz.HashTreeRoot(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	retrievedBlock, err := db.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proto.Equal(block, retrievedBlock) {
+		t.Errorf("Wanted %v, received %v", block, retrievedBlock)
+	}
+}
 
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
@@ -28,6 +53,16 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
+	}
+	blockRoots, err := db.BlockRoots(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(blockRoots) != 1 {
+		t.Errorf("Expected 1 block root stored, received %d", len(blockRoots))
+	}
+	if !bytes.Equal(blockRoots[0], blockRoot[:]) {
+		t.Errorf("Wanted %#x, received %#x", blockRoot, blockRoots[:])
 	}
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	if err != nil {
