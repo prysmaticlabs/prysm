@@ -22,10 +22,14 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["service_test.go"],
+    srcs = [
+        "parameter_test.go",
+        "service_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/testutil:go_default_library",
+        "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
