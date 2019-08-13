@@ -36,7 +36,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if v != nil && (!hasFilterSpecified || attestationFilterCriteria(k, f)) {
+			if v != nil && (!hasFilterSpecified || ensureAttestationFilterCriteria(k, f)) {
 				att := &ethpb.Attestation{}
 				if err := proto.Unmarshal(v, att); err != nil {
 					return err
@@ -147,7 +147,14 @@ func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
 	return buf, nil
 }
 
-func attestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
+// ensureAttestationFilterCriteria uses a set of specified filters
+// to ensure the byte key used for db lookups contains the correct values
+// requested by the filter. For example, if a key looks like:
+// root-0x23923-parent-root-0x49349-start-epoch-3-end-epoch-4-shard-5
+// and our filter criteria wants the key to contain shard 5 and
+// start epoch 5, the key will NOT meet all the filter criteria and this
+// function will return false.
+func ensureAttestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	numCriteriaMet := 0
 	for k, v := range f.Filters() {
 		switch k {
