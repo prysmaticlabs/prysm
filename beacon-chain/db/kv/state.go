@@ -9,7 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// State returns the saved state using block's signing root.
+// State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
 func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error) {
 	var s *pb.BeaconState
