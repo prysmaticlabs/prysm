@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"

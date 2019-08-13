@@ -21,7 +21,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
