@@ -1,4 +1,4 @@
-package db
+package depositcache
 
 import (
 	"bytes"
@@ -15,12 +15,11 @@ const nilDepositErr = "Ignoring nil deposit insertion"
 
 func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
-	db.InsertDeposit(context.Background(), nil, big.NewInt(1), 0, [32]byte{})
+	dc.InsertDeposit(context.Background(), nil, big.NewInt(1), 0, [32]byte{})
 
-	if len(db.deposits) != 0 {
+	if len(dc.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
 	}
 	if hook.LastEntry().Message != nilDepositErr {
@@ -30,12 +29,11 @@ func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 
 func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
-	db.InsertDeposit(context.Background(), &ethpb.Deposit{}, nil, 0, [32]byte{})
+	dc.InsertDeposit(context.Background(), &ethpb.Deposit{}, nil, 0, [32]byte{})
 
-	if len(db.deposits) != 0 {
+	if len(dc.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
 	}
 	if hook.LastEntry().Message != nilDepositErr {
@@ -44,8 +42,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
 }
 
 func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
 	insertions := []struct {
 		blkNum  *big.Int
@@ -75,20 +72,19 @@ func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	}
 
 	for _, ins := range insertions {
-		db.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
 	}
 
 	expectedIndices := []int{0, 1, 3, 4}
 	for i, ei := range expectedIndices {
-		if db.deposits[i].Index != ei {
-			t.Errorf("db.deposits[%d].Index = %d, wanted %d", i, db.deposits[i].Index, ei)
+		if dc.deposits[i].Index != ei {
+			t.Errorf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei)
 		}
 	}
 }
 
 func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
 	deposits := []*DepositContainer{
 		{
@@ -120,17 +116,16 @@ func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 			Deposit: &ethpb.Deposit{},
 		},
 	}
-	db.deposits = deposits
+	dc.deposits = deposits
 
-	d := db.AllDeposits(context.Background(), nil)
+	d := dc.AllDeposits(context.Background(), nil)
 	if len(d) != len(deposits) {
 		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), len(deposits))
 	}
 }
 
 func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
 	deposits := []*DepositContainer{
 		{
@@ -162,9 +157,9 @@ func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testi
 			Deposit: &ethpb.Deposit{},
 		},
 	}
-	db.deposits = deposits
+	dc.deposits = deposits
 
-	d := db.AllDeposits(context.Background(), big.NewInt(11))
+	d := dc.AllDeposits(context.Background(), big.NewInt(11))
 	expected := 5
 	if len(d) != expected {
 		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), expected)
@@ -172,10 +167,9 @@ func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testi
 }
 
 func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
-	db.deposits = []*DepositContainer{
+	dc.deposits = []*DepositContainer{
 		{
 			Block:   big.NewInt(10),
 			Deposit: &ethpb.Deposit{},
@@ -207,7 +201,7 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t
 		},
 	}
 
-	n, root := db.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(11))
+	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(11))
 	if int(n) != 5 {
 		t.Errorf("Returned unexpected deposits number %d wanted %d", n, 5)
 	}
@@ -218,9 +212,9 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t
 }
 
 func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	db.deposits = []*DepositContainer{
+	dc := DepositCache{}
+
+	dc.deposits = []*DepositContainer{
 		{
 			Block:       big.NewInt(10),
 			Deposit:     &ethpb.Deposit{},
@@ -233,7 +227,7 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLes
 		},
 	}
 
-	n, root := db.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
+	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
 	if int(n) != 0 {
 		t.Errorf("Returned unexpected deposits number %d wanted %d", n, 0)
 	}
@@ -244,10 +238,9 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLes
 }
 
 func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	dc := DepositCache{}
 
-	db.deposits = []*DepositContainer{
+	dc.deposits = []*DepositContainer{
 		{
 			Block: big.NewInt(9),
 			Deposit: &ethpb.Deposit{
@@ -282,7 +275,7 @@ func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		},
 	}
 
-	dep, blkNum := db.DepositByPubkey(context.Background(), []byte("pk1"))
+	dep, blkNum := dc.DepositByPubkey(context.Background(), []byte("pk1"))
 
 	if !bytes.Equal(dep.Data.PublicKey, []byte("pk1")) {
 		t.Error("Returned wrong deposit")
