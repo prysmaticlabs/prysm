@@ -45,9 +45,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "6ddad812eb6a8aa0902492c0b6fa12ce11c27fce50a38fcfd1dcdf04f57a1a1a",
-    strip_prefix = "rules_k8s-5648b17d5f9b612cc47031a6fa961e6752fe50e8",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/5648b17d5f9b612cc47031a6fa961e6752fe50e8.tar.gz",
+    sha256 = "c29481f98c7bb8e982e0488b35b2c5ccc99de56166f6711a9244a0720de9fdd7",
+    strip_prefix = "rules_k8s-b815470f49deb431d2ce6c2d29df2d5cb5eb1f35",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/b815470f49deb431d2ce6c2d29df2d5cb5eb1f35.tar.gz",
 )
 
 git_repository(
@@ -140,9 +140,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "462dcc769f29e9eee16499edb818e2fc2ffc24efea28300d53bbc098d27d322c",
-    strip_prefix = "repo-infra-f85734f673056977d8ba04b0386394b684ca2acb",
-    url = "https://github.com/kubernetes/repo-infra/archive/f85734f673056977d8ba04b0386394b684ca2acb.tar.gz",
+    sha256 = "f6d65480241ec0fd7a0d01f432938b97d7395aeb8eefbe859bb877c9b4eafa56",
+    strip_prefix = "repo-infra-9f4571ad7242bf3ec4b47365062498c2528f9a5f",
+    url = "https://github.com/kubernetes/repo-infra/archive/9f4571ad7242bf3ec4b47365062498c2528f9a5f.tar.gz",
 )
 
 http_archive(
@@ -205,7 +205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "48789cbaf046ec783a407a76c50a9cdd7507875b",
+    commit = "36ed6616276a5b6721bb1eb2e45eb5eb4e04c695",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -919,7 +919,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "cdaaf98f9226c39dc162b8e55083b2fbc67b4674",  # v0.43.0
+    commit = "2b2aeece7979f19ee2809459e0411b337d02661a",  # v0.44.0
     importpath = "cloud.google.com/go",
 )
 
@@ -991,7 +991,7 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "b495094dc72c7043b549f511a798391201624b14",
+    commit = "fb0e03c433000562a8f27e0e820667fd6c13d62b",
     importpath = "github.com/phoreproject/bls",
 )
 
@@ -1033,7 +1033,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_connmgr",
-    commit = "152025a671fcc297333095f8e4afc98d90b30df7",  # v0.1.0
+    commit = "b46e9bdbcd8436b4fe4b30a53ec913c07e5e09c9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-connmgr",
 )
 
@@ -1064,7 +1064,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "3390f7d16df07cee9e54c1700adeace090fede32",  # v0.2.0
+    commit = "d204016fc64589d0ec2ba965dd686d768d7ab34a",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1118,7 +1118,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_eventbus",
-    commit = "4afad1f6206cb9222914f2ec6ab9d0b414705c54",  # v0.0.3
+    commit = "d34a18eba211bd65b32a4a7a06390fc441257cbd",  # v0.1.0
     importpath = "github.com/libp2p/go-eventbus",
 )
 
@@ -1130,7 +1130,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "ec88cc4d1d143cad98308da54b73d0cdb04254eb",
+    commit = "a6479422943a734f4a0ba2729095fb20c6a233b2",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1219,7 +1219,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_go_cmp",
-    commit = "6f77996f0c42f7b84e5a2b252227263f93432e9b",  # v0.3.0
+    commit = "2d0692c2e9617365a95b295612ac0d4415ba4627",  # v0.3.1
     importpath = "github.com/google/go-cmp",
 )
 
@@ -1282,5 +1282,18 @@ go_repository(
 go_repository(
     name = "com_github_willf_bitset",
     commit = "77892cd8d53fa6524772426bc444dd2e3b4fb18f",
-    importpath = "github.com/willf/bitset",
+    imporpath = "github.com/willf/bitset",
+)
+
+go_repository(
+    name = "com_github_cloudflare_roughtime",
+    commit = "6b7e31ac9cb2d6048096585d2e8563ee60b28f84",
+    importpath = "github.com/cloudflare/roughtime",
+)
+
+go_repository(
+    name = "com_googlesource_roughtime_roughtime_git",
+    build_file_generation = "on",
+    commit = "51f6971f5f06ec101e5fbcabe5a49477708540f3",
+    importpath = "roughtime.googlesource.com/roughtime.git",
 )

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"os"
 	"path"
 	"sync"
@@ -8,11 +9,44 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "beacondb")
+
+// Database defines the necessary methods for Prysm's eth2 backend which may
+// be implemented by any key-value or relational database in practice.
+type Database interface {
+	ClearDB() error
+	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
+	HasAttestation(ctx context.Context, attRoot [32]byte) bool
+	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
+	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
+	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
+	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
+	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
+	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
+	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
+	HasBlock(ctx context.Context, blockRoot [32]byte) bool
+	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
+	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
+	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
+	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
+	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
+	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
+	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
+	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
+	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
+	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
+}
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,

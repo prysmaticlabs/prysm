@@ -52,10 +52,6 @@ var (
 		Name: "regsync_sent_state",
 		Help: "The number of sent state",
 	})
-	attestationReq = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "regsync_attestation_req",
-		Help: "The number of received attestation requests",
-	})
 	recAttestation = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "regsync_received_attestation",
 		Help: "The number of received attestations",

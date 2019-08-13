@@ -27,13 +27,6 @@ import (
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
-func init() {
-	// TODO(2993): remove this after ssz is optimized for mainnet.
-	c := params.BeaconConfig()
-	c.HistoricalRootsLimit = 8192
-	params.OverrideBeaconConfig(c)
-}
-
 func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) (*ethpb.BeaconBlock, error) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
@@ -211,7 +204,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -298,7 +291,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -389,7 +382,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -464,7 +457,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -534,7 +527,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -728,7 +721,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -941,7 +934,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
