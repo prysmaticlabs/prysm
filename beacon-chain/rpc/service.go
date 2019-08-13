@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	sync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated_sync"
+	sync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"

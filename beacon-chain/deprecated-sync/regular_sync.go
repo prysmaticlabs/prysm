@@ -1,5 +1,5 @@
 // Package sync defines the utilities for the beacon-chain to sync with the network.
-package deprecated_sync
+package deprecated-sync
 
 import (
 	"bytes"

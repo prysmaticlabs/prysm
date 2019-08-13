@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated_sync"
+	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"

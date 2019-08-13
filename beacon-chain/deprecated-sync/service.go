@@ -1,11 +1,11 @@
-package deprecated_sync
+package deprecated-sync
 
 import (
 	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated_sync/initial-sync"
+	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/sirupsen/logrus"
 )
