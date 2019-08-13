@@ -84,7 +84,7 @@ func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethp
 	return nil
 }
 
-func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
