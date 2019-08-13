@@ -25,13 +25,13 @@ const (
 	Root FilterType = 0
 	// ParentRoot defines a filter for parent roots of blocks using Simple Serialize (SSZ).
 	ParentRoot FilterType = 1
-	// StartSlot is used for range filters of objects by their slot.
+	// StartSlot is used for range filters of objects by their slot (inclusive).
 	StartSlot FilterType = 2
-	// EndSlot is used for range filters of objects by their slot.
+	// EndSlot is used for range filters of objects by their slot (inclusive).
 	EndSlot FilterType = 3
-	// StartEpoch is used for range filters of objects by their epoch.
+	// StartEpoch is used for range filters of objects by their epoch (inclusive).
 	StartEpoch FilterType = 4
-	// EndEpoch is used for range filters of objects by their epoch.
+	// EndEpoch is used for range filters of objects by their epoch (inclusive).
 	EndEpoch FilterType = 5
 	// Shard is used for filtering data by shard index.
 	Shard FilterType = 6
