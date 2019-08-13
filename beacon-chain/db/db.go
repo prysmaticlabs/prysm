@@ -39,7 +39,7 @@ type Database interface {
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
