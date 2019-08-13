@@ -33,6 +33,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		c := bkt.Cursor()
+		// TODO: Use indices here.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if v != nil && (!hasFilterSpecified || ensureAttestationFilterCriteria(k, f)) {
 				att := &ethpb.Attestation{}
@@ -54,6 +55,7 @@ func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		exists = bkt.Get(attRoot[:]) != nil
+		return nil
 	})
 	return exists
 }
@@ -62,13 +64,8 @@ func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
 func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(attRoot[:]); k != nil && bytes.Contains(k, attRoot[:]); k, v = c.Next() {
-			if v != nil {
-				return bkt.Delete(k)
-			}
-		}
-		return nil
+		// TODO(#3018): Also delete the keys from the indices list. Add delete attestations batch.
+		return bkt.Delete(attRoot[:])
 	})
 }
 
@@ -84,6 +81,11 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
+		// Do not save if already saved.
+		if bkt.Get(root[:]) != nil {
+			return nil
+		}
+
 		shardKey := append(attestationShardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...)
 		shardRoots := bkt.Get(shardKey)
 		if shardRoots == nil {
@@ -108,45 +110,38 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		if err != nil {
 			return err
 		}
-		key, err := generateAttestationKey(atts[i])
+		key, err := ssz.SigningRoot(atts[i])
 		if err != nil {
 			return err
 		}
 		encodedValues[i] = enc
-		keys[i] = key
+		keys[i] = key[:]
 	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(attestationsBucket)
+		bkt := tx.Bucket(attestationsBucket)
 		for i := 0; i < len(atts); i++ {
-			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
+			// Do not save if already saved.
+			if bkt.Get(keys[i]) != nil {
+				return nil
+			}
+
+			shardKey := append(attestationShardIdx, uint64ToBytes(atts[i].Data.Crosslink.Shard)...)
+			shardRoots := bkt.Get(shardKey)
+			if shardRoots == nil {
+				if err := bkt.Put(shardKey, keys[i]); err != nil {
+					return err
+				}
+			} else {
+				if err := bkt.Put(shardKey, append(shardRoots, keys[i]...)); err != nil {
+					return err
+				}
+			}
+			if err := bkt.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
-}
-
-func generateAttestationKey(att *ethpb.Attestation) ([]byte, error) {
-	buf := make([]byte, 0)
-	buf = append(buf, []byte("shard")...)
-	buf = append(buf, uint64ToBytes(att.Data.Crosslink.Shard)...)
-
-	buf = append(buf, []byte("parent-root")...)
-	buf = append(buf, att.Data.Crosslink.ParentRoot...)
-
-	buf = append(buf, []byte("start-epoch")...)
-	buf = append(buf, uint64ToBytes(att.Data.Crosslink.StartEpoch)...)
-
-	buf = append(buf, []byte("end-epoch")...)
-	buf = append(buf, uint64ToBytes(att.Data.Crosslink.EndEpoch)...)
-
-	buf = append(buf, []byte("root")...)
-	attRoot, err := ssz.HashTreeRoot(att)
-	if err != nil {
-		return nil, err
-	}
-	buf = append(buf, attRoot[:]...)
-	return buf, nil
 }
 
 // ensureAttestationFilterCriteria uses a set of specified filters
