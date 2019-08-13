@@ -16,6 +16,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -68,6 +69,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
