@@ -22,7 +22,7 @@ func TestQueryFilter_ChainsCorrectly(t *testing.T) {
 		case EndSlot:
 			t.Log(v.(uint64))
 		case ParentRoot:
-			t.Log(v.([32]byte))
+			t.Log(v.([]byte))
 		case Shard:
 			t.Log(v.(uint64))
 		default:
