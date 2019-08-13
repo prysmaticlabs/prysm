@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"reflect"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -46,15 +47,41 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 }
 
 // Blocks retrieves a list of beacon blocks by filter criteria.
-// TODO(#3164): Implement.
 func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error) {
-	return nil, nil
+	blocks := make([]*ethpb.BeaconBlock, 0)
+	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{}) && f != nil
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		c := bkt.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			if v != nil && (!hasFilterSpecified || ensureAttestationFilterCriteria(k, f)) {
+				block := &ethpb.BeaconBlock{}
+				if err := proto.Unmarshal(v, block); err != nil {
+					return err
+				}
+				blocks = append(blocks, block)
+			}
+		}
+		return nil
+	})
+	return blocks, err
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
-// TODO(#3164): Implement.
 func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
-	return nil, nil
+	blocks, err := k.Blocks(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	roots := make([][]byte, len(blocks))
+	for i, b := range blocks {
+		root, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return nil, err
+		}
+		roots[i] = root[:]
+	}
+	return roots, nil
 }
 
 // HasBlock checks if a block by root exists in the db.
