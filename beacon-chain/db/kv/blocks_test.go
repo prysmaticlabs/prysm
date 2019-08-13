@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_BlocksCRUD(t *testing.T) {
@@ -48,12 +49,15 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	defer teardownDB(t, db)
 	blocks := []*ethpb.BeaconBlock{
 		{
+			Slot:       0,
 			ParentRoot: []byte("parent"),
 		},
 		{
+			Slot:       params.BeaconConfig().SlotsPerEpoch * 2,
 			ParentRoot: []byte("parent2"),
 		},
 		{
+			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 			ParentRoot: []byte("parent3"),
 		},
 	}
@@ -67,6 +71,65 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		expectedNumBlocks int
 	}{
 		{
+			// Slot range filter cases.
+			filter: filters.NewFilter().
+				SetStartSlot(0).
+				SetEndSlot(params.BeaconConfig().SlotsPerEpoch),
+			expectedNumBlocks: 1,
+		},
+		{
+			filter: filters.NewFilter().
+				SetStartSlot(0).
+				SetEndSlot(params.BeaconConfig().SlotsPerEpoch * 2),
+			expectedNumBlocks: 2,
+		},
+		{
+			filter: filters.NewFilter().
+				SetStartSlot(params.BeaconConfig().SlotsPerEpoch * 2).
+				SetEndSlot(params.BeaconConfig().SlotsPerEpoch * 2),
+			expectedNumBlocks: 1,
+		},
+		{
+			filter: filters.NewFilter().
+				SetStartSlot(params.BeaconConfig().SlotsPerEpoch * 2).
+				SetEndSlot(params.BeaconConfig().SlotsPerEpoch * 3),
+			expectedNumBlocks: 2,
+		},
+		{
+			// The following slot range should return all blocks.
+			filter: filters.NewFilter().
+				SetStartSlot(0).
+				SetEndSlot(params.BeaconConfig().SlotsPerEpoch * 3),
+			expectedNumBlocks: 3,
+		},
+		{
+			// Epoch range filters.
+			filter: filters.NewFilter().
+				SetStartEpoch(0).
+				SetEndEpoch(2),
+			expectedNumBlocks: 2,
+		},
+		{
+			filter: filters.NewFilter().
+				SetStartEpoch(0).
+				SetEndEpoch(3),
+			expectedNumBlocks: 3,
+		},
+		{
+			filter: filters.NewFilter().
+				SetStartEpoch(3).
+				SetEndEpoch(3),
+			expectedNumBlocks: 1,
+		},
+		{
+			// No blocks should match a filter that has an end epoch < start epoch.
+			filter: filters.NewFilter().
+				SetStartEpoch(3).
+				SetEndEpoch(0),
+			expectedNumBlocks: 0,
+		},
+		{
+			// A simple parent root filter should return a single matching block.
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
 			expectedNumBlocks: 1,
 		},
