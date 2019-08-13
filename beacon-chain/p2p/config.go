@@ -1,5 +1,7 @@
 package p2p
 
+// Config for the p2p service. These parameters are set from application level flags
+// to initialize the p2p service..
 type Config struct {
 	NoDiscovery       bool
 	StaticPeers       []string
