@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -36,7 +35,6 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 			roots := bkt.Get(k)
 			rootSets = append(rootSets, roots)
 		}
-		fmt.Println(rootSets)
 		idx := 0
 		for i := 0; i < len(roots); i += 32 {
 			encoded := bkt.Get(roots[idx : idx+32])
