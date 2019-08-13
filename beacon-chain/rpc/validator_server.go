@@ -139,11 +139,12 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
 
-	// Advance state with empty transitions up to the requested slot.
-	slotsToAdvance := req.EpochStart * params.BeaconConfig().SlotsPerEpoch
-	s, err = state.ProcessSlots(ctx, s, slotsToAdvance)
-	if err != nil {
-		return nil, fmt.Errorf("could not process slots up to %d", slotsToAdvance)
+	// Advance state with empty transitions up to the requested epoch start slot.
+	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
+		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", epochStartSlot)
+		}
 	}
 
 	validatorIndexMap := stateutils.ValidatorIndexMap(s)

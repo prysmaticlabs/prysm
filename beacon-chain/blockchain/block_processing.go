@@ -183,7 +183,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+	if err := c.attsService.BatchUpdateLatestAttestations(ctx, block.Body.Attestations); err != nil {
 		return errors.Wrap(err, "failed to update latest attestation for store")
 	}
 

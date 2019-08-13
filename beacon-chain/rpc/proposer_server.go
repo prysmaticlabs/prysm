@@ -210,7 +210,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	eth1VotingPeriodStartTime := ps.powChainService.ETH2GenesisTime()
+	eth1VotingPeriodStartTime, _ := ps.powChainService.ETH2GenesisTime()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
@@ -252,34 +252,23 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
-	bNum := ps.powChainService.LatestBlockHeight()
-	if bNum == nil {
-		return nil, errors.New("latest PoW block number is unknown")
-	}
-	// Only request deposits that have passed the ETH1 follow distance window.
-	subbedBnum := big.NewInt(0).Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	allDeps := ps.beaconDB.DepositCache.AllDeposits(ctx, subbedBnum)
-	if len(allDeps) == 0 {
-		return nil, nil
-	}
-
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
-	latestEth1DataHeight, err := ps.latestEth1Height(ctx, beaconState, currentVote)
+	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
 	}
-	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
-	// If this is more than the total number of deposits stored in our deposit cache, we return an error
-	upToEth1DataDeposits := ps.beaconDB.DepositCache.AllDeposits(ctx, latestEth1DataHeight)
-	if len(upToEth1DataDeposits) > len(allDeps) {
-		return nil, errors.Wrapf(err, "number of deposits referred to by the eth1data is more than the current "+
-			"number of deposits in the deposit cache. %d is more than %d", len(upToEth1DataDeposits), len(allDeps))
+
+	_, genesisEth1Block := ps.powChainService.ETH2GenesisTime()
+	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
+		return []*ethpb.Deposit{}, nil
 	}
+
+	upToEth1DataDeposits := ps.beaconDB.DepositCache.AllDeposits(ctx, latestEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
@@ -300,7 +289,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*depositcache.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex {
+		if uint64(dep.Index) >= beaconState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -323,28 +312,29 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	return pendingDeposits, nil
 }
 
-// latestEth1Height determines what the latest eth1Blockhash is by tallying the votes in the
-// beacon state
-func (ps *ProposerServer) latestEth1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
-	currentVote *ethpb.Eth1Data) (*big.Int, error) {
+// canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
+func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")
+		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")
 	}
+	var canonicalEth1Data *ethpb.Eth1Data
 	if hasSupport {
+		canonicalEth1Data = currentVote
 		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
 	} else {
+		canonicalEth1Data = beaconState.Eth1Data
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	}
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch eth1data height")
+		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
-	return latestEth1DataHeight, nil
+	return canonicalEth1Data, latestEth1DataHeight, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we

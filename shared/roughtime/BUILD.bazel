@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["roughtime.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/roughtime",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_cloudflare_roughtime//:go_default_library",
+        "@com_googlesource_roughtime_roughtime_git//go/config:go_default_library",
+    ],
+)

@@ -12,7 +12,7 @@ import (
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	s := &pb.BeaconState{
@@ -76,7 +76,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().HistoricalRootsLimit; i++ {
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -102,7 +102,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 			// Edge case where stateSlot is over slots per historical root and
 			// slot is not within (stateSlot - HistoricalRootsLimit, statSlot]
 			slot:        1,
-			stateSlot:   params.BeaconConfig().HistoricalRootsLimit + 2,
+			stateSlot:   params.BeaconConfig().SlotsPerHistoricalRoot + 2,
 			expectedErr: "slot out of bounds",
 		},
 	}

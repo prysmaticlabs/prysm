@@ -1546,7 +1546,7 @@ func setupFFGTest(t *testing.T) ([32]byte, *ethpb.BeaconBlock, *pb.BeaconState, 
 	}
 	gState := &pb.BeaconState{
 		Slot:              genesisSlot,
-		BlockRoots:        make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		RandaoMixes:       latestRandaoMixes,
 		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
