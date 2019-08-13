@@ -59,13 +59,13 @@ func (q *QueryFilter) Filters() map[FilterType]interface{} {
 }
 
 // SetRoot --
-func (q *QueryFilter) SetRoot(val [32]byte) *QueryFilter {
+func (q *QueryFilter) SetRoot(val []byte) *QueryFilter {
 	q.queries[Root] = val
 	return q
 }
 
 // SetParentRoot --
-func (q *QueryFilter) SetParentRoot(val [32]byte) *QueryFilter {
+func (q *QueryFilter) SetParentRoot(val []byte) *QueryFilter {
 	q.queries[ParentRoot] = val
 	return q
 }
