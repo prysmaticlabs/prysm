@@ -1,16 +1,29 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Block retrival by root.
-// TODO(#3164): Implement.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
-	return nil, nil
+	att := &ethpb.BeaconBlock{}
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		c := bkt.Cursor()
+		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
+			if v != nil {
+				return proto.Unmarshal(v, att)
+			}
+		}
+		return nil
+	})
+	return att, err
 }
 
 // HeadBlock returns the latest canonical block in eth2.
