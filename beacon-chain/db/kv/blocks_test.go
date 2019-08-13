@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -39,5 +40,54 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 	if db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to have been deleted from the db")
+	}
+}
+
+func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	blocks := []*ethpb.BeaconBlock{
+		{
+			ParentRoot: []byte("parent"),
+		},
+		{
+			ParentRoot: []byte("parent2"),
+		},
+		{
+			ParentRoot: []byte("parent3"),
+		},
+	}
+	ctx := context.Background()
+	if err := db.SaveBlocks(ctx, blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		filter            *filters.QueryFilter
+		expectedNumBlocks int
+	}{
+		{
+			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
+			expectedNumBlocks: 1,
+		},
+		{
+			// No specified filter should return all blocks.
+			filter:            nil,
+			expectedNumBlocks: 3,
+		},
+		{
+			// No block meets the criteria below.
+			filter:            filters.NewFilter().SetParentRoot([]byte{3, 4, 5}),
+			expectedNumBlocks: 0,
+		},
+	}
+	for _, tt := range tests {
+		retrievedBlocks, err := db.Blocks(ctx, tt.filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(retrievedBlocks) != tt.expectedNumBlocks {
+			t.Errorf("Expected %d blocks, received %d", tt.expectedNumBlocks, len(retrievedBlocks))
+		}
 	}
 }
