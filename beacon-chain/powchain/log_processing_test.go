@@ -402,8 +402,10 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      testAcc.Backend,
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
-		BlockFetcher:    &goodFetcher{},
+		BeaconDB: &db.BeaconDB{
+			DepositCache: depositcache.NewDepositCache(),
+		},
+		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
