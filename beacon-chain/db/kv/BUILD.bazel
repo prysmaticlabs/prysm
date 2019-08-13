@@ -29,6 +29,7 @@ go_test(
         "attestations_test.go",
         "blocks_test.go",
         "kv_test.go",
+        "state_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],
