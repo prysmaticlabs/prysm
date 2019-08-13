@@ -1,9 +1,8 @@
 package kv
 
 import (
-	"bytes"
 	"context"
-	"reflect"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -29,19 +28,24 @@ func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attes
 // Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	atts := make([]*ethpb.Attestation, 0)
-	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{}) && f != nil
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		c := bkt.Cursor()
-		// TODO: Use indices here.
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if v != nil && (!hasFilterSpecified || ensureAttestationFilterCriteria(k, f)) {
-				att := &ethpb.Attestation{}
-				if err := proto.Unmarshal(v, att); err != nil {
-					return err
-				}
-				atts = append(atts, att)
+		keys := createIndicesFromFilters(f)
+		rootSets := [][]byte{}
+		for _, k := range keys {
+			roots := bkt.Get(k)
+			rootSets = append(rootSets, roots)
+		}
+		fmt.Println(rootSets)
+		idx := 0
+		for i := 0; i < len(roots); i += 32 {
+			encoded := bkt.Get(roots[idx : idx+32])
+			att := &ethpb.Attestation{}
+			if err := proto.Unmarshal(encoded, att); err != nil {
+				return err
 			}
+			atts = append(atts, att)
+			idx += 32
 		}
 		return nil
 	})
@@ -144,40 +148,14 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	})
 }
 
-// ensureAttestationFilterCriteria uses a set of specified filters
-// to ensure the byte key used for db lookups contains the correct values
-// requested by the filter. For example, if a key looks like:
-// root-0x23923-parent-root-0x49349-start-epoch-3-end-epoch-4-shard-5
-// and our filter criteria wants the key to contain shard 5 and
-// start epoch 5, the key will NOT meet all the filter criteria and this
-// function will return false.
-func ensureAttestationFilterCriteria(key []byte, f *filters.QueryFilter) bool {
-	numCriteriaMet := 0
+func createIndicesFromFilters(f *filters.QueryFilter) [][]byte {
+	keys := make([][]byte, 0)
 	for k, v := range f.Filters() {
 		switch k {
-		case filters.Root:
-			root := v.([]byte)
-			if bytes.Contains(key, append([]byte("root"), root[:]...)) {
-				numCriteriaMet++
-			}
-		case filters.ParentRoot:
-			root := v.([]byte)
-			if bytes.Contains(key, append([]byte("parent-root"), root[:]...)) {
-				numCriteriaMet++
-			}
-		case filters.StartEpoch:
-			if bytes.Contains(key, append([]byte("start-epoch"), uint64ToBytes(v.(uint64))...)) {
-				numCriteriaMet++
-			}
-		case filters.EndEpoch:
-			if bytes.Contains(key, append([]byte("end-epoch"), uint64ToBytes(v.(uint64))...)) {
-				numCriteriaMet++
-			}
 		case filters.Shard:
-			if bytes.Contains(key, append([]byte("shard"), uint64ToBytes(v.(uint64))...)) {
-				numCriteriaMet++
-			}
+			idx := append(attestationShardIdx, uint64ToBytes(v.(uint64))...)
+			keys = append(keys, idx)
 		}
 	}
-	return numCriteriaMet == len(f.Filters())
+	return keys
 }
