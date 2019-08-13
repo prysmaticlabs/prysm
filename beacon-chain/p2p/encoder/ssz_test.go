@@ -1,24 +1,24 @@
-package ssz_test
+package encoder_test
 
 import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ssz "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder/ssz"
+	encoder "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
-	e := &ssz.SszNetworkEncoder{UseSnappyCompression: false}
+	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
 	testRoundTrip(t, e)
 }
 
 func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
-	e := &ssz.SszNetworkEncoder{UseSnappyCompression: true}
+	e := &encoder.SszNetworkEncoder{UseSnappyCompression: true}
 	testRoundTrip(t, e)
 }
 
-func testRoundTrip(t *testing.T, e *ssz.SszNetworkEncoder) {
+func testRoundTrip(t *testing.T, e *encoder.SszNetworkEncoder) {
 	msg := &testpb.TestSimpleMessage{
 		Foo: []byte("fooooo"),
 		Bar: 9001,
