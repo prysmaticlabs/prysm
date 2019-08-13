@@ -1,0 +1,65 @@
+package kv
+
+import (
+	"context"
+	"reflect"
+	"testing"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
+
+func TestState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	s := &pb.BeaconState{Slot: 100}
+	r := []byte{'A'}
+
+	if err := db.SaveState(context.Background(), s, r); err != nil {
+		t.Fatal(err)
+	}
+
+	savedS, err := db.State(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(s, savedS) {
+		t.Error("did not retrieve saved state")
+	}
+
+	savedS, err = db.State(context.Background(), []byte{'B'})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if savedS != nil {
+		t.Error("unsaved state should've been nil")
+	}
+}
+
+func TestHeadState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	s := &pb.BeaconState{Slot: 100}
+	headRoot := bytesutil.ToBytes32([]byte{'A'})
+
+	if err := db.SaveHeadBlockRoot(context.Background(), headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveState(context.Background(), s, headRoot[:]); err != nil {
+		t.Fatal(err)
+	}
+
+	savedHeadS, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(s, savedHeadS) {
+		t.Error("did not retrieve saved state")
+	}
+}
