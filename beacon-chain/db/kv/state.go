@@ -64,7 +64,7 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 	})
 }
 
-// creates state from marshalled proto state bytes.
+// creates state from marshaled proto state bytes.
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	err := proto.Unmarshal(enc, protoState)
