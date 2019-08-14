@@ -12,7 +12,7 @@ var _ = shared.Service(&RegularSync{})
 
 type RegularSync struct {
 	ctx context.Context
-	p2p *p2p.Service
+	p2p p2p.Composite
 }
 
 func (r *RegularSync) Start() {

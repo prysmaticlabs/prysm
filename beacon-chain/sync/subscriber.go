@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -45,7 +44,8 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 			}
 
 			go func() {
-				ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+				// TODO: This doesn't need such a short timeout.
+				ctx, cancel := context.WithTimeout(r.ctx, ttfbTimeout)
 				defer cancel()
 
 				b := msg.Data
@@ -61,7 +61,10 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 				}
 
 				if !v(ctx, n, r.p2p) {
-					//				log.WithField("topic", topic).WithField("message", n.String()).Debug("Message did not verify")
+					log.WithField("topic", topic).
+						WithField("message", n.String()).
+						Debug("Message did not verify")
+
 					// TODO: Increment metrics.
 					return
 				}
