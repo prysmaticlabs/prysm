@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 // Attestation retrieval by root.
@@ -29,19 +30,12 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	atts := make([]*ethpb.Attestation, 0)
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		keys := createIndicesFromFilters(f)
-		rootSets := [][][]byte{}
-		for _, k := range keys {
-			roots := bkt.Get(k)
-			splitRoots := [][]byte{}
-			for i := 0; i < len(roots); i += 32 {
-				splitRoots = append(splitRoots, roots[i:i+32])
-			}
-			rootSets = append(rootSets, splitRoots)
-		}
-		intersectedRoots := findRootsIntersection(rootSets)
-		for i := 0; i < len(intersectedRoots); i++ {
-			encoded := bkt.Get(intersectedRoots[i])
+		// Creates a list of indices from the passed in filter values, such as:
+
+		indices := createIndicesFromFilters(f)
+		keys := sliceutil.TotalIntersectionByteSlices(valuesForIndices(indices, bkt))
+		for i := 0; i < len(keys); i++ {
+			encoded := bkt.Get(keys[i])
 			att := &ethpb.Attestation{}
 			if err := proto.Unmarshal(encoded, att); err != nil {
 				return err
@@ -189,44 +183,15 @@ func createIndicesFromFilters(f *filters.QueryFilter) [][]byte {
 	return keys
 }
 
-func findRootsIntersection(rootSets [][][]byte) [][]byte {
-	if len(rootSets) == 0 {
-		return [][]byte{}
-	}
-	if len(rootSets) == 1 {
-		return rootSets[0]
-	}
-	intersected := intersection(rootSets[0], rootSets[1])
-	for i := 2; i < len(rootSets); i++ {
-		intersected = intersection(intersected, rootSets[i])
-	}
-	return intersected
-}
-
-func intersection(s1, s2 [][]byte) (inter [][]byte) {
-	hash := make(map[string]bool)
-	for _, e := range s1 {
-		hash[string(e)] = true
-	}
-	for _, e := range s2 {
-		// If elements present in the hashmap then append intersection list.
-		if hash[string(e)] {
-			inter = append(inter, e)
+func valuesForIndices(indices [][]byte, bkt *bolt.Bucket) [][][]byte {
+	values := make([][][]byte, 0)
+	for _, k := range indices {
+		roots := bkt.Get(k)
+		splitRoots := make([][]byte, 0)
+		for i := 0; i < len(roots); i += 32 {
+			splitRoots = append(splitRoots, roots[i:i+32])
 		}
+		values = append(values, splitRoots)
 	}
-	//Remove dups from slice.
-	inter = removeDups(inter)
-	return
-}
-
-//Remove dups from slice.
-func removeDups(elements [][]byte) (nodups [][]byte) {
-	encountered := make(map[string]bool)
-	for _, element := range elements {
-		if !encountered[string(element)] {
-			nodups = append(nodups, element)
-			encountered[string(element)] = true
-		}
-	}
-	return
+	return values
 }
