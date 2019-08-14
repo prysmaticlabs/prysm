@@ -12,12 +12,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-// Attestation retrieval by root.
-func (k *Store) Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error) {
+// Attestation retrieval by attestation data root.
+func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
 	att := &ethpb.Attestation{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		enc := bkt.Get(attRoot[:])
+		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
 			return nil
 		}
@@ -54,31 +54,31 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	return atts, err
 }
 
-// HasAttestation checks if an attestation by root exists in the db.
-func (k *Store) HasAttestation(ctx context.Context, attRoot [32]byte) bool {
+// HasAttestation checks if an attestation by its attestation data root exists in the db.
+func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		exists = bkt.Get(attRoot[:]) != nil
+		exists = bkt.Get(attDataRoot[:]) != nil
 		return nil
 	})
 	return exists
 }
 
-// DeleteAttestation by root.
+// DeleteAttestation by attestation data root.
 // TODO(#3018): Add the ability for batch deletions.
-func (k *Store) DeleteAttestation(ctx context.Context, attRoot [32]byte) error {
+func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		// TODO(#3018): Also delete the keys from the indices list. Add delete attestations batch.
-		return bkt.Delete(attRoot[:])
+		return bkt.Delete(attDataRoot[:])
 	})
 }
 
 // SaveAttestation to the db.
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	root, err := ssz.SigningRoot(att)
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		// Do not save if already saved.
-		if bkt.Get(root[:]) != nil {
+		if bkt.Get(attDataRoot[:]) != nil {
 			return nil
 		}
 		indices := [][]byte{
@@ -97,10 +97,10 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			append(parentRootIdx, att.Data.Crosslink.ParentRoot...),
 		}
 		indicesBkt := tx.Bucket(attestationIndicesBucket)
-		if err := updateIndices(indices, root[:], indicesBkt); err != nil {
+		if err := updateIndices(indices, attDataRoot[:], indicesBkt); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		return bkt.Put(root[:], enc)
+		return bkt.Put(attDataRoot[:], enc)
 	})
 }
 
@@ -113,7 +113,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		if err != nil {
 			return err
 		}
-		key, err := ssz.SigningRoot(atts[i])
+		key, err := ssz.HashTreeRoot(atts[i].Data)
 		if err != nil {
 			return err
 		}
