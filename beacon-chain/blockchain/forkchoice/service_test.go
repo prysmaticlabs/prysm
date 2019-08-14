@@ -10,19 +10,22 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_GensisStoreOk(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	genesisTime := uint64(9999)
 	genesisState := &pb.BeaconState{GenesisTime: genesisTime}
@@ -53,7 +56,7 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Error("Finalized check point from genesis store did not match")
 	}
 
-	b, err := store.db.Block(genesisBlkRoot)
+	b, err := store.db.Block(ctx, genesisBlkRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,21 +64,18 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Error("Incorrect genesis block saved from store")
 	}
 
-	s, err := store.db.CheckpointState(ctx, genesisCheckpt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(s, genesisState) {
-		t.Error("Incorrect genesis state saved from store")
+	if store.checkptBlkRoot[genesisCheckpt] != genesisBlkRoot {
+		t.Error("Incorrect genesis check point to block root saved from store")
 	}
 }
 
 func TestStore_AncestorOk(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -113,9 +113,10 @@ func TestStore_AncestorOk(t *testing.T) {
 func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -142,12 +143,12 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 }
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
-	helpers.ClearAllCaches()
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -171,15 +172,15 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		switch {
 		case i < 33:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[1]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
 				t.Fatal(err)
 			}
 		case i > 66:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[7]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
 				t.Fatal(err)
 			}
 		default:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[8]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[8]}); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -210,16 +211,18 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	children, err := store.db.ChildrenBlocksFromParent(roots[0], 0)
+	filter := filters.NewFilter().SetParentRoot(roots[0]).SetStartSlot(0)
+	children, err := store.db.BlockRoots(ctx, filter)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +230,8 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 		t.Error("Did not receive correct children roots")
 	}
 
-	children, err = store.db.ChildrenBlocksFromParent(roots[0], 2)
+	filter = filters.NewFilter().SetParentRoot(roots[0]).SetStartSlot(2)
+	children, err = store.db.BlockRoots(ctx, filter)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,9 +243,10 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 func TestStore_GetHead(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -258,9 +263,7 @@ func TestStore_GetHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	store.justifiedCheckpt.Root = roots[0]
-	if err := store.db.SaveCheckpointState(ctx, s, store.justifiedCheckpt); err != nil {
-		t.Fatal(err)
-	}
+	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
 
 	//    /- B1 (33 votes)
 	// B0           /- B5 - B7 (33 votes)
@@ -268,15 +271,15 @@ func TestStore_GetHead(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		switch {
 		case i < 33:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[1]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
 				t.Fatal(err)
 			}
 		case i > 66:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[7]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
 				t.Fatal(err)
 			}
 		default:
-			if err := store.db.SaveLatestMessage(ctx, uint64(i), &pb.LatestMessage{Root: roots[8]}); err != nil {
+			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[8]}); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -292,7 +295,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	// 1 validator switches vote to B7 to gain 34%, enough to switch head
-	if err := store.db.SaveLatestMessage(ctx, 50, &pb.LatestMessage{Root: roots[7]}); err != nil {
+	if err := store.db.SaveValidatorLatestVote(ctx, 50, &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
 		t.Fatal(err)
 	}
 	head, err = store.Head()
@@ -306,7 +309,7 @@ func TestStore_GetHead(t *testing.T) {
 	// 18 validators switches vote to B1 to gain 51%, enough to switch head
 	for i := 0; i < 18; i++ {
 		idx := 50 + uint64(i)
-		if err := store.db.SaveLatestMessage(ctx, idx, &pb.LatestMessage{Root: roots[1]}); err != nil {
+		if err := store.db.SaveValidatorLatestVote(ctx, idx, &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -323,9 +326,10 @@ func TestStore_GetHead(t *testing.T) {
 func TestStore_OnBlockErrors(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -333,11 +337,11 @@ func TestStore_OnBlockErrors(t *testing.T) {
 	}
 
 	randaomParentRoot := []byte{'a'}
-	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, randaomParentRoot); err != nil {
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randaomParentRoot)); err != nil {
 		t.Fatal(err)
 	}
 	validGenesisRoot := []byte{'g'}
-	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(validGenesisRoot)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -394,9 +398,10 @@ func TestStore_OnBlockErrors(t *testing.T) {
 func TestStore_OnAttestationErrors(t *testing.T) {
 	ctx := context.Background()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	kv := db.(*kv.Store)
+	defer internal.TeardownDB(t, kv)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, kv)
 
 	_, err := blockTree1(db)
 	if err != nil {
@@ -404,26 +409,26 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 	}
 
 	BlkWithOutState := &ethpb.BeaconBlock{}
-	if err := db.SaveBlock(BlkWithOutState); err != nil {
+	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
 	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
 
 	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
-	if err := db.SaveBlock(BlkWithStateBadAtt); err != nil {
+	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
 	BlkWithStateBadAttRoot, _ := ssz.SigningRoot(BlkWithStateBadAtt)
-	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot[:]); err != nil {
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
-	if err := db.SaveBlock(BlkWithValidState); err != nil {
+	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}
 	BlkWithValidStateRoot, _ := ssz.SigningRoot(BlkWithValidState)
-	if err := store.db.SaveForkChoiceState(ctx, &pb.BeaconState{
+	if err := store.db.SaveState(ctx, &pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -431,7 +436,7 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 		},
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}, BlkWithValidStateRoot[:]); err != nil {
+	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
 

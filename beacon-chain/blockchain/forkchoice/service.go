@@ -40,6 +40,7 @@ func NewForkChoiceService(ctx context.Context, db *db.Store) *Store {
 		ctx:    ctx,
 		cancel: cancel,
 		db:     db,
+		checkptBlkRoot: make(map[*ethpb.Checkpoint][32]byte),
 	}
 }
 
@@ -331,10 +332,10 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 	}
 
 	if helpers.IsEpochStart(postState.Slot) {
-		if err := saveValidatorIdx(postState, s.db); err != nil {
+		if err := saveValidatorIdx(s.ctx, postState, s.db); err != nil {
 			return errors.Wrap(err, "could not save validator index")
 		}
-		if err := deleteValidatorIdx(postState, s.db); err != nil {
+		if err := deleteValidatorIdx(s.ctx, postState, s.db); err != nil {
 			return errors.Wrap(err, "could not delete validator index")
 		}
 		logEpochData(postState)
