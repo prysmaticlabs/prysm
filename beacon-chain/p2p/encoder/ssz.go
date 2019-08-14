@@ -14,7 +14,8 @@ type SszNetworkEncoder struct {
 	UseSnappyCompression bool
 }
 
-// Encode the proto message to bytes.
+// Encode the proto message to bytes. This encoding prefixes the byte slice with a protobuf varint
+// to indicate the size of the message.
 func (e SszNetworkEncoder) Encode(msg proto.Message) ([]byte, error) {
 	if msg == nil {
 		return nil, nil
@@ -27,7 +28,7 @@ func (e SszNetworkEncoder) Encode(msg proto.Message) ([]byte, error) {
 	if e.UseSnappyCompression {
 		b = snappy.Encode(nil /*dst*/, b)
 	}
-	return b, nil
+	return append(proto.EncodeVarint(uint64(len(b))), b...), nil
 }
 
 // DecodeTo decodes the bytes to the protobuf message provided.

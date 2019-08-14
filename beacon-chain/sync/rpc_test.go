@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -23,6 +24,10 @@ func TestRegisterRPC(t *testing.T) {
 	wg.Add(1)
 	topic := "/testing/foobar"
 	handler := func(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+		m := msg.(*pb.TestSimpleMessage)
+		if !bytes.Equal(m.Foo, []byte("foo")) {
+			t.Errorf("Unexpected incoming message: %+v", m)
+		}
 		wg.Done()
 
 		return nil
@@ -34,8 +39,6 @@ func TestRegisterRPC(t *testing.T) {
 	if waitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")
 	}
-
-	t.Fail()
 }
 
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
