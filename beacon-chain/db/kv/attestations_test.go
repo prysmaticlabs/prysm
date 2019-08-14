@@ -96,40 +96,47 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		expectedNumAtt int
 	}{
 		{
-			filter:         filters.NewFilter().SetShard(5),
+			filter: filters.NewFilter().
+				SetShard(5),
 			expectedNumAtt: 3,
 		},
 		{
-			filter:         filters.NewFilter().SetShard(5).SetParentRoot(otherParentRoot[:]),
+			filter: filters.NewFilter().
+				SetShard(5).
+				SetParentRoot(otherParentRoot[:]),
 			expectedNumAtt: 1,
 		},
 		{
-			filter:         filters.NewFilter().SetShard(5).SetParentRoot(sameParentRoot[:]),
+			filter: filters.NewFilter().
+				SetShard(5).
+				SetParentRoot(sameParentRoot[:]),
 			expectedNumAtt: 2,
 		},
 		//{
 		//	filter:         filters.NewFilter().SetStartEpoch(1),
 		//	expectedNumAtt: 2,
 		//},
-		//{
-		//	filter:         filters.NewFilter().SetParentRoot([]byte("parent3")),
-		//	expectedNumAtt: 1,
-		//},
+		{
+			filter: filters.NewFilter().
+				SetParentRoot(otherParentRoot[:]),
+			expectedNumAtt: 1,
+		},
 		//{
 		//	// Only a single attestation in the list meets the composite filter criteria above.
 		//	filter:         filters.NewFilter().SetShard(5).SetStartEpoch(1),
 		//	expectedNumAtt: 1,
 		//},
-		//{
-		//	// No specified filter should return all attestations.
-		//	filter:         nil,
-		//	expectedNumAtt: 3,
-		//},
-		//{
-		//	// No attestation meets the criteria below.
-		//	filter:         filters.NewFilter().SetShard(1000),
-		//	expectedNumAtt: 0,
-		//},
+		{
+			// No specified filter should return all attestations.
+			filter:         nil,
+			expectedNumAtt: 3,
+		},
+		{
+			// No attestation meets the criteria below.
+			filter: filters.NewFilter().
+				SetShard(1000),
+			expectedNumAtt: 0,
+		},
 	}
 	for _, tt := range tests {
 		retrievedAtts, err := db.Attestations(ctx, tt.filter)

@@ -31,6 +31,19 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	atts := make([]*ethpb.Attestation, 0)
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
+
+		// If no filter criteria is specified, return all attestations.
+		if f == nil {
+			return bkt.ForEach(func(k, v []byte) error {
+				att := &ethpb.Attestation{}
+				if err := proto.Unmarshal(v, att); err != nil {
+					return err
+				}
+				atts = append(atts, att)
+				return nil
+			})
+		}
+
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("shard-5"), []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// attestation roots that were stored under each of those indices for O(1) lookup.
