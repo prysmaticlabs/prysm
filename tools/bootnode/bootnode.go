@@ -11,9 +11,14 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"flag"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/p2p/discv5"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
@@ -37,6 +42,9 @@ var (
 
 const dhtProtocol = "/prysm/0.0.0/dht"
 
+// ECDSACurve is the default ecdsa curve used
+var ECDSACurve = elliptic.P256()
+
 func main() {
 	flag.Parse()
 
@@ -45,6 +53,8 @@ func main() {
 	if *debug {
 		logging.SetDebugLogging()
 	}
+	nd := discv5.NewNode()
+	discv5.ListenUDP()
 
 	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
 	if err != nil {
@@ -55,7 +65,8 @@ func main() {
 		libp2p.ListenAddrs(listen),
 	}
 
-	opts = addPrivateKeyOpt(opts)
+	privKey := addPrivateKeyOpt(opts)
+	discv5.ListenUDP(privKey, conn)
 
 	ctx := context.Background()
 
@@ -84,19 +95,25 @@ func main() {
 	select {}
 }
 
-func addPrivateKeyOpt(opts []libp2p.Option) []libp2p.Option {
+func addPrivateKeyOpt(opts []libp2p.Option) *ecdsa.PrivateKey {
+	var privKey *ecdsa.PrivateKey
+	var err error
 	if *privateKey != "" {
 		b, err := crypto.ConfigDecodeKey(*privateKey)
 		if err != nil {
 			panic(err)
 		}
-		pk, err := crypto.UnmarshalPrivateKey(b)
+		privKey, err = x509.ParseECPrivateKey(b)
 		if err != nil {
 			panic(err)
 		}
-		opts = append(opts, libp2p.Identity(pk))
+
 	} else {
+		privKey, err = ecdsa.GenerateKey(ECDSACurve, rand.Reader)
+		if err != nil {
+			panic(err)
+		}
 		log.Warning("No private key was provided. Using default/random private key")
 	}
-	return opts
+	return privKey
 }
