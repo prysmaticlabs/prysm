@@ -35,7 +35,7 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockOperationService) HandleAttestations(_ context.Context, _ proto.Message) error {
+func (ms *mockOperationService) HandleAttestation(_ context.Context, _ proto.Message) error {
 	return nil
 }
 

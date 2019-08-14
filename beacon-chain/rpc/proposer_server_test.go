@@ -11,10 +11,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -458,18 +458,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
-	p := &mockPOWChainService{
-		latestBlockNumber: nil,
-	}
-	ps := ProposerServer{powChainService: p}
-
-	_, err := ps.deposits(context.Background(), &ethpb.Eth1Data{})
-	if err.Error() != "latest PoW block number is unknown" {
-		t.Errorf("Received unexpected error: %v", err)
-	}
-}
-
 func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	ctx := context.Background()
 
@@ -518,7 +506,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	eth1Height, err := bs.latestEth1Height(ctx, beaconState, &ethpb.Eth1Data{})
+	_, eth1Height, err := bs.canonicalEth1Data(ctx, beaconState, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +529,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{Eth1Data: vote},
 	}
 
-	eth1Height, err = bs.latestEth1Height(ctx, beaconState, vote)
+	_, eth1Height, err = bs.canonicalEth1Data(ctx, beaconState, vote)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,7 +574,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	var mockCreds [32]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
-	readyDeposits := []*db.DepositContainer{
+	readyDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Block: big.NewInt(1000),
@@ -609,7 +597,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	recentDeposits := []*db.DepositContainer{
+	recentDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 2,
 			Block: big.NewInt(4000),
@@ -645,10 +633,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -699,7 +687,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 	vote := &ethpb.Eth1Data{
 		BlockHash:    []byte("0x1"),
-		DepositCount: 3,
+		DepositCount: 7,
 	}
 	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
 		votes = append(votes, vote)
@@ -708,7 +696,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
-			DepositCount: 2,
+			DepositCount: 5,
 		},
 		Eth1DepositIndex: 1,
 		Eth1DataVotes:    votes,
@@ -721,7 +709,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	var mockCreds [32]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
-	readyDeposits := []*db.DepositContainer{
+	readyDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Block: big.NewInt(1000),
@@ -744,7 +732,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		},
 	}
 
-	recentDeposits := []*db.DepositContainer{
+	recentDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 2,
 			Block: big.NewInt(5000),
@@ -780,10 +768,10 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -831,7 +819,8 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte("0x0"),
+			BlockHash:    []byte("0x0"),
+			DepositCount: 100,
 		},
 		Eth1DepositIndex: 10,
 	}
@@ -842,7 +831,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
-	readyDeposits := []*db.DepositContainer{
+	readyDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
@@ -863,9 +852,9 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		},
 	}
 
-	var recentDeposits []*db.DepositContainer
+	var recentDeposits []*depositcache.DepositContainer
 	for i := 2; i < 16; i++ {
-		recentDeposits = append(recentDeposits, &db.DepositContainer{
+		recentDeposits = append(recentDeposits, &depositcache.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -889,10 +878,10 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -932,7 +921,8 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte("0x0"),
+			BlockHash:    []byte("0x0"),
+			DepositCount: 100,
 		},
 		Eth1DepositIndex: 2,
 	}
@@ -942,7 +932,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
-	readyDeposits := []*db.DepositContainer{
+	readyDeposits := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
@@ -963,9 +953,9 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		},
 	}
 
-	var recentDeposits []*db.DepositContainer
+	var recentDeposits []*depositcache.DepositContainer
 	for i := 2; i < 22; i++ {
-		recentDeposits = append(recentDeposits, &db.DepositContainer{
+		recentDeposits = append(recentDeposits, &depositcache.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -989,10 +979,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
@@ -1012,6 +1002,105 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(deposits),
 			int(params.BeaconConfig().MaxDeposits),
+		)
+	}
+}
+
+func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+	}
+	d := internal.SetupDB(t)
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash:    []byte("0x0"),
+			DepositCount: 5,
+		},
+		Eth1DepositIndex: 2,
+	}
+	if err := d.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
+	readyDeposits := []*depositcache.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	var recentDeposits []*depositcache.DepositContainer
+	for i := 2; i < 22; i++ {
+		recentDeposits = append(recentDeposits, &depositcache.DepositContainer{
+			Index: i,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte{byte(i)},
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		})
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+		}
+
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+	}
+	for _, dp := range recentDeposits {
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+	}
+
+	bs := &ProposerServer{
+		beaconDB:        d,
+		powChainService: p,
+		chainService:    newMockChainService(),
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deposits) != 3 {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: %d",
+			len(deposits),
+			3,
 		)
 	}
 }
@@ -1048,7 +1137,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*db.DepositContainer{
+	deps := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Block: big.NewInt(1000),
@@ -1075,7 +1164,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
 	for _, dp := range deps {
-		beaconDB.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		beaconDB.DepositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	powChainService := &mockPOWChainService{
@@ -1156,7 +1245,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
-	deposits := []*db.DepositContainer{
+	deposits := []*depositcache.DepositContainer{
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
@@ -1180,7 +1269,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	for i, dp := range deposits {
 		var root [32]byte
 		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
-		beaconDB.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
+		beaconDB.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
 	}
 	numOfVotes := 1000
 	for i := 0; i < numOfVotes; i++ {
@@ -1211,5 +1300,103 @@ func Benchmark_Eth1Data(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+		genesisEth1Block: height,
+	}
+	d := internal.SetupDB(t)
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash: []byte("0x0"),
+		},
+		Eth1DepositIndex: 2,
+	}
+	if err := d.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
+	readyDeposits := []*depositcache.DepositContainer{
+		{
+			Index: 0,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index: 1,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	var recentDeposits []*depositcache.DepositContainer
+	for i := 2; i < 22; i++ {
+		recentDeposits = append(recentDeposits, &depositcache.DepositContainer{
+			Index: i,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte{byte(i)},
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		})
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		if err := depositTrie.InsertIntoTrie(depositHash[:], int(dp.Index)); err != nil {
+			t.Fatalf("Unable to insert deposit into trie %v", err)
+		}
+
+		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+	}
+	for _, dp := range recentDeposits {
+		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+	}
+
+	bs := &ProposerServer{
+		beaconDB:        d,
+		powChainService: p,
+		chainService:    newMockChainService(),
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deposits) != 0 {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: 0",
+			len(deposits),
+		)
 	}
 }

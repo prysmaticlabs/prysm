@@ -21,7 +21,11 @@ func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *ethpb.Atte
 	if err != nil {
 		return err
 	}
-	hash := hashutil.Hash(encodedAtt)
+
+	hash, err := hashutil.HashProto(attestation.Data)
+	if err != nil {
+		return err
+	}
 
 	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
@@ -49,7 +53,7 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
 func (db *BeaconDB) DeleteAttestation(attestation *ethpb.Attestation) error {
-	hash, err := hashutil.HashProto(attestation)
+	hash, err := hashutil.HashProto(attestation.Data)
 	if err != nil {
 		return err
 	}
@@ -60,7 +64,7 @@ func (db *BeaconDB) DeleteAttestation(attestation *ethpb.Attestation) error {
 	})
 }
 
-// Attestation retrieves an attestation record from the db using its hash.
+// Attestation retrieves an attestation record from the db using the hash of attestation.data.
 func (db *BeaconDB) Attestation(hash [32]byte) (*ethpb.Attestation, error) {
 	var attestation *ethpb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
@@ -102,7 +106,7 @@ func (db *BeaconDB) Attestations() ([]*ethpb.Attestation, error) {
 	return attestations, err
 }
 
-// AttestationTarget retrieves an attestation target record from the db using its hash.
+// AttestationTarget retrieves an attestation target record from the db using the hash of attestation.data.
 func (db *BeaconDB) AttestationTarget(hash [32]byte) (*pb.AttestationTarget, error) {
 	var attTgt *pb.AttestationTarget
 	err := db.view(func(tx *bolt.Tx) error {

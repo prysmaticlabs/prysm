@@ -984,7 +984,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 		int(beaconState.Eth1DepositIndex),
 		deposit.Proof,
 	); !ok {
-		fmt.Printf("deposit index %d\n", beaconState.Eth1DepositIndex)
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,

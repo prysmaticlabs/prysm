@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -25,10 +26,12 @@ func TestG2CompressedHash(t *testing.T) {
 
 	for i, tt := range test.TestCases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
+			b := make([]byte, 8)
+			binary.BigEndian.PutUint64(b, tt.Input.Domain)
 
 			projective := bls.HashG2WithDomain(
 				bytesutil.ToBytes32(tt.Input.Message),
-				tt.Input.Domain,
+				bytesutil.ToBytes8(b),
 			)
 			hash := bls.CompressG2(projective.ToAffine())
 
