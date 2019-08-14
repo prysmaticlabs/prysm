@@ -114,8 +114,8 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 }
 
 func TestProcessingBatchedBlocks_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
@@ -166,8 +166,8 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	setUpGenesisStateAndBlock(db, t)
 	ctx := context.Background()
 
