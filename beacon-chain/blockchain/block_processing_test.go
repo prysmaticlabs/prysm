@@ -54,8 +54,8 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 }
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -101,8 +101,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -194,8 +194,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -278,8 +278,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -363,8 +363,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -442,8 +442,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
@@ -509,8 +509,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -705,8 +705,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// we process F, the G. The expected behavior is that we load the historical
 	// state from slot 3 where the common ancestor block C is present.
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -915,8 +915,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 }
 
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -1005,8 +1005,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 }
 
 func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(2)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
@@ -1048,8 +1048,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(1)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	var validators []*ethpb.Validator
@@ -1084,8 +1084,8 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(100)
 
 	// Tried to insert 5 active indices to DB with only 3 validators in state

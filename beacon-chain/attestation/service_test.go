@@ -26,8 +26,8 @@ func init() {
 var _ = TargetHandler(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -98,8 +98,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -140,8 +140,8 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 }
 
 func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
@@ -163,8 +163,8 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 }
 
 func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -215,9 +215,9 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
+	beaconDB := internal.SetupDBDeprecated(t)
 	hook := logTest.NewGlobal()
-	defer internal.TeardownDB(t, beaconDB)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -266,8 +266,8 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 }
 
 func TestBatchUpdate_FromSync(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -321,8 +321,8 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
