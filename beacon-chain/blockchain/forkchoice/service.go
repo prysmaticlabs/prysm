@@ -22,6 +22,8 @@ import (
 
 var log = logrus.WithField("prefix", "forkchoice")
 
+// Store represents a service struct that handles the forkchoice
+// logic of managing the full PoS beacon chain.
 type Store struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -33,6 +35,8 @@ type Store struct {
 	checkptBlkRoot     map[*ethpb.Checkpoint][32]byte
 }
 
+// NewForkChoiceService instantiates a new service instance that will
+// be registered into a running beacon node.
 func NewForkChoiceService(ctx context.Context, db *db.Store) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 
