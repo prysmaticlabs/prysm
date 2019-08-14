@@ -74,6 +74,9 @@ type BeaconDB struct {
 
 	// Beacon chain deposits in memory.
 	DepositCache *depositcache.DepositCache
+
+	// Parent block root to children block roots.
+	blockChildrenRoots map[[32]byte][][]byte
 }
 
 // Close closes the underlying boltdb database.
@@ -119,10 +122,13 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
+	db.blockChildrenRoots = make(map[[32]byte][][]byte)
+
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
-			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
+			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket,
+			latestMessageBucket, checkpointBucket, forkChoiceStateBucket)
 	}); err != nil {
 		return nil, err
 	}
