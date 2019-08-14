@@ -174,15 +174,20 @@ func IsInInt64(a int64, b []int64) bool {
 	return false
 }
 
-// IntersectionByteSlices returns the common elements between two
-// sets of byte slices.
-func IntersectionByteSlices(s1, s2 [][]byte) [][]byte {
+// IntersectionByteSlices returns the common elements between sets of byte slices.
+func IntersectionByteSlices(s ...[][]byte) [][]byte {
+	if len(s) == 0 {
+		return [][]byte{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
 	hash := make(map[string]bool)
-	for _, e := range s1 {
+	for _, e := range s[0] {
 		hash[string(e)] = true
 	}
 	inter := make([][]byte, 0)
-	for _, e := range s2 {
+	for _, e := range s[1] {
 		if hash[string(e)] {
 			inter = append(inter, e)
 		}
@@ -196,22 +201,27 @@ func IntersectionByteSlices(s1, s2 [][]byte) [][]byte {
 			encountered[string(element)] = true
 		}
 	}
+	for i := 2; i < len(s); i++ {
+		hash := make(map[string]bool)
+		for _, e := range deduped {
+			hash[string(e)] = true
+		}
+		inter := make([][]byte, 0)
+		for _, e := range s[i] {
+			if hash[string(e)] {
+				inter = append(inter, e)
+			}
+		}
+		tmp := make([][]byte, 0)
+		// Remove duplicates from slice.
+		encountered := make(map[string]bool)
+		for _, element := range inter {
+			if !encountered[string(element)] {
+				tmp = append(tmp, element)
+				encountered[string(element)] = true
+			}
+		}
+		deduped = tmp
+	}
 	return deduped
-}
-
-// TotalIntersectionByteSlices takes in a set of byte slices
-// and determines the intersection of common elements across all of them,
-// returning a single slice of byte slices.
-func TotalIntersectionByteSlices(sets [][][]byte) [][]byte {
-	if len(sets) == 0 {
-		return [][]byte{}
-	}
-	if len(sets) == 1 {
-		return sets[0]
-	}
-	intersected := IntersectionByteSlices(sets[0], sets[1])
-	for i := 2; i < len(sets); i++ {
-		intersected = IntersectionByteSlices(intersected, sets[i])
-	}
-	return intersected
 }
