@@ -10,24 +10,17 @@
 package main
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"flag"
 	"fmt"
+	"net"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
-	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
-	protocol "github.com/libp2p/go-libp2p-protocol"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	_ "go.uber.org/automaxprocs"
 )
@@ -53,49 +46,30 @@ func main() {
 	if *debug {
 		logging.SetDebugLogging()
 	}
-	nd := discv5.NewNode()
-	discv5.ListenUDP()
 
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
+	privKey := addPrivateKeyOpt()
+	udpAddr := &net.UDPAddr{
+		IP:   net.ParseIP("0.0.0.0"),
+		Port: *port,
+	}
+	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
-		log.Fatalf("Failed to construct new multiaddress. %v", err)
+		log.Fatal(err)
 	}
 
-	opts := []libp2p.Option{
-		libp2p.ListenAddrs(listen),
-	}
-
-	privKey := addPrivateKeyOpt(opts)
-	discv5.ListenUDP(privKey, conn)
-
-	ctx := context.Background()
-
-	host, err := libp2p.New(ctx, opts...)
+	network, err := discv5.ListenUDP(privKey, conn, "", nil)
 	if err != nil {
-		log.Fatalf("Failed to create new host. %v", err)
+		log.Fatal(err)
 	}
 
-	dopts := []dhtopts.Option{
-		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-		dhtopts.Protocols(
-			protocol.ID(dhtProtocol),
-		),
-	}
+	node := network.Self()
 
-	dht, err := kaddht.New(ctx, host, dopts...)
-	if err != nil {
-		log.Fatalf("Failed to create new dht: %v", err)
-	}
-	if err := dht.Bootstrap(context.Background()); err != nil {
-		log.Fatalf("Failed to bootstrap DHT. %v", err)
-	}
-
-	fmt.Printf("Running bootnode: /ip4/0.0.0.0/tcp/%d/p2p/%s\n", *port, host.ID().Pretty())
+	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/p2p/%s\n", node.IP.String(), node.UDP, node.ID.String())
 
 	select {}
 }
 
-func addPrivateKeyOpt(opts []libp2p.Option) *ecdsa.PrivateKey {
+func addPrivateKeyOpt() *ecdsa.PrivateKey {
 	var privKey *ecdsa.PrivateKey
 	var err error
 	if *privateKey != "" {
