@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -74,4 +75,12 @@ func (s *Service) Status() error {
 		return errors.New("not running")
 	}
 	return nil
+}
+
+func (s *Service) Encoding() encoder.NetworkEncoding {
+	return nil
+}
+
+func (s *Service) PubSub() *pubsub.PubSub {
+	return s.pubsub
 }
