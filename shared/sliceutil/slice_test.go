@@ -225,3 +225,49 @@ func TestIsInInt64(t *testing.T) {
 		}
 	}
 }
+
+func TestIntersectionByteSlices(t *testing.T) {
+	testCases := []struct {
+		a      [][]byte
+		b      [][]byte
+		result [][]byte
+	}{
+		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}, {4, 5}}, [][]byte{{4, 5}}},
+		// Ensure duplicate elements are moved in the resulting set.
+		{[][]byte{{1, 2, 3}, {4, 5}, {4, 5}}, [][]byte{{1, 2}, {4, 5}, {4, 5}}, [][]byte{{4, 5}}},
+		// Ensure no intersection returns an empty set.
+		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}}, [][]byte{}},
+		//  Intersection between A and A should return A.
+		{[][]byte{{1, 2}}, [][]byte{{1, 2}}, [][]byte{{1, 2}}},
+	}
+	for _, tt := range testCases {
+		result := IntersectionByteSlices(tt.a, tt.b)
+		if !reflect.DeepEqual(result, tt.result) {
+			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
+				tt.a, tt.b, result, tt.result)
+		}
+	}
+}
+
+func TestTotalIntersectionByteSlices(t *testing.T) {
+	testCases := []struct {
+		a      [][]byte
+		b      [][]byte
+		result [][]byte
+	}{
+		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}, {4, 5}}, [][]byte{{4, 5}}},
+		// Ensure duplicate elements are moved in the resulting set.
+		{[][]byte{{1, 2, 3}, {4, 5}, {4, 5}}, [][]byte{{1, 2}, {4, 5}, {4, 5}}, [][]byte{{4, 5}}},
+		// Ensure no intersection returns an empty set.
+		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}}, [][]byte{}},
+		//  Intersection between A and A should return A.
+		{[][]byte{{1, 2}}, [][]byte{{1, 2}}, [][]byte{{1, 2}}},
+	}
+	for _, tt := range testCases {
+		result := IntersectionByteSlices(tt.a, tt.b)
+		if !reflect.DeepEqual(result, tt.result) {
+			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
+				tt.a, tt.b, result, tt.result)
+		}
+	}
+}
