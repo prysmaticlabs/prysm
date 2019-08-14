@@ -30,20 +30,23 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		keys := createIndicesFromFilters(f)
-		rootSets := [][]byte{}
+		rootSets := [][][]byte{}
 		for _, k := range keys {
 			roots := bkt.Get(k)
-			rootSets = append(rootSets, roots)
+			splitRoots := [][]byte{}
+			for i := 0; i < len(roots); i += 32 {
+				splitRoots = append(splitRoots, roots[i:i+32])
+			}
+			rootSets = append(rootSets, splitRoots)
 		}
-		idx := 0
-		for i := 0; i < len(roots); i += 32 {
-			encoded := bkt.Get(roots[idx : idx+32])
+		intersectedRoots := findRootsIntersection(rootSets)
+		for i := 0; i < len(intersectedRoots); i++ {
+			encoded := bkt.Get(intersectedRoots[i])
 			att := &ethpb.Attestation{}
 			if err := proto.Unmarshal(encoded, att); err != nil {
 				return err
 			}
 			atts = append(atts, att)
-			idx += 32
 		}
 		return nil
 	})
@@ -88,7 +91,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			return nil
 		}
 
-		shardKey := append(attestationShardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...)
+		shardKey := append(shardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...)
 		shardRoots := bkt.Get(shardKey)
 		if shardRoots == nil {
 			if err := bkt.Put(shardKey, root[:]); err != nil {
@@ -96,6 +99,18 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			}
 		} else {
 			if err := bkt.Put(shardKey, append(shardRoots, root[:]...)); err != nil {
+				return err
+			}
+		}
+
+		parentRootKey := append(parentRootIdx, att.Data.Crosslink.ParentRoot...)
+		parentRoots := bkt.Get(parentRootKey)
+		if parentRoots == nil {
+			if err := bkt.Put(parentRootKey, root[:]); err != nil {
+				return err
+			}
+		} else {
+			if err := bkt.Put(parentRootKey, append(parentRoots, root[:]...)); err != nil {
 				return err
 			}
 		}
@@ -127,7 +142,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 				return nil
 			}
 
-			shardKey := append(attestationShardIdx, uint64ToBytes(atts[i].Data.Crosslink.Shard)...)
+			shardKey := append(shardIdx, uint64ToBytes(atts[i].Data.Crosslink.Shard)...)
 			shardRoots := bkt.Get(shardKey)
 			if shardRoots == nil {
 				if err := bkt.Put(shardKey, keys[i]); err != nil {
@@ -135,6 +150,18 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 				}
 			} else {
 				if err := bkt.Put(shardKey, append(shardRoots, keys[i]...)); err != nil {
+					return err
+				}
+			}
+
+			parentRootKey := append(parentRootIdx, atts[i].Data.Crosslink.ParentRoot...)
+			parentRoots := bkt.Get(parentRootKey)
+			if parentRoots == nil {
+				if err := bkt.Put(parentRootKey, keys[i]); err != nil {
+					return err
+				}
+			} else {
+				if err := bkt.Put(parentRootKey, append(parentRoots, keys[i]...)); err != nil {
 					return err
 				}
 			}
@@ -151,9 +178,55 @@ func createIndicesFromFilters(f *filters.QueryFilter) [][]byte {
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.Shard:
-			idx := append(attestationShardIdx, uint64ToBytes(v.(uint64))...)
+			idx := append(shardIdx, uint64ToBytes(v.(uint64))...)
+			keys = append(keys, idx)
+		case filters.ParentRoot:
+			parentRoot := v.([]byte)
+			idx := append(parentRootIdx, parentRoot...)
 			keys = append(keys, idx)
 		}
 	}
 	return keys
+}
+
+func findRootsIntersection(rootSets [][][]byte) [][]byte {
+	if len(rootSets) == 0 {
+		return [][]byte{}
+	}
+	if len(rootSets) == 1 {
+		return rootSets[0]
+	}
+	intersected := intersection(rootSets[0], rootSets[1])
+	for i := 2; i < len(rootSets); i++ {
+		intersected = intersection(intersected, rootSets[i])
+	}
+	return intersected
+}
+
+func intersection(s1, s2 [][]byte) (inter [][]byte) {
+	hash := make(map[string]bool)
+	for _, e := range s1 {
+		hash[string(e)] = true
+	}
+	for _, e := range s2 {
+		// If elements present in the hashmap then append intersection list.
+		if hash[string(e)] {
+			inter = append(inter, e)
+		}
+	}
+	//Remove dups from slice.
+	inter = removeDups(inter)
+	return
+}
+
+//Remove dups from slice.
+func removeDups(elements [][]byte) (nodups [][]byte) {
+	encountered := make(map[string]bool)
+	for _, element := range elements {
+		if !encountered[string(element)] {
+			nodups = append(nodups, element)
+			encountered[string(element)] = true
+		}
+	}
+	return
 }

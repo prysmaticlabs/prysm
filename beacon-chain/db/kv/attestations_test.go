@@ -52,12 +52,14 @@ func TestStore_AttestationCRUD(t *testing.T) {
 func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	sameParentRoot := [32]byte{1, 2, 3}
+	otherParentRoot := [32]byte{4, 5, 6}
 	atts := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:      5,
-					ParentRoot: []byte("parent"),
+					ParentRoot: sameParentRoot[:],
 					StartEpoch: 1,
 					EndEpoch:   2,
 				},
@@ -67,7 +69,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
 					Shard:      5,
-					ParentRoot: []byte("parent2"),
+					ParentRoot: sameParentRoot[:],
 					StartEpoch: 10,
 					EndEpoch:   11,
 				},
@@ -76,8 +78,8 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
-					Shard:      4,
-					ParentRoot: []byte("parent3"),
+					Shard:      5,
+					ParentRoot: otherParentRoot[:],
 					StartEpoch: 1,
 					EndEpoch:   20,
 				},
@@ -95,6 +97,14 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	}{
 		{
 			filter:         filters.NewFilter().SetShard(5),
+			expectedNumAtt: 3,
+		},
+		{
+			filter:         filters.NewFilter().SetShard(5).SetParentRoot(otherParentRoot[:]),
+			expectedNumAtt: 1,
+		},
+		{
+			filter:         filters.NewFilter().SetShard(5).SetParentRoot(sameParentRoot[:]),
 			expectedNumAtt: 2,
 		},
 		//{
