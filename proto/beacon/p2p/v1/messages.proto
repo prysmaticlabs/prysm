@@ -8,6 +8,43 @@ import "proto/eth/v1alpha1/beacon_block.proto";
 import "google/protobuf/timestamp.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
+message Hello {
+  bytes fork_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 finalized_epoch = 3;
+  bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 5;
+}
+
+message Goodbye {
+  Reason reason = 1;
+
+  enum Reason {
+    UNKNOWN = 0;
+    CLIENT_SHUTDOWN = 1;
+    IRRELEVANT_NETWORK = 2;
+    GENERIC_ERROR = 3;
+
+    reserved 4 to 127;
+  }
+}
+
+message BeaconBlocksRequest {
+  bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 2;
+  uint64 count = 3;
+  uint64 step = 4;
+}
+
+message BeaconBlocksResponse {
+  repeated ethereum.eth.v1alpha1.BeaconBlock blocks = 1;
+}
+
+message RecentBeaconBlocksRequest {
+  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\""];
+}
+
+// TODO(3147): Delete below this line.
 
 enum Topic {
   UNKNOWN = 0;

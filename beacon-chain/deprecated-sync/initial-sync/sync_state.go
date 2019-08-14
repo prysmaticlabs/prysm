@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"go.opencensus.io/trace"
 )
 
@@ -76,7 +76,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	s.db.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
+	s.db.DepositCache.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
 
 	if err := s.db.UpdateChainHead(ctx, finalizedBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)

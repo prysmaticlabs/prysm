@@ -16,6 +16,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -28,9 +29,9 @@ go_library(
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/deprecated-p2p:go_default_library",
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
-        "//shared/p2p:go_default_library",
         "//shared/pagination:go_default_library",
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
@@ -68,6 +69,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",

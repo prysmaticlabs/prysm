@@ -17,7 +17,7 @@ go_library(
         "p2p.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/p2p",
+    importpath = "github.com/prysmaticlabs/prysm/shared/deprecated-p2p",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
@@ -78,7 +78,7 @@ go_test(
         "//proto/sharding/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared:go_default_library",
-        "//shared/p2p/mock:go_default_library",
+        "//shared/deprecated-p2p/mock:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//io:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

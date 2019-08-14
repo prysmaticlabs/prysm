@@ -16,7 +16,7 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"

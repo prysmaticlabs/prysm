@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 )
 
 // A basic adapter will complete its logic then call next. Some adapters

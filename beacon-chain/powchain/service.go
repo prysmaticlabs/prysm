@@ -266,7 +266,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
+	deposits := w.beaconDB.DepositCache.AllDeposits(w.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}

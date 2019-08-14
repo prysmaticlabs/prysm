@@ -123,16 +123,16 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
 		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
-		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
+		if w.beaconDB.DepositCache.PubkeyInChainstart(w.ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
-			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
+			w.beaconDB.DepositCache.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
 
 	}
 
 	// We always store all historical deposits in the DB.
-	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
+	w.beaconDB.DepositCache.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
@@ -146,7 +146,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 			validData = false
 		}
 	} else {
-		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
+		w.beaconDB.DepositCache.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -245,7 +245,7 @@ func (w *Web3Service) processPastLogs() error {
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex > 0 {
-		w.beaconDB.PrunePendingDeposits(w.ctx, int(currentState.Eth1DepositIndex))
+		w.beaconDB.DepositCache.PrunePendingDeposits(w.ctx, int(currentState.Eth1DepositIndex))
 	}
 
 	return nil
