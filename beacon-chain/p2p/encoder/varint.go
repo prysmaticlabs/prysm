@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"errors"
 	"io"
 
 	"github.com/gogo/protobuf/proto"
@@ -8,6 +9,8 @@ import (
 
 const maxVarintLength = 10
 
+// readVarint at the beginning of a byte slice. This varint may be used to indicate
+// the length of the remaining bytes in the reader.
 func readVarint(r io.Reader) (uint64, error) {
 	b := make([]byte, 0, maxVarintLength)
 	for i := 0; i < maxVarintLength; i++ {
@@ -17,7 +20,7 @@ func readVarint(r io.Reader) (uint64, error) {
 			return 0, err
 		}
 		if n != 1 {
-			panic("n isn't 1") // TODO: do something different than panic.
+			return 0, errors.New("did not read a byte from stream")
 		}
 		b = append(b, b1[0])
 
@@ -29,7 +32,7 @@ func readVarint(r io.Reader) (uint64, error) {
 
 	vi, n := proto.DecodeVarint(b)
 	if n != len(b) {
-		panic("n != len(b)") // TODO: do something different than panic.
+		return 0, errors.New("varint did not decode entire byte slice")
 	}
 	return vi, nil
 }

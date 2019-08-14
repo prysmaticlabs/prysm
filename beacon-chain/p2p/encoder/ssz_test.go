@@ -5,9 +5,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {

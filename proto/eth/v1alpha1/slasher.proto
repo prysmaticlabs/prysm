@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "google/protobuf/empty.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/attestation.proto";
+
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+
+// Slasher service API
+// 
+// Slasher service provides an interface for validators and beacon chain server to query
+// and subscribe for slashable events on the network as well as to make sure that the 
+// attestation or proposal they are going to submit to the network are not going to 
+// produce a slashable event.
+service Slasher {
+    // Gets AttesterSlashing container if the attestation that 
+    // was received produces a slashable event.
+    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.Attestation) returns (ethereum.eth.v1alpha1.AttesterSlashing);
+
+    // Gets ProposerSlashing container if the block header that 
+    // was received produces a slashable event.
+    rpc IsSlashableBlock(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (ethereum.eth.v1alpha1.ProposerSlashing);
+
+    // Subscription to receive all slashable proposer slashing events found by the watchtower.
+    rpc SlashableProposals(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.ProposerSlashing);
+    
+    // Subscription to receive all slashable attester slashing events found by the watchtower.
+    rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
+}

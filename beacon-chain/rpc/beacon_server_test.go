@@ -248,8 +248,8 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 }
 
 func TestBlockTree_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
@@ -469,8 +469,8 @@ func TestBlockTree_OK(t *testing.T) {
 }
 
 func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
@@ -680,8 +680,8 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 func TestBlockTreeBySlots_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
