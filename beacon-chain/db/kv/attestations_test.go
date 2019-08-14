@@ -27,24 +27,24 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
 	}
-	attRoot, err := ssz.HashTreeRoot(att)
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !db.HasAttestation(ctx, attRoot) {
+	if !db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to exist in the db")
 	}
-	retrievedAtt, err := db.Attestation(ctx, attRoot)
+	retrievedAtt, err := db.Attestation(ctx, attDataRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(att, retrievedAtt) {
 		t.Errorf("Wanted %v, received %v", att, retrievedAtt)
 	}
-	if err := db.DeleteAttestation(ctx, attRoot); err != nil {
+	if err := db.DeleteAttestation(ctx, attDataRoot); err != nil {
 		t.Fatal(err)
 	}
-	if db.HasAttestation(ctx, attRoot) {
+	if db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to have been deleted from the db")
 	}
 }

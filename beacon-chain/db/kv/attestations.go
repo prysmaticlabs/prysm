@@ -88,10 +88,6 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		// Do not save if already saved.
-		if bkt.Get(attDataRoot[:]) != nil {
-			return nil
-		}
 		indices := [][]byte{
 			append(shardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...),
 			append(parentRootIdx, att.Data.Crosslink.ParentRoot...),
@@ -123,10 +119,6 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		for i := 0; i < len(atts); i++ {
-			// Do not save if already saved.
-			if bkt.Get(keys[i]) != nil {
-				return nil
-			}
 			indices := [][]byte{
 				append(shardIdx, uint64ToBytes(atts[i].Data.Crosslink.Shard)...),
 				append(parentRootIdx, atts[i].Data.Crosslink.ParentRoot...),
