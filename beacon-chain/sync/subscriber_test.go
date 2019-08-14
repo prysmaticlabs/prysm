@@ -8,14 +8,12 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/testing"
-
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
-	_ = &pb.TestSimpleMessage{}
-
 	p2p := p2ptest.NewTestP2P(t)
 	r := RegularSync{
 		ctx: context.Background(),
@@ -37,7 +35,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 
 	p2p.ReceivePubSub(topic, &pb.TestSimpleMessage{Foo: []byte("foo")})
 
-	if waitTimeout(&wg, time.Second) {
+	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 }

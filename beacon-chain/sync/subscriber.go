@@ -44,8 +44,6 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 				return
 			}
 
-			log.Println("here")
-
 			go func() {
 				b := msg.Data
 				if b == nil {

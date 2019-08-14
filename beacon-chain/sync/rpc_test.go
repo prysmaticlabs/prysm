@@ -11,6 +11,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
@@ -36,22 +37,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 	p2p.ReceiveRPC(topic, &pb.TestSimpleMessage{Foo: []byte("foo")})
 
-	if waitTimeout(&wg, time.Second) {
+	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")
-	}
-}
-
-// TODO: Move to testutil.
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	ch := make(chan struct{})
-	go func() {
-		defer close(ch)
-		wg.Wait()
-	}()
-	select {
-	case <-ch:
-		return false
-	case <-time.After(timeout):
-		return true
 	}
 }

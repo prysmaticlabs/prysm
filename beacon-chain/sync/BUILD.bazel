@@ -6,6 +6,7 @@ go_library(
         "doc.go",
         "handler.go",
         "log.go",
+        "metrics.go",
         "rpc.go",
         "rpc_hello.go",
         "service.go",
@@ -27,6 +28,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "rpc_test.go",
         "subscriber_test.go",
@@ -35,6 +37,7 @@ go_test(
     deps = [
         "//beacon-chain/p2p/testing:go_default_library",
         "//proto/testing:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
     ],
