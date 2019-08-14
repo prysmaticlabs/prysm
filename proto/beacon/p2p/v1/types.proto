@@ -77,6 +77,13 @@ message AttestationTarget {
   bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
+message ValidatorLatestVote {
+  // The epoch of when the latest message was voted.
+  uint64 epoch = 1;
+  // The root of the latest message votes.
+  bytes root = 2;
+}
+
 message AttestationDataAndCustodyBit {
   ethereum.eth.v1alpha1.AttestationData data = 1;
   // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data

@@ -40,7 +40,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	ok := bs.powChainService.HasChainStarted()
 
 	if ok {
-		genesisTime := bs.powChainService.ETH2GenesisTime()
+		genesisTime, _ := bs.powChainService.ETH2GenesisTime()
 
 		res := &pb.ChainStartResponse{
 			Started:     true,

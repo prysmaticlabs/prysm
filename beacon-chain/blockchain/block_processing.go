@@ -194,13 +194,13 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	if err := c.attsService.BatchUpdateLatestAttestation(ctx, block.Body.Attestations); err != nil {
+	if err := c.attsService.BatchUpdateLatestAttestations(ctx, block.Body.Attestations); err != nil {
 		return errors.Wrap(err, "failed to update latest attestation for store")
 	}
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(ctx, dep)
+		c.beaconDB.DepositCache.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
 }

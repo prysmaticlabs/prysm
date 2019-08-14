@@ -23,7 +23,7 @@ func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconS
 	return m.targets[idx], nil
 }
 
-func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error {
+func (m *mockAttestationHandler) BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	return nil
 }
 
@@ -40,7 +40,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	justifiedState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		StateRoot: []byte{},
 	}

@@ -38,6 +38,10 @@ var (
 		Name: "powchain_block_number",
 		Help: "The current block number in the proof-of-work chain",
 	})
+	missedDepositLogsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_missed_deposit_logs",
+		Help: "The number of times a missed deposit log is detected",
+	})
 )
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
@@ -88,6 +92,7 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
+	chainStartBlockNumber   *big.Int
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -261,7 +266,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
+	deposits := w.beaconDB.DepositCache.AllDeposits(w.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
