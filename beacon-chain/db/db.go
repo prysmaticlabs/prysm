@@ -131,7 +131,7 @@ func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 	return db, err
 }
 
-// NewDB initializes a new DB. If the genesis block and states do not exist, this method creates it.
+// NewDB initializes a new DB.
 func NewDB(dirPath string) (Database, error) {
 	return kv.NewKVStore(dirPath)
 }
