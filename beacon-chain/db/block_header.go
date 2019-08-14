@@ -102,12 +102,13 @@ func (db *BeaconDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHea
 }
 
 func (db *BeaconDB) pruneHistory(currentEpoch uint64, historySize uint64) error {
+	removeUpTo := int64(currentEpoch) - int64(historySize)
+	if removeUpTo <= 0 {
+		return nil
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		if currentEpoch-historySize <= 0 {
-			return nil
-		}
 		max := bytesutil.Bytes8(currentEpoch - historySize)
 
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
