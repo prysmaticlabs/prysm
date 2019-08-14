@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -47,7 +48,10 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("shard-5"), []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// attestation roots that were stored under each of those indices for O(1) lookup.
-		indices := createIndicesFromFilters(f)
+		indices, err := createAttestationIndicesFromFilters(f)
+		if err != nil {
+			return errors.Wrap(err, "could not determine attestation lookup indices")
+		}
 		indicesBkt := tx.Bucket(attestationIndicesBucket)
 		// Once we have a list of attestation roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
@@ -146,4 +150,29 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		}
 		return nil
 	})
+}
+
+// createAttestationIndicesFromFilters takes in filter criteria and returns
+// a list of of byte keys used to retrieve the values stored
+// for the indices from the DB.
+//
+// For attestations, these are list of hash tree roots of attestation.Data
+// objects. If a certain filter criterion does not apply to
+// attestations, an appropriate error is returned.
+func createAttestationIndicesFromFilters(f *filters.QueryFilter) ([][]byte, error) {
+	keys := make([][]byte, 0)
+	for k, v := range f.Filters() {
+		switch k {
+		case filters.Shard:
+			idx := append(shardIdx, uint64ToBytes(v.(uint64))...)
+			keys = append(keys, idx)
+		case filters.ParentRoot:
+			parentRoot := v.([]byte)
+			idx := append(parentRootIdx, parentRoot...)
+			keys = append(keys, idx)
+		default:
+			return nil, fmt.Errorf("filter criterion %v not supported for attestations", k)
+		}
+	}
+	return keys, nil
 }

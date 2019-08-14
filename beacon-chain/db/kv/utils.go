@@ -2,28 +2,7 @@ package kv
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 )
-
-// createIndicesFromFilters takes in filter criteria and returns
-// a list of of byte keys used to retrieve the values stored
-// for the indices from the DB. Typically, these are list of hash tree roots
-// or signing roots of objects.
-func createIndicesFromFilters(f *filters.QueryFilter) [][]byte {
-	keys := make([][]byte, 0)
-	for k, v := range f.Filters() {
-		switch k {
-		case filters.Shard:
-			idx := append(shardIdx, uint64ToBytes(v.(uint64))...)
-			keys = append(keys, idx)
-		case filters.ParentRoot:
-			parentRoot := v.([]byte)
-			idx := append(parentRootIdx, parentRoot...)
-			keys = append(keys, idx)
-		}
-	}
-	return keys
-}
 
 // lookupValuesForIndices takes in a list of indices and looks up
 // their corresponding values in the DB, returning a list of
