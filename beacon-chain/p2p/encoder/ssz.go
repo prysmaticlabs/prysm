@@ -16,7 +16,7 @@ type SszNetworkEncoder struct {
 	UseSnappyCompression bool
 }
 
-// Encode the proto message to bytes. This encoding prefixes the byte slice with a protobuf varint
+// Encode the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message.
 func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 	if msg == nil {
@@ -34,7 +34,7 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 	return w.Write(b)
 }
 
-// DecodeTo decodes the bytes to the protobuf message provided.
+// Decode the bytes from io.Reader to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(r io.Reader, to proto.Message) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
@@ -56,6 +56,7 @@ func (e SszNetworkEncoder) Decode(r io.Reader, to proto.Message) error {
 	return ssz.Unmarshal(b, to)
 }
 
+// ProtocolSuffix returns the appropriate suffix for protocol IDs.
 func (e SszNetworkEncoder) ProtocolSuffix() string {
 	if e.UseSnappyCompression {
 		return "/ssz_snappy"
