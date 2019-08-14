@@ -35,7 +35,7 @@ func TestBootnode_OK(t *testing.T) {
 
 	nodes := listener.Lookup(listenerNode2.ID)
 	if len(nodes) != 2 {
-		t.Errorf("Length of nodes stored in table is noyt expected. Wanted %d but got %d", 2, len(nodes))
+		t.Errorf("Length of nodes stored in table is not expected. Wanted %d but got %d", 2, len(nodes))
 
 	}
 	if nodes[0].ID != listenerNode2.ID {
@@ -44,7 +44,7 @@ func TestBootnode_OK(t *testing.T) {
 
 	nodes = listener2.Lookup(listenerNode.ID)
 	if len(nodes) != 2 {
-		t.Errorf("Length of nodes stored in table is noyt expected. Wanted %d but got %d", 2, len(nodes))
+		t.Errorf("Length of nodes stored in table is not expected. Wanted %d but got %d", 2, len(nodes))
 
 	}
 	if nodes[0].ID != listenerNode.ID {
