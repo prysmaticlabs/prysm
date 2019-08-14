@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -101,8 +102,8 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	return nil
 }
 
-// NewDB initializes a new DB. If the genesis block and states do not exist, this method creates it.
-func NewDB(dirPath string) (*BeaconDB, error) {
+// NewDBDeprecated initializes a new DB. If the genesis block and states do not exist, this method creates it.
+func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -128,6 +129,11 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	return db, err
+}
+
+// NewDB initializes a new DB.
+func NewDB(dirPath string) (Database, error) {
+	return kv.NewKVStore(dirPath)
 }
 
 // ClearDB removes the previously stored directory at the data directory.

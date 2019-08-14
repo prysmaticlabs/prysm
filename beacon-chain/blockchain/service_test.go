@@ -205,8 +205,8 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 
 	// Test the start function.
@@ -244,8 +244,8 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	chainService := setupBeaconChain(t, db, nil)
 
