@@ -80,8 +80,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	}
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
-		beaconDb := internal.SetupDB(t)
-		defer internal.TeardownDB(t, beaconDb)
+		beaconDb := internal.SetupDBDeprecated(t)
+		defer internal.TeardownDBDeprecated(t, beaconDb)
 		attsService := attestation.NewAttestationService(
 			context.Background(),
 			&attestation.Config{BeaconDB: beaconDb})
@@ -136,8 +136,8 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
@@ -169,8 +169,8 @@ func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 }
 
 func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
@@ -228,8 +228,8 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -283,8 +283,8 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 func TestBlockChildren_2InARow(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -351,8 +351,8 @@ func TestBlockChildren_2InARow(t *testing.T) {
 func TestBlockChildren_ChainSplits(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -428,8 +428,8 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 func TestBlockChildren_SkipSlots(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, beaconDB, nil)
@@ -496,8 +496,8 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
@@ -561,8 +561,8 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
@@ -679,8 +679,8 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 func TestIsDescendant_Ok(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct the following chain:
@@ -771,8 +771,8 @@ func TestIsDescendant_Ok(t *testing.T) {
 func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	beaconState := &pb.BeaconState{
@@ -911,8 +911,8 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 // Ex:
 // 	B0 - B1 - B2 - B3 - B4 - B5 - B6 - B7 (8 votes)
 func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(b)
+	defer internal.TeardownDBDeprecated(b, beaconDB)
 	ctx := context.Background()
 
 	validatorCount := 8
@@ -992,8 +992,8 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 // Ex:
 // 	B0 - B1 - B2 - B3 - B4 - B5 - B6 - B7 (8 votes)
 func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(b)
+	defer internal.TeardownDBDeprecated(b, beaconDB)
 	ctx := context.Background()
 
 	validatorCount := 8
@@ -1071,8 +1071,8 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 // Ex:
 // 	B0 - B1 - B2 - ... - B32 (64 votes)
 func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(b)
+	defer internal.TeardownDBDeprecated(b, beaconDB)
 	ctx := context.Background()
 
 	validatorCount := 64
@@ -1150,8 +1150,8 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 // Ex:
 // 	B0 - B1 - B2 - ... - B64 (16384 votes)
 func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(b)
+	defer internal.TeardownDBDeprecated(b, beaconDB)
 	ctx := context.Background()
 
 	validatorCount := 16384
@@ -1263,8 +1263,8 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	genesisSlot := uint64(0)
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
@@ -1340,8 +1340,8 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	genesisSlot := uint64(0)
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
 	ctx := context.Background()
 
@@ -1422,8 +1422,8 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	genesisSlot := uint64(0)
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
@@ -1575,8 +1575,8 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 		featureconfig.InitFeatureConfig(nil)
 	}()
 
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
@@ -1642,8 +1642,8 @@ func TestVoteCount_CacheEnabledAndMiss(t *testing.T) {
 }
 
 func TestVoteCount_CacheEnabledAndHit(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
