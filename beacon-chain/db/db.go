@@ -9,11 +9,11 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "beacondb")
@@ -29,19 +29,21 @@ type Database interface {
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
+	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
+	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
-	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, error)
+	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
@@ -71,14 +73,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*DepositContainer
-	deposits              []*DepositContainer
-	depositsLock          sync.RWMutex
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
-
-	// Parent block root to children block roots.
-	blockChildrenRoots map[[32]byte][][]byte
+	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -120,14 +115,14 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	depCache := depositcache.NewDepositCache()
+
+	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
-	db.blockChildrenRoots = make(map[[32]byte][][]byte)
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
-			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket,
-			latestMessageBucket, checkpointBucket, forkChoiceStateBucket)
+			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 	}); err != nil {
 		return nil, err
 	}
