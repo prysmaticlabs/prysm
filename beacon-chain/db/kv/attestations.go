@@ -31,8 +31,14 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		// Creates a list of indices from the passed in filter values, such as:
-
+		// []byte("shard-5"), []byte("parent-root-0x2093923"), etc. to be used for looking up
+		// attestation roots that were stored under each of those indices for O(1) lookup.
 		indices := createIndicesFromFilters(f)
+
+		// Once we have a list of attestation roots that correspond to each
+		// lookup index, we find the intersection across all of them and use
+		// that list of roots to lookup the attestations. These attestations will
+		// meet the filter criteria.
 		keys := sliceutil.TotalIntersectionByteSlices(valuesForIndices(indices, bkt))
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
