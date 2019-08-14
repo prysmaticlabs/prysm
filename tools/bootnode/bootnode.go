@@ -1,7 +1,7 @@
 /**
  * Bootnode
  *
- * A simple peer Kademlia distributed hash table (DHT) service for peer
+ * A node which implements the DiscoveryV5 protocol for peer
  * discovery. The purpose of this service is to provide a starting point for
  * newly connected services to find other peers outside of their network.
  *
@@ -54,6 +54,7 @@ func main() {
 	opts := []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 	}
+
 	opts = addPrivateKeyOpt(opts)
 
 	ctx := context.Background()
