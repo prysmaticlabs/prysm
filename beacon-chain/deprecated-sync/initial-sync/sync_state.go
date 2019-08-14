@@ -76,7 +76,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	s.db.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
+	s.db.DepositCache.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
 
 	if err := s.db.UpdateChainHead(ctx, finalizedBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)

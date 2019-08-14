@@ -9,6 +9,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -39,7 +40,7 @@ type Database interface {
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
@@ -72,11 +73,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*DepositContainer
-	deposits              []*DepositContainer
-	depositsLock          sync.RWMutex
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
+	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -118,7 +115,9 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	depCache := depositcache.NewDepositCache()
+
+	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
