@@ -13,6 +13,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/kv:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/testutil:go_default_library",

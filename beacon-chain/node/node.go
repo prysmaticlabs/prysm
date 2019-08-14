@@ -181,7 +181,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		}
 	}
 
-	db, err := db.NewDB(dbPath)
+	db, err := db.NewDBDeprecated(dbPath)
 	if err != nil {
 		return err
 	}

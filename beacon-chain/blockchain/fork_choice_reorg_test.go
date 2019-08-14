@@ -31,8 +31,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 
 	ctx := context.Background()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)

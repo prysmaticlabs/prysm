@@ -1,10 +1,11 @@
 package encoder_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	encoder "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
@@ -19,16 +20,17 @@ func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
 }
 
 func testRoundTrip(t *testing.T, e *encoder.SszNetworkEncoder) {
+	buf := new(bytes.Buffer)
 	msg := &testpb.TestSimpleMessage{
 		Foo: []byte("fooooo"),
 		Bar: 9001,
 	}
-	encoded, err := e.Encode(msg)
+	_, err := e.Encode(buf, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded := &testpb.TestSimpleMessage{}
-	if err := e.DecodeTo(encoded, decoded); err != nil {
+	if err := e.Decode(buf, decoded); err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(decoded, msg) {
