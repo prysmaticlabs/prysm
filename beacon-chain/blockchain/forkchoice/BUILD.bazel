@@ -29,6 +29,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "benchmark_test.go",
         "helpers_test.go",
         "service_test.go",
         "tree_test.go",
