@@ -26,10 +26,10 @@ func lookupValuesForIndices(indices [][]byte, bkt *bolt.Bucket) [][][]byte {
 	return values
 }
 
-// updateIndices updates the value for each index by appending it to the previous
+// updateValueForIndices updates the value for each index by appending it to the previous
 // values stored at said index. Typically, indices are roots of data that can then
 // be used for reads or batch reads from the DB.
-func updateIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) error {
+func updateValueForIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) error {
 	for _, idx := range indices {
 		valuesAtIndex := bkt.Get(idx)
 		if valuesAtIndex == nil {

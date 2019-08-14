@@ -119,7 +119,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		bkt := tx.Bucket(attestationsBucket)
 		indices := createAttestationIndicesFromData(att.Data)
 		indicesBkt := tx.Bucket(attestationIndicesBucket)
-		if err := updateIndices(indices, attDataRoot[:], indicesBkt); err != nil {
+		if err := updateValueForIndices(indices, attDataRoot[:], indicesBkt); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
@@ -147,7 +147,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		for i := 0; i < len(atts); i++ {
 			indicesBkt := tx.Bucket(attestationIndicesBucket)
 			indices := createAttestationIndicesFromData(atts[i].Data)
-			if err := updateIndices(indices, keys[i], indicesBkt); err != nil {
+			if err := updateValueForIndices(indices, keys[i], indicesBkt); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if err := bkt.Put(keys[i], encodedValues[i]); err != nil {
