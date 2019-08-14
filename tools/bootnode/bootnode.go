@@ -11,14 +11,15 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"flag"
 	"fmt"
 	"net"
 
+	curve "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+
 	logging "github.com/ipfs/go-log"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -33,10 +34,8 @@ var (
 	log = logging.Logger("prysm-bootnode")
 )
 
-const dhtProtocol = "/prysm/0.0.0/dht"
-
-// ECDSACurve is the default ecdsa curve used
-var ECDSACurve = elliptic.P256()
+// ECDSACurve is the default ecdsa curve used(secpk2561)
+var ECDSACurve = curve.S256()
 
 func main() {
 	flag.Parse()
@@ -47,10 +46,21 @@ func main() {
 		logging.SetDebugLogging()
 	}
 
-	privKey := addPrivateKeyOpt()
+	defaultIP := "0.0.0.0"
+
+	privKey := extractPrivateKey()
+	listener := createListener(defaultIP, *port, privKey)
+
+	node := listener.Self()
+	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/p2p/%s\n", node.IP.String(), node.UDP, node.ID.String())
+
+	select {}
+}
+
+func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
 	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP("0.0.0.0"),
-		Port: *port,
+		IP:   net.ParseIP(ipAddr),
+		Port: port,
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
@@ -61,15 +71,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	node := network.Self()
-
-	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/p2p/%s\n", node.IP.String(), node.UDP, node.ID.String())
-
-	select {}
+	return network
 }
 
-func addPrivateKeyOpt() *ecdsa.PrivateKey {
+func extractPrivateKey() *ecdsa.PrivateKey {
 	var privKey *ecdsa.PrivateKey
 	var err error
 	if *privateKey != "" {
