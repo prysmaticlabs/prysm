@@ -13,7 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
-func TestRegisterRPC(t *testing.T) {
+func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := &RegularSync{
 		ctx: context.Background(),
@@ -22,7 +22,7 @@ func TestRegisterRPC(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	topic := "/testing/foobar"
+	topic := "/testing/foobar/1"
 	handler := func(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
 		m := msg.(*pb.TestSimpleMessage)
 		if !bytes.Equal(m.Foo, []byte("foo")) {
@@ -41,6 +41,7 @@ func TestRegisterRPC(t *testing.T) {
 	}
 }
 
+// TODO: Move to testutil.
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	ch := make(chan struct{})
 	go func() {

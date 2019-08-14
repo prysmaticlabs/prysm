@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
@@ -43,39 +44,35 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 				return
 			}
 
-			_ = msg
+			log.Println("here")
 
 			go func() {
-				//// TODO: This doesn't need such a short timeout.
-				//ctx, cancel := context.WithTimeout(r.ctx, ttfbTimeout)
-				//defer cancel()
-				//
-				//b := msg.Data
-				//if b == nil {
-				//	log.WithField("topic", topic).Warn("Received nil message on pubsub")
-				//	return
-				//}
-				//
-				//n := proto.Clone(base)
-				//if err := r.p2p.Encoding().DecodeTo(b, n); err != nil {
-				//	log.WithField("topic", topic).Warn("Failed to decode pubsub message")
-				//	return
-				//}
-				//
-				//if !v(ctx, n, r.p2p) {
-				//	log.WithField("topic", topic).
-				//		WithField("message", n.String()).
-				//		Debug("Message did not verify")
-				//
-				//	// TODO: Increment metrics.
-				//	return
-				//}
-				//
-				//if err := h(ctx, n); err != nil {
-				//	// TODO: Increment metrics.
-				//
-				//	return
-				//}
+				b := msg.Data
+				if b == nil {
+					log.WithField("topic", topic).Warn("Received nil message on pubsub")
+					return
+				}
+
+				n := proto.Clone(base)
+				if err := r.p2p.Encoding().Decode(bytes.NewBuffer(b), n); err != nil {
+					log.WithField("topic", topic).Warn("Failed to decode pubsub message")
+					return
+				}
+
+				if !v(r.ctx, n, r.p2p) {
+					log.WithField("topic", topic).
+						WithField("message", n.String()).
+						Debug("Message did not verify")
+
+					// TODO: Increment metrics.
+					return
+				}
+
+				if err := h(r.ctx, n); err != nil {
+					// TODO: Increment metrics.
+
+					return
+				}
 			}()
 		}
 	}()

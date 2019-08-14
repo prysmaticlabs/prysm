@@ -1,8 +1,10 @@
 package testing
 
 import (
+	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
@@ -72,6 +74,33 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	}
 
 	p.t.Logf("Wrote %d bytes", n)
+}
+
+func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
+	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t, context.Background()))
+	ps, err := pubsub.NewFloodSub(context.Background(), h,
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	)
+	if err != nil {
+		p.t.Fatalf("Failed to create flood sub: %v", err)
+	}
+	if err := connect(h, p.host); err != nil {
+		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
+	}
+
+	// PubSub requires some delay after connecting for the (*PubSub).processLoop method to
+	// pick up the newly connected peer.
+	time.Sleep(time.Millisecond * 100)
+
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		p.t.Fatalf("Failed to encode message: %v", err)
+	}
+
+	if err := ps.Publish(topic+p.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
+		p.t.Fatalf("Failed to publish message; %v", err)
+	}
 }
 
 // Broadcast a message.

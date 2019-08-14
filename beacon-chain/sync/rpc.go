@@ -21,17 +21,19 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler
 
 		if err := stream.SetReadDeadline(roughtime.Now().Add(ttfbTimeout)); err != nil {
 			// TODO
-			return
+			panic(err)
+			//return
 		}
 
 		n := proto.Clone(base)
 		if err := r.p2p.Encoding().Decode(stream, n); err != nil {
 			// TODO
-			return
+			panic(err)
+			//return
 		}
 		if err := h(ctx, n, stream); err != nil {
 			// TODO
-			return
+			panic(err) //return
 		}
 	})
 }
