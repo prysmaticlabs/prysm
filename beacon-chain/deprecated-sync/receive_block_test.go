@@ -65,8 +65,8 @@ func setupBlocksMissingParent(parents []*ethpb.BeaconBlock, parentRoots [][32]by
 
 func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	rsCfg := DefaultRegularSyncConfig()
 	rsCfg.ChainService = &mockChainService{
@@ -91,8 +91,8 @@ func TestReceiveBlockAnnounce_SkipsBlacklistedBlock(t *testing.T) {
 }
 
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	rsCfg := DefaultRegularSyncConfig()

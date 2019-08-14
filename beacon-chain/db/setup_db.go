@@ -20,7 +20,7 @@ func SetupDB() (*BeaconDB, error) {
 	if err := os.RemoveAll(path); err != nil {
 		return nil, errors.Wrap(err, "failed to remove directory")
 	}
-	return NewDB(path)
+	return NewDBDeprecated(path)
 }
 
 // TeardownDB cleans up a simulated backend BeaconDB instance.
