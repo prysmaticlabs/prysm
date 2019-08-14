@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -123,7 +122,6 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		//},
 	}
 	for _, tt := range tests {
-		fmt.Println("First test")
 		retrievedAtts, err := db.Attestations(ctx, tt.filter)
 		if err != nil {
 			t.Fatal(err)
