@@ -34,35 +34,21 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 		return []uint64{}
 	}
 	if len(s) == 1 {
-		return s[1]
+		return s[0]
 	}
-	set := make([]uint64, 0)
-	m := make(map[uint64]bool)
-
-	for i := 0; i < len(s[0]); i++ {
-		m[s[0][i]] = true
-	}
-	for i := 0; i < len(s[1]); i++ {
-		if _, found := m[s[1][i]]; found {
-			set = append(set, s[1][i])
-		}
-	}
-
-	for i := 0; i < len(s); i++ {
-		tmp := make([]uint64, 0)
+	intersect := make([]uint64, 0)
+	for i := 1; i < len(s); i++ {
 		m := make(map[uint64]bool)
-
-		for j := 0; j < len(set); j++ {
-			m[set[j]] = true
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
 		}
 		for j := 0; j < len(s[i]); j++ {
 			if _, found := m[s[i][j]]; found {
-				tmp = append(tmp, s[i][j])
+				intersect = append(intersect, s[i][j])
 			}
 		}
-		set = tmp
 	}
-	return set
+	return intersect
 }
 
 // UnionUint64 of any number of uint64 slices with time
@@ -78,27 +64,14 @@ func UnionUint64(s ...[]uint64) []uint64 {
 	}
 	set := make([]uint64, 0)
 	m := make(map[uint64]bool)
-
-	for i := 0; i < len(s[0]); i++ {
-		m[s[0][i]] = true
-		set = append(set, s[0][i])
-	}
-	for i := 0; i < len(s[1]); i++ {
-		if _, found := m[s[1][i]]; !found {
-			set = append(set, s[1][i])
-		}
-	}
-
-	for i := 0; i < len(s); i++ {
-		tmp := make([]uint64, 0)
-		m := make(map[uint64]bool)
-		for j := 0; j < len(set); j++ {
-			m[set[j]] = true
-			tmp = append(tmp, set[j])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+			set = append(set, s[i-1][j])
 		}
 		for j := 0; j < len(s[i]); j++ {
 			if _, found := m[s[i][j]]; !found {
-				tmp = append(tmp, s[i][j])
+				set = append(set, s[i][j])
 			}
 		}
 		set = tmp
@@ -157,17 +130,18 @@ func IntersectionInt64(s ...[]int64) []int64 {
 		return []int64{}
 	}
 	if len(s) == 1 {
-		return s[1]
+		return s[0]
 	}
 	set := make([]int64, 0)
 	m := make(map[int64]bool)
-
-	for i := 0; i < len(s[0]); i++ {
-		m[s[0][i]] = true
-	}
-	for i := 0; i < len(s[1]); i++ {
-		if _, found := m[s[1][i]]; found {
-			set = append(set, s[1][i])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; found {
+				set = append(set, s[i][j])
+			}
 		}
 	}
 
@@ -201,23 +175,15 @@ func UnionInt64(s ...[]int64) []int64 {
 	}
 	set := make([]int64, 0)
 	m := make(map[int64]bool)
-
-	for i := 0; i < len(s[0]); i++ {
-		m[s[0][i]] = true
-		set = append(set, s[0][i])
-	}
-	for i := 0; i < len(s[1]); i++ {
-		if _, found := m[s[1][i]]; !found {
-			set = append(set, s[1][i])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+			set = append(set, s[i-1][j])
 		}
-	}
-
-	for i := 0; i < len(s); i++ {
-		tmp := make([]int64, 0)
-		m := make(map[int64]bool)
-		for j := 0; j < len(set); j++ {
-			m[set[j]] = true
-			tmp = append(tmp, set[j])
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; !found {
+				set = append(set, s[i][j])
+			}
 		}
 		for j := 0; j < len(s[i]); j++ {
 			if _, found := m[s[i][j]]; !found {
@@ -266,31 +232,12 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 	if len(s) == 1 {
 		return s[0]
 	}
-	hash := make(map[string]bool)
-	for _, e := range s[0] {
-		hash[string(e)] = true
-	}
 	inter := make([][]byte, 0)
-	for _, e := range s[1] {
-		if hash[string(e)] {
-			inter = append(inter, e)
-		}
-	}
-	// Remove duplicates from slice.
-	deduped := make([][]byte, 0)
-	encountered := make(map[string]bool)
-	for _, element := range inter {
-		if !encountered[string(element)] {
-			deduped = append(deduped, element)
-			encountered[string(element)] = true
-		}
-	}
-	for i := 2; i < len(s); i++ {
+	for i := 1; i < len(s); i++ {
 		hash := make(map[string]bool)
-		for _, e := range deduped {
+		for _, e := range s[i-1] {
 			hash[string(e)] = true
 		}
-		inter := make([][]byte, 0)
 		for _, e := range s[i] {
 			if hash[string(e)] {
 				inter = append(inter, e)
@@ -305,7 +252,7 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 				encountered[string(element)] = true
 			}
 		}
-		deduped = tmp
+		inter = tmp
 	}
-	return deduped
+	return inter
 }
