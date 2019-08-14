@@ -60,8 +60,8 @@ func (mp *afterGenesisPowChain) AreAllDepositsProcessed() (bool, error) {
 
 func TestQuerier_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
@@ -91,8 +91,8 @@ func TestQuerier_StartStop(t *testing.T) {
 }
 
 func TestListenForStateInitialization_ContextCancelled(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
@@ -120,8 +120,8 @@ func TestListenForStateInitialization_ContextCancelled(t *testing.T) {
 }
 
 func TestListenForStateInitialization(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
@@ -211,8 +211,8 @@ func TestQuerier_BestPeerAssignment(t *testing.T) {
 }
 
 func TestSyncedInGenesis(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
@@ -236,8 +236,8 @@ func TestSyncedInGenesis(t *testing.T) {
 }
 
 func TestSyncedInRestarts(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
@@ -289,8 +289,8 @@ func TestSyncedInRestarts(t *testing.T) {
 }
 
 func TestWaitForDepositsProcessed_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	powchain := &genesisPowChain{depositsProcessed: false}
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},

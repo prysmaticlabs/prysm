@@ -48,8 +48,8 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 }
 
 func TestNodeServer_GetGenesis(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 	addr := [20]byte{1, 2, 3, 4, 5, 6}
 	beaconDB.VerifyContractAddress(ctx, common.Address(addr))
