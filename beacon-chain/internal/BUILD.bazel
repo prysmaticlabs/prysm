@@ -7,7 +7,6 @@ go_library(
     srcs = [
         "beacon_service_mock.go",
         "db_test_util.go",
-        "db_test_util_deprecated.go",
         "validator_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/internal",
