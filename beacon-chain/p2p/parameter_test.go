@@ -3,13 +3,13 @@ package p2p
 import (
 	"testing"
 
-    "github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 const (
 	// overlay parameters
-	gossipSubD   = 6 // topic stable mesh target count
-	gossipSubDlo = 4 // topic stable mesh low watermark
+	gossipSubD   = 6  // topic stable mesh target count
+	gossipSubDlo = 4  // topic stable mesh low watermark
 	gossipSubDhi = 12 // topic stable mesh high watermark
 
 	// gossip parameters
