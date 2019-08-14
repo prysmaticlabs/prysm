@@ -228,81 +228,69 @@ func TestIsInInt64(t *testing.T) {
 
 func TestIntersectionByteSlices(t *testing.T) {
 	testCases := []struct {
-		a      [][]byte
-		b      [][]byte
+		input  [][][]byte
 		result [][]byte
 	}{
-		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}, {4, 5}}, [][]byte{{4, 5}}},
-		// Ensure duplicate elements are moved in the resulting set.
-		{[][]byte{{1, 2, 3}, {4, 5}, {4, 5}}, [][]byte{{1, 2}, {4, 5}, {4, 5}}, [][]byte{{4, 5}}},
+		{
+			input: [][][]byte{
+				{
+					{1, 2, 3},
+					{4, 5},
+				},
+				{
+					{1, 2},
+					{4, 5},
+				},
+			},
+			result: [][]byte{{4, 5}},
+		},
+		// Ensure duplicate elements are removed in the resulting set.
+		{
+			input: [][][]byte{
+				{
+					{1, 2, 3},
+					{4, 5},
+					{4, 5},
+				},
+				{
+					{1, 2},
+					{4, 5},
+					{4, 5},
+				},
+			},
+			result: [][]byte{{4, 5}},
+		},
 		// Ensure no intersection returns an empty set.
-		{[][]byte{{1, 2, 3}, {4, 5}}, [][]byte{{1, 2}}, [][]byte{}},
+		{
+			input: [][][]byte{
+				{
+					{1, 2, 3},
+					{4, 5},
+				},
+				{
+					{1, 2},
+				},
+			},
+			result: [][]byte{},
+		},
 		//  Intersection between A and A should return A.
-		{[][]byte{{1, 2}}, [][]byte{{1, 2}}, [][]byte{{1, 2}}},
-	}
-	for _, tt := range testCases {
-		result := IntersectionByteSlices(tt.a, tt.b)
-		if !reflect.DeepEqual(result, tt.result) {
-			t.Errorf("IntersectionByteSlices(%v, %v)=%v, wanted: %v",
-				tt.a, tt.b, result, tt.result)
-		}
-	}
-}
-
-func TestTotalIntersectionByteSlices(t *testing.T) {
-	testCases := []struct {
-		a      [][][]byte
-		result [][]byte
-	}{
 		{
-			[][][]byte{
+			input: [][][]byte{
 				{
-					{1, 2, 3},
-					{4, 5},
+					{1, 2},
 				},
 				{
-					{4, 5},
-				},
-				{
-					{4, 5},
-					{6, 7, 8},
-					{9, 10, 11},
+					{1, 2},
 				},
 			},
-			[][]byte{
-				{4, 5},
-			},
-		},
-		{
-			[][][]byte{
-				{
-					{1, 2, 3},
-					{4, 5},
-				},
-			},
-			[][]byte{
-				{1, 2, 3},
-				{4, 5},
-			},
-		},
-		{
-			[][][]byte{
-				{
-					{1, 2, 3},
-					{4, 5},
-				},
-				{
-					{6},
-				},
-			},
-			[][]byte{},
+			result: [][]byte{{1, 2}},
 		},
 	}
 	for _, tt := range testCases {
-		result := TotalIntersectionByteSlices(tt.a)
+		result := IntersectionByteSlices(tt.input...)
 		if !reflect.DeepEqual(result, tt.result) {
-			t.Errorf("TotalIntersectionByteSlices(%v)=%v, wanted: %v",
-				tt.a, result, tt.result)
+			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v",
+				tt.input, result, tt.result)
 		}
 	}
 }
