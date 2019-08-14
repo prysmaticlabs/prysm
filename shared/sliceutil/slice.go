@@ -174,64 +174,44 @@ func IsInInt64(a int64, b []int64) bool {
 	return false
 }
 
-// ByteIntersection returns a new set with elements that are common in
-// both sets a and b.
-func ByteIntersection(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
+// IntersectionByteSlices returns the common elements between two
+// sets of byte slices.
+func IntersectionByteSlices(s1, s2 [][]byte) [][]byte {
+	hash := make(map[string]bool)
+	for _, e := range s1 {
+		hash[string(e)] = true
 	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; found {
-			set = append(set, b[i])
+	inter := make([][]byte, 0)
+	for _, e := range s2 {
+		if hash[string(e)] {
+			inter = append(inter, e)
 		}
 	}
-	return set
+	// Remove duplicates from slice.
+	deduped := make([][]byte, 0)
+	encountered := make(map[string]bool)
+	for _, element := range inter {
+		if !encountered[string(element)] {
+			deduped = append(deduped, element)
+			encountered[string(element)] = true
+		}
+	}
+	return deduped
 }
 
-// ByteUnion returns a new set with elements that are common in
-// both sets a and b.
-func ByteUnion(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-		set = append(set, a[i])
+// TotalIntersectionByteSlices takes in a set of byte slices
+// and determines the intersection of common elements across all of them,
+// returning a single slice of byte slices.
+func TotalIntersectionByteSlices(sets [][][]byte) [][]byte {
+	if len(sets) == 0 {
+		return [][]byte{}
 	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
-		}
+	if len(sets) == 1 {
+		return sets[0]
 	}
-	return set
-}
-
-// ByteNot returns a new set with elements that are common in
-// both sets a and b.
-func ByteNot(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
+	intersected := IntersectionByteSlices(sets[0], sets[1])
+	for i := 2; i < len(sets); i++ {
+		intersected = IntersectionByteSlices(intersected, sets[i])
 	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
-		}
-	}
-	return set
-}
-
-// ByteIsIn returns true if a is in b and False otherwise.
-func ByteIsIn(a byte, b []byte) bool {
-	for _, v := range b {
-		if a == v {
-			return true
-		}
-	}
-	return false
+	return intersected
 }
