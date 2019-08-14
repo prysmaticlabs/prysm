@@ -60,21 +60,17 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	if err := connect(h, p.host); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
-	s, err := h.NewStream(context.Background(), p.host.ID(), protocol.ID(topic))
+	s, err := h.NewStream(context.Background(), p.host.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
 	if err != nil {
 		p.t.Fatalf("Failed to open stream %v", err)
 	}
-	//defer s.Close()
+	defer s.Close()
 
-	b, err := p.Encoding().Encode(msg)
+	n, err := p.Encoding().Encode(s, msg)
 	if err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 
-	n, err := s.Write(b)
-	if err != nil {
-		p.t.Fatalf("Failed to write to stream: %v", err)
-	}
 	p.t.Logf("Wrote %d bytes", n)
 }
 

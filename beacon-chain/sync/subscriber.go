@@ -29,7 +29,7 @@ func noopValidator(context.Context, proto.Message, p2p.Broadcaster) bool {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h subHandler) {
-	sub, err := r.p2p.PubSub().Subscribe(topic + "/ssz") // TODO: Determine encoding suffix.
+	sub, err := r.p2p.PubSub().Subscribe(topic + r.p2p.Encoding().ProtocolSuffix()) // TODO: Determine encoding suffix.
 	if err != nil {
 		panic(err)
 	}
@@ -43,37 +43,39 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 				return
 			}
 
+			_ = msg
+
 			go func() {
-				// TODO: This doesn't need such a short timeout.
-				ctx, cancel := context.WithTimeout(r.ctx, ttfbTimeout)
-				defer cancel()
-
-				b := msg.Data
-				if b == nil {
-					log.WithField("topic", topic).Warn("Received nil message on pubsub")
-					return
-				}
-
-				n := proto.Clone(base)
-				if err := r.p2p.Encoding().DecodeTo(b, n); err != nil {
-					log.WithField("topic", topic).Warn("Failed to decode pubsub message")
-					return
-				}
-
-				if !v(ctx, n, r.p2p) {
-					log.WithField("topic", topic).
-						WithField("message", n.String()).
-						Debug("Message did not verify")
-
-					// TODO: Increment metrics.
-					return
-				}
-
-				if err := h(ctx, n); err != nil {
-					// TODO: Increment metrics.
-
-					return
-				}
+				//// TODO: This doesn't need such a short timeout.
+				//ctx, cancel := context.WithTimeout(r.ctx, ttfbTimeout)
+				//defer cancel()
+				//
+				//b := msg.Data
+				//if b == nil {
+				//	log.WithField("topic", topic).Warn("Received nil message on pubsub")
+				//	return
+				//}
+				//
+				//n := proto.Clone(base)
+				//if err := r.p2p.Encoding().DecodeTo(b, n); err != nil {
+				//	log.WithField("topic", topic).Warn("Failed to decode pubsub message")
+				//	return
+				//}
+				//
+				//if !v(ctx, n, r.p2p) {
+				//	log.WithField("topic", topic).
+				//		WithField("message", n.String()).
+				//		Debug("Message did not verify")
+				//
+				//	// TODO: Increment metrics.
+				//	return
+				//}
+				//
+				//if err := h(ctx, n); err != nil {
+				//	// TODO: Increment metrics.
+				//
+				//	return
+				//}
 			}()
 		}
 	}()

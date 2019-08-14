@@ -6,6 +6,7 @@ go_library(
         "doc.go",
         "network_encoding.go",
         "ssz.go",
+        "varint.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder",
     visibility = ["//beacon-chain:__subpackages__"],

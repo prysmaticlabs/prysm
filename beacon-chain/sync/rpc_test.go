@@ -34,7 +34,7 @@ func TestRegisterRPC(t *testing.T) {
 	}
 	r.registerRPC(topic, &pb.TestSimpleMessage{}, handler)
 
-	p2p.ReceiveRPC(topic+"/ssz", &pb.TestSimpleMessage{Foo: []byte("foo")})
+	p2p.ReceiveRPC(topic, &pb.TestSimpleMessage{Foo: []byte("foo")})
 
 	if waitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")
