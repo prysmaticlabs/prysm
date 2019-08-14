@@ -41,9 +41,9 @@ func NewForkChoiceService(ctx context.Context, db *db.Store) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &Store{
-		ctx:    ctx,
-		cancel: cancel,
-		db:     db,
+		ctx:            ctx,
+		cancel:         cancel,
+		db:             db,
 		checkptBlkRoot: make(map[*ethpb.Checkpoint][32]byte),
 	}
 }
