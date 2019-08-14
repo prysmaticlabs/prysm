@@ -10,8 +10,8 @@ option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
 // Slasher service API
 // 
-// Slasher service provides an interface for validators and beacon server to query
-// to subscribe for slashable events on the network as well as to make sure that the 
+// Slasher service provides an interface for validators and beacon chain server to query
+// and subscribe for slashable events on the network as well as to make sure that the 
 // attestation or proposal they are going to submit to the network are not going to 
 // produce a slashable event.
 service Slasher {
