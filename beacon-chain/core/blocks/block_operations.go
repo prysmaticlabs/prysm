@@ -3,7 +3,6 @@ package blocks
 import (
 	"bytes"
 	"encoding/binary"
-
 	"fmt"
 	"sort"
 
@@ -301,6 +300,19 @@ func ProcessRandao(
 	}
 	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
+}
+
+// ValidateBlockRandaoBeforeStateTransition given a block and a state this function validates
+// that valid proposer for the current state signed it and returns its id.
+func ValidateBlockRandaoBeforeStateTransition(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (proposerID uint64, epoch uint64, err error) {
+	beaconState.Slot++
+	pid, ep, err := ValidateBlockRandao(beaconState, body)
+	beaconState.Slot--
+	return pid, ep, err
+
 }
 
 // ValidateBlockRandao given a block and a state this function validates
