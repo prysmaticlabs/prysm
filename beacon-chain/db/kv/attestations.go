@@ -84,11 +84,23 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 }
 
 // DeleteAttestation by attestation data root.
-// TODO(#3018): Add the ability for batch deletions.
+// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		// TODO(#3018): Also delete the keys from the indices list. Add delete attestations batch.
+		enc := bkt.Get(attDataRoot[:])
+		if enc == nil {
+			return nil
+		}
+		att := &ethpb.Attestation{}
+		if err := proto.Unmarshal(enc, att); err != nil {
+			return err
+		}
+		indices := createAttestationIndicesFromData(att.Data)
+		indicesBkt := tx.Bucket(attestationIndicesBucket)
+		if err := deleteValueForIndices(indices, attDataRoot[:], indicesBkt); err != nil {
+			return errors.Wrap(err, "could not delete root for DB indices")
+		}
 		return bkt.Delete(attDataRoot[:])
 	})
 }
@@ -105,10 +117,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		indices := [][]byte{
-			append(shardIdx, uint64ToBytes(att.Data.Crosslink.Shard)...),
-			append(parentRootIdx, att.Data.Crosslink.ParentRoot...),
-		}
+		indices := createAttestationIndicesFromData(att.Data)
 		indicesBkt := tx.Bucket(attestationIndicesBucket)
 		if err := updateIndices(indices, attDataRoot[:], indicesBkt); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
@@ -136,11 +145,8 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		for i := 0; i < len(atts); i++ {
-			indices := [][]byte{
-				append(shardIdx, uint64ToBytes(atts[i].Data.Crosslink.Shard)...),
-				append(parentRootIdx, atts[i].Data.Crosslink.ParentRoot...),
-			}
 			indicesBkt := tx.Bucket(attestationIndicesBucket)
+			indices := createAttestationIndicesFromData(atts[i].Data)
 			if err := updateIndices(indices, keys[i], indicesBkt); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
@@ -150,6 +156,17 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		}
 		return nil
 	})
+}
+
+// createAttestationIndicesFromData creates a set of byte indices
+// for key lookups in the DB using attestation data.
+func createAttestationIndicesFromData(attData *ethpb.AttestationData) [][]byte {
+	return [][]byte{
+		append(shardIdx, uint64ToBytes(attData.Crosslink.Shard)...),
+		append(parentRootIdx, attData.Crosslink.ParentRoot...),
+		append(startEpochIdx, uint64ToBytes(attData.Crosslink.StartEpoch)...),
+		append(endEpochIdx, uint64ToBytes(attData.Crosslink.EndEpoch)...),
+	}
 }
 
 // createAttestationIndicesFromFilters takes in filter criteria and returns
@@ -169,6 +186,12 @@ func createAttestationIndicesFromFilters(f *filters.QueryFilter) ([][]byte, erro
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
 			idx := append(parentRootIdx, parentRoot...)
+			keys = append(keys, idx)
+		case filters.StartEpoch:
+			idx := append(startEpochIdx, uint64ToBytes(v.(uint64))...)
+			keys = append(keys, idx)
+		case filters.EndEpoch:
+			idx := append(endEpochIdx, uint64ToBytes(v.(uint64))...)
 			keys = append(keys, idx)
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for attestations", k)

@@ -17,6 +17,8 @@ var (
 	// Key indices.
 	shardIdx      = []byte("shard")
 	parentRootIdx = []byte("parent-root")
+	startEpochIdx = []byte("start-epoch")
+	endEpochIdx   = []byte("end-epoch")
 
 	// Block keys.
 	headBlockRootKey = []byte("head-root")

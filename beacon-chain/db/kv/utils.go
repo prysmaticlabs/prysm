@@ -1,6 +1,8 @@
 package kv
 
 import (
+	"bytes"
+
 	"github.com/boltdb/bolt"
 )
 
@@ -36,6 +38,28 @@ func updateIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) error {
 			}
 		} else {
 			if err := bkt.Put(idx, append(valuesAtIndex, root...)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// deleteValueForIndices clears a root stored at each index.
+func deleteValueForIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) error {
+	for _, idx := range indices {
+		valuesAtIndex := bkt.Get(idx)
+		if valuesAtIndex != nil {
+			start := bytes.Index(valuesAtIndex, root)
+			// if the root was not found inside the values at index slice, we continue.
+			if start == -1 {
+				continue
+			}
+			// We clear out the root from the values at index slice. For example,
+			// If we had [0x32, 0x33, 0x45] and we wanted to clear out 0x33, the code below
+			// updates the slice to [0x32, 0x45].
+			valuesAtIndex = append(valuesAtIndex[:start], valuesAtIndex[start+len(root):]...)
+			if err := bkt.Put(idx, valuesAtIndex); err != nil {
 				return err
 			}
 		}
