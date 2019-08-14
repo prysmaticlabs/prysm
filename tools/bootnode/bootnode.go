@@ -52,7 +52,7 @@ func main() {
 	listener := createListener(defaultIP, *port, privKey)
 
 	node := listener.Self()
-	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/p2p/%s\n", node.IP.String(), node.UDP, node.ID.String())
+	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/discv5/%s\n", node.IP.String(), node.UDP, node.ID.String())
 
 	select {}
 }
