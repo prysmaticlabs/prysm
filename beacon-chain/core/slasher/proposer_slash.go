@@ -9,7 +9,10 @@ import (
 var epochProposalBitlist map[uint64]bitfield.Bitlist
 
 func init() {
-	epochProposalBitlist = make(map[uint64]bitfield.Bitlist, 54000)
+	epochProposalBitlist = make(map[uint64]bitfield.Bitlist, 100)
+	for i := uint64(0); i < 100; i++ {
+		epochProposalBitlist[i] = bitfield.NewBitlist(300000)
+	}
 }
 
 // CheckNewProposal checks weather a new proposal is allowed or
