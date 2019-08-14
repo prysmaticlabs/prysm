@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -12,7 +13,7 @@ import (
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
-func notImplementedSubHandler(context.Context, proto.Message) error {
+func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
 	return errors.New("not implemented")
 }
 
@@ -23,14 +24,22 @@ type validator func(context.Context, proto.Message, p2p.Broadcaster) bool
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
-func noopValidator(context.Context, proto.Message, p2p.Broadcaster) bool {
+func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 	return true
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h subHandler) {
-	sub, err := r.p2p.PubSub().Subscribe(topic + r.p2p.Encoding().ProtocolSuffix()) // TODO: Determine encoding suffix.
+func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
+	base := GossipTopicMappings[topic]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
+	}
+
+	topic += r.p2p.Encoding().ProtocolSuffix()
+	log := log.WithField("topic", topic)
+
+	sub, err := r.p2p.PubSub().Subscribe(topic)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +62,7 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 
 				n := proto.Clone(base)
 				if err := r.p2p.Encoding().Decode(bytes.NewBuffer(b), n); err != nil {
-					log.WithField("topic", topic).Warn("Failed to decode pubsub message")
+					log.WithError(err).WithField("topic", topic).Warn("Failed to decode pubsub message")
 					return
 				}
 
@@ -68,7 +77,7 @@ func (r *RegularSync) subscribe(topic string, base proto.Message, v validator, h
 
 				if err := h(r.ctx, n); err != nil {
 					// TODO: Increment metrics.
-
+					log.WithError(err).Error("Failed to handle p2p pubsub")
 					return
 				}
 			}()

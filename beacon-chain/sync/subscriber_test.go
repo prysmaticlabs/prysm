@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -9,7 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -20,20 +19,20 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		p2p: p2p,
 	}
 
-	topic := "/testing/foobar"
+	topic := "/eth2/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, &pb.TestSimpleMessage{}, noopValidator, func(_ context.Context, msg proto.Message) error {
-		m := msg.(*pb.TestSimpleMessage)
-		if !bytes.Equal(m.Foo, []byte("foo")) {
+	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
+		m := msg.(*pb.VoluntaryExit)
+		if m.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}
 		wg.Done()
 		return nil
 	})
 
-	p2p.ReceivePubSub(topic, &pb.TestSimpleMessage{Foo: []byte("foo")})
+	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")

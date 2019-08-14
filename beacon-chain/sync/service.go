@@ -41,31 +41,26 @@ func (r *RegularSync) Start() {
 	// Register PubSub subscribers.
 	r.subscribe(
 		"/eth2/beacon_block",
-		nil,
 		noopValidator,
 		notImplementedSubHandler, // TODO(3147): Implement.
 	)
 	r.subscribe(
 		"/eth2/beacon_attestation",
-		nil,
 		noopValidator,
 		notImplementedSubHandler, // TODO(3147): Implement.
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
-		nil,
 		noopValidator,
 		notImplementedSubHandler, // TODO(3147): Implement.
 	)
 	r.subscribe(
 		"/eth2/proposer_slashing",
-		nil,
 		noopValidator,
 		notImplementedSubHandler, // TODO(3147): Implement.
 	)
 	r.subscribe(
 		"/eth2/attester_slashing",
-		nil,
 		noopValidator,
 		notImplementedSubHandler, // TODO(3147): Implement.
 	)

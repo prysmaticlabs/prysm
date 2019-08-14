@@ -2,9 +2,11 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -12,6 +14,16 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte).
 var ttfbTimeout = 5 * time.Second
+
+// rpcHandler is responsible for handling and responding to any incoming message.
+// This method may return an error to internal monitoring, but the error will
+// not be relayed to the peer.
+type rpcHandler func(context.Context, proto.Message, libp2pcore.Stream) error
+
+// TODO(3147): Delete after all handlers implemented.
+func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.Stream) error {
+	return errors.New("not implemented")
+}
 
 func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
@@ -33,6 +45,7 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler
 		}
 		if err := h(ctx, n, stream); err != nil {
 			// TODO: Metrics
+			log.WithError(err).Error("Failed to handle p2p RPC")
 		}
 	})
 }
