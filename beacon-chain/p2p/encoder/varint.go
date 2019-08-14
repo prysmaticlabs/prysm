@@ -9,6 +9,8 @@ import (
 
 const maxVarintLength = 10
 
+// readVarint at the beginning of a byte slice. This varint may be used to indicate
+// the length of the remaining bytes in the reader.
 func readVarint(r io.Reader) (uint64, error) {
 	b := make([]byte, 0, maxVarintLength)
 	for i := 0; i < maxVarintLength; i++ {
