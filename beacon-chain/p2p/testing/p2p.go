@@ -17,6 +17,7 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 var _ = p2p.P2P(&TestP2P{})
@@ -133,4 +134,8 @@ func (p *TestP2P) PubSub() *pubsub.PubSub {
 
 func (p *TestP2P) Disconnect(pid peer.ID) error {
 	return p.Host.Network().ClosePeer(pid)
+}
+
+func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
+	// TODO
 }

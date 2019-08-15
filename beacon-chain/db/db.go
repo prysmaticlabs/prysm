@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -22,6 +23,9 @@ var log = logrus.WithField("prefix", "beacondb")
 // Database defines the necessary methods for Prysm's eth2 backend which may
 // be implemented by any key-value or relational database in practice.
 type Database interface {
+	io.Closer
+	DatabasePath() string
+
 	ClearDB() error
 	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)

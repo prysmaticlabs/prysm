@@ -9,10 +9,25 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/network"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+// expectSuccess status code from a stream in regular sync.
+func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
+	code, errMsg, err := r.readStatusCode(stream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code != 0 {
+		t.Fatalf("Received non-zero response code: %d", code)
+	}
+	if errMsg != nil {
+		t.Fatalf("Received error message from stream: %+v", errMsg)
+	}
+}
 
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
