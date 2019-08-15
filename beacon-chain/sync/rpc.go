@@ -12,7 +12,8 @@ import (
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
-// request response (time-to-first-byte).
+// request response (time-to-first-byte). The client is expected to give up if
+// they don't receive the first byte within 5 seconds.
 var ttfbTimeout = 5 * time.Second
 
 // rpcHandler is responsible for handling and responding to any incoming message.
@@ -25,6 +26,7 @@ func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.S
 	return errors.New("not implemented")
 }
 
+// registerRPC for a given topic with an expected protobuf message type.
 func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
@@ -44,7 +46,7 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler
 			return
 		}
 		if err := h(ctx, n, stream); err != nil {
-			// TODO: Metrics
+			// TODO(3147): Update metrics
 			log.WithError(err).Error("Failed to handle p2p RPC")
 		}
 	})

@@ -1,4 +1,4 @@
-package sync
+package p2p
 
 import (
 	"reflect"
@@ -7,8 +7,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
-// TODO: Move to appropriate place.
-
+// GossipTopicMappings represent the protocol ID to protobuf message type map for easy
+// lookup.
 var GossipTopicMappings = map[string]proto.Message{
 	"/eth2/beacon_block":       &pb.BeaconBlock{},
 	"/eth2/beacon_attestation": &pb.Attestation{},
@@ -17,6 +17,8 @@ var GossipTopicMappings = map[string]proto.Message{
 	"/eth2/attester_slashing":  &pb.AttesterSlashing{},
 }
 
+// GossipTypeMapping is the inverse of GossipTypeMappings so that an arbitrary protobuf message
+// can be mapped to a protocol ID string.
 var GossipTypeMapping = make(map[reflect.Type]string)
 
 func init() {

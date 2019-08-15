@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
@@ -32,7 +31,7 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
-	base := GossipTopicMappings[topic]
+	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
@@ -63,12 +62,12 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 			log.WithField("message", n.String()).
 				Debug("Message did not verify")
 
-			// TODO: Increment metrics.
+			// TODO(3147): Increment metrics.
 			return
 		}
 
 		if err := h(r.ctx, n); err != nil {
-			// TODO: Increment metrics.
+			// TODO(3147): Increment metrics.
 			log.WithError(err).Error("Failed to handle p2p pubsub")
 			return
 		}
@@ -80,7 +79,7 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
 				log.WithError(err).Error("Subscription next failed")
-				// TODO: Mark unhealthy.
+				// TODO(3147): Mark status unhealthy.
 				return
 			}
 

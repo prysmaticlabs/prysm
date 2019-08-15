@@ -6,6 +6,7 @@ go_library(
         "broadcaster.go",
         "config.go",
         "doc.go",
+        "gossip_topic_mappings.go",
         "interfaces.go",
         "log.go",
         "service.go",
@@ -14,6 +15,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/p2p/encoder:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",

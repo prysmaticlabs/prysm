@@ -8,5 +8,6 @@ import (
 )
 
 func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+	// TODO(3147): Implement
 	return nil
 }
