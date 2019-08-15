@@ -27,7 +27,7 @@ func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.S
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler) {
+func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
@@ -36,16 +36,18 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, h rpcHandler
 		defer stream.Close()
 
 		if err := stream.SetReadDeadline(roughtime.Now().Add(ttfbTimeout)); err != nil {
-			log.Error("Could not set stream read deadline")
+			log.WithError(err).Error("Could not set stream read deadline")
 			return
 		}
 
-		n := proto.Clone(base)
-		if err := r.p2p.Encoding().Decode(stream, n); err != nil {
+		// Clone the base message type so we have a newly initialized message as the decoding
+		// destination.
+		msg := proto.Clone(base)
+		if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
 			log.WithError(err).Error("Failed to decode stream message")
 			return
 		}
-		if err := h(ctx, n, stream); err != nil {
+		if err := handle(ctx, msg, stream); err != nil {
 			// TODO(3147): Update metrics
 			log.WithError(err).Error("Failed to handle p2p RPC")
 		}

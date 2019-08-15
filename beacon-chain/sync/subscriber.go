@@ -30,7 +30,7 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
+func (r *RegularSync) subscribe(topic string, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
@@ -41,6 +41,9 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 
 	sub, err := r.p2p.PubSub().Subscribe(topic)
 	if err != nil {
+		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
+		// libp2p PubSub library. This should not happen at normal runtime, unless the config
+		// changes to a fatal configuration.
 		panic(err)
 	}
 
@@ -52,21 +55,20 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 			return
 		}
 
-		n := proto.Clone(base)
-		if err := r.p2p.Encoding().Decode(bytes.NewBuffer(data), n); err != nil {
+		msg := proto.Clone(base)
+		if err := r.p2p.Encoding().Decode(bytes.NewBuffer(data), msg); err != nil {
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}
 
-		if !v(r.ctx, n, r.p2p) {
-			log.WithField("message", n.String()).
-				Debug("Message did not verify")
+		if !validate(r.ctx, msg, r.p2p) {
+			log.WithField("message", msg.String()).Debug("Message did not verify")
 
 			// TODO(3147): Increment metrics.
 			return
 		}
 
-		if err := h(r.ctx, n); err != nil {
+		if err := handle(r.ctx, msg); err != nil {
 			// TODO(3147): Increment metrics.
 			log.WithError(err).Error("Failed to handle p2p pubsub")
 			return
