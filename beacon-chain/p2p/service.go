@@ -45,13 +45,15 @@ func (s *Service) Start() {
 	s.started = true
 
 	// TODO(3147): Add host options
-	h, err := libp2p.New(s.ctx)
+	opts := buildOptions(s.cfg)
+	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
 		return
 	}
 	s.host = h
 
+	startDiscoveryV5(h.ID().)
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
