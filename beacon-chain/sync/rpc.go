@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -24,6 +25,30 @@ type rpcHandler func(context.Context, proto.Message, libp2pcore.Stream) error
 // TODO(3147): Delete after all handlers implemented.
 func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.Stream) error {
 	return errors.New("not implemented")
+}
+
+// registerRPCHandlers for p2p RPC.
+func (r *RegularSync) registerRPCHandlers() {
+	r.registerRPC(
+		"/eth2/beacon_chain/req/hello/1",
+		&pb.Hello{},
+		r.helloRPCHandler,
+	)
+	r.registerRPC(
+		"/eth2/beacon_chain/req/goodbye/1",
+		nil,
+		notImplementedRPCHandler, // TODO(3147): Implement.
+	)
+	r.registerRPC(
+		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
+		nil,
+		notImplementedRPCHandler, // TODO(3147): Implement.
+	)
+	r.registerRPC(
+		"/eth2/beacon_chain/req/beacon_blocks/1",
+		nil,
+		notImplementedRPCHandler, // TODO(3147): Implement.
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.

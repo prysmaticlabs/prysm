@@ -28,6 +28,35 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 	return true
 }
 
+// Register PubSub subscribers
+func (r *RegularSync) registerSubscribers() {
+	r.subscribe(
+		"/eth2/beacon_block",
+		noopValidator,
+		notImplementedSubHandler, // TODO(3147): Implement.
+	)
+	r.subscribe(
+		"/eth2/beacon_attestation",
+		noopValidator,
+		notImplementedSubHandler, // TODO(3147): Implement.
+	)
+	r.subscribe(
+		"/eth2/voluntary_exit",
+		noopValidator,
+		notImplementedSubHandler, // TODO(3147): Implement.
+	)
+	r.subscribe(
+		"/eth2/proposer_slashing",
+		noopValidator,
+		notImplementedSubHandler, // TODO(3147): Implement.
+	)
+	r.subscribe(
+		"/eth2/attester_slashing",
+		noopValidator,
+		notImplementedSubHandler, // TODO(3147): Implement.
+	)
+}
+
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (r *RegularSync) subscribe(topic string, validate validator, handle subHandler) {
