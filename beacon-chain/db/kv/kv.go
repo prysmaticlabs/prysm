@@ -13,7 +13,7 @@ import (
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db           *bolt.DB
-	DatabasePath string
+	databasePath string
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -32,7 +32,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	kv := &Store{db: boltDB, DatabasePath: dirPath}
+	kv := &Store{db: boltDB, databasePath: dirPath}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, validatorsBucket, attestationsBucket, blocksBucket, stateBucket)
@@ -45,15 +45,20 @@ func NewKVStore(dirPath string) (*Store, error) {
 
 // ClearDB removes the previously stored directory at the data directory.
 func (k *Store) ClearDB() error {
-	if _, err := os.Stat(k.DatabasePath); os.IsNotExist(err) {
+	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.RemoveAll(k.DatabasePath)
+	return os.RemoveAll(k.databasePath)
 }
 
 // Close closes the underlying BoltDB database.
 func (k *Store) Close() error {
 	return k.db.Close()
+}
+
+// DatabasePath at which this database writes files.
+func (k *Store) DatabasePath() string {
+	return k.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
