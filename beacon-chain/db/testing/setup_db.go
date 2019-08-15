@@ -3,35 +3,39 @@ package testing
 import (
 	"crypto/rand"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"path"
+	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 // SetupDB instantiates and returns database backed by key value store.
-func SetupDB() (db.Database, error) {
+func SetupDB(t testing.TB) db.Database {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate random file path")
+		t.Fatalf("could not generate random file path: %v", err)
 	}
-	p := path.Join(os.TempDir(), fmt.Sprintf("/%d", randPath))
+	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
-		return nil, errors.Wrap(err, "failed to remove directory")
+		t.Fatalf("failed to remove directory: %v", err)
 	}
-	return kv.NewKVStore(p)
+	s, err := kv.NewKVStore(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
 
-// TeardownDB closes a database and destroyes the fails at the database path.
-func TeardownDB(db db.Database) {
+// TeardownDB closes a database and destroys the fails at the database path.
+func TeardownDB(t testing.TB, db db.Database) {
 	if err := db.Close(); err != nil {
-		log.Fatalf("failed to close database: %v", err)
+		t.Fatalf("failed to close database: %v", err)
 	}
 	if err := os.RemoveAll(db.DatabasePath()); err != nil {
-		log.Fatalf("could not remove tmp db dir: %v", err)
+		t.Fatalf("could not remove tmp db dir: %v", err)
 	}
 }

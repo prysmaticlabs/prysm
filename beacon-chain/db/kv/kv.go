@@ -56,6 +56,7 @@ func (k *Store) Close() error {
 	return k.db.Close()
 }
 
+// DatabasePath at which this database writes files.
 func (k *Store) DatabasePath() string {
 	return k.databasePath
 }

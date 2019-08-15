@@ -64,11 +64,8 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	d, err := db.SetupDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.TeardownDB(d)
+	d := db.SetupDB(t)
+	defer db.TeardownDB(t, d)
 
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
