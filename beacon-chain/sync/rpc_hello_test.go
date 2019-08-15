@@ -9,15 +9,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
@@ -28,31 +26,39 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := RegularSync{p2p: p1}
+	r := &RegularSync{p2p: p1}
 
-	stream, err := p1.Swarm.NewStream(context.Background(), p2.Host.ID())
+	stream1, err := p1.Swarm.NewStream(context.Background(), p2.Host.ID())
 	if err != nil {
 		t.Fatal(err)
 	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Swarm.SetStreamHandler(func(stream network.Stream) {
+		defer wg.Done()
+		code, errMsg, err := r.readStatusCode(stream)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if code == 0 {
+			t.Error("Expected a non-zero code")
+		}
+		if errMsg.ErrorMessage != errWrongForkVersion.Error() {
+			t.Errorf("Received unexpected message response in the stream: %+v", err)
+		}
+	})
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream)
+	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
 
-	if len(p1.Host.Network().Peers()) != 0 {
-		t.Error("handler did not disconnect peer")
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	code, errMsg, err := r.readStatusCode(stream)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if code == 0 {
-		t.Error("Expected a non-zero code")
-	}
-	if errMsg.ErrorMessage != errWrongForkVersion.Error() {
-		t.Errorf("Received unexpected message response in the stream: %+v", err)
+	if len(p1.Host.Network().Peers()) != 0 {
+		t.Error("handler did not disconnect peer")
 	}
 }
 

@@ -33,6 +33,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "error_test.go",
         "rpc_hello_test.go",
         "rpc_test.go",
         "subscriber_test.go",
