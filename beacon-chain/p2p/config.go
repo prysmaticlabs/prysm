@@ -10,6 +10,7 @@ type Config struct {
 	HostAddress       string
 	PrivateKey        string
 	Port              uint
+	UDPPort           uint
 	MaxPeers          uint
 	WhitelistCIDR     string
 	EnableUPnP        bool

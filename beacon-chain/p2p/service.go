@@ -53,7 +53,7 @@ func (s *Service) Start() {
 	}
 	s.host = h
 
-	startDiscoveryV5(h.ID().)
+	startDiscoveryV5(,,)
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
