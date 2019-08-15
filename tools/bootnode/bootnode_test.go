@@ -15,9 +15,11 @@ func TestBootnode_OK(t *testing.T) {
 	}
 	privKey := extractPrivateKey()
 	listener := createListener(ipAddr, 4000, privKey)
+	defer listener.Close()
 
 	privKey = extractPrivateKey()
 	listener2 := createListener(ipAddr, 4001, privKey)
+	defer listener.Close()
 
 	err = listener.SetFallbackNodes([]*discv5.Node{listener2.Self()})
 	if err != nil {
