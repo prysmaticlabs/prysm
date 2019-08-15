@@ -88,6 +88,7 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 	}
 }
 
+// See: https://github.com/prysmaticlabs/go-ssz/pull/69
 func TestBeaconBlock(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 55,
