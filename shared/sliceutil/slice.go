@@ -143,21 +143,6 @@ func IntersectionInt64(s ...[]int64) []int64 {
 			}
 		}
 	}
-
-	for i := 0; i < len(s); i++ {
-		tmp := make([]int64, 0)
-		m := make(map[int64]bool)
-
-		for j := 0; j < len(set); j++ {
-			m[set[j]] = true
-		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				tmp = append(tmp, s[i][j])
-			}
-		}
-		set = tmp
-	}
 	return set
 }
 
