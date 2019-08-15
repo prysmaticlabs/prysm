@@ -17,7 +17,7 @@ var GossipTopicMappings = map[string]proto.Message{
 	"/eth2/attester_slashing":  &pb.AttesterSlashing{},
 }
 
-// GossipTypeMapping is the inverse of GossipTypeMappings so that an arbitrary protobuf message
+// GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
 // can be mapped to a protocol ID string.
 var GossipTypeMapping = make(map[reflect.Type]string)
 
