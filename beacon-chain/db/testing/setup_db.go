@@ -30,7 +30,7 @@ func SetupDB(t testing.TB) db.Database {
 	return s
 }
 
-// TeardownDB closes a database and destroyes the fails at the database path.
+// TeardownDB closes a database and destroys the files at the database path.
 func TeardownDB(t testing.TB, db db.Database) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("failed to close database: %v", err)
