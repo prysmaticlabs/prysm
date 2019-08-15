@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
 
-var _ = p2p.Composite(&TestP2P{})
+var _ = p2p.P2P(&TestP2P{})
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {

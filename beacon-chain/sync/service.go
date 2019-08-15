@@ -14,7 +14,7 @@ var _ = shared.Service(&RegularSync{})
 // main entry point for network messages.
 type RegularSync struct {
 	ctx context.Context
-	p2p p2p.Composite
+	p2p p2p.P2P
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.

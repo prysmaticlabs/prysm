@@ -5,8 +5,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GossipTopicMappings represent the protocol ID to protobuf message type map for easy
