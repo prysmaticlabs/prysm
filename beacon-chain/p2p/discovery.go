@@ -9,21 +9,21 @@ import (
 	_ "go.uber.org/automaxprocs"
 )
 
-func startDiscoveryV5(addr string, port int, privKey *ecdsa.PrivateKey, bootStrapAddr string) error {
-	listener := createListener(addr, port, privKey)
-	nodeID, err := discv5.HexID(bootStrapAddr)
+func startDiscoveryV5(addr string, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
+	listener := createListener(addr, int(cfg.UDPPort), privKey)
+	nodeID, err := discv5.HexID(cfg.BootstrapNodeAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	bootNode := listener.Resolve(nodeID)
 	if err := listener.SetFallbackNodes([]*discv5.Node{bootNode}); err != nil {
-		return err
+		return nil, err
 	}
-
 	node := listener.Self()
 	log.Infof("Started Discovery: %s", node.ID)
-	return nil
+
+	return listener, nil
 }
 
 func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {

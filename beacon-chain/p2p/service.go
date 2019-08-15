@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -17,12 +18,12 @@ type Service struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	started    bool
-	cfg        *Config
-	startupErr error
-
-	host   host.Host
-	pubsub *pubsub.PubSub
+	started     bool
+	cfg         *Config
+	startupErr  error
+	dv5Listener *discv5.Network
+	host        host.Host
+	pubsub      *pubsub.PubSub
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -45,7 +46,7 @@ func (s *Service) Start() {
 	s.started = true
 
 	// TODO(3147): Add host options
-	opts := buildOptions(s.cfg)
+	opts, ipAddr := buildOptions(s.cfg)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
@@ -53,7 +54,13 @@ func (s *Service) Start() {
 	}
 	s.host = h
 
-	startDiscoveryV5(,,)
+	listener, err := startDiscoveryV5(ipAddr, s.cfg)
+	if err != nil {
+		s.startupErr = err
+		return
+	}
+	s.dv5Listener = listener
+
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
@@ -66,6 +73,7 @@ func (s *Service) Start() {
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
 	s.started = false
+	s.dv5Listener.Close()
 	return nil
 }
 
