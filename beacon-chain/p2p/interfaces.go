@@ -3,6 +3,7 @@ package p2p
 import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
@@ -13,6 +14,7 @@ type P2P interface {
 	SetStreamHandler
 	EncodingProvider
 	PubSubProvider
+	PeerManager
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -33,4 +35,8 @@ type EncodingProvider interface {
 // PubSubProvider provides the p2p pubsub protocol.
 type PubSubProvider interface {
 	PubSub() *pubsub.PubSub
+}
+
+type PeerManager interface {
+	Disconnect(peer.ID) error
 }

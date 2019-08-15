@@ -10,8 +10,10 @@ import (
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	swarm "github.com/libp2p/go-libp2p-swarm"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -22,15 +24,16 @@ var _ = p2p.P2P(&TestP2P{})
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
 	t      *testing.T
-	host   host.Host
+	Host   host.Host
+	Swarm  *swarm.Swarm
 	pubsub *pubsub.PubSub
 }
 
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
-
-	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	s := swarmt.GenSwarm(t, ctx)
+	h := bhost.NewBlankHost(s)
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
@@ -41,14 +44,15 @@ func NewTestP2P(t *testing.T) *TestP2P {
 
 	return &TestP2P{
 		t:      t,
-		host:   h,
+		Host:   h,
+		Swarm:  s,
 		pubsub: ps,
 	}
 }
 
 // Connect two test peers together.
 func (p *TestP2P) Connect(b *TestP2P) {
-	if err := connect(p.host, b.host); err != nil {
+	if err := connect(p.Host, b.Host); err != nil {
 		p.t.Fatal(err)
 	}
 }
@@ -61,10 +65,10 @@ func connect(a, b host.Host) error {
 // ReceiveRPC simulates an incoming RPC.
 func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t, context.Background()))
-	if err := connect(h, p.host); err != nil {
+	if err := connect(h, p.Host); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
-	s, err := h.NewStream(context.Background(), p.host.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
+	s, err := h.NewStream(context.Background(), p.Host.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
 	if err != nil {
 		p.t.Fatalf("Failed to open stream %v", err)
 	}
@@ -88,7 +92,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	if err != nil {
 		p.t.Fatalf("Failed to create flood sub: %v", err)
 	}
-	if err := connect(h, p.host); err != nil {
+	if err := connect(h, p.Host); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
 
@@ -113,7 +117,7 @@ func (p *TestP2P) Broadcast(msg proto.Message) {
 
 // SetStreamHandler for RPC.
 func (p *TestP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
-	p.host.SetStreamHandler(protocol.ID(topic), handler)
+	p.Host.SetStreamHandler(protocol.ID(topic), handler)
 }
 
 // Encoding returns ssz encoding.
@@ -125,4 +129,8 @@ func (p *TestP2P) Encoding() encoder.NetworkEncoding {
 // to ensure all connected peers receive the message.
 func (p *TestP2P) PubSub() *pubsub.PubSub {
 	return p.pubsub
+}
+
+func (p *TestP2P) Disconnect(pid peer.ID) error {
+	return p.Host.Network().ClosePeer(pid)
 }
