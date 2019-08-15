@@ -23,7 +23,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("ff")}, stream)
+	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
