@@ -49,19 +49,18 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 	// message.
 	pipeline := func(data []byte) {
 		if data == nil {
-			log.WithField("topic", topic).Warn("Received nil message on pubsub")
+			log.Warn("Received nil message on pubsub")
 			return
 		}
 
 		n := proto.Clone(base)
 		if err := r.p2p.Encoding().Decode(bytes.NewBuffer(data), n); err != nil {
-			log.WithError(err).WithField("topic", topic).Warn("Failed to decode pubsub message")
+			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}
 
 		if !v(r.ctx, n, r.p2p) {
-			log.WithField("topic", topic).
-				WithField("message", n.String()).
+			log.WithField("message", n.String()).
 				Debug("Message did not verify")
 
 			// TODO: Increment metrics.
@@ -80,7 +79,7 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 		for {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
-				log.WithError(err).WithField("topic", topic).Error("Subscription next failed")
+				log.WithError(err).Error("Subscription next failed")
 				// TODO: Mark unhealthy.
 				return
 			}
