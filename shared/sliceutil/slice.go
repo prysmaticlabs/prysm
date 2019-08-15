@@ -74,7 +74,6 @@ func UnionUint64(s ...[]uint64) []uint64 {
 				set = append(set, s[i][j])
 			}
 		}
-		set = tmp
 	}
 	return set
 }
@@ -185,12 +184,6 @@ func UnionInt64(s ...[]int64) []int64 {
 				set = append(set, s[i][j])
 			}
 		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; !found {
-				tmp = append(tmp, s[i][j])
-			}
-		}
-		set = tmp
 	}
 	return set
 }
