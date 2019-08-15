@@ -11,25 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// logs epoch related data in each epoch transition
-func logEpochData(beaconState *pb.BeaconState) {
-	log.WithField(
-		"previousJustifiedEpoch", beaconState.PreviousJustifiedCheckpoint.Epoch,
-	).Info("Previous justified epoch")
-	log.WithField(
-		"justifiedEpoch", beaconState.CurrentJustifiedCheckpoint.Epoch,
-	).Info("Justified epoch")
-	log.WithField(
-		"finalizedEpoch", beaconState.FinalizedCheckpoint.Epoch,
-	).Info("Finalized epoch")
-	log.WithField(
-		"Deposit Index", beaconState.Eth1DepositIndex,
-	).Info("ETH1 Deposit Index")
-	log.WithField(
-		"numValidators", len(beaconState.Validators),
-	).Info("Validator registry length")
-}
-
 // saveValidatorIdx saves the current epoch activated validators public key to index mapping in DB,
 // current epoch key is then deleted from ActivatedValidators mapping.
 func saveValidatorIdx(ctx context.Context, state *pb.BeaconState, db db.Database) error {

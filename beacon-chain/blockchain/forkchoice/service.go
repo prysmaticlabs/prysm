@@ -20,8 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "forkchoice")
-
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
