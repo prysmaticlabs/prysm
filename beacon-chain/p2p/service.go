@@ -46,7 +46,7 @@ func (s *Service) Start() {
 	s.started = true
 
 	// TODO(3147): Add host options
-	opts, ipAddr := buildOptions(s.cfg)
+	opts, ipAddr, privKey := buildOptions(s.cfg)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
@@ -54,7 +54,7 @@ func (s *Service) Start() {
 	}
 	s.host = h
 
-	listener, err := startDiscoveryV5(ipAddr, s.cfg)
+	listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 	if err != nil {
 		s.startupErr = err
 		return
