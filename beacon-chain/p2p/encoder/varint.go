@@ -24,7 +24,7 @@ func readVarint(r io.Reader) (uint64, error) {
 		}
 		b = append(b, b1[0])
 
-		// If most signficant bit is not set, we have reached the end of the Varint.
+		// If most significant bit is not set, we have reached the end of the Varint.
 		if b1[0]&0x80 == 0 {
 			break
 		}
