@@ -15,6 +15,7 @@ type RegularSync struct {
 	p2p p2p.Composite
 }
 
+// Start the regular sync service by initializing all of the p2p sync handlers.
 func (r *RegularSync) Start() {
 	// Register RPC handlers.
 	r.registerRPC(
@@ -66,10 +67,12 @@ func (r *RegularSync) Start() {
 	)
 }
 
+// Stop the regular sync service.
 func (r *RegularSync) Stop() error {
 	return nil
 }
 
+// Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
 }

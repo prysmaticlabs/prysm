@@ -15,18 +15,22 @@ type Composite interface {
 	PubSubProvider
 }
 
+// Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
 	Broadcast(proto.Message)
 }
 
+// SetStreamHandler configures p2p to handle streams of a certain topic ID.
 type SetStreamHandler interface {
 	SetStreamHandler(topic string, handler network.StreamHandler)
 }
 
+// EncodingProvider provides p2p network encoding.
 type EncodingProvider interface {
 	Encoding() encoder.NetworkEncoding
 }
 
+// PubSubProvider provides the p2p pubsub protocol.
 type PubSubProvider interface {
 	PubSub() *pubsub.PubSub
 }

@@ -19,12 +19,14 @@ import (
 
 var _ = p2p.Composite(&TestP2P{})
 
+// TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
 	t      *testing.T
 	host   host.Host
 	pubsub *pubsub.PubSub
 }
 
+// NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
 
@@ -76,6 +78,7 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	p.t.Logf("Wrote %d bytes", n)
 }
 
+// ReceivePubSub simulates an incoming message over pubsub on a given topic.
 func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t, context.Background()))
 	ps, err := pubsub.NewFloodSub(context.Background(), h,
@@ -105,7 +108,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 
 // Broadcast a message.
 func (p *TestP2P) Broadcast(msg proto.Message) {
-
+	// TODO(3147): implement
 }
 
 // SetStreamHandler for RPC.
