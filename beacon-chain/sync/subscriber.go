@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
@@ -44,7 +45,38 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 		panic(err)
 	}
 
-	go func() {
+	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
+	// message.
+	pipeline := func(data []byte) {
+		if data == nil {
+			log.WithField("topic", topic).Warn("Received nil message on pubsub")
+			return
+		}
+
+		n := proto.Clone(base)
+		if err := r.p2p.Encoding().Decode(bytes.NewBuffer(data), n); err != nil {
+			log.WithError(err).WithField("topic", topic).Warn("Failed to decode pubsub message")
+			return
+		}
+
+		if !v(r.ctx, n, r.p2p) {
+			log.WithField("topic", topic).
+				WithField("message", n.String()).
+				Debug("Message did not verify")
+
+			// TODO: Increment metrics.
+			return
+		}
+
+		if err := h(r.ctx, n); err != nil {
+			// TODO: Increment metrics.
+			log.WithError(err).Error("Failed to handle p2p pubsub")
+			return
+		}
+	}
+
+	// The main message loop for receiving incoming messages from this subscription.
+	messageLoop := func() {
 		for {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
@@ -53,34 +85,9 @@ func (r *RegularSync) subscribe(topic string, v validator, h subHandler) {
 				return
 			}
 
-			go func() {
-				b := msg.Data
-				if b == nil {
-					log.WithField("topic", topic).Warn("Received nil message on pubsub")
-					return
-				}
-
-				n := proto.Clone(base)
-				if err := r.p2p.Encoding().Decode(bytes.NewBuffer(b), n); err != nil {
-					log.WithError(err).WithField("topic", topic).Warn("Failed to decode pubsub message")
-					return
-				}
-
-				if !v(r.ctx, n, r.p2p) {
-					log.WithField("topic", topic).
-						WithField("message", n.String()).
-						Debug("Message did not verify")
-
-					// TODO: Increment metrics.
-					return
-				}
-
-				if err := h(r.ctx, n); err != nil {
-					// TODO: Increment metrics.
-					log.WithError(err).Error("Failed to handle p2p pubsub")
-					return
-				}
-			}()
+			go pipeline(msg.Data)
 		}
-	}()
+	}
+
+	go messageLoop()
 }
