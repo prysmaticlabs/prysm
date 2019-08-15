@@ -79,10 +79,12 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
 	return nil
 }
 
+// PubSub returns the p2p pubsub framework.
 func (s *Service) PubSub() *pubsub.PubSub {
 	return s.pubsub
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
 
+// Composite represents the full p2p interface composed of all of the sub-interfaces.
 type Composite interface {
 	Broadcaster
 	SetStreamHandler

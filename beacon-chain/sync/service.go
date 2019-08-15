@@ -10,6 +10,8 @@ import (
 
 var _ = shared.Service(&RegularSync{})
 
+// RegularSync service is responsible for handling all run time p2p related operations as the
+// main entry point for network messages.
 type RegularSync struct {
 	ctx context.Context
 	p2p p2p.Composite
