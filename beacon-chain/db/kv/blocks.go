@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -49,23 +48,7 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 // Blocks retrieves a list of beacon blocks by filter criteria.
 func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error) {
 	blocks := make([]*ethpb.BeaconBlock, 0)
-	hasFilterSpecified := !reflect.DeepEqual(f, &filters.QueryFilter{}) && f != nil
-	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		c := bkt.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			// TODO(#3064): Include range filters for slots.
-			if v != nil && (!hasFilterSpecified || ensureBlockFilterCriteria(k, f)) {
-				block := &ethpb.BeaconBlock{}
-				if err := proto.Unmarshal(v, block); err != nil {
-					return err
-				}
-				blocks = append(blocks, block)
-			}
-		}
-		return nil
-	})
-	return blocks, err
+	return blocks, nil
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
@@ -76,7 +59,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 	}
 	roots := make([][]byte, len(blocks))
 	for i, b := range blocks {
-		root, err := ssz.HashTreeRoot(b)
+		root, err := ssz.SigningRoot(b)
 		if err != nil {
 			return nil, err
 		}
@@ -101,13 +84,28 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
-			if v != nil {
-				return bkt.Delete(k)
-			}
+		enc := bkt.Get(blockRoot[:])
+		if enc == nil {
+			return nil
 		}
-		return nil
+		block := &ethpb.BeaconBlock{}
+		if err := proto.Unmarshal(enc, block); err != nil {
+			return err
+		}
+		indicesByBucket := make(map[*bolt.Bucket][]byte)
+		buckets := []*bolt.Bucket{
+			tx.Bucket(parentRootIndicesBucket),
+		}
+		indices := [][]byte{
+			append(parentRootIdx, block.ParentRoot...),
+		}
+		for i := 0; i < len(buckets); i++ {
+			indicesByBucket[buckets[i]] = indices[i]
+		}
+		if err := deleteValueForIndicesMap(indicesByBucket, blockRoot[:]); err != nil {
+			return errors.Wrap(err, "could not delete root for DB indices")
+		}
+		return bkt.Delete(blockRoot[:])
 	})
 }
 
