@@ -3,7 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "deadlines.go",
         "doc.go",
+        "error.go",
         "log.go",
         "metrics.go",
         "rpc.go",
@@ -14,9 +16,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
@@ -29,16 +33,26 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "error_test.go",
+        "rpc_hello_test.go",
         "rpc_test.go",
         "subscriber_test.go",
     ],
     embed = [":go_default_library"],
+    flaky = True,  # libp2p hosts are flaky upstream.
     deps = [
+        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )

@@ -44,6 +44,10 @@ message RecentBeaconBlocksRequest {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\""];
 }
 
+message ErrorMessage {
+  string error_message = 1;
+}
+
 // TODO(3147): Delete below this line.
 
 enum Topic {

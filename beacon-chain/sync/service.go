@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -14,6 +15,7 @@ var _ = shared.Service(&RegularSync{})
 type RegularSync struct {
 	ctx context.Context
 	p2p p2p.P2P
+	db  db.Database
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.

@@ -6,6 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	network "github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
@@ -93,4 +94,10 @@ func (s *Service) PubSub() *pubsub.PubSub {
 // This method is a pass through to libp2pcore.Host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// Disconnect from a peer.
+func (s *Service) Disconnect(pid peer.ID) error {
+	// TODO(3147): Implement disconnect
+	return nil
 }
