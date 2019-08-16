@@ -14,6 +14,8 @@ import (
 
 var _ = shared.Service(&Service{})
 var pollingPeriod time.Duration = 1
+
+// nodes live forever in the peerstore
 var standardttl time.Duration = 1e8
 
 // Service for managing peer to peer (p2p) networking.
