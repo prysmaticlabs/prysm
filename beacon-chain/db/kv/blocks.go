@@ -14,18 +14,16 @@ import (
 
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
-	att := &ethpb.BeaconBlock{}
+	block := &ethpb.BeaconBlock{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
-			if v != nil {
-				return proto.Unmarshal(v, att)
-			}
+		enc := bkt.Get(blockRoot[:])
+		if enc == nil {
+			return nil
 		}
-		return nil
+		return proto.Unmarshal(enc, block)
 	})
-	return att, err
+	return block, err
 }
 
 // HeadBlock returns the latest canonical block in eth2.
