@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 // Block retrieval by root.
@@ -47,7 +48,45 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 // Blocks retrieves a list of beacon blocks by filter criteria.
 func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error) {
 	blocks := make([]*ethpb.BeaconBlock, 0)
-	return blocks, nil
+	err := k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+
+		// If no filter criteria are specified, return all blocks.
+		if f == nil {
+			return bkt.ForEach(func(k, v []byte) error {
+				block := &ethpb.BeaconBlock{}
+				if err := proto.Unmarshal(v, block); err != nil {
+					return err
+				}
+				blocks = append(blocks, block)
+				return nil
+			})
+		}
+
+		// Creates a list of indices from the passed in filter values, such as:
+		// []byte("parent-root-0x2093923"), etc. to be used for looking up
+		// block roots that were stored under each of those indices for O(1) lookup.
+		bucketReader := tx.Bucket
+		indicesByBucket, err := createBlockFiltersFromIndices(f, bucketReader)
+		if err != nil {
+			return errors.Wrap(err, "could not determine block lookup indices")
+		}
+		// Once we have a list of attestation roots that correspond to each
+		// lookup index, we find the intersection across all of them and use
+		// that list of roots to lookup the attestations. These attestations will
+		// meet the filter criteria.
+		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indices, indicesBkt)...)
+		for i := 0; i < len(keys); i++ {
+			encoded := bkt.Get(keys[i])
+			block := &ethpb.BeaconBlock{}
+			if err := proto.Unmarshal(encoded, block); err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+		return nil
+	})
+	return blocks, err
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
@@ -80,6 +119,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteBlock by block root.
+// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
