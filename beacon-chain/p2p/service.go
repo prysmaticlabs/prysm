@@ -5,8 +5,12 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
+	network "github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -73,5 +77,27 @@ func (s *Service) Status() error {
 	if !s.started {
 		return errors.New("not running")
 	}
+	return nil
+}
+
+// Encoding returns the configured networking encoding.
+func (s *Service) Encoding() encoder.NetworkEncoding {
+	return nil
+}
+
+// PubSub returns the p2p pubsub framework.
+func (s *Service) PubSub() *pubsub.PubSub {
+	return s.pubsub
+}
+
+// SetStreamHandler sets the protocol handler on the p2p host multiplexer.
+// This method is a pass through to libp2pcore.Host.SetStreamHandler.
+func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
+	s.host.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// Disconnect from a peer.
+func (s *Service) Disconnect(pid peer.ID) error {
+	// TODO(3147): Implement disconnect
 	return nil
 }
