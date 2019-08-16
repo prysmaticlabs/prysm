@@ -25,40 +25,54 @@ func SubsetUint64(a []uint64, b []uint64) bool {
 	return true
 }
 
-// IntersectionUint64 of two uint64 slices with time
+// IntersectionUint64 of any number of uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func IntersectionUint64(a []uint64, b []uint64) []uint64 {
-	set := make([]uint64, 0)
-	m := make(map[uint64]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
+func IntersectionUint64(s ...[]uint64) []uint64 {
+	if len(s) == 0 {
+		return []uint64{}
 	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; found {
-			set = append(set, b[i])
+	if len(s) == 1 {
+		return s[0]
+	}
+	intersect := make([]uint64, 0)
+	for i := 1; i < len(s); i++ {
+		m := make(map[uint64]bool)
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; found {
+				intersect = append(intersect, s[i][j])
+			}
 		}
 	}
-	return set
+	return intersect
 }
 
-// UnionUint64 of two uint64 slices with time
+// UnionUint64 of any number of uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func UnionUint64(a []uint64, b []uint64) []uint64 {
+func UnionUint64(s ...[]uint64) []uint64 {
+	if len(s) == 0 {
+		return []uint64{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
 	set := make([]uint64, 0)
 	m := make(map[uint64]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-		set = append(set, a[i])
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+			set = append(set, s[i-1][j])
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; !found {
+				set = append(set, s[i][j])
+			}
 		}
 	}
 	return set
@@ -106,40 +120,54 @@ func IsInUint64(a uint64, b []uint64) bool {
 	return false
 }
 
-// IntersectionInt64 of two int64 slices with time
+// IntersectionInt64 of any number of int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func IntersectionInt64(a []int64, b []int64) []int64 {
+func IntersectionInt64(s ...[]int64) []int64 {
+	if len(s) == 0 {
+		return []int64{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
 	set := make([]int64, 0)
 	m := make(map[int64]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; found {
-			set = append(set, b[i])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; found {
+				set = append(set, s[i][j])
+			}
 		}
 	}
 	return set
 }
 
-// UnionInt64 of two int64 slices with time
+// UnionInt64 of any number of int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func UnionInt64(a []int64, b []int64) []int64 {
+func UnionInt64(s ...[]int64) []int64 {
+	if len(s) == 0 {
+		return []int64{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
 	set := make([]int64, 0)
 	m := make(map[int64]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-		set = append(set, a[i])
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[s[i-1][j]] = true
+			set = append(set, s[i-1][j])
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[s[i][j]]; !found {
+				set = append(set, s[i][j])
+			}
 		}
 	}
 	return set
@@ -174,64 +202,35 @@ func IsInInt64(a int64, b []int64) bool {
 	return false
 }
 
-// ByteIntersection returns a new set with elements that are common in
-// both sets a and b.
-func ByteIntersection(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
+// IntersectionByteSlices returns the common elements between sets of byte slices.
+func IntersectionByteSlices(s ...[][]byte) [][]byte {
+	if len(s) == 0 {
+		return [][]byte{}
 	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; found {
-			set = append(set, b[i])
+	if len(s) == 1 {
+		return s[0]
+	}
+	inter := make([][]byte, 0)
+	for i := 1; i < len(s); i++ {
+		hash := make(map[string]bool)
+		for _, e := range s[i-1] {
+			hash[string(e)] = true
 		}
-	}
-	return set
-}
-
-// ByteUnion returns a new set with elements that are common in
-// both sets a and b.
-func ByteUnion(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-		set = append(set, a[i])
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
+		for _, e := range s[i] {
+			if hash[string(e)] {
+				inter = append(inter, e)
+			}
 		}
-	}
-	return set
-}
-
-// ByteNot returns a new set with elements that are common in
-// both sets a and b.
-func ByteNot(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
+		tmp := make([][]byte, 0)
+		// Remove duplicates from slice.
+		encountered := make(map[string]bool)
+		for _, element := range inter {
+			if !encountered[string(element)] {
+				tmp = append(tmp, element)
+				encountered[string(element)] = true
+			}
 		}
+		inter = tmp
 	}
-	return set
-}
-
-// ByteIsIn returns true if a is in b and False otherwise.
-func ByteIsIn(a byte, b []byte) bool {
-	for _, v := range b {
-		if a == v {
-			return true
-		}
-	}
-	return false
+	return inter
 }

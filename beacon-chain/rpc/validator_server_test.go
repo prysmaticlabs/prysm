@@ -31,8 +31,8 @@ import (
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	pubKey := []byte{'A'}
 	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
@@ -52,8 +52,8 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestValidatorIndex_InStateNotInDB(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	pubKey := []byte{'A'}
 
@@ -94,9 +94,9 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 }
 
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
-	db := internal.SetupDB(t)
+	db := internal.SetupDBDeprecated(t)
 	ctx := context.Background()
-	defer internal.TeardownDB(t, db)
+	defer internal.TeardownDBDeprecated(t, db)
 	helpers.ClearAllCaches()
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 8)
@@ -128,8 +128,8 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 }
 
 func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	genesis := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
@@ -159,8 +159,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 func TestCommitteeAssignment_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
@@ -237,9 +237,67 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
+	helpers.ClearAllCaches()
+
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
+	ctx := context.Background()
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
+
+	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	state.Slot = 5 // Set state to non-epoch start slot.
+	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < len(deposits); i++ {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+
+	// Test the first validator in registry.
+	req := &pb.AssignmentRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		EpochStart: 0,
+	}
+	res, err := vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.ValidatorAssignment) != 1 {
+		t.Error("Expected 1 assignment")
+	}
+}
+
 func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
@@ -296,8 +354,8 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 }
 
 func TestValidatorStatus_PendingActive(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -326,7 +384,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -350,8 +408,8 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 }
 
 func TestValidatorStatus_Active(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -375,7 +433,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
@@ -418,8 +476,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 }
 
 func TestValidatorStatus_InitiatedExit(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -455,7 +513,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -478,8 +536,8 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 }
 
 func TestValidatorStatus_Withdrawable(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -512,7 +570,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -535,8 +593,8 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 }
 
 func TestValidatorStatus_ExitedSlashed(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -569,7 +627,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -592,8 +650,8 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 }
 
 func TestValidatorStatus_Exited(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -625,7 +683,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -648,8 +706,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 }
 
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
@@ -679,7 +737,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -702,8 +760,8 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
@@ -745,8 +803,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -806,7 +864,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
 	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
@@ -854,8 +912,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 }
 
 func TestMultipleValidatorStatus_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
@@ -899,7 +957,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
 		PublicKey:             []byte{'C'},
 		Signature:             []byte("hi"),
@@ -911,7 +969,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		Data: depData,
 	}
 	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
-	db.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
+	db.DepositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
@@ -956,7 +1014,7 @@ func BenchmarkAssignment(b *testing.B) {
 	b.StopTimer()
 	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	db, _ := db.NewDB(path)
+	db, _ := db.NewDBDeprecated(path)
 	defer db.Close()
 	os.RemoveAll(db.DatabasePath)
 

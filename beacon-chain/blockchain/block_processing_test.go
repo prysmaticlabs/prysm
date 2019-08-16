@@ -27,13 +27,6 @@ import (
 // Ensure ChainService implements interfaces.
 var _ = BlockProcessor(&ChainService{})
 
-func init() {
-	// TODO(2993): remove this after ssz is optimized for mainnet.
-	c := params.BeaconConfig()
-	c.HistoricalRootsLimit = 8192
-	params.OverrideBeaconConfig(c)
-}
-
 func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) (*ethpb.BeaconBlock, error) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parent, err := chainService.beaconDB.Block(parentRoot)
@@ -61,8 +54,8 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 }
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -108,8 +101,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -201,8 +194,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -211,7 +204,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -285,8 +278,8 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -298,7 +291,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	genesis := b.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
@@ -370,8 +363,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -389,7 +382,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -449,8 +442,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
@@ -464,7 +457,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -516,8 +509,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -534,7 +527,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -643,10 +636,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	for _, dep := range pendingDeposits {
-		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
+		db.DepositCache.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
+	if len(db.DepositCache.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
 		t.Fatalf("Expected %d pending deposits", len(pendingDeposits))
 	}
 
@@ -673,8 +666,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != 0 {
-		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.PendingDeposits(chainService.ctx, nil))
+	if len(db.DepositCache.PendingDeposits(chainService.ctx, nil)) != 0 {
+		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.DepositCache.PendingDeposits(chainService.ctx, nil))
 	}
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
@@ -712,8 +705,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// we process F, the G. The expected behavior is that we load the historical
 	// state from slot 3 where the common ancestor block C is present.
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -728,7 +721,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -922,8 +915,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 }
 
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -941,7 +934,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	beaconState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       genesis.Slot,
 		ParentRoot: genesis.ParentRoot,
@@ -1012,8 +1005,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 }
 
 func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(2)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
@@ -1055,8 +1048,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(1)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	var validators []*ethpb.Validator
@@ -1091,8 +1084,8 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(100)
 
 	// Tried to insert 5 active indices to DB with only 3 validators in state

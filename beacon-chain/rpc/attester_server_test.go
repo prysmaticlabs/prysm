@@ -23,8 +23,8 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
 }
 
 func TestSubmitAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
@@ -80,8 +80,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	block := &ethpb.BeaconBlock{
@@ -108,7 +108,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),
@@ -193,8 +193,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -228,7 +228,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
-		BlockRoots: make([][]byte, params.BeaconConfig().HistoricalRootsLimit),
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		PreviousCrosslinks: []*ethpb.Crosslink{
 			{
 				DataRoot: []byte("A"),

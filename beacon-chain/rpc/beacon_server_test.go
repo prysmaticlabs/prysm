@@ -39,8 +39,8 @@ type faultyPOWChainService struct {
 func (f *faultyPOWChainService) HasChainStarted() bool {
 	return false
 }
-func (f *faultyPOWChainService) ETH2GenesisTime() uint64 {
-	return 0
+func (f *faultyPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+	return 0, big.NewInt(0)
 }
 
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
@@ -97,14 +97,19 @@ type mockPOWChainService struct {
 	blockTimeByHeight   map[int]uint64
 	blockNumberByHeight map[uint64]*big.Int
 	eth1Data            *ethpb.Eth1Data
+	genesisEth1Block    *big.Int
 }
 
 func (m *mockPOWChainService) HasChainStarted() bool {
 	return true
 }
 
-func (m *mockPOWChainService) ETH2GenesisTime() uint64 {
-	return uint64(time.Unix(0, 0).Unix())
+func (m *mockPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+	blk := m.genesisEth1Block
+	if blk == nil {
+		blk = big.NewInt(0)
+	}
+	return uint64(time.Unix(0, 0).Unix()), blk
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed
@@ -243,8 +248,8 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 }
 
 func TestBlockTree_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
@@ -464,8 +469,8 @@ func TestBlockTree_OK(t *testing.T) {
 }
 
 func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
@@ -675,8 +680,8 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 func TestBlockTreeBySlots_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.

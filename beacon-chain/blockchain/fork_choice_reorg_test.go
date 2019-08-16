@@ -23,7 +23,7 @@ func (m *mockAttestationHandler) LatestAttestationTarget(beaconState *pb.BeaconS
 	return m.targets[idx], nil
 }
 
-func (m *mockAttestationHandler) BatchUpdateLatestAttestation(ctx context.Context, atts []*ethpb.Attestation) error {
+func (m *mockAttestationHandler) BatchUpdateLatestAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	return nil
 }
 
@@ -31,8 +31,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 
 	ctx := context.Background()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -40,7 +40,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().HistoricalRootsLimit)
+	justifiedState.StateRoots = make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	justifiedState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		StateRoot: []byte{},
 	}

@@ -9,9 +9,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+var _ = Database(&kv.Store{})
 
 // setupDB instantiates and returns a BeaconDB instance.
 func setupDB(t testing.TB) *BeaconDB {
@@ -23,7 +26,7 @@ func setupDB(t testing.TB) *BeaconDB {
 	if err := os.RemoveAll(path); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewDB(path)
+	db, err := NewDBDeprecated(path)
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err != nil {
