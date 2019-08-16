@@ -2,44 +2,55 @@ package sync
 
 import (
 	"context"
+	"encoding/base64"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/karlseguin/ccache"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// pendingBlocks cache.
+// TODO: This cache value should represent a doubly linked list or some management to
+// process pending blocks after a link to the canonical chain is found.
+var pendingBlocks = ccache.New(ccache.Configure())
+
 func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	m := msg.(*ethpb.BeaconBlock)
+	block := msg.(*ethpb.BeaconBlock)
 
-	_ = m
+	headState, err := r.db.HeadState(ctx)
+	if err != nil {
+		return err
+	}
 
-	//block, _, isValid, err := rs.validateAndProcessBlock(ctx, msg)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if !isValid {
-	//	return nil
-	//}
-	//
-	//blockRoot, err := ssz.SigningRoot(block)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if rs.db.IsEvilBlockHash(blockRoot) {
-	//	log.WithField("blockRoot", bytesutil.Trunc(blockRoot[:])).Debug("Skipping blacklisted block")
-	//	return nil
-	//}
-	//
-	//// If the block has a child, we then clear it from the blocks pending processing
-	//// and call receiveBlock recursively. The recursive function call will stop once
-	//// the block we process no longer has children.
-	//if child, ok := rs.hasChild(blockRoot); ok {
-	//	// We clear the block root from the pending processing map.
-	//	rs.clearPendingBlock(blockRoot)
-	//	return rs.processBlockAndFetchAncestors(ctx, child)
-	//}
-	//return nil
+	// Ignore block older than last finalized checkpoint.
+	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch+1) {
+		return nil
+	}
 
-	return nil
+	// Handle block when the parent is unknown.
+	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
+		blockRoot, err := ssz.SigningRoot(block)
+		if err != nil {
+			return err
+		}
+		b64BlockRoot := base64.StdEncoding.EncodeToString(blockRoot[:])
+		pendingBlocks.Set(b64BlockRoot, block, 2*time.Hour)
+
+		// TODO: Request parent block from peers
+		log.Warn("Received a block which we do not have the parent block in the database. " +
+			"Requesting missing blocks from peers is not yet implemented.")
+		return nil
+	}
+
+	// TODO: ReceiveBlock also re-broadcasts this block, maybe this needs to be refactored.
+	postState, err := r.chain.ReceiveBlock(ctx, block)
+	if err != nil {
+		return err
+	}
+
+	return r.chain.ApplyForkChoiceRule(ctx, block, postState)
 }

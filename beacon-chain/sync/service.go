@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -13,9 +14,10 @@ var _ = shared.Service(&RegularSync{})
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx context.Context
-	p2p p2p.P2P
-	db  db.Database
+	ctx   context.Context
+	p2p   p2p.P2P
+	db    db.Database
+	chain *blockchain.ChainService
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.
