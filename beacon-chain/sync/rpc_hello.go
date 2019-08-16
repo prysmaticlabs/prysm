@@ -12,12 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// helloRPCHandler reads the incoming Hello RPC from the peer and responds with our version of a hello message.
+// This handler will disconnect any peer that does not match our fork version.
 func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
+	log := log.WithField("rpc", "hello")
 	m := msg.(*pb.Hello)
 
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, m.ForkVersion) {
@@ -38,6 +41,8 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		}
 		return errWrongForkVersion
 	}
+
+	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
 	state, err := r.db.HeadState(ctx)
 	if err != nil {

@@ -39,6 +39,7 @@ go_test(
         "subscriber_test.go",
     ],
     embed = [":go_default_library"],
+    flaky = True,  # libp2p hosts are flaky upstream.
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db/testing:go_default_library",

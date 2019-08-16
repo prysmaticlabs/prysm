@@ -52,7 +52,6 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 
 	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
-	stream1.Close()
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -74,9 +73,9 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
+	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
-
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +94,6 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		Epoch: 5,
 		Root:  finalizedRoot[:],
 	}
-
 	if err := d.SaveHeadBlockRoot(context.Background(), headRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -108,13 +106,11 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		p2p: p1,
 	}
 
-	stream1, err := p1.Swarm.NewStream(context.Background(), p2.Host.ID())
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Setup streams
+	pcl := protocol.ID("/testing")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Swarm.SetStreamHandler(func(stream network.Stream) {
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Hello{}
@@ -132,6 +128,10 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 		}
 	})
+	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
@@ -141,4 +141,8 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
+}
+
+func TestRegularSync_HelloRPCHandler_AddsHandshake(t *testing.T) {
+	t.Skip("TODO(3147): Add a test to ensure the handshake was added.")
 }
