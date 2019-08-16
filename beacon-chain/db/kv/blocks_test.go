@@ -21,7 +21,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,13 +48,16 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	defer teardownDB(t, db)
 	blocks := []*ethpb.BeaconBlock{
 		{
+			Slot:       4,
 			ParentRoot: []byte("parent"),
 		},
 		{
+			Slot:       5,
 			ParentRoot: []byte("parent2"),
 		},
 		{
-			ParentRoot: []byte("parent3"),
+			Slot:       6,
+			ParentRoot: []byte("parent2"),
 		},
 	}
 	ctx := context.Background()
@@ -68,7 +71,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	}{
 		{
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
-			expectedNumBlocks: 1,
+			expectedNumBlocks: 2,
 		},
 		{
 			// No specified filter should return all blocks.
