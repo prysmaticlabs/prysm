@@ -14,6 +14,7 @@ import (
 
 var _ = shared.Service(&Service{})
 var pollingPeriod time.Duration = 1
+var standardttl time.Duration = 1e8
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -61,6 +62,9 @@ func (s *Service) Start() {
 		return
 	}
 	s.dv5Listener = listener
+
+	go s.listenForNewNodes()
+
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
@@ -86,18 +90,22 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	nodeID, err := discv5.HexID(s.cfg.BootstrapNodeAddr)
 	if err != nil {
 		log.Fatalf("could not parse bootstrap address: %v", err)
 	}
 	ticker := time.NewTicker(pollingPeriod * time.Second)
+	ttl := standardttl * time.Hour
 	for {
 		select {
 		case <-ticker.C:
 			nodes := s.dv5Listener.Lookup(nodeID)
 			multiAddresses := convertToMultiAddr(nodes)
-			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses)
+			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses, ttl)
+			// store furthest node as the next to lookup
+			nodeID = nodes[len(nodes)-1].ID
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
