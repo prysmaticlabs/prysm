@@ -7,11 +7,19 @@ package kv
 // it easy to scan for keys that have a certain shard number as a prefix and return those
 // corresponding attestations.
 var (
-	attestationsBucket = []byte("attestations")
-	blocksBucket       = []byte("blocks")
-	validatorsBucket   = []byte("validators")
-	stateBucket        = []byte("state")
+	attestationsBucket       = []byte("attestations")
+	attestationIndicesBucket = []byte("attestation-indices")
+	blocksBucket             = []byte("blocks")
+	blockIndicesBucket       = []byte("block-indices")
+	validatorsBucket         = []byte("validators")
+	stateBucket              = []byte("state")
 
-	// Bucket specific keys.
+	// Key indices.
+	shardIdx      = []byte("shard")
+	parentRootIdx = []byte("parent-root")
+	startEpochIdx = []byte("start-epoch")
+	endEpochIdx   = []byte("end-epoch")
+
+	// Block keys.
 	headBlockRootKey = []byte("head-root")
 )
