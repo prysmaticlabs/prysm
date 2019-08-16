@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	swarm "github.com/libp2p/go-libp2p-swarm"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -26,15 +25,13 @@ var _ = p2p.P2P(&TestP2P{})
 type TestP2P struct {
 	t      *testing.T
 	Host   host.Host
-	Swarm  *swarm.Swarm
 	pubsub *pubsub.PubSub
 }
 
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
-	s := swarmt.GenSwarm(t, ctx)
-	h := bhost.NewBlankHost(s)
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
@@ -46,7 +43,6 @@ func NewTestP2P(t *testing.T) *TestP2P {
 	return &TestP2P{
 		t:      t,
 		Host:   h,
-		Swarm:  s,
 		pubsub: ps,
 	}
 }
