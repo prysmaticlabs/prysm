@@ -26,10 +26,15 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, errWrongForkVersion.Error())
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
-		} else if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Error("Failed to write error back")
+		} else {
+			if _, err := stream.Write(resp); err != nil {
+				log.WithError(err).Errorf("Failed to write to whatever")
+			}
 		}
-
+		stream.Close()
+		// Add a short delay to allow the stream to flush before closing the connection.
+		// There is still a chance that the peer won't receive the message.
+		time.Sleep(50 * time.Millisecond)
 		if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}

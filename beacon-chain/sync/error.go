@@ -34,8 +34,6 @@ func (r *RegularSync) readStatusCode(stream io.Reader) (uint8, *pb.ErrorMessage,
 		return 0, nil, nil
 	}
 
-	log.Printf("first bytes: %#x", b)
-
 	msg := &pb.ErrorMessage{}
 	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
 		return 0, nil, err

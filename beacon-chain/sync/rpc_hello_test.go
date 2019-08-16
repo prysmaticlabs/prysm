@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -27,14 +28,11 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 
 	r := &RegularSync{p2p: p1}
+	pcl := protocol.ID("/testing")
 
-	stream1, err := p1.Swarm.NewStream(context.Background(), p2.Host.ID())
-	if err != nil {
-		t.Fatal(err)
-	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Swarm.SetStreamHandler(func(stream network.Stream) {
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		code, errMsg, err := r.readStatusCode(stream)
 		if err != nil {
@@ -48,7 +46,13 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		}
 	})
 
+	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
+	stream1.Close()
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
