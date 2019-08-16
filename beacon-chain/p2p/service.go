@@ -96,6 +96,7 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
 }
 
+// Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
 	// TODO(3147): Implement disconnect
 	return nil

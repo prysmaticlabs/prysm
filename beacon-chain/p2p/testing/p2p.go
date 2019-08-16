@@ -128,10 +128,12 @@ func (p *TestP2P) PubSub() *pubsub.PubSub {
 	return p.pubsub
 }
 
+// Disconnect from a peer.
 func (p *TestP2P) Disconnect(pid peer.ID) error {
 	return p.Host.Network().ClosePeer(pid)
 }
 
+// AddHandshake to the peer handshake records.
 func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
 	// TODO(3147): add this.
 }
