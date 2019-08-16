@@ -62,7 +62,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 				return nil
 			})
 		}
-		// TODO: Initialize keys slice from range scans of slots using filters.
+		// TODO(#3221): Initialize keys slice from range scans of slots using filters.
 
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
