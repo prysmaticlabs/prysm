@@ -138,8 +138,8 @@ func setupService(db *db.BeaconDB) *RegularSync {
 func TestProcessBlockRoot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := &RegularSyncConfig{
@@ -173,8 +173,8 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 func TestProcessBlock_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -250,8 +250,8 @@ func TestProcessBlock_OK(t *testing.T) {
 func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
@@ -363,8 +363,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	os := &mockOperationService{}
 	ctx := context.Background()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	beaconState := &pb.BeaconState{
 		Slot:                2,
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
@@ -420,8 +420,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	os := &mockOperationService{}
 	ctx := context.Background()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	state := &pb.BeaconState{
 		Slot:                2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
@@ -471,8 +471,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 func TestReceiveExitReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	cfg := &RegularSyncConfig{
 		OperationService: os,
@@ -500,8 +500,8 @@ func TestReceiveExitReq_OK(t *testing.T) {
 func TestHandleStateReq_NOState(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	ss := setupService(db)
 
@@ -531,8 +531,8 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 func TestHandleStateReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
@@ -579,8 +579,8 @@ func TestHandleStateReq_OK(t *testing.T) {
 }
 
 func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	// Construct the following chain:
@@ -621,8 +621,8 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 }
 
 func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	// Construct the following chain:
@@ -647,8 +647,8 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 }
 
 func TestCanonicalBlockList_NilBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	want := "nil block 0x42 from db"
@@ -658,8 +658,8 @@ func TestCanonicalBlockList_NilBlock(t *testing.T) {
 }
 
 func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	block1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
