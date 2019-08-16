@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"net"
 
@@ -36,6 +37,9 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 	}
 
 	bootNode := listener.Resolve(nodeID)
+	if bootNode == nil {
+		return nil, errors.New("bootnode could not be found")
+	}
 	if err := listener.SetFallbackNodes([]*discv5.Node{bootNode}); err != nil {
 		return nil, err
 	}
@@ -52,6 +56,9 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 		if ip4 == nil {
 			log.Error("node doesn't have an ip4 address")
 			continue
+		}
+		if node.TCP < 1024 {
+			log.Errorf("Invalid port, the tcp port of the node is a reserved port: %d", node.TCP)
 		}
 		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/discv5/%s", ip4.String(), node.TCP, node.ID.String())
 		multiAddr, err := ma.NewMultiaddr(multiAddrString)
