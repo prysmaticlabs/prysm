@@ -12,8 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const genericError = "internal service error"
-
 func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -28,10 +26,10 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to whatever")
+				log.WithError(err).Errorf("Failed to write to stream")
 			}
 		}
-		stream.Close()
+		stream.Close() // Close before disconnecting.
 		// Add a short delay to allow the stream to flush before closing the connection.
 		// There is still a chance that the peer won't receive the message.
 		time.Sleep(50 * time.Millisecond)
@@ -45,7 +43,9 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	if err != nil {
 		log.WithError(err).Error("Failed to get head state")
 		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
-		stream.Write(resp)
+		if _, err := stream.Write(resp); err != nil {
+			log.WithError(err).Error("Failed to write to stream")
+		}
 		return err
 	}
 
@@ -57,7 +57,9 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		HeadSlot:       state.Slot,
 	}
 
-	stream.Write([]byte{responseCodeSuccess})
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		log.WithError(err).Error("Failed to write to stream")
+	}
 	_, err = r.p2p.Encoding().Encode(stream, resp)
 
 	return err

@@ -8,6 +8,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+const genericError = "internal service error"
+
 var errWrongForkVersion = errors.New("wrong fork version")
 
 var responseCodeSuccess = byte(0x00)
