@@ -14,6 +14,8 @@ var (
 	validatorsBucket         = []byte("validators")
 	stateBucket              = []byte("state")
 
+	parentRootIndicesBucket = []byte("parent-root-indices")
+
 	// Key indices.
 	shardIdx      = []byte("shard")
 	parentRootIdx = []byte("parent-root")

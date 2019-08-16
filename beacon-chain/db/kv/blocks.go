@@ -8,6 +8,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -112,7 +113,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 
 // SaveBlock to the db.
 func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
-	key, err := generateBlockKey(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return err
 	}
@@ -121,8 +122,23 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		return err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(blocksBucket)
-		return bucket.Put(key, enc)
+		bkt := tx.Bucket(blocksBucket)
+		// Every index has a unique bucket for fast, binary-search
+		// range scans for filtering across keys.
+		indicesByBucket := make(map[*bolt.Bucket][]byte)
+		buckets := []*bolt.Bucket{
+			tx.Bucket(parentRootIndicesBucket),
+		}
+		indices := [][]byte{
+			append(parentRootIdx, block.ParentRoot...),
+		}
+		for i := 0; i < len(buckets); i++ {
+			indicesByBucket[buckets[i]] = indices[i]
+		}
+		if err := updateValueForIndicesMap(indicesByBucket, blockRoot[:]); err != nil {
+			return errors.Wrap(err, "could not update DB indices")
+		}
+		return bkt.Put(blockRoot[:], enc)
 	})
 }
 

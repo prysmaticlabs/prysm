@@ -45,6 +45,25 @@ func updateValueForIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) erro
 	return nil
 }
 
+// updateValueForIndicesMap updates the value for each index by appending it to the previous
+// values stored at said index. Typically, indices are roots of data that can then
+// be used for reads or batch reads from the DB.
+func updateValueForIndicesMap(indicesByBucket map[*bolt.Bucket][]byte, root []byte) error {
+	for bkt, idx := range indicesByBucket {
+		valuesAtIndex := bkt.Get(idx)
+		if valuesAtIndex == nil {
+			if err := bkt.Put(idx, root); err != nil {
+				return err
+			}
+		} else {
+			if err := bkt.Put(idx, append(valuesAtIndex, root...)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // deleteValueForIndices clears a root stored at each index.
 func deleteValueForIndices(indices [][]byte, root []byte, bkt *bolt.Bucket) error {
 	for _, idx := range indices {
