@@ -2,12 +2,16 @@ package p2p
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
@@ -86,4 +90,30 @@ func TestStartDiscV5_OK(t *testing.T) {
 	for _, listener := range listeners {
 		listener.Close()
 	}
+}
+
+func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ipAddr := net.IPv6zero
+	pkey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Could not generate key %v", err)
+	}
+	nodeID := discv5.PubkeyID(&pkey.PublicKey)
+	node := discv5.NewNode(nodeID, ipAddr, 0, 0)
+	_ = convertToMultiAddr([]*discv5.Node{node})
+
+	testutil.AssertLogsContain(t, hook, "Node doesn't have an ip4 address")
+}
+
+func TestMultiAddrConversion_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	port := 1024
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	listener := createListener(ipAddr, port, pkey)
+
+	_ = convertToMultiAddr([]*discv5.Node{listener.Self()})
+	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
+	testutil.AssertLogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not get multiaddr")
 }

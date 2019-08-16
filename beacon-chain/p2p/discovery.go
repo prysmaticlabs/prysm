@@ -47,7 +47,7 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 	for _, node := range nodes {
 		ip4 := node.IP.To4()
 		if ip4 == nil {
-			log.Error("node doesn't have an ip4 address")
+			log.Error("Node doesn't have an ip4 address")
 			continue
 		}
 		if node.TCP < 1024 {
@@ -56,7 +56,7 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/discv5/%s", ip4.String(), node.TCP, node.ID.String())
 		multiAddr, err := ma.NewMultiaddr(multiAddrString)
 		if err != nil {
-			log.Errorf("could not get multiaddr:%v", err)
+			log.Errorf("Could not get multiaddr:%v", err)
 			continue
 		}
 		multiAddrs = append(multiAddrs, multiAddr)
