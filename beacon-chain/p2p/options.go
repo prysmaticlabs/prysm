@@ -3,9 +3,7 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 
@@ -54,19 +52,9 @@ func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 		log.WithField("private key file", prvKey).Warn("Could not read private key, file is missing or unreadable")
 		return nil, err
 	}
-	bytes, err := ioutil.ReadFile(prvKey)
+	priv, err := curve.LoadECDSA(prvKey)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
-		return nil, err
-	}
-	keyBytes, err := crypto.ConfigDecodeKey(string(bytes))
-	if err != nil {
-		log.WithError(err).Error("Error decoding private key")
-		return nil, err
-	}
-	priv, err := x509.ParseECPrivateKey(keyBytes)
-	if err != nil {
-		log.WithError(err).Error("Error unmarshalling private key")
 		return nil, err
 	}
 
