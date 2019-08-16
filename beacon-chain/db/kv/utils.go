@@ -26,6 +26,19 @@ func lookupValuesForIndices(indices [][]byte, bkt *bolt.Bucket) [][][]byte {
 	return values
 }
 
+func lookupValuesForIndicesMap(indicesByBucket map[*bolt.Bucket][]byte) [][][]byte {
+	values := make([][][]byte, 0)
+	for bkt, k := range indicesByBucket {
+		roots := bkt.Get(k)
+		splitRoots := make([][]byte, 0)
+		for i := 0; i < len(roots); i += 32 {
+			splitRoots = append(splitRoots, roots[i:i+32])
+		}
+		values = append(values, splitRoots)
+	}
+	return values
+}
+
 // updateValueForIndices updates the value for each index by appending it to the previous
 // values stored at said index. Typically, indices are roots of data that can then
 // be used for reads or batch reads from the DB.

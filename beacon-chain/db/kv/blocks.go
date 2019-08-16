@@ -66,8 +66,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
-		bucketReader := tx.Bucket
-		indicesByBucket, err := createBlockFiltersFromIndices(f, bucketReader)
+		indicesByBucket, err := createBlockIndicesFromFilters(f, tx.Bucket)
 		if err != nil {
 			return errors.Wrap(err, "could not determine block lookup indices")
 		}
@@ -75,7 +74,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
-		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indices, indicesBkt)...)
+		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndicesMap(indicesByBucket)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.BeaconBlock{}
@@ -234,17 +233,17 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to
 // blocks, an appropriate error is returned.
-func createBlockFiltersFromIndices(f *filters.QueryFilter) ([][]byte, error) {
-	keys := make([][]byte, 0)
+func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []byte) *bolt.Bucket) (map[*bolt.Bucket][]byte, error) {
+	indicesByBucket := make(map[*bolt.Bucket][]byte)
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
 			idx := append(parentRootIdx, parentRoot...)
-			keys = append(keys, idx)
+			indicesByBucket[readBucket(parentRootIndicesBucket)] = idx
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}
 	}
-	return keys, nil
+	return indicesByBucket, nil
 }
