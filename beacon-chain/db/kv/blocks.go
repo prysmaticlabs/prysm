@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -149,16 +148,29 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 		if err != nil {
 			return err
 		}
-		key, err := generateBlockKey(blocks[i])
+		key, err := ssz.SigningRoot(blocks[i])
 		if err != nil {
 			return err
 		}
 		encodedValues[i] = enc
-		keys[i] = key
+		keys[i] = key[:]
 	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		for i := 0; i < len(blocks); i++ {
+			indicesByBucket := make(map[*bolt.Bucket][]byte)
+			buckets := []*bolt.Bucket{
+				tx.Bucket(parentRootIndicesBucket),
+			}
+			indices := [][]byte{
+				append(parentRootIdx, blocks[i].ParentRoot...),
+			}
+			for i := 0; i < len(buckets); i++ {
+				indicesByBucket[buckets[i]] = indices[i]
+			}
+			if err := updateValueForIndicesMap(indicesByBucket, keys[i]); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
+			}
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}
@@ -173,43 +185,6 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})
-}
-
-func generateBlockKey(block *ethpb.BeaconBlock) ([]byte, error) {
-	buf := make([]byte, 0)
-	buf = append(buf, []byte("parent-root")...)
-	buf = append(buf, block.ParentRoot...)
-
-	buf = append(buf, []byte("slot")...)
-	buf = append(buf, uint64ToBytes(block.Slot)...)
-
-	buf = append(buf, []byte("root")...)
-	blockRoot, err := ssz.HashTreeRoot(block)
-	if err != nil {
-		return nil, err
-	}
-	buf = append(buf, blockRoot[:]...)
-	return buf, nil
-}
-
-// ensureBlockFilterCriteria uses a set of specified filters
-// to ensure the byte key used for db lookups contains the correct values
-// requested by the filter. For example, if a key looks like:
-// root-0x23923-parent-root-0x49349 and our filter criteria wants the key to
-// contain parent root 0x49349 and root 0x99283, the key will NOT meet all the filter
-// criteria and the function will return false.
-func ensureBlockFilterCriteria(key []byte, f *filters.QueryFilter) bool {
-	numCriteriaMet := 0
-	for k, v := range f.Filters() {
-		switch k {
-		case filters.ParentRoot:
-			root := v.([]byte)
-			if bytes.Contains(key, append([]byte("parent-root"), root[:]...)) {
-				numCriteriaMet++
-			}
-		}
-	}
-	return numCriteriaMet == len(f.Filters())
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns
