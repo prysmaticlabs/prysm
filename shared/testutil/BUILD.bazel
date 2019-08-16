@@ -10,6 +10,7 @@ go_library(
         "json_to_pb_converter.go",
         "log.go",
         "tempdir.go",
+        "wait_timeout.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
     visibility = ["//visibility:public"],
