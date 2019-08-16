@@ -47,7 +47,6 @@ func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 		}
 		return priv, nil
 	}
-
 	if _, err := os.Stat(prvKey); os.IsNotExist(err) {
 		log.WithField("private key file", prvKey).Warn("Could not read private key, file is missing or unreadable")
 		return nil, err
@@ -57,7 +56,6 @@ func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
 	}
-
 	return priv, nil
 }
 
