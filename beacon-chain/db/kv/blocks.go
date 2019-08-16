@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/boltdb/bolt"
@@ -89,13 +90,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		c := bkt.Cursor()
-		for k, v := c.Seek(blockRoot[:]); k != nil && bytes.Contains(k, blockRoot[:]); k, v = c.Next() {
-			if v != nil {
-				exists = true
-				return nil
-			}
-		}
+		exists = bkt.Get(blockRoot[:]) != nil
 		return nil
 	})
 	return exists
@@ -201,4 +196,26 @@ func ensureBlockFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 		}
 	}
 	return numCriteriaMet == len(f.Filters())
+}
+
+// createBlockFiltersFromIndices takes in filter criteria and returns
+// a list of of byte keys used to retrieve the values stored
+// for the indices from the DB.
+//
+// For blocks, these are list of signing roots of block
+// objects. If a certain filter criterion does not apply to
+// blocks, an appropriate error is returned.
+func createBlockFiltersFromIndices(f *filters.QueryFilter) ([][]byte, error) {
+	keys := make([][]byte, 0)
+	for k, v := range f.Filters() {
+		switch k {
+		case filters.ParentRoot:
+			parentRoot := v.([]byte)
+			idx := append(parentRootIdx, parentRoot...)
+			keys = append(keys, idx)
+		default:
+			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
+		}
+	}
+	return keys, nil
 }
