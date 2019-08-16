@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"net"
 
@@ -31,21 +30,15 @@ func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
 	listener := createListener(addr, int(cfg.UDPPort), privKey)
-	nodeID, err := discv5.HexID(cfg.BootstrapNodeAddr)
+	bootNode, err := discv5.ParseNode(cfg.BootstrapNodeAddr)
 	if err != nil {
 		return nil, err
-	}
-
-	bootNode := listener.Resolve(nodeID)
-	if bootNode == nil {
-		return nil, errors.New("bootnode could not be found")
 	}
 	if err := listener.SetFallbackNodes([]*discv5.Node{bootNode}); err != nil {
 		return nil, err
 	}
 	node := listener.Self()
 	log.Infof("Started Discovery: %s", node.ID)
-
 	return listener, nil
 }
 

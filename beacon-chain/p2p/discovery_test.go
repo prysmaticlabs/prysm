@@ -4,7 +4,9 @@ import (
 	"crypto/ecdsa"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
@@ -54,8 +56,34 @@ func TestStartDiscV5_OK(t *testing.T) {
 
 	bootNode := bootListener.Self()
 
-	for i := 1; i <= 10; i++ {
-		port = 2000 + i
+	cfg := &Config{
+		BootstrapNodeAddr: bootNode.String(),
 	}
 
+	var listeners []*discv5.Network
+	for i := 1; i <= 10; i++ {
+		port = 2000 + i
+		cfg.UDPPort = uint(port)
+		ipAddr, pkey := createAddrAndPrivKey(t)
+		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		if err != nil {
+			t.Errorf("Could not start discovery for node: %v", err)
+		}
+		listeners = append(listeners, listener)
+	}
+
+	// Wait for the nodes to have their local routing tables to be populated with the other nodes
+	time.Sleep(100 * time.Millisecond)
+
+	lastListener := listeners[len(listeners)-1]
+	nodes := lastListener.Lookup(bootNode.ID)
+	if len(nodes) != 11 {
+		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
+			"Expected %d but got %d", 11, len(nodes))
+	}
+
+	// Close all ports
+	for _, listener := range listeners {
+		listener.Close()
+	}
 }
