@@ -6,44 +6,39 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 
 	curve "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p"
-	crypto "github.com/libp2p/go-libp2p-core/crypto"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
 // buildOptions for the libp2p host.
-func buildOptions(cfg *Config) ([]libp2p.Option, string, *ecdsa.PrivateKey) {
-
+func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
-
 	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.Port))
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
-
 	privateKey, err := privKey(cfg.PrivateKey)
 	if err != nil {
 		log.Fatalf("Could not create private key %v", err)
 	}
-
 	options := []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		privKeyOption(privateKey),
 	}
-
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
 	}
-
-	return options, ip, privateKey
+	return options, net.ParseIP(ip), privateKey
 }
 
 func privKey(prvKey string) (*ecdsa.PrivateKey, error) {

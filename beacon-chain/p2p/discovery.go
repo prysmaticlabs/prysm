@@ -11,9 +11,9 @@ import (
 	_ "go.uber.org/automaxprocs"
 )
 
-func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
 	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP(ipAddr),
+		IP:   ipAddr,
 		Port: port,
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
@@ -28,7 +28,7 @@ func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.
 	return network
 }
 
-func startDiscoveryV5(addr string, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
+func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
 	listener := createListener(addr, int(cfg.UDPPort), privKey)
 	nodeID, err := discv5.HexID(cfg.BootstrapNodeAddr)
 	if err != nil {
