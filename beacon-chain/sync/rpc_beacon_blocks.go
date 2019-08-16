@@ -11,8 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// beaconBlocksRPCHandler looks up the request blocks from the database from a given start block
-// and ensures that all blocks are a descendant of the message head block root.
+// beaconBlocksRPCHandler looks up the request blocks from the database from a given start block.
 func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -21,11 +20,10 @@ func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg proto.Mess
 
 	m := msg.(*pb.BeaconBlocksRequest)
 
-	// TODO Only return canonical blocks.
 	startSlot := m.HeadSlot
 	endSlot := startSlot + (m.Step * m.Count)
 
-	// TODO: Update this with reasonable constraints.
+	// TODO(3147): Update this with reasonable constraints.
 	if endSlot-startSlot > 1000 || m.Step == 0 {
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "invalid range or step")
 		if err != nil {
@@ -38,6 +36,7 @@ func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg proto.Mess
 		return errors.New("invalid range or step")
 	}
 
+	// TODO(3147): Only return canonical blocks.
 	blks, err := r.db.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 	if err != nil {
 		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
