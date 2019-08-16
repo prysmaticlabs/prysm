@@ -37,8 +37,8 @@ func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]
 }
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	count := uint64(10)
@@ -72,8 +72,8 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -170,8 +170,8 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	count := uint64(1)
@@ -214,8 +214,8 @@ func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -253,8 +253,8 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	bs := &BeaconChainServer{
 		pool:     &mockPool{},
 		beaconDB: db,
@@ -276,8 +276,8 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 100
 	balances := make([]uint64, count)
@@ -345,8 +345,8 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 1
 	balances := make([]uint64, count)
@@ -377,8 +377,8 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
@@ -410,8 +410,8 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 100
 	balances := make([]uint64, count)
@@ -482,8 +482,8 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 1
 	validators := make([]*ethpb.Validator, 0, count)
@@ -523,8 +523,8 @@ func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
@@ -559,8 +559,8 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 1
 	validators := make([]*ethpb.Validator, 0, count)
@@ -597,8 +597,8 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
@@ -659,8 +659,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
@@ -717,8 +717,8 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
@@ -814,8 +814,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	epoch := uint64(1)
 	attestedBalance := uint64(1)
@@ -885,8 +885,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -980,8 +980,8 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 
 func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	bs := &BeaconChainServer{beaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)

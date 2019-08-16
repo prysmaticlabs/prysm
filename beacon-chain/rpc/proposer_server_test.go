@@ -30,8 +30,8 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	mockChain := &mockChainService{}
 	ctx := context.Background()
 
@@ -69,8 +69,8 @@ func TestProposeBlock_OK(t *testing.T) {
 }
 
 func TestComputeStateRoot_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
@@ -146,8 +146,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -261,8 +261,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 }
 
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -470,7 +470,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 			int(newHeight.Int64()): []byte("0x1"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	var votes []*ethpb.Eth1Data
 
@@ -558,7 +558,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			int(height.Int64()): []byte("0x0"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
@@ -681,7 +681,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			int(newHeight.Int64()): []byte("0x1"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	var votes []*ethpb.Eth1Data
 
@@ -815,7 +815,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			int(height.Int64()): []byte("0x0"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
@@ -917,7 +917,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			int(height.Int64()): []byte("0x0"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
@@ -1016,7 +1016,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 			int(height.Int64()): []byte("0x0"),
 		},
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
@@ -1106,8 +1106,8 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 }
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	proposerServer := &ProposerServer{
@@ -1132,8 +1132,8 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 }
 
 func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -1199,8 +1199,8 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 
 // TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 
 	slot := uint64(10000)
 
@@ -1231,8 +1231,8 @@ func TestEth1Data(t *testing.T) {
 }
 
 func Benchmark_Eth1Data(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(b)
+	defer internal.TeardownDBDeprecated(b, beaconDB)
 	ctx := context.Background()
 
 	hashesByHeight := make(map[int][]byte)
@@ -1314,7 +1314,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 		},
 		genesisEth1Block: height,
 	}
-	d := internal.SetupDB(t)
+	d := internal.SetupDBDeprecated(t)
 
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
