@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/libp2p/go-libp2p"
@@ -12,6 +13,7 @@ import (
 )
 
 var _ = shared.Service(&Service{})
+var pollingPeriod time.Duration = 1
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -53,14 +55,12 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
-
 	listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 	if err != nil {
 		s.startupErr = err
 		return
 	}
 	s.dv5Listener = listener
-
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
@@ -84,4 +84,24 @@ func (s *Service) Status() error {
 		return errors.New("not running")
 	}
 	return nil
+}
+
+func (s *Service) listenForNewNodes() {
+	nodeID, err := discv5.HexID(s.cfg.BootstrapNodeAddr)
+	if err != nil {
+		log.Fatalf("could not parse bootstrap address: %v", err)
+	}
+	ticker := time.NewTicker(pollingPeriod * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			nodes := s.dv5Listener.Lookup(nodeID)
+			multiAddresses := convertToMultiAddr(nodes)
+			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses)
+		case <-s.ctx.Done():
+			log.Debug("p2p context is closed, exiting routine")
+			break
+
+		}
+	}
 }
