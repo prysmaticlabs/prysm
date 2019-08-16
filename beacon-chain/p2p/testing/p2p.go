@@ -133,5 +133,5 @@ func (p *TestP2P) Disconnect(pid peer.ID) error {
 }
 
 func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
-	// TODO
+	// TODO(3147): add this.
 }
