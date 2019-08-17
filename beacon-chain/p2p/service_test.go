@@ -77,10 +77,41 @@ func TestService_Status_NotRunning(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
-	//hook := logTest.NewGlobal()
+	// setup bootnode
+	port := 2000
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	bootListener := createListener(ipAddr, port, pkey)
+	defer bootListener.Close()
 
-	s, _ := NewService(&Config{})
-	s.dv5Listener = &mockListener{}
+	bootNode := bootListener.Self()
+
+	cfg := &Config{
+		BootstrapNodeAddr: bootNode.String(),
+	}
+
+	// setup other nodes
+	var listeners []*discv5.Network
+	for i := 1; i <= 10; i++ {
+		port = 2000 + i
+		cfg.UDPPort = uint(port)
+		ipAddr, pkey := createAddrAndPrivKey(t)
+		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		if err != nil {
+			t.Errorf("Could not start discovery for node: %v", err)
+		}
+		listeners = append(listeners, listener)
+	}
+	cfg.UDPPort = 4000
+	s, _ := NewService(cfg)
+
 	defer s.Stop()
 	s.Start()
+
+	time.Sleep(10 * time.Second)
+
+	peers := s.host.Peerstore().Peers()
+
+	if len(peers) != 12 {
+		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 12, len(peers))
+	}
 }

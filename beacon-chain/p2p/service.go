@@ -20,7 +20,7 @@ var _ = shared.Service(&Service{})
 var pollingPeriod time.Duration = 1
 
 // nodes live forever in the peerstore
-var standardttl time.Duration = 1e8
+var standardttl time.Duration = 1e4
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -96,30 +96,6 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// listen for new nodes watches for new nodes in the network and adds them to the peerstore.
-func (s *Service) listenForNewNodes() {
-	nodeID, err := discv5.HexID(s.cfg.BootstrapNodeAddr)
-	if err != nil {
-		log.Fatalf("could not parse bootstrap address: %v", err)
-	}
-	ticker := time.NewTicker(pollingPeriod * time.Second)
-	ttl := standardttl * time.Hour
-	for {
-		select {
-		case <-ticker.C:
-			nodes := s.dv5Listener.Lookup(nodeID)
-			multiAddresses := convertToMultiAddr(nodes)
-			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses, ttl)
-			// store furthest node as the next to lookup
-			nodeID = nodes[len(nodes)-1].ID
-		case <-s.ctx.Done():
-			log.Debug("p2p context is closed, exiting routine")
-			break
-
-		}
-	}
-}
-
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
 	return nil
@@ -140,4 +116,30 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 func (s *Service) Disconnect(pid peer.ID) error {
 	// TODO(3147): Implement disconnect
 	return nil
+}
+
+// listen for new nodes watches for new nodes in the network and adds them to the peerstore.
+func (s *Service) listenForNewNodes() {
+	node, err := discv5.ParseNode(s.cfg.BootstrapNodeAddr)
+	if err != nil {
+		log.Fatalf("could not parse bootstrap address: %v", err)
+	}
+	nodeID := node.ID
+	ticker := time.NewTicker(pollingPeriod * time.Second)
+	ttl := standardttl * time.Hour
+	for {
+		select {
+		case <-ticker.C:
+			nodes := s.dv5Listener.Lookup(nodeID)
+			multiAddresses := convertToMultiAddr(nodes)
+			log.Infof("Adding %d new peers", len(multiAddresses))
+			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses, ttl)
+			// store furthest node as the next to lookup
+			nodeID = nodes[len(nodes)-1].ID
+		case <-s.ctx.Done():
+			log.Debug("p2p context is closed, exiting routine")
+			break
+
+		}
+	}
 }
