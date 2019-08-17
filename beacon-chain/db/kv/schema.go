@@ -15,10 +15,12 @@ var (
 	stateBucket              = []byte("state")
 
 	parentRootIndicesBucket = []byte("parent-root-indices")
+	blockSlotIndicesBucket  = []byte("block-slot-indices")
 
 	// Key indices.
 	shardIdx      = []byte("shard")
 	parentRootIdx = []byte("parent-root")
+	slotIdx       = []byte("slot")
 	startEpochIdx = []byte("start-epoch")
 	endEpochIdx   = []byte("end-epoch")
 
