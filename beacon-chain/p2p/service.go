@@ -118,6 +118,8 @@ func (s *Service) listenForNewNodes() {
 
 		}
 	}
+}
+
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
 	return nil

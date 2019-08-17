@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/btcsuite/btcd/btcec"
 	curve "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -45,11 +46,12 @@ func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 
 func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 	if prvKey == "" {
-		priv, err := ecdsa.GenerateKey(curve.S256(), rand.Reader)
+		priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			return nil, err
 		}
-		return priv, nil
+		convertedKey := convertFromInterface(priv)
+		return convertedKey, nil
 	}
 	if _, err := os.Stat(prvKey); os.IsNotExist(err) {
 		log.WithField("private key file", prvKey).Warn("Could not read private key, file is missing or unreadable")
@@ -66,26 +68,24 @@ func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 // Adds a private key to the libp2p option if the option was provided.
 // If the private key file is missing or cannot be read, or if the
 // private key contents cannot be marshaled, an exception is thrown.
-func privKeyOption(prvKey *ecdsa.PrivateKey) libp2p.Option {
+func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 	return func(cfg *libp2p.Config) error {
-		id, privKey, err := peerIDFromPrivKey(prvKey)
+		convertedKey := convertToInterface(privkey)
+		id, err := peer.IDFromPrivateKey(convertedKey)
 		if err != nil {
 			return err
 		}
 		log.WithField("peer id", id.Pretty()).Info("Private key generated. Announcing peer id")
-		return cfg.Apply(libp2p.Identity(privKey))
+		return cfg.Apply(libp2p.Identity(convertedKey))
 	}
 }
 
-func peerIDFromPrivKey(prvKey *ecdsa.PrivateKey) (peer.ID, crypto.PrivKey, error) {
-	privKey, pubKey, err := crypto.ECDSAKeyPairFromKey(prvKey)
-	if err != nil {
-		return "", nil, err
-	}
+func convertFromInterface(privkey crypto.PrivKey) *ecdsa.PrivateKey {
+	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
+	return typeAssertedKey
+}
 
-	id, err := peer.IDFromPublicKey(pubKey)
-	if err != nil {
-		return "", nil, err
-	}
-	return id, privKey, nil
+func convertToInterface(privkey *ecdsa.PrivateKey) crypto.PrivKey {
+	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)((*btcec.PrivateKey)(privkey)))
+	return typeAssertedKey
 }
