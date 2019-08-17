@@ -26,7 +26,7 @@ type Service struct {
 	started     bool
 	cfg         *Config
 	startupErr  error
-	dv5Listener *discv5.Network
+	dv5Listener Listener
 	host        host.Host
 	pubsub      *pubsub.PubSub
 }

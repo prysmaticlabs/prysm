@@ -11,6 +11,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 	s, _ := NewService(nil)
 	s.started = true
 	_ = s.Stop()
+	s.dv5Listener.
 	if s.started != false {
 		t.Error("Expected Service.started to be false, got true")
 	}
@@ -34,4 +35,17 @@ func TestService_Status_NotRunning(t *testing.T) {
 	if s.Status().Error() != "not running" {
 		t.Errorf("Status returned wrong error, got %v", s.Status())
 	}
+}
+
+func TestListenForNewNodes(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	s, _ := NewService(nil)
+	defer s.Stop()
+	s.Start()
+	if s.started != true {
+		t.Error("Expected service to be started")
+	}
+	s.Start()
+	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
 }

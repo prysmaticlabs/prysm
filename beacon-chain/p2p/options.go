@@ -36,6 +36,10 @@ func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
 	}
+	// add discv5 to list of protocols in libp2p.
+	if err := addDiscv5protocol(); err != nil {
+		log.Fatalf("Could not set add discv5 to libp2p protocols: %v", err)
+	}
 	return options, net.ParseIP(ip), privateKey
 }
 
@@ -64,15 +68,24 @@ func privKey(prvKey string) (*ecdsa.PrivateKey, error) {
 // private key contents cannot be marshaled, an exception is thrown.
 func privKeyOption(prvKey *ecdsa.PrivateKey) libp2p.Option {
 	return func(cfg *libp2p.Config) error {
-		privKey, pubKey, err := crypto.ECDSAKeyPairFromKey(prvKey)
-		if err != nil {
-			return err
-		}
-		id, err := peer.IDFromPublicKey(pubKey)
+		id, privKey, err := peerIDFromPrivKey(prvKey)
 		if err != nil {
 			return err
 		}
 		log.WithField("peer id", id.Pretty()).Info("Private key generated. Announcing peer id")
 		return cfg.Apply(libp2p.Identity(privKey))
 	}
+}
+
+func peerIDFromPrivKey(prvKey *ecdsa.PrivateKey) (peer.ID, crypto.PrivKey, error) {
+	privKey, pubKey, err := crypto.ECDSAKeyPairFromKey(prvKey)
+	if err != nil {
+		return "", nil, err
+	}
+
+	id, err := peer.IDFromPublicKey(pubKey)
+	if err != nil {
+		return "", nil, err
+	}
+	return id, privKey, nil
 }
