@@ -1,10 +1,15 @@
 package p2p
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -41,6 +46,20 @@ func (m *mockListener) RegisterTopic(discv5.Topic, <-chan struct{}) {
 
 func (m *mockListener) SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *discv5.Node, chan<- bool) {
 	panic("implement me")
+}
+
+func newhost(t *testing.T, options []libp2p.Option) *basichost.BasicHost {
+	ctx := context.Background()
+	h := basichost.New(swarmt.GenSwarm(t, ctx), options)
+	_, err := pubsub.NewFloodSub(ctx, h,
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return h
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
@@ -91,10 +110,13 @@ func TestListenForNewNodes(t *testing.T) {
 
 	// setup other nodes
 	var listeners []*discv5.Network
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 5; i++ {
 		port = 2000 + i
 		cfg.UDPPort = uint(port)
+		cfg.Port = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
+		opts, ipAddr, pkey := buildOptions(cfg)
+		_ = newhost(t, opts)
 		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
@@ -107,7 +129,7 @@ func TestListenForNewNodes(t *testing.T) {
 	defer s.Stop()
 	s.Start()
 
-	time.Sleep(1000 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	peers := s.host.Network().Peers()
 

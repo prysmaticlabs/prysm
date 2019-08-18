@@ -7,8 +7,6 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
-	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
@@ -27,16 +25,9 @@ func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 	if err != nil {
 		log.Fatalf("Could not create private key %v", err)
 	}
-	peerStore := peerstore.NewPeerstore(
-		pstoremem.NewKeyBook(),
-		pstoremem.NewAddrBook(),
-		pstoremem.NewProtoBook(),
-		pstoremem.NewPeerMetadata(),
-	)
 	options := []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		privKeyOption(privateKey),
-		libp2p.Peerstore(peerStore),
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

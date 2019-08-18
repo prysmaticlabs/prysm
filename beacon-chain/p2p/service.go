@@ -148,7 +148,6 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		return
 	}
 	for _, info := range addrInfos {
-		log.Info(info.String())
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer: %v", err)
 		}

@@ -17,7 +17,7 @@ var discv5Protocol = ma.Protocol{
 	Name:       "discv5",
 	Code:       discv5codec,
 	VCode:      ma.CodeToVarint(discv5codec),
-	Size:       64,
+	Size:       ma.LengthPrefixedVarSize,
 	Transcoder: ma.TranscoderUnix, // doesn't do any transcoding since the argument to the protocol is a pubkey
 	// TODO(#3147): Add Transcoder to validate pubkey argument.
 }
@@ -94,7 +94,6 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 			log.Errorf("Could not get multiaddr:%v", err)
 			continue
 		}
-		log.Info(multiAddr.String())
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
