@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -63,20 +62,24 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 				return nil
 			})
 		}
+		// Check if has range filters.
 		fmap := f.Filters()
 		startSlot, hasStart := fmap[filters.StartSlot]
 		endSlot, hasEnd := fmap[filters.EndSlot]
-		keys := make([][]byte, 0)
+		vals := make([][][]byte, 0)
 		if hasStart && hasEnd {
-			c := bkt.Cursor()
+			c := tx.Bucket(blockSlotIndicesBucket).Cursor()
 			min := uint64ToBytes(startSlot.(uint64))
 			max := uint64ToBytes(endSlot.(uint64))
+			// Iterate over the 90's.
 			for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-				// TODO: Split the roots.
-				keys = append(keys, v)
+				splitRoots := make([][]byte, 0)
+				for i := 0; i < len(v); i += 32 {
+					splitRoots = append(splitRoots, v[i:i+32])
+				}
+				vals = append(vals, splitRoots)
 			}
 		}
-
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
@@ -88,8 +91,14 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
-		otherKeys := sliceutil.IntersectionByteSlices(lookupValuesForIndicesMap(indicesByBucket)...)
-		keys = sliceutil.IntersectionByteSlices(keys, otherKeys)
+		indices := lookupValuesForIndicesMap(indicesByBucket)
+		var keys [][]byte
+		if len(indices) > 0 {
+			joined := append(vals, lookupValuesForIndicesMap(indicesByBucket)...)
+			keys = sliceutil.IntersectionByteSlices(joined...)
+		} else {
+			keys = sliceutil.UnionByteSlices(vals...)
+		}
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.BeaconBlock{}
@@ -185,7 +194,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		}
 		indices := [][]byte{
 			append(parentRootIdx, block.ParentRoot...),
-			append(slotIdx, uint64ToBytes(block.Slot)...),
+			uint64ToBytes(block.Slot),
 		}
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
@@ -223,7 +232,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			}
 			indices := [][]byte{
 				append(parentRootIdx, blocks[i].ParentRoot...),
-				append(slotIdx, uint64ToBytes(blocks[i].Slot)...),
+				uint64ToBytes(blocks[i].Slot),
 			}
 			for i := 0; i < len(buckets); i++ {
 				indicesByBucket[buckets[i]] = indices[i]
@@ -263,7 +272,7 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []b
 			idx := append(parentRootIdx, parentRoot...)
 			indicesByBucket[readBucket(parentRootIndicesBucket)] = idx
 		default:
-			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
+			//return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}
 	}
 	return indicesByBucket, nil
