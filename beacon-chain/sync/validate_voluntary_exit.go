@@ -28,17 +28,17 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 
 	state, err := r.db.HeadState(ctx)
 	if err != nil {
-		// TODO: complain
+		log.WithError(err).Error("Failed to get head state")
 		return false
 	}
 	if err := blocks.VerifyExit(state, exit); err != nil {
-		// TODO: complain
+		log.WithError(err).Warn("Received invalid voluntary exit")
 		return false
 	}
 	seenExits.Set(exitCacheKey(exit), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if err := p.Broadcast(exit); err != nil {
-		// TODO: complain
+		log.WithError(err).Error("Failed to propagate voluntary exit")
 	}
 	return true
 }
