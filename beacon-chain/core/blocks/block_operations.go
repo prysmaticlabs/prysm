@@ -1023,7 +1023,7 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := verifyExit(beaconState, exit); err != nil {
+		if err := VerifyExit(beaconState, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
@@ -1034,7 +1034,7 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
+func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
