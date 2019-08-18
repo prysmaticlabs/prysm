@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrMessageNotMapped occurs on a Broadcast attempt when a message has not been defined in the
+// GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
 // Broadcast a message to the p2p network.
