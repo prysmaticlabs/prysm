@@ -22,9 +22,7 @@ func (s *Service) Broadcast(msg proto.Message) error {
 		return errors.Wrap(err, "could not encode message")
 	}
 
-	log.Infof("Publishing to topic %s", topic+s.Encoding().ProtocolSuffix())
 	if err := s.pubsub.Publish(topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
-		// TODO: complain
 		return errors.Wrap(err, "could not publish message")
 	}
 	return nil
