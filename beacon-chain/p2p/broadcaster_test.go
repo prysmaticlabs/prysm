@@ -15,7 +15,7 @@ import (
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
-func TestBroadcast(t *testing.T) {
+func TestService_Broadcast(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -73,5 +73,12 @@ func TestBroadcast(t *testing.T) {
 	}
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
+	}
+}
+
+func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
+	p := Service{}
+	if err := p.Broadcast(&testpb.AddressBook{}); err != ErrMessageNotMapped {
+		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
 	}
 }
