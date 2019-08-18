@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,13 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
-	p2p := p2ptest.NewTestP2P(t)
+func setupValidExit(t *testing.T, db db.Database) *ethpb.VoluntaryExit {
 	ctx := context.Background()
-
-	// Setup a valid exit and state
 	exit := &ethpb.VoluntaryExit{
 		ValidatorIndex: 0,
 		Epoch:          0,
@@ -66,6 +62,16 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	return exit
+}
+
+func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit := setupValidExit(t, db)
 
 	r := &RegularSync{
 		p2p: p2p,
@@ -73,6 +79,21 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	}
 
 	if !r.validateVoluntaryExit(ctx, exit, p2p) {
-		t.Error("failed validation")
+		t.Error("Failed validation")
+	}
+
+	if !p2p.BroadcastCalled {
+		t.Error("Broadcast was not called")
+	}
+
+	// A second message with the same information should not be valid for processing or
+	// propagation.
+	p2p.BroadcastCalled = false
+	if r.validateVoluntaryExit(ctx, exit, p2p) {
+		t.Error("Passed validation when should have failed")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("broadcast was called when it should not have been called")
 	}
 }

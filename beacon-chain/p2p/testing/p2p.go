@@ -3,7 +3,6 @@ package testing
 import (
 	"bytes"
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -25,6 +24,8 @@ type TestP2P struct {
 	t      *testing.T
 	Host   host.Host
 	pubsub *pubsub.PubSub
+
+	BroadcastCalled bool
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -108,8 +109,8 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 
 // Broadcast a message.
 func (p *TestP2P) Broadcast(msg proto.Message) error {
-	// TODO(3147): implement
-	return errors.New("not implemented")
+	p.BroadcastCalled = true
+	return nil
 }
 
 // SetStreamHandler for RPC.
