@@ -14,12 +14,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-)
 
-var _ = p2p.P2P(&TestP2P{})
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+)
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
