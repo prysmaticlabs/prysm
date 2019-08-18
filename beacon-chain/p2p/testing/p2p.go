@@ -3,6 +3,7 @@ package testing
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -106,8 +107,9 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 }
 
 // Broadcast a message.
-func (p *TestP2P) Broadcast(msg proto.Message) {
+func (p *TestP2P) Broadcast(msg proto.Message) error {
 	// TODO(3147): implement
+	return errors.New("not implemented")
 }
 
 // SetStreamHandler for RPC.

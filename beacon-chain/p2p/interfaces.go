@@ -21,7 +21,7 @@ type P2P interface {
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
-	Broadcast(proto.Message)
+	Broadcast(proto.Message) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.

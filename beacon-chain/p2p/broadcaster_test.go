@@ -19,29 +19,32 @@ func TestBroadcast(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	p := &Service{
-		host:   p1.Host,
-		pubsub: p1.PubSub(),
-	}
-
 	if len(p1.Host.Network().Peers()) == 0 {
 		t.Fatal("No peers")
 	}
 
-	topic := "/testing" + p.Encoding().ProtocolSuffix()
-	sub, err := p2.PubSub().Subscribe(topic)
-	if err != nil {
-		t.Fatal(err)
+	p := &Service{
+		host:   p1.Host,
+		pubsub: p1.PubSub(),
 	}
 
 	msg := &testpb.TestSimpleMessage{
 		Bar: 55,
 	}
 
+	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = "/testing"
+
+	// External peer subscribes to the topic.
+	topic := "/testing" + p.Encoding().ProtocolSuffix()
+	sub, err := p2.PubSub().Subscribe(topic)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
 
+	// Async listen for the pubsub, must be before the broadcast.
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -64,8 +67,10 @@ func TestBroadcast(t *testing.T) {
 		}
 	}()
 
-	p.Broadcast(msg)
-
+	// Broadcast to peers and wait.
+	if err := p.Broadcast(msg); err != nil {
+		t.Fatal(err)
+	}
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}

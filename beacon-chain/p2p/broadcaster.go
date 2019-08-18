@@ -5,27 +5,27 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 )
 
-// TODO: I think broadcast should return an error
+var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
 // Broadcast a message to the p2p network.
-func (s *Service) Broadcast(msg proto.Message) {
+func (s *Service) Broadcast(msg proto.Message) error {
 	topic, ok := GossipTypeMapping[reflect.TypeOf(msg)]
 	if !ok {
-		// TODO: complain
-		panic("msg is not a registered topic")
+		return ErrMessageNotMapped
 	}
 
 	buf := new(bytes.Buffer)
 	if _, err := s.Encoding().Encode(buf, msg); err != nil {
-		// TODO: complain
-		panic(err)
+		return errors.Wrap(err, "could not encode message")
 	}
 
 	log.Infof("Publishing to topic %s", topic+s.Encoding().ProtocolSuffix())
 	if err := s.pubsub.Publish(topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		// TODO: complain
-		panic(err)
+		return errors.Wrap(err, "could not publish message")
 	}
+	return nil
 }
