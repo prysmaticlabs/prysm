@@ -19,7 +19,8 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 	return fmt.Sprintf("%d-%d", exit.Epoch, exit.ValidatorIndex)
 }
 
-// Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before forwarding it across the network.
+// Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
+// forwarding it across the network.
 func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
 	exit := msg.(*ethpb.VoluntaryExit)
 	if seenExits.Get(exitCacheKey(exit)) != nil {
