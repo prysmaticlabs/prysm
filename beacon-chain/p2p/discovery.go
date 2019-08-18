@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	_ "go.uber.org/automaxprocs"
 )
@@ -75,13 +76,25 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 		}
 		if node.TCP < 1024 {
 			log.Errorf("Invalid port, the tcp port of the node is a reserved port: %d", node.TCP)
+			continue
 		}
-		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/discv5/%s", ip4.String(), node.TCP, node.ID.String())
+		pubkey, err := node.ID.Pubkey()
+		if err != nil {
+			log.Errorf("Could not get pubkey from node ID: %v", err)
+			continue
+		}
+		assertedKey := convertToInterfacePubkey(pubkey)
+		id, err := peer.IDFromPublicKey(assertedKey)
+		if err != nil {
+			log.Errorf("Could not get peer id: %v", err)
+		}
+		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
 		multiAddr, err := ma.NewMultiaddr(multiAddrString)
 		if err != nil {
 			log.Errorf("Could not get multiaddr:%v", err)
 			continue
 		}
+		log.Info(multiAddr.String())
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs

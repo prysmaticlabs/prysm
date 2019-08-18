@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -18,9 +19,6 @@ import (
 
 var _ = shared.Service(&Service{})
 var pollingPeriod time.Duration = 1
-
-// nodes live forever in the peerstore
-var standardttl time.Duration = 1e4
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -126,20 +124,33 @@ func (s *Service) listenForNewNodes() {
 	}
 	nodeID := node.ID
 	ticker := time.NewTicker(pollingPeriod * time.Second)
-	ttl := standardttl * time.Hour
 	for {
 		select {
 		case <-ticker.C:
 			nodes := s.dv5Listener.Lookup(nodeID)
 			multiAddresses := convertToMultiAddr(nodes)
 			log.Infof("Adding %d new peers", len(multiAddresses))
-			s.host.Peerstore().AddAddrs(s.host.ID(), multiAddresses, ttl)
+			s.connectWithAllPeers(multiAddresses)
 			// store furthest node as the next to lookup
 			nodeID = nodes[len(nodes)-1].ID
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
 
+		}
+	}
+}
+
+func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
+	if err != nil {
+		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)
+		return
+	}
+	for _, info := range addrInfos {
+		log.Info(info.String())
+		if err := s.host.Connect(s.ctx, info); err != nil {
+			log.Errorf("Could not connect with peer: %v", err)
 		}
 	}
 }
