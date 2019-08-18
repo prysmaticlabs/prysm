@@ -92,10 +92,26 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		//	expectedNumBlocks: 0,
 		//},
 		{
-			// No block meets the criteria below.
+			// Block slot range filter criteria.
 			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(7),
 			expectedNumBlocks: 3,
 		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(7).SetEndSlot(7),
+			expectedNumBlocks: 1,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(8),
+			expectedNumBlocks: 5,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(5),
+			expectedNumBlocks: 2,
+		},
+		//{
+		//	filter:            filters.NewFilter().SetEndSlot(8),
+		//	expectedNumBlocks: 5,
+		//},
 	}
 	for _, tt := range tests {
 		retrievedBlocks, err := db.Blocks(ctx, tt.filter)
