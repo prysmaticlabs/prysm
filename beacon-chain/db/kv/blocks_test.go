@@ -77,20 +77,20 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		filter            *filters.QueryFilter
 		expectedNumBlocks int
 	}{
-		//{
-		//	filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
-		//	expectedNumBlocks: 2,
-		//},
-		//{
-		//	// No specified filter should return all blocks.
-		//	filter:            nil,
-		//	expectedNumBlocks: 3,
-		//},
-		//{
-		//	// No block meets the criteria below.
-		//	filter:            filters.NewFilter().SetParentRoot([]byte{3, 4, 5}),
-		//	expectedNumBlocks: 0,
-		//},
+		{
+			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
+			expectedNumBlocks: 2,
+		},
+		{
+			// No specified filter should return all blocks.
+			filter:            nil,
+			expectedNumBlocks: 5,
+		},
+		{
+			// No block meets the criteria below.
+			filter:            filters.NewFilter().SetParentRoot([]byte{3, 4, 5}),
+			expectedNumBlocks: 0,
+		},
 		{
 			// Block slot range filter criteria.
 			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(7),
