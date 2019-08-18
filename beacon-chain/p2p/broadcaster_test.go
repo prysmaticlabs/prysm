@@ -10,9 +10,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestService_Broadcast(t *testing.T) {
