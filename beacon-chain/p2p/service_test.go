@@ -110,17 +110,17 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
 	}
-
+	var l *testing2.TestP2P
 	// setup other nodes
 	var listeners []*discv5.Network
 	for i := 1; i <= 5; i++ {
-		port = 2000 + i
+		port = 5000 + i
 		cfg.UDPPort = uint(port)
 		cfg.Port = uint(port)
-		testp2p := testing2.NewTestP2P(t)
-		ipAddr := net.ParseIP("127.0.0.1")
-		pubkey, err := testp2p.Host.Network().LocalPeer().ExtractPublicKey()
-		convertFromInterfacePubKey(pubkey)
+		ipAddr, pkey := createAddrAndPrivKey(t)
+		ipAddr = net.ParseIP("127.0.0.1")
+		privKey := convertToInterfacePrivkey(pkey)
+		l = testing2.NewTestP2PWithKey(t, privKey)
 		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
@@ -128,16 +128,34 @@ func TestListenForNewNodes(t *testing.T) {
 		listeners = append(listeners, listener)
 	}
 	cfg.UDPPort = 4000
-	s, _ := NewService(cfg)
+	/*	s, _ := NewService(cfg)
 
-	defer s.Stop()
-	s.Start()
+		defer s.Stop()
+		s.Start()*/
 
-	time.Sleep(5 * time.Second)
+	ipAddr, pkey = createAddrAndPrivKey(t)
+	ipAddr = net.ParseIP("127.0.0.1")
+	privKey := convertToInterfacePrivkey(pkey)
+	testp2p := testing2.NewTestP2PWithKey(t, privKey)
+	listener, _ := startDiscoveryV5(ipAddr, pkey, cfg)
+
+	s := &Service{
+		dv5Listener: listener,
+		host:        testp2p.Host,
+		pubsub:      testp2p.PubSub(),
+		cfg:         cfg,
+		ctx:         context.Background(),
+	}
+
+	go s.listenForNewNodes()
+
+	time.Sleep(10 * time.Second)
+
+	l.Connect(testp2p)
 
 	peers := s.host.Network().Peers()
 
-	if len(peers) != 7 {
+	if len(peers) != 12 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 12, len(peers))
 	}
 }
