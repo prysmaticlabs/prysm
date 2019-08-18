@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
+	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -98,7 +100,8 @@ func TestService_Status_NotRunning(t *testing.T) {
 func TestListenForNewNodes(t *testing.T) {
 	// setup bootnode
 	port := 2000
-	ipAddr, pkey := createAddrAndPrivKey(t)
+	_, pkey := createAddrAndPrivKey(t)
+	ipAddr := net.ParseIP("127.0.0.1")
 	bootListener := createListener(ipAddr, port, pkey)
 	defer bootListener.Close()
 
@@ -114,9 +117,10 @@ func TestListenForNewNodes(t *testing.T) {
 		port = 2000 + i
 		cfg.UDPPort = uint(port)
 		cfg.Port = uint(port)
-		ipAddr, pkey := createAddrAndPrivKey(t)
-		opts, ipAddr, pkey := buildOptions(cfg)
-		_ = newhost(t, opts)
+		testp2p := testing2.NewTestP2P(t)
+		ipAddr := net.ParseIP("127.0.0.1")
+		pubkey, err := testp2p.Host.Network().LocalPeer().ExtractPublicKey()
+		convertFromInterfacePubKey(pubkey)
 		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
@@ -133,7 +137,7 @@ func TestListenForNewNodes(t *testing.T) {
 
 	peers := s.host.Network().Peers()
 
-	if len(peers) != 12 {
+	if len(peers) != 7 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 12, len(peers))
 	}
 }
