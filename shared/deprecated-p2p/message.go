@@ -9,6 +9,7 @@ import (
 )
 
 // Message represents a message received from an external peer.
+// DEPRECATED: Do not use. This exists for backwards compatibility but may be removed.
 type Message struct {
 	// Ctx message context.
 	Ctx context.Context

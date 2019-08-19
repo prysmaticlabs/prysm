@@ -160,10 +160,10 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.Tx) map[*bolt.Bucket][]byte {
 	indicesByBucket := make(map[*bolt.Bucket][]byte)
 	buckets := []*bolt.Bucket{
-		tx.Bucket(shardIndicesBucket),
-		tx.Bucket(parentRootIndicesBucket),
-		tx.Bucket(startEpochIndicesBucket),
-		tx.Bucket(endEpochIndicesBucket),
+		tx.Bucket(attestationShardIndicesBucket),
+		tx.Bucket(attestationParentRootIndicesBucket),
+		tx.Bucket(attestationStartEpochIndicesBucket),
+		tx.Bucket(attestationEndEpochIndicesBucket),
 	}
 	indices := [][]byte{
 		uint64ToBytes(attData.Crosslink.Shard),
@@ -190,16 +190,16 @@ func createAttestationIndicesFromFilters(f *filters.QueryFilter, readBucket func
 		switch k {
 		case filters.Shard:
 			shard := v.(uint64)
-			indicesByBucket[readBucket(shardIndicesBucket)] = uint64ToBytes(shard)
+			indicesByBucket[readBucket(attestationShardIndicesBucket)] = uint64ToBytes(shard)
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
-			indicesByBucket[readBucket(parentRootIndicesBucket)] = parentRoot
+			indicesByBucket[readBucket(attestationParentRootIndicesBucket)] = parentRoot
 		case filters.StartEpoch:
 			startEpoch := v.(uint64)
-			indicesByBucket[readBucket(startEpochIndicesBucket)] = uint64ToBytes(startEpoch)
+			indicesByBucket[readBucket(attestationStartEpochIndicesBucket)] = uint64ToBytes(startEpoch)
 		case filters.EndEpoch:
 			endEpoch := v.(uint64)
-			indicesByBucket[readBucket(endEpochIndicesBucket)] = uint64ToBytes(endEpoch)
+			indicesByBucket[readBucket(attestationEndEpochIndicesBucket)] = uint64ToBytes(endEpoch)
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for attestations", k)
 		}

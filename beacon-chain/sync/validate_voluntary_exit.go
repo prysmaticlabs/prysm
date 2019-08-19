@@ -38,7 +38,7 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 	seenExits.Set(exitCacheKey(exit), true /*value*/, 365*24*time.Hour /*TTL*/)
 
-	if err := p.Broadcast(exit); err != nil {
+	if err := p.Broadcast(ctx, exit); err != nil {
 		log.WithError(err).Error("Failed to propagate voluntary exit")
 	}
 	return true
