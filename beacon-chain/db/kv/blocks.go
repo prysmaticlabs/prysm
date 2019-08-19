@@ -65,38 +65,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		}
 
 		// Check if has range filters.
-		fmap := f.Filters()
-		var min []byte
-		var max []byte
-		var conditional func(k []byte, max []byte) bool
-		startSlot, hasStart := fmap[filters.StartSlot]
-		if hasStart {
-			min = []byte(fmt.Sprintf("%07d", startSlot.(uint64)))
-		} else {
-			min = []byte(fmt.Sprintf("%07d", 0))
-		}
-		endSlot, hasEnd := fmap[filters.EndSlot]
-		if hasEnd {
-			conditional = func(k, max []byte) bool {
-				return k != nil && bytes.Compare(k, max) <= 0
-			}
-			max = []byte(fmt.Sprintf("%07d", endSlot.(uint64)))
-		} else {
-			conditional = func(k, max []byte) bool {
-				return k != nil
-			}
-		}
-		vals := make([][]byte, 0)
-		if hasStart || hasEnd {
-			c := tx.Bucket(blockSlotIndicesBucket).Cursor()
-			for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
-				splitRoots := make([][]byte, 0)
-				for i := 0; i < len(v); i += 32 {
-					splitRoots = append(splitRoots, v[i:i+32])
-				}
-				vals = append(vals, splitRoots...)
-			}
-		}
+
+		rootsBySlotRange := fetchBlockRootsBySlotRange(startSlot, endSlot)
 
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
@@ -194,8 +164,6 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		// Every index has a unique bucket for fast, binary-search
-		// range scans for filtering across keys.
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
@@ -243,11 +211,49 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	})
 }
 
+func fetchBlockRootsBySlotRange(startSlot, endSlot uint64) [][]byte {
+	fmap := f.Filters()
+	var min []byte
+	var max []byte
+	var conditional func(k []byte, max []byte) bool
+	startSlot, hasStart := fmap[filters.StartSlot]
+	if hasStart {
+		min = []byte(fmt.Sprintf("%07d", startSlot.(uint64)))
+	} else {
+		min = []byte(fmt.Sprintf("%07d", 0))
+	}
+	endSlot, hasEnd := fmap[filters.EndSlot]
+	if hasEnd {
+		conditional = func(k, max []byte) bool {
+			return k != nil && bytes.Compare(k, max) <= 0
+		}
+		max = []byte(fmt.Sprintf("%07d", endSlot.(uint64)))
+	} else {
+		conditional = func(k, max []byte) bool {
+			return k != nil
+		}
+	}
+	vals := make([][]byte, 0)
+	if hasStart || hasEnd {
+		c := tx.Bucket(blockSlotIndicesBucket).Cursor()
+		for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
+			splitRoots := make([][]byte, 0)
+			for i := 0; i < len(v); i += 32 {
+				splitRoots = append(splitRoots, v[i:i+32])
+			}
+			vals = append(vals, splitRoots...)
+		}
+	}
+	return vals
+}
+
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bolt.Bucket][]byte {
 	indicesByBucket := make(map[*bolt.Bucket][]byte)
+	// Every index has a unique bucket for fast, binary-search
+	// range scans for filtering across keys.
 	buckets := []*bolt.Bucket{
 		tx.Bucket(parentRootIndicesBucket),
 		tx.Bucket(blockSlotIndicesBucket),
