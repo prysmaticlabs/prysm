@@ -76,8 +76,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		filtersMap := f.Filters()
 		rootsBySlotRange := fetchBlockRootsBySlotRange(
 			tx.Bucket(blockSlotIndicesBucket),
-			filtersMap[filters.StartSlot].(uint64),
-			filtersMap[filters.EndSlot].(uint64),
+			filtersMap[filters.StartSlot],
+			filtersMap[filters.EndSlot],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -87,10 +87,16 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		indices := lookupValuesForIndices(indicesByBucket)
 		keys := rootsBySlotRange
 		if len(indices) > 0 {
-			if len(keys) > 0 {
+			// If we have found indices that meet the filter criteria, and there are also
+			// block roots that meet the slot range filter criteria, we find the intersection
+			// between these two sets of roots.
+			if len(rootsBySlotRange) > 0 {
 				joined := append([][][]byte{keys}, indices...)
 				keys = sliceutil.IntersectionByteSlices(joined...)
 			} else {
+				// If we have found indices that meet the filter criteria, but there are no block roots
+				// that meet the slot range filter criteria, we find the intersection
+				// of the regular filter indices.
 				keys = sliceutil.IntersectionByteSlices(indices...)
 			}
 		}
@@ -219,7 +225,15 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
 // range scan using sorted left-padded byte keys using a start slot and an end slot.
 // If both the start and end slot are the same, and are 0, the function returns nil.
-func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlot, endSlot uint64) [][]byte {
+func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncoded interface{}) [][]byte {
+	var startSlot, endSlot uint64
+	var ok bool
+	if startSlot, ok = startSlotEncoded.(uint64); !ok {
+		startSlot = 0
+	}
+	if endSlot, ok = endSlotEncoded.(uint64); !ok {
+		endSlot = 0
+	}
 	if startSlot == endSlot && startSlot == 0 {
 		return nil
 	}
@@ -235,16 +249,16 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlot, endSlot uint64) [][
 			return k != nil && bytes.Compare(k, max) <= 0
 		}
 	}
-	vals := make([][]byte, 0)
+	roots := make([][]byte, 0)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		splitRoots := make([][]byte, 0)
 		for i := 0; i < len(v); i += 32 {
 			splitRoots = append(splitRoots, v[i:i+32])
 		}
-		vals = append(vals, splitRoots...)
+		roots = append(roots, splitRoots...)
 	}
-	return vals
+	return roots
 }
 
 // createBlockIndicesFromBlock takes in a beacon block and returns
