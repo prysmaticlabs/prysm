@@ -108,10 +108,26 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(5),
 			expectedNumBlocks: 2,
 		},
-		//{
-		//	filter:            filters.NewFilter().SetEndSlot(8),
-		//	expectedNumBlocks: 5,
-		//},
+		{
+			filter:            filters.NewFilter().SetStartSlot(5),
+			expectedNumBlocks: 4,
+		},
+		{
+			filter:            filters.NewFilter().SetEndSlot(7),
+			expectedNumBlocks: 4,
+		},
+		{
+			filter:            filters.NewFilter().SetEndSlot(8),
+			expectedNumBlocks: 5,
+		},
+		{
+			// Composite filter criteria.
+			filter: filters.NewFilter().
+				SetParentRoot([]byte("parent2")).
+				SetStartSlot(6).
+				SetEndSlot(8),
+			expectedNumBlocks: 1,
+		},
 	}
 	for _, tt := range tests {
 		retrievedBlocks, err := db.Blocks(ctx, tt.filter)

@@ -62,26 +62,41 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 				return nil
 			})
 		}
+
 		// Check if has range filters.
 		fmap := f.Filters()
+		var min []byte
+		var max []byte
+		var conditional func(k []byte, max []byte) bool
 		startSlot, hasStart := fmap[filters.StartSlot]
+		if hasStart {
+			min = uint64ToBytes(startSlot.(uint64))
+		} else {
+			min = uint64ToBytes(0)
+		}
 		endSlot, hasEnd := fmap[filters.EndSlot]
-		vals := make([][][]byte, 0)
-		if hasStart && hasEnd {
+		if hasEnd {
+			conditional = func(k, max []byte) bool {
+				return k != nil && bytes.Compare(k, max) <= 0
+			}
+			max = uint64ToBytes(endSlot.(uint64))
+		} else {
+			conditional = func(k, max []byte) bool {
+				return k != nil
+			}
+		}
+		vals := make([][]byte, 0)
+		if hasStart || hasEnd {
 			c := tx.Bucket(blockSlotIndicesBucket).Cursor()
-			// TODO(#3064): If no min, specify to 0.
-			// TODO(#3064): If no max, change the conditional in the for loop.
-			min := uint64ToBytes(startSlot.(uint64))
-			max := uint64ToBytes(endSlot.(uint64))
-			// Iterate over the 90's.
-			for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 				splitRoots := make([][]byte, 0)
 				for i := 0; i < len(v); i += 32 {
 					splitRoots = append(splitRoots, v[i:i+32])
 				}
-				vals = append(vals, splitRoots)
+				vals = append(vals, splitRoots...)
 			}
 		}
+
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
@@ -94,12 +109,14 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
 		indices := lookupValuesForIndicesMap(indicesByBucket)
-		var keys [][]byte
+		keys := vals
 		if len(indices) > 0 {
-			joined := append(vals, lookupValuesForIndicesMap(indicesByBucket)...)
-			keys = sliceutil.IntersectionByteSlices(joined...)
-		} else {
-			keys = sliceutil.UnionByteSlices(vals...)
+			if len(vals) > 0 {
+				joined := append([][][]byte{vals}, indices...)
+				keys = sliceutil.IntersectionByteSlices(joined...)
+			} else {
+				keys = sliceutil.IntersectionByteSlices(indices...)
+			}
 		}
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
