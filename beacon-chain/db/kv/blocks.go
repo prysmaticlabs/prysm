@@ -65,7 +65,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		}
 
 		// Creates a list of indices from the passed in filter values, such as:
-		// []byte("parent-root-0x2093923"), etc. to be used for looking up
+		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
 		indicesByBucket, err := createBlockIndicesFromFilters(f, tx.Bucket)
 		if err != nil {
