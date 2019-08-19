@@ -1,25 +1,13 @@
 package p2p
 
 import (
-	"context"
-
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
-// Message represents a message received from an external peer.
-// DEPRECATED: Do not use. This exists for backwards compatibility but may be removed.
-type Message struct {
-	// Ctx message context.
-	Ctx context.Context
-	// Peer represents the sender of the message.
-	Peer peer.ID
-	// Data can be any type of message found in sharding/p2p/proto package.
-	Data proto.Message
-}
-
+// DeprecatedSubscriber exists for backwards compatibility.
 // DEPRECATED: Do not use. This exists for backwards compatibility but may be removed.
 type DeprecatedSubscriber interface {
-	Subscribe(msg proto.Message, channel chan Message) event.Subscription
+	Subscribe(msg proto.Message, channel chan deprecatedp2p.Message) event.Subscription
 }

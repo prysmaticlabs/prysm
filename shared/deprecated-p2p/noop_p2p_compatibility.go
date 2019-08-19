@@ -4,15 +4,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // This file exists to enable interop/compatibility between this deprecated library and the new
 // p2p library. See issue #3147.
-
-var _ = p2p.P2P(&Server{})
 
 // AddHandshake not implemented.
 func (s *Server) AddHandshake(_ peer.ID, _ *ethpb.Hello) {

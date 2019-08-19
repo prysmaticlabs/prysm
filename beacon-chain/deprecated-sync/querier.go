@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ type powChainService interface {
 // QuerierConfig defines the configurable properties of SyncQuerier.
 type QuerierConfig struct {
 	ResponseBufferSize int
-	P2P                p2p.P2P
+	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
 	PowChain           powChainService
 	CurrentHeadSlot    uint64
@@ -49,13 +49,13 @@ func DefaultQuerierConfig() *QuerierConfig {
 type Querier struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	p2p                       p2p.P2P
+	p2p                       p2pAPI
 	db                        *db.BeaconDB
 	chainService              chainService
 	currentHeadSlot           uint64
 	currentStateRoot          []byte
 	currentFinalizedStateRoot [32]byte
-	responseBuf               chan p2p.Message
+	responseBuf               chan deprecatedp2p.Message
 	chainStartBuf             chan time.Time
 	powchain                  powChainService
 	chainStarted              bool
@@ -73,7 +73,7 @@ func NewQuerierService(ctx context.Context,
 ) *Querier {
 	ctx, cancel := context.WithCancel(ctx)
 
-	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
+	responseBuf := make(chan deprecatedp2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
 		ctx:                ctx,

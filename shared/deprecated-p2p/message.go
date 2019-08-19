@@ -1,14 +1,23 @@
 package p2p
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
-	newp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 // Message represents a message received from an external peer.
-type Message = newp2p.Message
+// DEPRECATED: Do not use. This exists for backwards compatibility but may be removed.
+type Message struct {
+	// Ctx message context.
+	Ctx context.Context
+	// Peer represents the sender of the message.
+	Peer peer.ID
+	// Data can be any type of message found in sharding/p2p/proto package.
+	Data proto.Message
+}
 
 // messageType returns the underlying struct type for a given proto.message.
 func messageType(msg proto.Message) reflect.Type {

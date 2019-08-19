@@ -27,6 +27,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -47,7 +48,7 @@ type Config struct {
 	BatchedBlockBufferSize int
 	StateBufferSize        int
 	BeaconDB               *db.BeaconDB
-	P2P                    p2p.P2P
+	P2P                    p2pAPI
 	SyncService            syncService
 	ChainService           chainService
 	PowChain               powChainService
@@ -63,6 +64,11 @@ func DefaultConfig() *Config {
 		BatchedBlockBufferSize: params.BeaconConfig().DefaultBufferSize,
 		StateBufferSize:        params.BeaconConfig().DefaultBufferSize,
 	}
+}
+
+type p2pAPI interface {
+	p2p.Sender
+	p2p.DeprecatedSubscriber
 }
 
 type powChainService interface {
@@ -86,13 +92,13 @@ type syncService interface {
 type InitialSync struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	p2p                 p2p.P2P
+	p2p                 p2pAPI
 	syncService         syncService
 	chainService        chainService
 	db                  *db.BeaconDB
 	powchain            powChainService
-	batchedBlockBuf     chan p2p.Message
-	stateBuf            chan p2p.Message
+	batchedBlockBuf     chan deprecatedp2p.Message
+	stateBuf            chan deprecatedp2p.Message
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
@@ -107,8 +113,8 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
+	stateBuf := make(chan deprecatedp2p.Message, cfg.StateBufferSize)
+	batchedBlockBuf := make(chan deprecatedp2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
 		ctx:                 ctx,
