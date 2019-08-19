@@ -146,6 +146,7 @@ func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) erro
 	return nil
 }
 
+// Subscribe to some topic. Not implemented.
 func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) event.Subscription {
 	// TODO(3147): remove this.
 	return nil
