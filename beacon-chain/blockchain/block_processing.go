@@ -151,7 +151,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 	// Apply state transition on the incoming newly received block.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
-		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
@@ -208,7 +207,6 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 	// Apply state transition on the incoming newly received block.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
-		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
@@ -271,7 +269,6 @@ func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethp
 	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 	// Apply state transition on the incoming newly received block.
 	if err := c.forkChoiceStore.OnBlock(block); err != nil {
-		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
