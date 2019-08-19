@@ -64,15 +64,6 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 			})
 		}
 
-		// Check if has range filters.
-		filtersMap := f.Filters()
-		slotIndicesBkt := tx.Bucket(blockSlotIndicesBucket)
-		rootsBySlotRange := fetchBlockRootsBySlotRange(
-			slotIndicesBkt.Cursor(),
-			filtersMap[filters.StartSlot].(uint64),
-			filtersMap[filters.EndSlot].(uint64),
-		)
-
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
@@ -80,15 +71,24 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		if err != nil {
 			return errors.Wrap(err, "could not determine block lookup indices")
 		}
+
+		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
+		filtersMap := f.Filters()
+		rootsBySlotRange := fetchBlockRootsBySlotRange(
+			tx.Bucket(blockSlotIndicesBucket),
+			filtersMap[filters.StartSlot].(uint64),
+			filtersMap[filters.EndSlot].(uint64),
+		)
+
 		// Once we have a list of block roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the block. These block will
 		// meet the filter criteria.
 		indices := lookupValuesForIndices(indicesByBucket)
-		keys := vals
+		keys := rootsBySlotRange
 		if len(indices) > 0 {
-			if len(vals) > 0 {
-				joined := append([][][]byte{vals}, indices...)
+			if len(keys) > 0 {
+				joined := append([][][]byte{keys}, indices...)
 				keys = sliceutil.IntersectionByteSlices(joined...)
 			} else {
 				keys = sliceutil.IntersectionByteSlices(indices...)
@@ -216,7 +216,10 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	})
 }
 
-func fetchBlockRootsBySlotRange(cursor *bolt.Cursor, startSlot, endSlot uint64) [][]byte {
+// fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
+// range scan using sorted left-padded byte keys using a start slot and an end slot.
+// If both the start and end slot are the same, and are 0, the function returns nil.
+func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlot, endSlot uint64) [][]byte {
 	if startSlot == endSlot && startSlot == 0 {
 		return nil
 	}
@@ -233,14 +236,13 @@ func fetchBlockRootsBySlotRange(cursor *bolt.Cursor, startSlot, endSlot uint64) 
 		}
 	}
 	vals := make([][]byte, 0)
-	if hasStart || hasEnd {
-		for k, v := cursor.Seek(min); conditional(k, max); k, v = cursor.Next() {
-			splitRoots := make([][]byte, 0)
-			for i := 0; i < len(v); i += 32 {
-				splitRoots = append(splitRoots, v[i:i+32])
-			}
-			vals = append(vals, splitRoots...)
+	c := bkt.Cursor()
+	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
+		splitRoots := make([][]byte, 0)
+		for i := 0; i < len(v); i += 32 {
+			splitRoots = append(splitRoots, v[i:i+32])
 		}
+		vals = append(vals, splitRoots...)
 	}
 	return vals
 }
