@@ -180,8 +180,8 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			tx.Bucket(blockSlotIndicesBucket),
 		}
 		indices := [][]byte{
-			append(parentRootIdx, block.ParentRoot...),
-			append(slotIdx, uint64ToBytes(block.Slot)...),
+			block.ParentRoot,
+			[]byte(fmt.Sprintf("%07d", block.Slot)),
 		}
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
@@ -213,7 +213,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 			tx.Bucket(blockSlotIndicesBucket),
 		}
 		indices := [][]byte{
-			append(parentRootIdx, block.ParentRoot...),
+			block.ParentRoot,
 			[]byte(fmt.Sprintf("%07d", block.Slot)),
 		}
 		for i := 0; i < len(buckets); i++ {
@@ -251,7 +251,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 				tx.Bucket(blockSlotIndicesBucket),
 			}
 			indices := [][]byte{
-				append(parentRootIdx, blocks[i].ParentRoot...),
+				blocks[i].ParentRoot,
 				[]byte(fmt.Sprintf("%07d", blocks[i].Slot)),
 			}
 			for i := 0; i < len(buckets); i++ {
@@ -289,8 +289,7 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []b
 		switch k {
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
-			idx := append(parentRootIdx, parentRoot...)
-			indicesByBucket[readBucket(parentRootIndicesBucket)] = idx
+			indicesByBucket[readBucket(parentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
 		default:
