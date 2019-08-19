@@ -143,7 +143,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	}); err != nil {
 		return errors.Wrap(err, "could not to save attestation target")
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
+	state, err = s.chainService.AdvanceStateDeprecated(ctx, state, block)
 	if err != nil {
 		return errors.Wrap(err, "could not apply block state transition")
 	}

@@ -125,7 +125,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err := chainService.beaconDB.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
+		if err := chainService.ApplyForkChoiceRuleDeprecated(context.Background(), block, tt.state); err != nil {
 			t.Errorf("Expected head to update, received %v", err)
 		}
 		chainService.cancel()
