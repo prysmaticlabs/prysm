@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/sirupsen/logrus"
 )
 
 var slog = logrus.WithField("prefix", "sync")
