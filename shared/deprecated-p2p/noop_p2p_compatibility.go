@@ -14,22 +14,27 @@ import (
 
 var _ = p2p.P2P(&Server{})
 
+// AddHandshake not implemented.
 func (s *Server) AddHandshake(_ peer.ID, _ *ethpb.Hello) {
 	panic("not implemented")
 }
 
+// Handshakes not implemented.
 func (s *Server) Handshakes() map[peer.ID]*ethpb.Hello {
 	return nil
 }
 
+// Encoding not implemented.
 func (s *Server) Encoding() encoder.NetworkEncoding {
 	return nil
 }
 
+// PubSub not implemented.
 func (s *Server) PubSub() *pubsub.PubSub {
 	return s.gsub
 }
 
+// SetStreamHandler not implemented.
 func (s *Server) SetStreamHandler(_ string, _ network.StreamHandler) {
 	panic("not implemented")
 }

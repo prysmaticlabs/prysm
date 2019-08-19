@@ -73,7 +73,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.NoGenesisDelay = true
 	}
 	if ctx.GlobalBool(UseNewP2PFlag.Name) {
-		log.Warn("Using new P2P service")
+		log.Warn("Using new P2P service.")
 		cfg.UseNewP2P = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {

@@ -53,6 +53,7 @@ type HandshakeManager interface {
 	AddHandshake(peer.ID, *pb.Hello)
 }
 
+// Sender abstracts the sending functionality from libp2p.
 type Sender interface {
 	Send(context.Context, proto.Message, peer.ID) error
 }
