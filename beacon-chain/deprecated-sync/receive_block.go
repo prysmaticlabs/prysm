@@ -168,7 +168,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		"Sending newly received block to chain service")
 	// We then process the block by passing it through the ChainService and running
 	// a fork choice rule.
-	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+	beaconState, err = rs.chainService.ReceiveBlockDeprecated(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
@@ -200,7 +200,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		}
 	}
 
-	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+	if err := rs.chainService.ApplyForkChoiceRuleDeprecated(ctx, block, beaconState); err != nil {
 		log.WithError(err).Error("Could not run fork choice on block")
 		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		return nil, nil, false, err
