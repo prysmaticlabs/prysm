@@ -52,10 +52,10 @@ func NewTestP2P(t *testing.T) *TestP2P {
 	}
 }
 
-// NewTestP2P initializes a new p2p test service.
+// NewTestP2PWithKey initializes a new p2p test service.
 func NewTestP2PWithKey(t *testing.T, privkey crypto.PrivKey) *TestP2P {
 	ctx := context.Background()
-	h := bhost.NewBlankHost(GenSwarmWithKey(t, ctx, privkey))
+	h := bhost.NewBlankHost(GenSwarmWithKey(ctx, t, privkey))
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
@@ -71,10 +71,10 @@ func NewTestP2PWithKey(t *testing.T, privkey crypto.PrivKey) *TestP2P {
 	}
 }
 
-// GenSwarmwithKey generates a new test swarm. Modified from
+// GenSwarmWithKey generates a new test swarm. Modified from
 // "github.com/libp2p/go-libp2p-swarm/testing" for
 // internal testing
-func GenSwarmWithKey(t *testing.T, ctx context.Context, privKey crypto.PrivKey) *swarm.Swarm {
+func GenSwarmWithKey(ctx context.Context, t *testing.T, privKey crypto.PrivKey) *swarm.Swarm {
 	var err error
 	p := tnet.PeerNetParams{}
 	p.Addr = tnet.ZeroLocalTCPAddress

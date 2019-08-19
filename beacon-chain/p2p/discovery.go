@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	_ "go.uber.org/automaxprocs"
 )
 
 var discv5codec = 0x01C1
