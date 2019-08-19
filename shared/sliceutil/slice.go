@@ -62,16 +62,17 @@ func UnionUint64(s ...[]uint64) []uint64 {
 	if len(s) == 1 {
 		return s[0]
 	}
-	set := make([]uint64, 0)
+	set := s[0]
 	m := make(map[uint64]bool)
 	for i := 1; i < len(s); i++ {
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-			set = append(set, s[i-1][j])
+		a := s[i-1]
+		b := s[i]
+		for j := 0; j < len(a); j++ {
+			m[a[j]] = true
 		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; !found {
-				set = append(set, s[i][j])
+		for j := 0; j < len(b); j++ {
+			if _, found := m[b[j]]; !found {
+				set = append(set, b[j])
 			}
 		}
 	}
@@ -157,16 +158,17 @@ func UnionInt64(s ...[]int64) []int64 {
 	if len(s) == 1 {
 		return s[0]
 	}
-	set := make([]int64, 0)
+	set := s[0]
 	m := make(map[int64]bool)
 	for i := 1; i < len(s); i++ {
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-			set = append(set, s[i-1][j])
+		a := s[i-1]
+		b := s[i]
+		for j := 0; j < len(a); j++ {
+			m[a[j]] = true
 		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; !found {
-				set = append(set, s[i][j])
+		for j := 0; j < len(b); j++ {
+			if _, found := m[b[j]]; !found {
+				set = append(set, b[j])
 			}
 		}
 	}
@@ -200,6 +202,29 @@ func IsInInt64(a int64, b []int64) bool {
 		}
 	}
 	return false
+}
+
+// UnionByteSlices returns the common elements between sets of byte slices.
+func UnionByteSlices(s ...[][]byte) [][]byte {
+	if len(s) == 0 {
+		return [][]byte{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
+	set := s[0]
+	m := make(map[string]bool)
+	for i := 1; i < len(s); i++ {
+		for j := 0; j < len(s[i-1]); j++ {
+			m[string(s[i-1][j])] = true
+		}
+		for j := 0; j < len(s[i]); j++ {
+			if _, found := m[string(s[i][j])]; !found {
+				set = append(set, s[i][j])
+			}
+		}
+	}
+	return set
 }
 
 // IntersectionByteSlices returns the common elements between sets of byte slices.
