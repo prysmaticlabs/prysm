@@ -56,7 +56,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
-		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndicesMap(indicesByBucket)...)
+		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			att := &ethpb.Attestation{}
@@ -111,7 +111,7 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
 		}
-		if err := deleteValueForIndicesMap(indicesByBucket, attDataRoot[:]); err != nil {
+		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:]); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(attDataRoot[:])
@@ -146,7 +146,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
 		}
-		if err := updateValueForIndicesMap(indicesByBucket, attDataRoot[:]); err != nil {
+		if err := updateValueForIndices(indicesByBucket, attDataRoot[:]); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
@@ -188,7 +188,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 			for i := 0; i < len(buckets); i++ {
 				indicesByBucket[buckets[i]] = indices[i]
 			}
-			if err := updateValueForIndicesMap(indicesByBucket, keys[i]); err != nil {
+			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if err := bkt.Put(keys[i], encodedValues[i]); err != nil {

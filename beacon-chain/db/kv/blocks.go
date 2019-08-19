@@ -109,7 +109,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the block. These block will
 		// meet the filter criteria.
-		indices := lookupValuesForIndicesMap(indicesByBucket)
+		indices := lookupValuesForIndices(indicesByBucket)
 		keys := vals
 		if len(indices) > 0 {
 			if len(vals) > 0 {
@@ -186,7 +186,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
 		}
-		if err := deleteValueForIndicesMap(indicesByBucket, blockRoot[:]); err != nil {
+		if err := deleteValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(blockRoot[:])
@@ -219,7 +219,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
 		}
-		if err := updateValueForIndicesMap(indicesByBucket, blockRoot[:]); err != nil {
+		if err := updateValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(blockRoot[:], enc)
@@ -257,7 +257,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			for i := 0; i < len(buckets); i++ {
 				indicesByBucket[buckets[i]] = indices[i]
 			}
-			if err := updateValueForIndicesMap(indicesByBucket, keys[i]); err != nil {
+			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
