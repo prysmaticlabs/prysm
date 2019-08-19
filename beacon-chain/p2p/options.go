@@ -17,17 +17,21 @@ func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.Port))
-	if err != nil {
-		log.Fatalf("Failed to p2p listen: %v", err)
-	}
 	privateKey, err := privKey(cfg.PrivateKey)
 	if err != nil {
 		log.Fatalf("Could not create private key %v", err)
 	}
+	id, err := peer.IDFromPrivateKey(convertToInterfacePrivkey(privateKey))
+	if err != nil {
+
+	}
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip, cfg.Port, id))
+	if err != nil {
+		log.Fatalf("Failed to p2p listen: %v", err)
+	}
 	options := []libp2p.Option{
-		libp2p.ListenAddrs(listen),
 		privKeyOption(privateKey),
+		libp2p.ListenAddrs(listen),
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

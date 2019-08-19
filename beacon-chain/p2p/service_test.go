@@ -92,7 +92,11 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	s, _ := NewService(&Config{})
+	cfg := &Config{
+		Port:    2000,
+		UDPPort: 2000,
+	}
+	s, _ := NewService(cfg)
 	s.dv5Listener = &mockListener{}
 	defer s.Stop()
 	s.Start()
