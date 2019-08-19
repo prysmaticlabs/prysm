@@ -1,8 +1,6 @@
 package sliceutil
 
 import (
-	"encoding/hex"
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -353,28 +351,4 @@ func TestIntersectionByteSlices(t *testing.T) {
 				tt.input, result, tt.result)
 		}
 	}
-	col := [][][]byte{
-		{
-			decodeOrDie("dbe20d8d8b6a4ea77d6d827ad0b4438f26247cef7d7650ef7bd20adf4f4e31ce"),
-		},
-		{
-			decodeOrDie("a043092233b263996ca35de19b84c46941900817da147126df2a3dc990ef18f5"),
-		},
-		{
-			decodeOrDie("44210cf26e005ad5758e067ed5e785502bb5ed54a292572cce0746d2663d4a20"),
-		},
-		{
-			decodeOrDie("2c5694ac395889f27f737a91dafea86f3747a2308fa2fc8c9a5c5a252659f344"),
-			decodeOrDie("dbe20d8d8b6a4ea77d6d827ad0b4438f26247cef7d7650ef7bd20adf4f4e31ce"),
-		},
-	}
-	fmt.Println(IntersectionByteSlices(col...))
-}
-
-func decodeOrDie(s string) []byte {
-	res, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return res
 }
