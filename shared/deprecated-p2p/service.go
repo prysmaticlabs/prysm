@@ -477,7 +477,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 //   msg := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
 //   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
-func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
+func (s *Server) Broadcast(ctx context.Context, msg proto.Message) error {
 	defer func() {
 		if r := recover(); r != nil {
 			log.WithField("r", r).Error("Panicked when broadcasting!")
@@ -510,13 +510,13 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	m, ok := msg.(proto.Message)
 	if !ok {
 		log.Errorf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg)
-		return
+		return nil
 	}
 
 	b, err := proto.Marshal(m)
 	if err != nil {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
-		return
+		return err
 	}
 
 	envelope := &pb.Envelope{
@@ -528,10 +528,11 @@ func (s *Server) Broadcast(ctx context.Context, msg proto.Message) {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
-		return
+		return err
 	}
 
 	if err := s.gsub.Publish(topic, data); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
 	}
+	return nil
 }

@@ -23,10 +23,10 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -47,7 +47,7 @@ type Config struct {
 	BatchedBlockBufferSize int
 	StateBufferSize        int
 	BeaconDB               *db.BeaconDB
-	P2P                    p2pAPI
+	P2P                    p2p.P2P
 	SyncService            syncService
 	ChainService           chainService
 	PowChain               powChainService
@@ -63,12 +63,6 @@ func DefaultConfig() *Config {
 		BatchedBlockBufferSize: params.BeaconConfig().DefaultBufferSize,
 		StateBufferSize:        params.BeaconConfig().DefaultBufferSize,
 	}
-}
-
-type p2pAPI interface {
-	p2p.Sender
-	p2p.ReputationManager
-	p2p.Subscriber
 }
 
 type powChainService interface {
@@ -92,7 +86,7 @@ type syncService interface {
 type InitialSync struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	p2p                 p2pAPI
+	p2p                 p2p.P2P
 	syncService         syncService
 	chainService        chainService
 	db                  *db.BeaconDB
@@ -290,13 +284,11 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			log.WithFields(fields).Info("Received batched blocks from peer")
 			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
 				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
-				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 				continue
 			}
 			if !s.nodeIsSynced {
 				return errors.New("node still not in sync after receiving batch blocks")
 			}
-			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
 			return nil
 		}
 	}

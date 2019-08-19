@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +32,7 @@ type Service struct {
 type Config struct {
 	ChainService     chainService
 	BeaconDB         *db.BeaconDB
-	P2P              p2pAPI
+	P2P              p2p.P2P
 	AttsService      attsService
 	OperationService operations.OperationFeeds
 	PowChainService  powChainService

@@ -202,10 +202,8 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	if err := rs.chainService.ApplyForkChoiceRuleDeprecated(ctx, block, beaconState); err != nil {
 		log.WithError(err).Error("Could not run fork choice on block")
-		rs.p2p.Reputation(blockMsg.Peer, p2p.RepPenalityInvalidBlock)
 		return nil, nil, false, err
 	}
-	rs.p2p.Reputation(blockMsg.Peer, p2p.RepRewardValidBlock)
 	sentBlocks.Inc()
 	// We update the last observed slot to the received canonical block's slot.
 	if block.Slot > rs.highestObservedSlot {
