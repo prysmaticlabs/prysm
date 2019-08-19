@@ -65,8 +65,13 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		}
 
 		// Check if has range filters.
-
-		rootsBySlotRange := fetchBlockRootsBySlotRange(startSlot, endSlot)
+		filtersMap := f.Filters()
+		slotIndicesBkt := tx.Bucket(blockSlotIndicesBucket)
+		rootsBySlotRange := fetchBlockRootsBySlotRange(
+			slotIndicesBkt.Cursor(),
+			filtersMap[filters.StartSlot].(uint64),
+			filtersMap[filters.EndSlot].(uint64),
+		)
 
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
@@ -211,32 +216,25 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	})
 }
 
-func fetchBlockRootsBySlotRange(startSlot, endSlot uint64) [][]byte {
-	fmap := f.Filters()
-	var min []byte
-	var max []byte
-	var conditional func(k []byte, max []byte) bool
-	startSlot, hasStart := fmap[filters.StartSlot]
-	if hasStart {
-		min = []byte(fmt.Sprintf("%07d", startSlot.(uint64)))
-	} else {
-		min = []byte(fmt.Sprintf("%07d", 0))
+func fetchBlockRootsBySlotRange(cursor *bolt.Cursor, startSlot, endSlot uint64) [][]byte {
+	if startSlot == endSlot && startSlot == 0 {
+		return nil
 	}
-	endSlot, hasEnd := fmap[filters.EndSlot]
-	if hasEnd {
-		conditional = func(k, max []byte) bool {
-			return k != nil && bytes.Compare(k, max) <= 0
-		}
-		max = []byte(fmt.Sprintf("%07d", endSlot.(uint64)))
-	} else {
+	min := []byte(fmt.Sprintf("%07d", startSlot))
+	max := []byte(fmt.Sprintf("%07d", endSlot))
+	var conditional func(key, max []byte) bool
+	if endSlot == 0 {
 		conditional = func(k, max []byte) bool {
 			return k != nil
+		}
+	} else {
+		conditional = func(k, max []byte) bool {
+			return k != nil && bytes.Compare(k, max) <= 0
 		}
 	}
 	vals := make([][]byte, 0)
 	if hasStart || hasEnd {
-		c := tx.Bucket(blockSlotIndicesBucket).Cursor()
-		for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
+		for k, v := cursor.Seek(min); conditional(k, max); k, v = cursor.Next() {
 			splitRoots := make([][]byte, 0)
 			for i := 0; i < len(v); i += 32 {
 				splitRoots = append(splitRoots, v[i:i+32])
