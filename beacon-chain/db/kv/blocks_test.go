@@ -139,3 +139,25 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		}
 	}
 }
+
+func TestStore_Blocks_RetrieveRange(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	b := make([]*ethpb.BeaconBlock, 400)
+	for i := 0; i < 400; i++ {
+		b[i] = &ethpb.BeaconBlock{
+			Slot: uint64(i),
+		}
+	}
+	ctx := context.Background()
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(400))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 300 {
+		t.Errorf("Wanted %d, received %d", 300, len(retrieved))
+	}
+}
