@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
-        "helpers.go",
         "log.go",
         "metrics.go",
         "service.go",
@@ -15,7 +14,6 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -32,14 +30,12 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "helpers_test.go",
         "service_test.go",
         "tree_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
