@@ -14,18 +14,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-)
 
-var _ = p2p.P2P(&TestP2P{})
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+)
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
 	t      *testing.T
 	Host   host.Host
 	pubsub *pubsub.PubSub
+
+	BroadcastCalled bool
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -108,8 +108,9 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 }
 
 // Broadcast a message.
-func (p *TestP2P) Broadcast(msg proto.Message) {
-	// TODO(3147): implement
+func (p *TestP2P) Broadcast(msg proto.Message) error {
+	p.BroadcastCalled = true
+	return nil
 }
 
 // SetStreamHandler for RPC.
