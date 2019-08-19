@@ -342,13 +342,8 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		s.finalizedCheckpt.Epoch = postState.FinalizedCheckpoint.Epoch
 	}
 
+	// Log epoch summary before the next epoch.
 	if helpers.IsEpochStart(postState.Slot) {
-		if err := saveValidatorIdx(s.ctx, postState, s.db); err != nil {
-			return errors.Wrap(err, "could not save validator index")
-		}
-		if err := deleteValidatorIdx(s.ctx, postState, s.db); err != nil {
-			return errors.Wrap(err, "could not delete validator index")
-		}
 		logEpochData(postState)
 	}
 
