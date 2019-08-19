@@ -10,10 +10,10 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "8df59f11fb697743cbb3f26cfb8750395f30471e9eabde0d174c3aebc7a1cd39",
+    sha256 = "313f2c7a23fecc33023563f082f381a32b9b7254f727a7dd2d6380ccc6dfe09b",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/0.19.1/rules_go-0.19.1.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/0.19.1/rules_go-0.19.1.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/0.19.3/rules_go-0.19.3.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/0.19.3/rules_go-0.19.3.tar.gz",
     ],
 )
 
@@ -39,15 +39,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "6625259f9f77ef90d795d20df1d0385d9b3ce63b6619325f702b6358abb4ab33",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.35.0/rules_nodejs-0.35.0.tar.gz"],
+    sha256 = "9abd649b74317c9c135f4810636aaa838d5bea4913bfa93a85c2f52a919fdaf3",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.0/rules_nodejs-0.36.0.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "c29481f98c7bb8e982e0488b35b2c5ccc99de56166f6711a9244a0720de9fdd7",
-    strip_prefix = "rules_k8s-b815470f49deb431d2ce6c2d29df2d5cb5eb1f35",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/b815470f49deb431d2ce6c2d29df2d5cb5eb1f35.tar.gz",
+    sha256 = "34809abbed8aeb465873e13b1f8d0fdc7973291c1f3066309d35b5fe52ec7c23",
+    strip_prefix = "rules_k8s-b799dd0cd7140ed7b58f1fd4c9a14fc924239b0b",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/b799dd0cd7140ed7b58f1fd4c9a14fc924239b0b.tar.gz",
 )
 
 git_repository(
@@ -272,7 +272,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "0e239d8fa37b597bd150660e5b6845570aa5b833",  # v0.0.6
+    commit = "64ffd94071a5bc58130ea88fd8404408aef993f2",  # v0.0.7
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -435,7 +435,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "1311e847b0cb909da63b5fecfb5370aa66236465",  # v0.0.8
+    commit = "e1f7b56ace729e4a73a29a6b4fac6cd5fcda7ab3",  # v0.0.9
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -919,7 +919,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "2b2aeece7979f19ee2809459e0411b337d02661a",  # v0.44.0
+    commit = "ceeb313ad77b789a7fa5287b36a1d127b69b7093",  # v0.44.3
     importpath = "cloud.google.com/go",
 )
 
@@ -1189,7 +1189,7 @@ go_repository(
 
 go_repository(
     name = "com_github_googleapis_gnostic",
-    commit = "e73c7ec21d36ddb0711cb36d1502d18363b5c2c9",  # v0.3.0
+    commit = "ab0dd09aa10e2952b28e12ecd35681b20463ebab",  # v0.3.1
     importpath = "github.com/googleapis/gnostic",
 )
 
