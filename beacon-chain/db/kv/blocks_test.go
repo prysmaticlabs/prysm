@@ -146,7 +146,8 @@ func TestStore_Blocks_RetrieveRange(t *testing.T) {
 	b := make([]*ethpb.BeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.BeaconBlock{
-			Slot: uint64(i),
+			ParentRoot: []byte("parent"),
+			Slot:       uint64(i),
 		}
 	}
 	ctx := context.Background()
