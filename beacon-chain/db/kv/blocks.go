@@ -269,7 +269,7 @@ func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bol
 	// Every index has a unique bucket for fast, binary-search
 	// range scans for filtering across keys.
 	buckets := []*bolt.Bucket{
-		tx.Bucket(parentRootIndicesBucket),
+		tx.Bucket(blockParentRootIndicesBucket),
 		tx.Bucket(blockSlotIndicesBucket),
 	}
 	indices := [][]byte{
@@ -295,7 +295,7 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []b
 		switch k {
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
-			indicesByBucket[readBucket(parentRootIndicesBucket)] = parentRoot
+			indicesByBucket[readBucket(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
 		default:
