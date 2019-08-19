@@ -87,15 +87,15 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			&attestation.Config{BeaconDB: beaconDb})
 
 		chainService := setupBeaconChain(t, beaconDb, attsService)
-		if err := chainService.beaconDB.SaveBlock(
+		if err := chainService.deprecatedBeaconDB.SaveBlock(
 			genesis); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveJustifiedBlock(
+		if err := chainService.deprecatedBeaconDB.SaveJustifiedBlock(
 			genesis); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveJustifiedState(
+		if err := chainService.deprecatedBeaconDB.SaveJustifiedState(
 			beaconState); err != nil {
 			t.Fatal(err)
 		}
@@ -119,10 +119,10 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+		if err := chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
+		if err := chainService.deprecatedBeaconDB.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 			t.Fatal(err)
 		}
 		if err := chainService.ApplyForkChoiceRuleDeprecated(context.Background(), block, tt.state); err != nil {
@@ -303,10 +303,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -318,10 +318,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -329,10 +329,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		Slot:       3,
 		ParentRoot: root2[:],
 	}
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -373,10 +373,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -384,10 +384,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:       2,
 		ParentRoot: root1[:],
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -395,10 +395,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:       3,
 		ParentRoot: root1[:],
 	}
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -406,10 +406,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:       4,
 		ParentRoot: root1[:],
 	}
-	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -448,10 +448,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -463,10 +463,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block5, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block5, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -474,10 +474,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		Slot:       9,
 		ParentRoot: root2[:],
 	}
-	if err = chainService.beaconDB.SaveBlock(block9); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block9); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block9, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block9, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -518,10 +518,10 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -533,10 +533,10 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -592,10 +592,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -607,10 +607,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -622,10 +622,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -637,10 +637,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -699,7 +699,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block2 := &ethpb.BeaconBlock{
@@ -710,7 +710,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block3 := &ethpb.BeaconBlock{
@@ -721,7 +721,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block4 := &ethpb.BeaconBlock{
@@ -732,7 +732,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block5 := &ethpb.BeaconBlock{
@@ -743,7 +743,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
@@ -797,10 +797,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block1, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -812,10 +812,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block2, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -827,10 +827,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block3, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -842,10 +842,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block4, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -857,10 +857,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block5, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block5, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -872,10 +872,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(block6); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(block6); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, block6, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block6, beaconState); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -937,10 +937,10 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -950,10 +950,10 @@ func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
-		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+		if err = chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = ssz.SigningRoot(block)
@@ -1018,10 +1018,10 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1031,10 +1031,10 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
-		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+		if err = chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = ssz.SigningRoot(block)
@@ -1097,10 +1097,10 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1110,10 +1110,10 @@ func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
-		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+		if err = chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = ssz.SigningRoot(block)
@@ -1176,10 +1176,10 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not hash block: %v", err)
 	}
-	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err = chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		b.Fatalf("Could not save block: %v", err)
 	}
-	if err = chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		b.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1189,10 +1189,10 @@ func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
 			Slot:       uint64(i),
 			ParentRoot: root[:],
 		}
-		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+		if err = chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 			b.Fatalf("Could not save block: %v", err)
 		}
-		if err = chainService.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+		if err = chainService.deprecatedBeaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
 			b.Fatalf("Could update chain head: %v", err)
 		}
 		root, err = ssz.SigningRoot(block)
@@ -1270,24 +1270,24 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
 
-	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedState(gState); err != nil {
 		t.Fatal(err)
 	}
 
 	// Last justified check point happened at slot 0.
-	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+	if err := chainSvc.deprecatedBeaconDB.SaveJustifiedBlock(
 		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1306,10 +1306,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		}}
-	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
@@ -1318,11 +1318,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 
 	// Getting latest justification check point from DB and
 	// verify they have been updated.
-	newJustifiedState, err := chainSvc.beaconDB.JustifiedState()
+	newJustifiedState, err := chainSvc.deprecatedBeaconDB.JustifiedState()
 	if err != nil {
 		t.Fatal(err)
 	}
-	newJustifiedBlock, err := chainSvc.beaconDB.JustifiedBlock()
+	newJustifiedBlock, err := chainSvc.deprecatedBeaconDB.JustifiedBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1346,22 +1346,22 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	ctx := context.Background()
 
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
-	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedState(gState); err != nil {
 		t.Fatal(err)
 	}
 
 	// Last finalized check point happened at slot 0.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedBlock(
 		gBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveFinalizedState(
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedState(
 		gState); err != nil {
 		t.Fatal(err)
 	}
@@ -1370,7 +1370,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	offset := uint64(64)
 
 	// Also saved justified block to slot 0 to test finalized case only.
-	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+	if err := chainSvc.deprecatedBeaconDB.SaveJustifiedBlock(
 		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
@@ -1388,10 +1388,10 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 			RandaoReveal: epochSignature,
 		}}
 
-	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
@@ -1400,11 +1400,11 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// Getting latest justification check point from DB and
 	// verify they have been updated.
-	newFinalizedState, err := chainSvc.beaconDB.FinalizedState()
+	newFinalizedState, err := chainSvc.deprecatedBeaconDB.FinalizedState()
 	if err != nil {
 		t.Fatal(err)
 	}
-	newFinalizedBlock, err := chainSvc.beaconDB.FinalizedBlock()
+	newFinalizedBlock, err := chainSvc.deprecatedBeaconDB.FinalizedBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1428,24 +1428,24 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 
 	chainSvc := setupBeaconChain(t, beaconDB, nil)
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
-	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, gBlock, gState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedState(gState); err != nil {
 		t.Fatal(err)
 	}
 
 	// Last justified check point happened at slot 0.
-	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+	if err := chainSvc.deprecatedBeaconDB.SaveJustifiedBlock(
 		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+	if err := chainSvc.deprecatedBeaconDB.SaveFinalizedBlock(
 		&ethpb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
@@ -1465,7 +1465,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		}}
-	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	blockHeader, err := b.HeaderFromBlock(block)
@@ -1476,10 +1476,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 		Slot:              genesisSlot + lastAvailableSlot,
 		LatestBlockHeader: blockHeader,
 	}
-	if err := chainSvc.beaconDB.SaveState(ctx, computedState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.SaveState(ctx, computedState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(ctx, block, gState); err != nil {
+	if err := chainSvc.deprecatedBeaconDB.UpdateChainHead(ctx, block, gState); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainSvc.updateFFGCheckPts(ctx, gState); err != nil {
@@ -1488,11 +1488,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 
 	// Getting latest justification check point from DB and
 	// verify they have been updated.
-	newJustifiedState, err := chainSvc.beaconDB.JustifiedState()
+	newJustifiedState, err := chainSvc.deprecatedBeaconDB.JustifiedState()
 	if err != nil {
 		t.Fatal(err)
 	}
-	newJustifiedBlock, err := chainSvc.beaconDB.JustifiedBlock()
+	newJustifiedBlock, err := chainSvc.deprecatedBeaconDB.JustifiedBlock()
 	if err != nil {
 		t.Fatal(err)
 	}

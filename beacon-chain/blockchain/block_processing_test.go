@@ -29,11 +29,11 @@ var _ = BlockProcessor(&ChainService{})
 
 func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *ChainService) (*ethpb.BeaconBlock, error) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parent, err := chainService.beaconDB.Block(parentRoot)
+	parent, err := chainService.deprecatedBeaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, err
 	}
-	beaconState, err := chainService.beaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot, parentRoot)
+	beaconState, err := chainService.deprecatedBeaconDB.HistoricalStateFromSlot(context.Background(), parent.Slot, parentRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatalf("Unable to tree hash block %v", err)
 	}
 
-	if err := chainService.beaconDB.SaveBlock(parentBlock); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("Unable to save block %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		},
 	}
 
-	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err == nil {
@@ -122,7 +122,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 	}
 	beaconState.Eth1DepositIndex = 100
-	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(genesis)
@@ -134,7 +134,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesis, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -177,13 +177,13 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveFinalizedBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err != nil {
@@ -218,10 +218,10 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	beaconState.Eth1DepositIndex = 100
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
@@ -268,7 +268,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err != nil {
@@ -304,10 +304,10 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 
@@ -389,11 +389,11 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -430,7 +430,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(goodStateBlock); err != nil {
 		t.Fatal(err)
 	}
 
@@ -464,11 +464,11 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
-	if err := chainService.beaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, parentHash); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -535,7 +535,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	beaconState.Eth1Data.DepositCount = 1
 	beaconState.Eth1DepositIndex = 0
-	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveJustifiedState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveFinalizedState(beaconState); err != nil {
@@ -548,7 +548,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService)
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -611,7 +611,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	beaconState.Slot--
 
 	beaconState.Eth1DepositIndex = 0
-	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	block, err = initBlockStateRoot(t, block, chainService)
@@ -628,10 +628,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveFinalizedBlock(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -644,7 +644,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
-	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
@@ -954,7 +954,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+	if err := chainService.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(genesis)
@@ -1030,7 +1030,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		t.Fatalf("Could not delete validator idx: %v", err)
 	}
 	wantedIdx := uint64(1)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
+	idx, err := chainService.deprecatedBeaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -1039,7 +1039,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	}
 
 	wantedIdx = uint64(2)
-	if chainService.beaconDB.HasValidator(validators[wantedIdx].PublicKey) {
+	if chainService.deprecatedBeaconDB.HasValidator(validators[wantedIdx].PublicKey) {
 		t.Errorf("Validator index %d should have been deleted", wantedIdx)
 	}
 	if v.ExitedValFromEpoch(epoch) != nil {
@@ -1070,7 +1070,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
+	idx, err := chainService.deprecatedBeaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}
@@ -1108,7 +1108,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	}
 
 	wantedIdx := uint64(2)
-	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
+	idx, err := chainService.deprecatedBeaconDB.ValidatorIndex(validators[wantedIdx].PublicKey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
 	}

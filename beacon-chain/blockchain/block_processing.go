@@ -2,7 +2,9 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -57,14 +59,14 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parent, err := c.beaconDB.Block(parentRoot)
+	parent, err := c.deprecatedBeaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get parent block")
 	}
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
+	beaconState, err := c.deprecatedBeaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
@@ -94,8 +96,8 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
 			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
-			c.beaconDB.MarkEvilBlockHash(blockRoot)
-			if err := c.beaconDB.DeleteBlock(block); err != nil {
+			c.deprecatedBeaconDB.MarkEvilBlockHash(blockRoot)
+			if err := c.deprecatedBeaconDB.DeleteBlock(block); err != nil {
 				return nil, errors.Wrap(err, "could not delete bad block from db")
 			}
 			return beaconState, err
@@ -124,6 +126,174 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 	return beaconState, nil
 }
 
+// ReceiveBlock is a function that defines the operations that are preformed on
+// blocks that is received from p2p layer or rpc. The operations consists of:
+//   1. Gossip block to other peers
+//   2. Validate block, apply state transition and update check points
+//   3. Apply fork choice to the processed block
+//   4. Save latest head info
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
+	defer span.End()
+
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
+	}
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+		Hash:       root[:],
+		SlotNumber: block.Slot,
+	})
+
+	// Update fork choice service's time tracker to current time.
+	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
+	// Apply state transition on the incoming newly received block.
+	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
+		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": block.Slot,
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("Finished state transition and updated fork choice store for block")
+
+	// Run fork choice for head block and head block.
+	headRoot, err := c.forkChoiceStore.Head()
+	if err != nil {
+		return errors.Wrap(err, "could not get head from fork choice service")
+	}
+	headBlk, err := c.db.Block(ctx, bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return errors.Wrap(err, "could not compute state from block head")
+	}
+
+	// Save head info after success upon running fork choice.
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = headBlk.Slot
+	c.canonicalRoots[headBlk.Slot] = headRoot
+	if err := c.db.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": headBlk.Slot,
+		"root":  hex.EncodeToString(headRoot),
+	}).Info("Saved head info")
+
+	// Remove block's contained deposits, attestations, and other operations from persistent storage.
+	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
+	}
+
+	return nil
+}
+
+// ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
+// that are preformed on blocks that is received from p2p layer or rpc. The operations consists of:
+//   1. Validate block, apply state transition and update check points
+//   2. Apply fork choice to the processed block
+//   3. Save latest head info
+func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
+	defer span.End()
+
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
+	}
+
+	// Update fork choice service's time tracker to current time.
+	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
+	// Apply state transition on the incoming newly received block.
+	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
+		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": block.Slot,
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("Finished state transition and updated fork choice store for block")
+
+	// Run fork choice for head block and head block.
+	headRoot, err := c.forkChoiceStore.Head()
+	if err != nil {
+		return errors.Wrap(err, "could not get head from fork choice service")
+	}
+	headBlk, err := c.db.Block(ctx, bytesutil.ToBytes32(headRoot))
+	if err != nil {
+		return errors.Wrap(err, "could not compute state from block head")
+	}
+
+	// Save head info after success upon running fork choice.
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = headBlk.Slot
+	c.canonicalRoots[headBlk.Slot] = headRoot
+	if err := c.db.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": headBlk.Slot,
+		"root":  hex.EncodeToString(headRoot),
+	}).Info("Saved head info")
+
+	// Remove block's contained deposits, attestations, and other operations from persistent storage.
+	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
+	}
+
+	return nil
+}
+
+// ReceiveBlockNoForkchoice is a function that defines the all operations (minus applying forkchoice)
+// that are preformed blocks that is received from p2p layer or rpc. The operations consists of:
+//   1. Gossip block to other peers
+//   2. Validate block, apply state transition and update check points
+//   3. Save latest head info
+func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
+	defer span.End()
+
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
+	}
+
+	// Update fork choice service's time tracker to current time.
+	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
+	// Apply state transition on the incoming newly received block.
+	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+		c.deprecatedBeaconDB.MarkEvilBlockHash(root)
+		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": block.Slot,
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("Finished state transition and updated fork choice store for block")
+
+	// Save head info after success upon running fork choice.
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = block.Slot
+	c.canonicalRoots[block.Slot] = root[:]
+	if err := c.db.SaveHeadBlockRoot(ctx, root); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": block.Slot,
+		"root":  hex.EncodeToString(root[:]),
+	}).Info("Saved head info")
+
+	// Remove block's contained deposits, attestations, and other operations from persistent storage.
+	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
+	}
+
+	return nil
+}
+
 // VerifyBlockValidity cross-checks the block against the pre-processing conditions from
 // Ethereum 2.0, namely:
 //   The parent block with root block.parent_root has been processed and accepted.
@@ -141,7 +311,7 @@ func (c *ChainService) VerifyBlockValidity(
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
-		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
+		c.deprecatedBeaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return errors.Wrap(err, "block does not fulfill pre-processing conditions")
 	}
 	return nil
@@ -155,10 +325,10 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash incoming block")
 	}
-	if err := c.beaconDB.SaveBlock(block); err != nil {
+	if err := c.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		return errors.Wrap(err, "failed to save block")
 	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+	if err := c.deprecatedBeaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            block.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		ParentRoot:      block.ParentRoot,
@@ -189,7 +359,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
-		c.beaconDB.DepositCache.RemovePendingDeposit(ctx, dep)
+		c.deprecatedBeaconDB.DepositCache.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
 }
@@ -214,7 +384,7 @@ func (c *ChainService) AdvanceStateDeprecated(
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if newState.FinalizedCheckpoint.Epoch > finalizedEpoch {
 		helpers.ClearAllCaches()
-		c.beaconDB.ClearBlockCache()
+		c.deprecatedBeaconDB.ClearBlockCache()
 	}
 
 	log.WithField(
@@ -231,7 +401,7 @@ func (c *ChainService) AdvanceStateDeprecated(
 			return nil, err
 		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
+		if err := c.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, errors.Wrap(err, "could not save historical state")
 		}
 	}
@@ -269,7 +439,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 			continue
 		}
 		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
+		if err := c.deprecatedBeaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return errors.Wrap(err, "could not save validator index")
 		}
 	}
@@ -287,7 +457,7 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
+		if err := c.deprecatedBeaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return errors.Wrap(err, "could not delete validator index")
 		}
 	}
