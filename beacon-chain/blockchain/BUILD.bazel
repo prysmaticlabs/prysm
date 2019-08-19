@@ -40,7 +40,7 @@ go_test(
     srcs = [
         "block_processing_test.go",
         "fork_choice_deprecated_test.go",
-        "fork_choice_reorg_test.go",
+        "fork_choice_reorg_deprecated_test.go",
         "service_test.go",
     ],
     embed = [":go_default_library"],
