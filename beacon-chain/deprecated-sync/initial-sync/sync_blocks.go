@@ -50,7 +50,6 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainH
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
-		s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 		return nil
 	}
 

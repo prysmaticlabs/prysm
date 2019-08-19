@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
@@ -13,7 +14,7 @@ import (
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
 // Broadcast a message to the p2p network.
-func (s *Service) Broadcast(msg proto.Message) error {
+func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	topic, ok := GossipTypeMapping[reflect.TypeOf(msg)]
 	if !ok {
 		return ErrMessageNotMapped
