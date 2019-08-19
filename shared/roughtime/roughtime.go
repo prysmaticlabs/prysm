@@ -6,6 +6,7 @@ import (
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
+	"github.com/sirupsen/logrus"
 	"roughtime.googlesource.com/roughtime.git/go/config"
 )
 
@@ -21,6 +22,8 @@ func mustDecodeString(in string) []byte {
 	}
 	return pk
 }
+
+var log = logrus.WithField("prefix", "roughtime")
 
 func init() {
 	t0 := time.Now()
@@ -71,7 +74,7 @@ func init() {
 	var err error
 	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Error("Failed to calculate roughtime offset")
 	}
 }
 
