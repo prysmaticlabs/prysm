@@ -64,7 +64,7 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.Beaco
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) AdvanceState(
+func (ms *mockChainService) AdvanceStateDeprecated(
 	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{
@@ -80,7 +80,7 @@ func (ms *mockChainService) VerifyBlockValidity(
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
