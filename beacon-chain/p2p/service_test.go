@@ -140,7 +140,7 @@ func TestListenForNewNodes(t *testing.T) {
 
 	go s.listenForNewNodes()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Second)
 	peers := testp2p.Host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
