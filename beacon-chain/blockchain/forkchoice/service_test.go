@@ -420,13 +420,13 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	BlkWithOutState := &ethpb.BeaconBlock{Slot: 0, ParentRoot: params.BeaconConfig().ZeroHash[:]}
+	BlkWithOutState := &ethpb.BeaconBlock{Slot: 0}
 	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
 	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
 
-	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1, ParentRoot: params.BeaconConfig().ZeroHash[:]}
+	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
 	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +435,7 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2, ParentRoot: params.BeaconConfig().ZeroHash[:]}
+	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}

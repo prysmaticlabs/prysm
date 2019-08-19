@@ -37,7 +37,6 @@ type Store struct {
 // be registered into a running beacon node.
 func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	ctx, cancel := context.WithCancel(ctx)
-
 	return &Store{
 		ctx:            ctx,
 		cancel:         cancel,
@@ -166,12 +165,12 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	balances := uint64(0)
 	for _, i := range activeIndices {
 		if s.db.HasValidatorLatestVote(s.ctx, i) {
-			msg, err := s.db.ValidatorLatestVote(s.ctx, i)
+			vote, err := s.db.ValidatorLatestVote(s.ctx, i)
 			if err != nil {
-				return 0, errors.Wrapf(err, "could not get validator %d's latest msg", i)
+				return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
 			}
 
-			wantedRoot, err := s.Ancestor(msg.Root, wantedBlk.Slot)
+			wantedRoot, err := s.Ancestor(vote.Root, wantedBlk.Slot)
 			if err != nil {
 				return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
 			}
@@ -446,19 +445,19 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		return errors.New("could not verify indexed attestation")
 	}
 
-	// Update every validator's latest message.
+	// Update every validator's latest vote.
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
 		s.db.HasValidatorLatestVote(s.ctx, i)
-		msg, err := s.db.ValidatorLatestVote(s.ctx, i)
+		vote, err := s.db.ValidatorLatestVote(s.ctx, i)
 		if err != nil {
-			return errors.Wrapf(err, "could not get latest msg for validator %d", i)
+			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(s.ctx, i) || tgt.Epoch > msg.Epoch {
+		if !s.db.HasValidatorLatestVote(s.ctx, i) || tgt.Epoch > vote.Epoch {
 			if err := s.db.SaveValidatorLatestVote(s.ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  a.Data.BeaconBlockRoot,
 			}); err != nil {
-				return errors.Wrapf(err, "could not save latest msg for validator %d", i)
+				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
 			}
 		}
 	}
