@@ -174,18 +174,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := proto.Unmarshal(enc, block); err != nil {
 			return err
 		}
-		indicesByBucket := make(map[*bolt.Bucket][]byte)
-		buckets := []*bolt.Bucket{
-			tx.Bucket(parentRootIndicesBucket),
-			tx.Bucket(blockSlotIndicesBucket),
-		}
-		indices := [][]byte{
-			block.ParentRoot,
-			[]byte(fmt.Sprintf("%07d", block.Slot)),
-		}
-		for i := 0; i < len(buckets); i++ {
-			indicesByBucket[buckets[i]] = indices[i]
-		}
+		indicesByBucket := createBlockIndicesFromBlock(block, tx)
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -207,18 +196,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		bkt := tx.Bucket(blocksBucket)
 		// Every index has a unique bucket for fast, binary-search
 		// range scans for filtering across keys.
-		indicesByBucket := make(map[*bolt.Bucket][]byte)
-		buckets := []*bolt.Bucket{
-			tx.Bucket(parentRootIndicesBucket),
-			tx.Bucket(blockSlotIndicesBucket),
-		}
-		indices := [][]byte{
-			block.ParentRoot,
-			[]byte(fmt.Sprintf("%07d", block.Slot)),
-		}
-		for i := 0; i < len(buckets); i++ {
-			indicesByBucket[buckets[i]] = indices[i]
-		}
+		indicesByBucket := createBlockIndicesFromBlock(block, tx)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
@@ -245,18 +223,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		for i := 0; i < len(blocks); i++ {
-			indicesByBucket := make(map[*bolt.Bucket][]byte)
-			buckets := []*bolt.Bucket{
-				tx.Bucket(parentRootIndicesBucket),
-				tx.Bucket(blockSlotIndicesBucket),
-			}
-			indices := [][]byte{
-				blocks[i].ParentRoot,
-				[]byte(fmt.Sprintf("%07d", blocks[i].Slot)),
-			}
-			for i := 0; i < len(buckets); i++ {
-				indicesByBucket[buckets[i]] = indices[i]
-			}
+			indicesByBucket := createBlockIndicesFromBlock(blocks[i], tx)
 			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
@@ -274,6 +241,25 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})
+}
+
+// createBlockIndicesFromBlock takes in a beacon block and returns
+// a map of bolt DB index buckets corresponding to each particular key for indices for
+// data, such as (shard indices bucket -> shard 5).
+func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bolt.Bucket][]byte {
+	indicesByBucket := make(map[*bolt.Bucket][]byte)
+	buckets := []*bolt.Bucket{
+		tx.Bucket(parentRootIndicesBucket),
+		tx.Bucket(blockSlotIndicesBucket),
+	}
+	indices := [][]byte{
+		block.ParentRoot,
+		[]byte(fmt.Sprintf("%07d", block.Slot)),
+	}
+	for i := 0; i < len(buckets); i++ {
+		indicesByBucket[buckets[i]] = indices[i]
+	}
+	return indicesByBucket
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns
