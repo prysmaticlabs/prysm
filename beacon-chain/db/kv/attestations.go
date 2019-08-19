@@ -95,22 +95,7 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		if err := proto.Unmarshal(enc, att); err != nil {
 			return err
 		}
-		indicesByBucket := make(map[*bolt.Bucket][]byte)
-		buckets := []*bolt.Bucket{
-			tx.Bucket(shardIndicesBucket),
-			tx.Bucket(parentRootIndicesBucket),
-			tx.Bucket(startEpochIndicesBucket),
-			tx.Bucket(endEpochIndicesBucket),
-		}
-		indices := [][]byte{
-			uint64ToBytes(att.Data.Crosslink.Shard),
-			att.Data.Crosslink.ParentRoot,
-			uint64ToBytes(att.Data.Crosslink.StartEpoch),
-			uint64ToBytes(att.Data.Crosslink.EndEpoch),
-		}
-		for i := 0; i < len(buckets); i++ {
-			indicesByBucket[buckets[i]] = indices[i]
-		}
+		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:]); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -130,22 +115,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
-		indicesByBucket := make(map[*bolt.Bucket][]byte)
-		buckets := []*bolt.Bucket{
-			tx.Bucket(shardIndicesBucket),
-			tx.Bucket(parentRootIndicesBucket),
-			tx.Bucket(startEpochIndicesBucket),
-			tx.Bucket(endEpochIndicesBucket),
-		}
-		indices := [][]byte{
-			uint64ToBytes(att.Data.Crosslink.Shard),
-			att.Data.Crosslink.ParentRoot,
-			uint64ToBytes(att.Data.Crosslink.StartEpoch),
-			uint64ToBytes(att.Data.Crosslink.EndEpoch),
-		}
-		for i := 0; i < len(buckets); i++ {
-			indicesByBucket[buckets[i]] = indices[i]
-		}
+		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:]); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
@@ -172,22 +142,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		for i := 0; i < len(atts); i++ {
-			indicesByBucket := make(map[*bolt.Bucket][]byte)
-			buckets := []*bolt.Bucket{
-				tx.Bucket(shardIndicesBucket),
-				tx.Bucket(parentRootIndicesBucket),
-				tx.Bucket(startEpochIndicesBucket),
-				tx.Bucket(endEpochIndicesBucket),
-			}
-			indices := [][]byte{
-				uint64ToBytes(atts[i].Data.Crosslink.Shard),
-				atts[i].Data.Crosslink.ParentRoot,
-				uint64ToBytes(atts[i].Data.Crosslink.StartEpoch),
-				uint64ToBytes(atts[i].Data.Crosslink.EndEpoch),
-			}
-			for i := 0; i < len(buckets); i++ {
-				indicesByBucket[buckets[i]] = indices[i]
-			}
+			indicesByBucket := createAttestationIndicesFromData(atts[i].Data, tx)
 			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
@@ -197,6 +152,29 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 		}
 		return nil
 	})
+}
+
+// createAttestationIndicesFromData takes in attestation data and returns
+// a map of bolt DB index buckets corresponding to each particular key for indices for
+// data, such as (shard indices bucket -> shard 5).
+func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.Tx) map[*bolt.Bucket][]byte {
+	indicesByBucket := make(map[*bolt.Bucket][]byte)
+	buckets := []*bolt.Bucket{
+		tx.Bucket(shardIndicesBucket),
+		tx.Bucket(parentRootIndicesBucket),
+		tx.Bucket(startEpochIndicesBucket),
+		tx.Bucket(endEpochIndicesBucket),
+	}
+	indices := [][]byte{
+		uint64ToBytes(attData.Crosslink.Shard),
+		attData.Crosslink.ParentRoot,
+		uint64ToBytes(attData.Crosslink.StartEpoch),
+		uint64ToBytes(attData.Crosslink.EndEpoch),
+	}
+	for i := 0; i < len(buckets); i++ {
+		indicesByBucket[buckets[i]] = indices[i]
+	}
+	return indicesByBucket
 }
 
 // createAttestationIndicesFromFilters takes in filter criteria and returns
