@@ -8,7 +8,7 @@ import (
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,9 +17,9 @@ import (
 
 func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	epoch := uint64(2)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
@@ -63,9 +63,9 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 
 func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	epoch := uint64(1)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
@@ -102,9 +102,9 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 
 func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	epoch := uint64(100)
 	// Tried to insert 5 active indices to DB with only 3 validators in state

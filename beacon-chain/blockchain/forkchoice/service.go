@@ -11,13 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	db "github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 // Store represents a service struct that handles the forkchoice
@@ -26,23 +26,23 @@ type Store struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	time               uint64
-	db                 *db.Store
+	db                 db.Database
 	justifiedCheckpt   *ethpb.Checkpoint
 	finalizedCheckpt   *ethpb.Checkpoint
 	checkptBlkRootLock sync.RWMutex
-	checkptBlkRoot     map[*ethpb.Checkpoint][32]byte
+	checkptBlkRoot     map[[32]byte][32]byte
 }
 
 // NewForkChoiceService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewForkChoiceService(ctx context.Context, db *db.Store) *Store {
+func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &Store{
 		ctx:            ctx,
 		cancel:         cancel,
 		db:             db,
-		checkptBlkRoot: make(map[*ethpb.Checkpoint][32]byte),
+		checkptBlkRoot: make(map[[32]byte][32]byte),
 	}
 }
 
@@ -89,7 +89,11 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 
 	s.checkptBlkRootLock.Lock()
 	defer s.checkptBlkRootLock.Unlock()
-	s.checkptBlkRoot[s.justifiedCheckpt] = blkRoot
+	h, err := hashutil.HashProto(s.justifiedCheckpt)
+	if err != nil {
+		return errors.Wrap(err, "could not hash justified checkpoint")
+	}
+	s.checkptBlkRoot[h] = blkRoot
 
 	return nil
 }
@@ -134,7 +138,11 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	s.checkptBlkRootLock.RLock()
 	defer s.checkptBlkRootLock.RUnlock()
-	lastJustifiedBlkRoot := s.checkptBlkRoot[s.justifiedCheckpt]
+	h, err := hashutil.HashProto(s.justifiedCheckpt)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not hash justified checkpoint")
+	}
+	lastJustifiedBlkRoot := s.checkptBlkRoot[h]
 
 	lastJustifiedState, err := s.db.State(s.ctx, lastJustifiedBlkRoot)
 	if err != nil {
@@ -195,7 +203,8 @@ func (s *Store) Head() ([]byte, error) {
 	head := s.justifiedCheckpt.Root
 
 	for {
-		filter := filters.NewFilter().SetParentRoot(head).SetStartEpoch(s.justifiedCheckpt.Epoch)
+		// Filter by slot since filter by epoch is not yet supported.
+		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch)
 		children, err := s.db.BlockRoots(s.ctx, filter)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve children info")
@@ -218,6 +227,7 @@ func (s *Store) Head() ([]byte, error) {
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
+
 				if balance > highest {
 					highest = balance
 					head = child
@@ -403,13 +413,17 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	}
 
 	// Store target checkpoint state if not yet seen.
-	_, exists := s.checkptBlkRoot[tgt]
+	h, err := hashutil.HashProto(tgt)
+	if err != nil {
+		return errors.Wrap(err, "could not hash justified checkpoint")
+	}
+	_, exists := s.checkptBlkRoot[h]
 	if !exists {
 		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot)
 		if err != nil {
 			return errors.Wrapf(err, "could not process slots up to %d", tgtSlot)
 		}
-		s.checkptBlkRoot[tgt] = bytesutil.ToBytes32(tgt.Root)
+		s.checkptBlkRoot[h] = bytesutil.ToBytes32(tgt.Root)
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
@@ -449,14 +463,4 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 		}
 	}
 	return nil
-}
-
-// JustifiedCheckpt returns the latest justified check point from fork choice store.
-func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
-	return s.justifiedCheckpt
-}
-
-// FinalizedCheckpt returns the latest finalized check point from fork choice store.
-func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
-	return s.finalizedCheckpt
 }

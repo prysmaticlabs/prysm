@@ -12,18 +12,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_GensisStoreOk(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -64,16 +65,20 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Error("Incorrect genesis block saved from store")
 	}
 
-	if store.checkptBlkRoot[genesisCheckpt] != genesisBlkRoot {
+	h, err := hashutil.HashProto(genesisCheckpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.checkptBlkRoot[h] != genesisBlkRoot {
 		t.Error("Incorrect genesis check point to block root saved from store")
 	}
 }
 
 func TestStore_AncestorOk(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -112,9 +117,9 @@ func TestStore_AncestorOk(t *testing.T) {
 
 func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -144,9 +149,9 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -210,9 +215,9 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -242,9 +247,9 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 
 func TestStore_GetHead(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -262,8 +267,15 @@ func TestStore_GetHead(t *testing.T) {
 	if err := store.GensisStore(s); err != nil {
 		t.Fatal(err)
 	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		t.Fatal(err)
+	}
 	store.justifiedCheckpt.Root = roots[0]
-	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
+	h, err := hashutil.HashProto(store.justifiedCheckpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	//    /- B1 (33 votes)
 	// B0           /- B5 - B7 (33 votes)
@@ -325,9 +337,9 @@ func TestStore_GetHead(t *testing.T) {
 
 func TestStore_OnBlockErrors(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -397,9 +409,9 @@ func TestStore_OnBlockErrors(t *testing.T) {
 
 func TestStore_OnAttestationErrors(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -408,13 +420,13 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	BlkWithOutState := &ethpb.BeaconBlock{}
+	BlkWithOutState := &ethpb.BeaconBlock{Slot: 0, ParentRoot: params.BeaconConfig().ZeroHash[:]}
 	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
 	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
 
-	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
+	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1, ParentRoot: params.BeaconConfig().ZeroHash[:]}
 	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +435,7 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
+	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2, ParentRoot: params.BeaconConfig().ZeroHash[:]}
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}
