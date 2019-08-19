@@ -105,9 +105,9 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		if err != nil {
 			return errors.Wrap(err, "could not determine block lookup indices")
 		}
-		// Once we have a list of attestation roots that correspond to each
+		// Once we have a list of block roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
-		// that list of roots to lookup the attestations. These attestations will
+		// that list of roots to lookup the block. These block will
 		// meet the filter criteria.
 		indices := lookupValuesForIndicesMap(indicesByBucket)
 		keys := vals
@@ -291,8 +291,10 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []b
 			parentRoot := v.([]byte)
 			idx := append(parentRootIdx, parentRoot...)
 			indicesByBucket[readBucket(parentRootIndicesBucket)] = idx
+		case filters.StartSlot:
+		case filters.EndSlot:
 		default:
-			//return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
+			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}
 	}
 	return indicesByBucket, nil

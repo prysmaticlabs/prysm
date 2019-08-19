@@ -14,15 +14,13 @@ var (
 	validatorsBucket         = []byte("validators")
 	stateBucket              = []byte("state")
 
+	// Key indices buckets.
 	parentRootIndicesBucket = []byte("parent-root-indices")
 	blockSlotIndicesBucket  = []byte("block-slot-indices")
-
-	// Key indices.
-	shardIdx      = []byte("shard")
-	parentRootIdx = []byte("parent-root")
-	slotIdx       = []byte("slot")
-	startEpochIdx = []byte("start-epoch")
-	endEpochIdx   = []byte("end-epoch")
+	shardIndicesBucket      = []byte("shard-indices")
+	slotIndicesBucket       = []byte("attestation-slot-indices")
+	startEpochIndicesBucket = []byte("start-epoch-indices")
+	endEpochIndicesBucket   = []byte("end-epoch-indices")
 
 	// Block keys.
 	headBlockRootKey = []byte("head-root")
