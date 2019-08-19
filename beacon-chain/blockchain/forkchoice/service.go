@@ -90,7 +90,7 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	defer s.checkptBlkRootLock.Unlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
 	if err != nil {
-		return errors.Wrap(err, "could not hash justified checkpoint")
+		return errors.Wrap(err, "could not hash proto justified checkpoint")
 	}
 	s.checkptBlkRoot[h] = blkRoot
 
@@ -139,7 +139,7 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 	defer s.checkptBlkRootLock.RUnlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
 	if err != nil {
-		return 0, errors.Wrap(err, "could not hash justified checkpoint")
+		return 0, errors.Wrap(err, "could not hash proto justified checkpoint")
 	}
 	lastJustifiedBlkRoot := s.checkptBlkRoot[h]
 
@@ -202,8 +202,8 @@ func (s *Store) Head() ([]byte, error) {
 	head := s.justifiedCheckpt.Root
 
 	for {
-		// Filter by slot since filter by epoch is not yet supported.
-		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch)
+		startSlot := s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch
+		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(startSlot)
 		children, err := s.db.BlockRoots(s.ctx, filter)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve children info")
