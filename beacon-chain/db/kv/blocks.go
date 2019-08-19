@@ -269,12 +269,14 @@ func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bol
 	// Every index has a unique bucket for fast, binary-search
 	// range scans for filtering across keys.
 	buckets := []*bolt.Bucket{
-		tx.Bucket(blockParentRootIndicesBucket),
 		tx.Bucket(blockSlotIndicesBucket),
 	}
 	indices := [][]byte{
-		block.ParentRoot,
 		[]byte(fmt.Sprintf("%07d", block.Slot)),
+	}
+	if block.ParentRoot != nil && len(block.ParentRoot) > 0 {
+		buckets = append(buckets, tx.Bucket(blockParentRootIndicesBucket))
+		indices = append(indices, block.ParentRoot)
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[buckets[i]] = indices[i]
