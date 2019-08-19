@@ -21,11 +21,7 @@ func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
 	if err != nil {
 		log.Fatalf("Could not create private key %v", err)
 	}
-	id, err := peer.IDFromPrivateKey(convertToInterfacePrivkey(privateKey))
-	if err != nil {
-
-	}
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip, cfg.Port, id))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.Port))
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}

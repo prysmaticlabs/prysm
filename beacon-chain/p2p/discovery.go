@@ -61,7 +61,7 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 		return nil, err
 	}
 	node := listener.Self()
-	log.Infof("Started Discovery: %s", node.ID)
+	log.Infof("Started Discovery: %s", node.String())
 	return listener, nil
 }
 
