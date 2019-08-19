@@ -1,7 +1,7 @@
 /**
  * Bootnode
  *
- * A simple peer Kademlia distributed hash table (DHT) service for peer
+ * A node which implements the DiscoveryV5 protocol for peer
  * discovery. The purpose of this service is to provide a starting point for
  * newly connected services to find other peers outside of their network.
  *
@@ -10,19 +10,18 @@
 package main
 
 import (
-	"context"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/x509"
 	"flag"
 	"fmt"
+	"net"
 
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
+	curve "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/discv5"
+
 	logging "github.com/ipfs/go-log"
-	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
-	protocol "github.com/libp2p/go-libp2p-protocol"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	_ "go.uber.org/automaxprocs"
 )
@@ -35,7 +34,8 @@ var (
 	log = logging.Logger("prysm-bootnode")
 )
 
-const dhtProtocol = "/prysm/0.0.0/dht"
+// ECDSACurve is the default ecdsa curve used(secpk2561)
+var ECDSACurve = curve.S256()
 
 func main() {
 	flag.Parse()
@@ -46,56 +46,53 @@ func main() {
 		logging.SetDebugLogging()
 	}
 
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
-	if err != nil {
-		log.Fatalf("Failed to construct new multiaddress. %v", err)
-	}
+	defaultIP := "0.0.0.0"
 
-	opts := []libp2p.Option{
-		libp2p.ListenAddrs(listen),
-	}
-	opts = addPrivateKeyOpt(opts)
+	privKey := extractPrivateKey()
+	listener := createListener(defaultIP, *port, privKey)
 
-	ctx := context.Background()
-
-	host, err := libp2p.New(ctx, opts...)
-	if err != nil {
-		log.Fatalf("Failed to create new host. %v", err)
-	}
-
-	dopts := []dhtopts.Option{
-		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-		dhtopts.Protocols(
-			protocol.ID(dhtProtocol),
-		),
-	}
-
-	dht, err := kaddht.New(ctx, host, dopts...)
-	if err != nil {
-		log.Fatalf("Failed to create new dht: %v", err)
-	}
-	if err := dht.Bootstrap(context.Background()); err != nil {
-		log.Fatalf("Failed to bootstrap DHT. %v", err)
-	}
-
-	fmt.Printf("Running bootnode: /ip4/0.0.0.0/tcp/%d/p2p/%s\n", *port, host.ID().Pretty())
+	node := listener.Self()
+	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/discv5/%s\n", node.IP.String(), node.UDP, node.ID.String())
 
 	select {}
 }
 
-func addPrivateKeyOpt(opts []libp2p.Option) []libp2p.Option {
+func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+	udpAddr := &net.UDPAddr{
+		IP:   net.ParseIP(ipAddr),
+		Port: port,
+	}
+	conn, err := net.ListenUDP("udp4", udpAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	network, err := discv5.ListenUDP(privKey, conn, "", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return network
+}
+
+func extractPrivateKey() *ecdsa.PrivateKey {
+	var privKey *ecdsa.PrivateKey
+	var err error
 	if *privateKey != "" {
 		b, err := crypto.ConfigDecodeKey(*privateKey)
 		if err != nil {
 			panic(err)
 		}
-		pk, err := crypto.UnmarshalPrivateKey(b)
+		privKey, err = x509.ParseECPrivateKey(b)
 		if err != nil {
 			panic(err)
 		}
-		opts = append(opts, libp2p.Identity(pk))
+
 	} else {
+		privKey, err = ecdsa.GenerateKey(ECDSACurve, rand.Reader)
+		if err != nil {
+			panic(err)
+		}
 		log.Warning("No private key was provided. Using default/random private key")
 	}
-	return opts
+	return privKey
 }
