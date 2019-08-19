@@ -110,7 +110,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
+	beaconState, err := ps.chainService.ReceiveBlockDeprecated(ctx, blk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}

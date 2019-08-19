@@ -31,7 +31,7 @@ var blkAncestorCache = cache.NewBlockAncestorCache()
 // ForkChoice interface defines the methods for applying fork choice rule
 // operations to the blockchain.
 type ForkChoice interface {
-	ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error
+	ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 // TargetsFetcher defines a struct which can retrieve latest attestation targets
@@ -131,11 +131,11 @@ func (c *ChainService) updateFFGCheckPts(ctx context.Context, state *pb.BeaconSt
 	return nil
 }
 
-// ApplyForkChoiceRule determines the current beacon chain head using LMD
+// ApplyForkChoiceRuleDeprecated determines the current beacon chain head using LMD
 // GHOST as a block-vote weighted function to select a canonical head in
 // Ethereum Serenity. The inputs are the the recently processed block and its
 // associated state.
-func (c *ChainService) ApplyForkChoiceRule(
+func (c *ChainService) ApplyForkChoiceRuleDeprecated(
 	ctx context.Context,
 	block *ethpb.BeaconBlock,
 	postState *pb.BeaconState,

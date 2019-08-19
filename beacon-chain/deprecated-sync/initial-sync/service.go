@@ -180,7 +180,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	}); err != nil {
 		return errors.Wrap(err, "failed to save attestation target")
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
+	state, err = s.chainService.AdvanceStateDeprecated(ctx, state, block)
 	if err != nil {
 		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {

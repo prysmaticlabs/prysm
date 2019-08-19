@@ -21,7 +21,7 @@ type P2P interface {
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
-	Broadcast(proto.Message)
+	Broadcast(proto.Message) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
@@ -39,10 +39,12 @@ type PubSubProvider interface {
 	PubSub() *pubsub.PubSub
 }
 
+// PeerManager abstracts some peer management methods from libp2p.
 type PeerManager interface {
 	Disconnect(peer.ID) error
 }
 
+// HandshakeManager abstracts certain methods regarding handshake records.
 type HandshakeManager interface {
 	AddHandshake(peer.ID, *pb.Hello)
 }
