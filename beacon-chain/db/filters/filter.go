@@ -21,20 +21,18 @@ package filters
 type FilterType int
 
 const (
-	// Root defines a filter for hash tree roots of objects using Simple Serialize (SSZ).
-	Root FilterType = 0
 	// ParentRoot defines a filter for parent roots of blocks using Simple Serialize (SSZ).
-	ParentRoot FilterType = 1
+	ParentRoot FilterType = 0
 	// StartSlot is used for range filters of objects by their slot (inclusive).
-	StartSlot FilterType = 2
+	StartSlot FilterType = 1
 	// EndSlot is used for range filters of objects by their slot (inclusive).
-	EndSlot FilterType = 3
+	EndSlot FilterType = 2
 	// StartEpoch is used for range filters of objects by their epoch (inclusive).
-	StartEpoch FilterType = 4
+	StartEpoch FilterType = 3
 	// EndEpoch is used for range filters of objects by their epoch (inclusive).
-	EndEpoch FilterType = 5
+	EndEpoch FilterType = 4
 	// Shard is used for filtering data by shard index.
-	Shard FilterType = 6
+	Shard FilterType = 5
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -56,12 +54,6 @@ func NewFilter() *QueryFilter {
 // asserted for use anywhere.
 func (q *QueryFilter) Filters() map[FilterType]interface{} {
 	return q.queries
-}
-
-// SetRoot --
-func (q *QueryFilter) SetRoot(val []byte) *QueryFilter {
-	q.queries[Root] = val
-	return q
 }
 
 // SetParentRoot --

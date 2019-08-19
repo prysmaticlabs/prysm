@@ -195,11 +195,6 @@ func ensureBlockFilterCriteria(key []byte, f *filters.QueryFilter) bool {
 	numCriteriaMet := 0
 	for k, v := range f.Filters() {
 		switch k {
-		case filters.Root:
-			root := v.([]byte)
-			if bytes.Contains(key, append([]byte("root"), root[:]...)) {
-				numCriteriaMet++
-			}
 		case filters.ParentRoot:
 			root := v.([]byte)
 			if bytes.Contains(key, append([]byte("parent-root"), root[:]...)) {
