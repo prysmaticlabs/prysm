@@ -69,6 +69,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		vals := make([][][]byte, 0)
 		if hasStart && hasEnd {
 			c := tx.Bucket(blockSlotIndicesBucket).Cursor()
+			// TODO(#3064): If no min, specify to 0.
+			// TODO(#3064): If no max, change the conditional in the for loop.
 			min := uint64ToBytes(startSlot.(uint64))
 			max := uint64ToBytes(endSlot.(uint64))
 			// Iterate over the 90's.
