@@ -22,7 +22,7 @@ import (
 // directly receives a new block from other services and applies the full processing pipeline.
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlockDeprecated(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
 	IsCanonical(slot uint64, hash []byte) bool
 	UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte)
 }
@@ -31,7 +31,7 @@ type BlockReceiver interface {
 // to beacon blocks and generating a new beacon state from the Ethereum 2.0 core primitives.
 type BlockProcessor interface {
 	VerifyBlockValidity(ctx context.Context, block *ethpb.BeaconBlock, beaconState *pb.BeaconState) error
-	AdvanceState(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
+	AdvanceStateDeprecated(ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock) (*pb.BeaconState, error)
 	CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error
 }
 
@@ -44,14 +44,14 @@ func (b *BlockFailedProcessingErr) Error() string {
 	return fmt.Sprintf("block failed processing: %v", b.err)
 }
 
-// ReceiveBlock is a function that defines the operations that are preformed on
+// ReceiveBlockDeprecated is a function that defines the operations that are preformed on
 // any block that is received from p2p layer or rpc. It performs the following actions: It checks the block to see
 // 1. Verify a block passes pre-processing conditions
 // 2. Save and broadcast the block via p2p to other peers
 // 3. Apply the block state transition function and account for skip slots.
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	c.receiveBlockLock.Lock()
 	defer c.receiveBlockLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
@@ -89,7 +89,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	log.WithField("slot", block.Slot).Info("Executing state transition")
 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
-	beaconState, err = c.AdvanceState(ctx, beaconState, block)
+	beaconState, err = c.AdvanceStateDeprecated(ctx, beaconState, block)
 	if err != nil {
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
@@ -194,10 +194,10 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	return nil
 }
 
-// AdvanceState executes the Ethereum 2.0 core state transition for the beacon chain and
+// AdvanceStateDeprecated executes the Ethereum 2.0 core state transition for the beacon chain and
 // updates important checkpoints and local persistent data during epoch transitions. It serves as a wrapper
 // around the more low-level, core state transition function primitive.
-func (c *ChainService) AdvanceState(
+func (c *ChainService) AdvanceStateDeprecated(
 	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
