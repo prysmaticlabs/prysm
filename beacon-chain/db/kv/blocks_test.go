@@ -143,8 +143,8 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 func TestStore_Blocks_RetrieveRange(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	b := make([]*ethpb.BeaconBlock, 400)
-	for i := 0; i < 400; i++ {
+	b := make([]*ethpb.BeaconBlock, 500)
+	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.BeaconBlock{
 			Slot: uint64(i),
 		}
@@ -153,11 +153,12 @@ func TestStore_Blocks_RetrieveRange(t *testing.T) {
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(400))
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) != 300 {
-		t.Errorf("Wanted %d, received %d", 300, len(retrieved))
+	want := 300
+	if len(retrieved) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
 }

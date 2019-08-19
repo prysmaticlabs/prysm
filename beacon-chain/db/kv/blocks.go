@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -70,16 +71,16 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		var conditional func(k []byte, max []byte) bool
 		startSlot, hasStart := fmap[filters.StartSlot]
 		if hasStart {
-			min = uint64ToBytes(startSlot.(uint64))
+			min = []byte(fmt.Sprintf("%07d", startSlot.(uint64)))
 		} else {
-			min = uint64ToBytes(0)
+			min = []byte(fmt.Sprintf("%07d", 0))
 		}
 		endSlot, hasEnd := fmap[filters.EndSlot]
 		if hasEnd {
 			conditional = func(k, max []byte) bool {
 				return k != nil && bytes.Compare(k, max) <= 0
 			}
-			max = uint64ToBytes(endSlot.(uint64))
+			max = []byte(fmt.Sprintf("%07d", endSlot.(uint64)))
 		} else {
 			conditional = func(k, max []byte) bool {
 				return k != nil
@@ -213,7 +214,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		}
 		indices := [][]byte{
 			append(parentRootIdx, block.ParentRoot...),
-			uint64ToBytes(block.Slot),
+			[]byte(fmt.Sprintf("%07d", block.Slot)),
 		}
 		for i := 0; i < len(buckets); i++ {
 			indicesByBucket[buckets[i]] = indices[i]
@@ -251,7 +252,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			}
 			indices := [][]byte{
 				append(parentRootIdx, blocks[i].ParentRoot...),
-				uint64ToBytes(blocks[i].Slot),
+				[]byte(fmt.Sprintf("%07d", blocks[i].Slot)),
 			}
 			for i := 0; i < len(buckets); i++ {
 				indicesByBucket[buckets[i]] = indices[i]
