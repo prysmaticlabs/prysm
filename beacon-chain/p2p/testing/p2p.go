@@ -14,9 +14,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -108,7 +109,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 }
 
 // Broadcast a message.
-func (p *TestP2P) Broadcast(msg proto.Message) error {
+func (p *TestP2P) Broadcast(ctx context.Context, msg proto.Message) error {
 	p.BroadcastCalled = true
 	return nil
 }
@@ -137,4 +138,16 @@ func (p *TestP2P) Disconnect(pid peer.ID) error {
 // AddHandshake to the peer handshake records.
 func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
 	// TODO(3147): add this.
+}
+
+// Send a message to a specific peer.
+func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) error {
+	// TODO(3147): add this.
+	return nil
+}
+
+// Subscribe to some topic. Not implemented.
+func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) event.Subscription {
+	// TODO(3147): remove this.
+	return nil
 }
