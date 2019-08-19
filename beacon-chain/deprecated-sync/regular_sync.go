@@ -17,10 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
@@ -51,8 +52,7 @@ type attsService interface {
 type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
-	p2p.Subscriber
-	p2p.ReputationManager
+	p2p.DeprecatedSubscriber
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -76,17 +76,17 @@ type RegularSync struct {
 	operationsService            operations.OperationFeeds
 	db                           *db.BeaconDB
 	blockAnnouncementFeed        *event.Feed
-	announceBlockBuf             chan p2p.Message
-	blockBuf                     chan p2p.Message
-	blockRequestByHash           chan p2p.Message
-	batchedRequestBuf            chan p2p.Message
-	stateRequestBuf              chan p2p.Message
-	chainHeadReqBuf              chan p2p.Message
-	attestationBuf               chan p2p.Message
-	exitBuf                      chan p2p.Message
+	announceBlockBuf             chan deprecatedp2p.Message
+	blockBuf                     chan deprecatedp2p.Message
+	blockRequestByHash           chan deprecatedp2p.Message
+	batchedRequestBuf            chan deprecatedp2p.Message
+	stateRequestBuf              chan deprecatedp2p.Message
+	chainHeadReqBuf              chan deprecatedp2p.Message
+	attestationBuf               chan deprecatedp2p.Message
+	exitBuf                      chan deprecatedp2p.Message
 	canonicalBuf                 chan *pb.BeaconBlockAnnounce
 	highestObservedSlot          uint64
-	blocksAwaitingProcessing     map[[32]byte]p2p.Message
+	blocksAwaitingProcessing     map[[32]byte]deprecatedp2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
 	blockProcessingLock          sync.RWMutex
 	blockAnnouncements           map[uint64][]byte
@@ -138,16 +138,16 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		operationsService:        cfg.OperationService,
 		attsService:              cfg.AttsService,
 		blockAnnouncementFeed:    new(event.Feed),
-		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
-		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestByHash:       make(chan p2p.Message, cfg.BlockReqHashBufferSize),
-		batchedRequestBuf:        make(chan p2p.Message, cfg.BatchedBufferSize),
-		stateRequestBuf:          make(chan p2p.Message, cfg.StateReqBufferSize),
-		attestationBuf:           make(chan p2p.Message, cfg.AttestationBufferSize),
-		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
-		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
+		announceBlockBuf:         make(chan deprecatedp2p.Message, cfg.BlockAnnounceBufferSize),
+		blockBuf:                 make(chan deprecatedp2p.Message, cfg.BlockBufferSize),
+		blockRequestByHash:       make(chan deprecatedp2p.Message, cfg.BlockReqHashBufferSize),
+		batchedRequestBuf:        make(chan deprecatedp2p.Message, cfg.BatchedBufferSize),
+		stateRequestBuf:          make(chan deprecatedp2p.Message, cfg.StateReqBufferSize),
+		attestationBuf:           make(chan deprecatedp2p.Message, cfg.AttestationBufferSize),
+		exitBuf:                  make(chan deprecatedp2p.Message, cfg.ExitBufferSize),
+		chainHeadReqBuf:          make(chan deprecatedp2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
-		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
+		blocksAwaitingProcessing: make(map[[32]byte]deprecatedp2p.Message),
 		blockAnnouncements:       make(map[uint64][]byte),
 	}
 }
@@ -228,7 +228,7 @@ func (rs *RegularSync) run() {
 
 // safelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
+func safelyHandleMessage(fn func(deprecatedp2p.Message) error, msg deprecatedp2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			printedMsg := "message contains no data"
@@ -273,7 +273,7 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 	}
 }
 
-func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
+func (rs *RegularSync) handleStateRequest(msg deprecatedp2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
 	defer span.End()
 	stateReq.Inc()
@@ -322,7 +322,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	return nil
 }
 
-func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
+func (rs *RegularSync) handleChainHeadRequest(msg deprecatedp2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleChainHeadRequest")
 	defer span.End()
 	chainHeadReq.Inc()
@@ -382,7 +382,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 // receiveAttestation accepts an broadcasted attestation from the p2p layer,
 // discard the attestation if we have gotten before, send it to attestation
 // pool if we have not.
-func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
+func (rs *RegularSync) receiveAttestation(msg deprecatedp2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
 	defer span.End()
 	recAttestation.Inc()
@@ -438,7 +438,6 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	log.Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	rs.attsService.IncomingAttestationFeed().Send(attestation)
-	rs.p2p.Reputation(msg.Peer, p2p.RepRewardValidAttestation)
 	sentAttestation.Inc()
 	sendAttestationSpan.End()
 	return nil
@@ -447,7 +446,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 // receiveExitRequest accepts an broadcasted exit from the p2p layer,
 // discard the exit if we have gotten before, send it to operation
 // service if we have not.
-func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
+func (rs *RegularSync) receiveExitRequest(msg deprecatedp2p.Message) error {
 	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
 	defer span.End()
 	recExit.Inc()
@@ -472,7 +471,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) error {
 	return nil
 }
 
-func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) error {
+func (rs *RegularSync) handleBlockRequestByHash(msg deprecatedp2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestByHash")
 	defer span.End()
 	blockReqHash.Inc()
@@ -500,7 +499,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) error {
 
 // handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
 // which are bounded by a start slot and end slot.
-func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
+func (rs *RegularSync) handleBatchedBlockRequest(msg deprecatedp2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
 	defer span.End()
 	batchedBlockReq.Inc()
