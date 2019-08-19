@@ -130,7 +130,6 @@ func (s *Service) listenForNewNodes() {
 		case <-ticker.C:
 			nodes := s.dv5Listener.Lookup(nodeID)
 			multiAddresses := convertToMultiAddr(nodes)
-			log.Infof("Adding %d new peers", len(multiAddresses))
 			s.connectWithAllPeers(multiAddresses)
 			// store furthest node as the next to lookup
 			nodeID = nodes[len(nodes)-1].ID
@@ -149,6 +148,9 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		return
 	}
 	for _, info := range addrInfos {
+		if info.ID == s.host.ID() {
+			continue
+		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer: %v", err)
 		}

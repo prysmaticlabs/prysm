@@ -3,14 +3,14 @@ package p2p
 import (
 	"context"
 	"net"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/libp2p/go-libp2p"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
+	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/multiformats/go-multiaddr"
 	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -50,18 +50,32 @@ func (m *mockListener) SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *d
 	panic("implement me")
 }
 
-func newhost(t *testing.T, options []libp2p.Option) *basichost.BasicHost {
-	ctx := context.Background()
-	h := basichost.New(swarmt.GenSwarm(t, ctx), options)
-	_, err := pubsub.NewFloodSub(ctx, h,
-		pubsub.WithMessageSigning(false),
-		pubsub.WithStrictSignatureVerification(false),
-	)
+func tcpPortFromHost(t *testing.T, host host.Host) int64 {
+	pinfo := host.Peerstore().PeerInfo(host.ID())
+	addresses := multiaddr.Split(pinfo.Addrs[0])
+	tcpAddr := addresses[len(addresses)-1]
+	trimmedStr := strings.Trim(tcpAddr.String(), "/tcp/")
+	port, err := strconv.ParseInt(trimmedStr, 10, 64)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Could not get tcp port from peer: %v", err)
 	}
+	return port
+}
 
-	return h
+func createPeer(t *testing.T, cfg *Config) (Listener, *testing2.TestP2P) {
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	ipAddr = net.ParseIP("127.0.0.1")
+	privKey := convertToInterfacePrivkey(pkey)
+	peerNode := testing2.NewTestP2PWithKey(t, privKey)
+	port := tcpPortFromHost(t, peerNode.Host)
+
+	cfg.UDPPort = uint(port)
+	cfg.Port = uint(port)
+	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+	if err != nil {
+		t.Errorf("Could not start discovery for node: %v", err)
+	}
+	return listener, peerNode
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
@@ -110,34 +124,11 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
 	}
-	var l *testing2.TestP2P
 	// setup other nodes
-	var listeners []*discv5.Network
 	for i := 1; i <= 5; i++ {
-		port = 5000 + i
-		cfg.UDPPort = uint(port)
-		cfg.Port = uint(port)
-		ipAddr, pkey := createAddrAndPrivKey(t)
-		ipAddr = net.ParseIP("127.0.0.1")
-		privKey := convertToInterfacePrivkey(pkey)
-		l = testing2.NewTestP2PWithKey(t, privKey)
-		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
-		listeners = append(listeners, listener)
+		_, _ = createPeer(t, cfg)
 	}
-	cfg.UDPPort = 4000
-	/*	s, _ := NewService(cfg)
-
-		defer s.Stop()
-		s.Start()*/
-
-	ipAddr, pkey = createAddrAndPrivKey(t)
-	ipAddr = net.ParseIP("127.0.0.1")
-	privKey := convertToInterfacePrivkey(pkey)
-	testp2p := testing2.NewTestP2PWithKey(t, privKey)
-	listener, _ := startDiscoveryV5(ipAddr, pkey, cfg)
+	listener, testp2p := createPeer(t, cfg)
 
 	s := &Service{
 		dv5Listener: listener,
@@ -150,12 +141,8 @@ func TestListenForNewNodes(t *testing.T) {
 	go s.listenForNewNodes()
 
 	time.Sleep(10 * time.Second)
-
-	l.Connect(testp2p)
-
-	peers := s.host.Network().Peers()
-
-	if len(peers) != 12 {
-		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 12, len(peers))
+	peers := testp2p.Host.Network().Peers()
+	if len(peers) != 5 {
+		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
 }

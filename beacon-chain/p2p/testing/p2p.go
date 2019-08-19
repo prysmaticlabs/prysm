@@ -31,6 +31,7 @@ type TestP2P struct {
 	t      *testing.T
 	Host   host.Host
 	pubsub *pubsub.PubSub
+	ctx    context.Context
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -114,8 +115,8 @@ func (p *TestP2P) Connect(b *TestP2P) {
 }
 
 func connect(a, b host.Host) error {
-	pinfo := a.Peerstore().PeerInfo(a.ID())
-	return b.Connect(context.Background(), pinfo)
+	pinfo := b.Peerstore().PeerInfo(b.ID())
+	return a.Connect(context.Background(), pinfo)
 }
 
 // ReceiveRPC simulates an incoming RPC.
