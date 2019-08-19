@@ -105,12 +105,12 @@ func TestStore_AncestorOk(t *testing.T) {
 		{args: &args{roots[7], 0}, want: roots[0]},
 	}
 	for _, tt := range tests {
-		got, err := store.Ancestor(tt.args.root, tt.args.slot)
+		got, err := store.ancestor(tt.args.root, tt.args.slot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("Store.Ancestor() = %v, want %v", got, tt.want)
+			t.Errorf("Store.ancestor() = %v, want %v", got, tt.want)
 		}
 	}
 }
@@ -131,14 +131,14 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	//    /- B1
 	// B0           /- B5 - B7
 	//    \- B3 - B4 - B6 - B8
-	root, err := store.Ancestor(roots[8], 1)
+	root, err := store.ancestor(roots[8], 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if root != nil {
 		t.Error("block at slot 1 is not part of the chain")
 	}
-	root, err = store.Ancestor(roots[8], 2)
+	root, err = store.ancestor(roots[8], 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,12 +203,12 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		{root: roots[8], want: 34 * 1e9},
 	}
 	for _, tt := range tests {
-		got, err := store.LatestAttestingBalance(tt.root)
+		got, err := store.latestAttestingBalance(tt.root)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got != tt.want {
-			t.Errorf("Store.LatestAttestingBalance() = %v, want %v", got, tt.want)
+			t.Errorf("Store.latestAttestingBalance() = %v, want %v", got, tt.want)
 		}
 	}
 }

@@ -97,14 +97,14 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	return nil
 }
 
-// Ancestor returns the block root of an ancestry block from the input block root.
+// ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
 //   def get_ancestor(store: Store, root: Hash, slot: Slot) -> Hash:
 //    block = store.blocks[root]
 //    assert block.slot >= slot
 //    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
-func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
+func (s *Store) ancestor(root []byte, slot uint64) ([]byte, error) {
 	b, err := s.db.Block(s.ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
@@ -120,10 +120,10 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 		return root, nil
 	}
 
-	return s.Ancestor(b.ParentRoot, slot)
+	return s.ancestor(b.ParentRoot, slot)
 }
 
-// LatestAttestingBalance returns the staked balance of a block from the input block root.
+// latestAttestingBalance returns the staked balance of a block from the input block root.
 //
 // Spec pseudocode definition:
 //   def get_latest_attesting_balance(store: Store, root: Hash) -> Gwei:
@@ -134,7 +134,7 @@ func (s *Store) Ancestor(root []byte, slot uint64) ([]byte, error) {
 //        if (i in store.latest_messages
 //            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
 //    ))
-func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
+func (s *Store) latestAttestingBalance(root []byte) (uint64, error) {
 	s.checkptBlkRootLock.RLock()
 	defer s.checkptBlkRootLock.RUnlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
@@ -170,7 +170,7 @@ func (s *Store) LatestAttestingBalance(root []byte) (uint64, error) {
 				return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
 			}
 
-			wantedRoot, err := s.Ancestor(vote.Root, wantedBlk.Slot)
+			wantedRoot, err := s.ancestor(vote.Root, wantedBlk.Slot)
 			if err != nil {
 				return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
 			}
@@ -217,12 +217,12 @@ func (s *Store) Head() ([]byte, error) {
 		// know that this child will be the best child.
 		head = children[0]
 		if len(children) > 1 {
-			highest, err := s.LatestAttestingBalance(head)
+			highest, err := s.latestAttestingBalance(head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get latest balance")
 			}
 			for _, child := range children[1:] {
-				balance, err := s.LatestAttestingBalance(child)
+				balance, err := s.latestAttestingBalance(child)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
@@ -305,7 +305,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
-	bFinalizedRoot, err := s.Ancestor(root[:], finalizedBlk.Slot)
+	bFinalizedRoot, err := s.ancestor(root[:], finalizedBlk.Slot)
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", b.Slot)
 	}
