@@ -525,11 +525,22 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		}
 	}
 
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
