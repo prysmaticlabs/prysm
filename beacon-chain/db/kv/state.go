@@ -7,11 +7,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"go.opencensus.io/trace"
 )
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
 func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
+	defer span.End()
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
@@ -29,6 +32,8 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 
 // HeadState returns the latest canonical state in beacon chain.
 func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
+	defer span.End()
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
 		// Retrieve head block's signing root from blocks bucket,
@@ -51,6 +56,8 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
 func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
+	defer span.End()
 	enc, err := proto.Marshal(state)
 	if err != nil {
 		return err
