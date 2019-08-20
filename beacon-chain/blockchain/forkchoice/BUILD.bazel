@@ -6,6 +6,8 @@ go_library(
         "doc.go",
         "log.go",
         "metrics.go",
+        "process_attestation.go",
+        "process_block.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice",
@@ -30,6 +32,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "process_attestation_test.go",
+        "process_block_test.go",
         "service_test.go",
         "tree_test.go",
     ],
