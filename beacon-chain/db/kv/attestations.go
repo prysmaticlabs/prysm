@@ -15,13 +15,14 @@ import (
 
 // Attestation retrieval by attestation data root.
 func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
-	att := &ethpb.Attestation{}
+	var att *ethpb.Attestation
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
 			return nil
 		}
+		att = &ethpb.Attestation{}
 		return proto.Unmarshal(enc, att)
 	})
 	return att, err
