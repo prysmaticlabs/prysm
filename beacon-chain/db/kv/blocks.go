@@ -67,7 +67,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
-		indicesByBucket, err := createBlockIndicesFromFilters(f, tx.Bucket)
+		indicesByBucket, err := createBlockIndicesFromFilters(f)
 		if err != nil {
 			return errors.Wrap(err, "could not determine block lookup indices")
 		}
@@ -84,7 +84,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the block. These block will
 		// meet the filter criteria.
-		indices := lookupValuesForIndices(indicesByBucket)
+		indices := lookupValuesForIndices(indicesByBucket, tx)
 		keys := rootsBySlotRange
 		if len(indices) > 0 {
 			// If we have found indices that meet the filter criteria, and there are also
@@ -156,7 +156,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
-		if err := deleteValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
+		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(blockRoot[:])
@@ -176,7 +176,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
-		if err := updateValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
+		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(blockRoot[:], enc)
@@ -203,7 +203,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 		bucket := tx.Bucket(blocksBucket)
 		for i := 0; i < len(blocks); i++ {
 			indicesByBucket := createBlockIndicesFromBlock(blocks[i], tx)
-			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
+			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
@@ -264,22 +264,22 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bolt.Bucket][]byte {
-	indicesByBucket := make(map[*bolt.Bucket][]byte)
+func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[string][]byte {
+	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
 	// range scans for filtering across keys.
-	buckets := []*bolt.Bucket{
-		tx.Bucket(blockSlotIndicesBucket),
+	buckets := [][]byte{
+		blockSlotIndicesBucket,
 	}
 	indices := [][]byte{
 		[]byte(fmt.Sprintf("%07d", block.Slot)),
 	}
 	if block.ParentRoot != nil && len(block.ParentRoot) > 0 {
-		buckets = append(buckets, tx.Bucket(blockParentRootIndicesBucket))
+		buckets = append(buckets, blockParentRootIndicesBucket)
 		indices = append(indices, block.ParentRoot)
 	}
 	for i := 0; i < len(buckets); i++ {
-		indicesByBucket[buckets[i]] = indices[i]
+		indicesByBucket[string(buckets[i])] = indices[i]
 	}
 	return indicesByBucket
 }
@@ -291,13 +291,13 @@ func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bol
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to
 // blocks, an appropriate error is returned.
-func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []byte) *bolt.Bucket) (map[*bolt.Bucket][]byte, error) {
-	indicesByBucket := make(map[*bolt.Bucket][]byte)
+func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, error) {
+	indicesByBucket := make(map[string][]byte)
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
-			indicesByBucket[readBucket(blockParentRootIndicesBucket)] = parentRoot
+			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
 		default:
