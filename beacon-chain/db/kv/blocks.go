@@ -17,12 +17,13 @@ import (
 
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
-	k.blocksLock.Lock()
+	k.blocksLock.RLock()
 	// Return block from cache if it exists.
 	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
 		k.blocksLock.RUnlock()
 		return blk, nil
 	}
+	k.blocksLock.RUnlock()
 	var block *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
