@@ -16,13 +16,14 @@ import (
 
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
-	block := &ethpb.BeaconBlock{}
+	var block *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
+		block = &ethpb.BeaconBlock{}
 		return proto.Unmarshal(enc, block)
 	})
 	return block, err
@@ -30,7 +31,7 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 
 // HeadBlock returns the latest canonical block in eth2.
 func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
-	headBlock := &ethpb.BeaconBlock{}
+	var headBlock *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		headRoot := bkt.Get(headBlockRootKey)
@@ -41,6 +42,7 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 		if enc == nil {
 			return nil
 		}
+		headBlock = &ethpb.BeaconBlock{}
 		return proto.Unmarshal(enc, headBlock)
 	})
 	return headBlock, err
