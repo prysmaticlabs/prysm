@@ -160,12 +160,12 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 
 	balances := uint64(0)
 	for _, i := range activeIndices {
-		if !s.db.HasValidatorLatestVote(ctx, i) {
-			continue
-		}
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
+		}
+		if vote == nil {
+			continue
 		}
 
 		wantedRoot, err := s.ancestor(ctx, vote.Root, wantedBlk.Slot)

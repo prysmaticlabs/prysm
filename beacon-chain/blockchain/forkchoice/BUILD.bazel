@@ -32,6 +32,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "benchmark_test.go",
         "lmd_ghost_yaml_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
