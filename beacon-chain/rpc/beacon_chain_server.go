@@ -21,8 +21,9 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB *db.BeaconDB
-	pool     operations.Pool
+	deprecatedDB *db.BeaconDB
+	beaconDB     db.Database
+	pool         operations.Pool
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -60,7 +61,7 @@ func (bs *BeaconChainServer) ListAttestations(
 	case *ethpb.ListAttestationsRequest_Epoch:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}
-	atts, err := bs.beaconDB.Attestations()
+	atts, err := bs.deprecatedDB.Attestations()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
@@ -91,7 +92,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.ChainHead()
+	headBlock, err := bs.deprecatedDB.ChainHead()
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func (bs *BeaconChainServer) ListBlocks(
 
 		var blks []*ethpb.BeaconBlock
 		for i := startSlot; i < endSlot; i++ {
-			b, err := bs.beaconDB.BlocksBySlot(ctx, i)
+			b, err := bs.deprecatedDB.BlocksBySlot(ctx, i)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
 			}
@@ -149,7 +150,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
-		blk, err := bs.beaconDB.Block(bytesutil.ToBytes32(q.Root))
+		blk, err := bs.deprecatedDB.Block(bytesutil.ToBytes32(q.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
 		}
@@ -164,7 +165,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.beaconDB.BlocksBySlot(ctx, q.Slot)
+		blks, err := bs.deprecatedDB.BlocksBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -212,11 +213,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	balances, err := bs.beaconDB.Balances(ctx)
+	balances, err := bs.deprecatedDB.Balances(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validator balances: %v", err)
 	}
-	validators, err := bs.beaconDB.Validators(ctx)
+	validators, err := bs.deprecatedDB.Validators(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
@@ -227,7 +228,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		index, err := bs.deprecatedDB.ValidatorIndex(pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
@@ -275,7 +276,7 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	validators, err := bs.beaconDB.Validators(ctx)
+	validators, err := bs.deprecatedDB.Validators(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
@@ -325,7 +326,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}
 
 	e := req.Epoch
-	s, err := bs.beaconDB.HeadState(ctx)
+	s, err := bs.deprecatedDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
@@ -335,7 +336,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		index, err := bs.deprecatedDB.ValidatorIndex(pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
@@ -441,7 +442,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	s, err := bs.beaconDB.HeadState(ctx)
+	s, err := bs.deprecatedDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
