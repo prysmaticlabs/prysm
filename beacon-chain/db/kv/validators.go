@@ -79,6 +79,23 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	})
 }
 
+// DeleteValidatorLatestVote from the db.
+func (k *Store) DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteValidatorLatestVote")
+	defer span.End()
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(validatorsBucket)
+		enc := bkt.Get(uint64ToBytes(validatorIdx))
+		if enc == nil {
+			return nil
+		}
+		k.votesLock.Lock()
+		delete(k.latestVotes, validatorIdx)
+		k.votesLock.Unlock()
+		return bkt.Delete(uint64ToBytes(validatorIdx))
+	})
+}
+
 // ValidatorIndex by public key.
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorIndex")

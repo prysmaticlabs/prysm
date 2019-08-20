@@ -44,6 +44,7 @@ type Database interface {
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
+	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
 	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
