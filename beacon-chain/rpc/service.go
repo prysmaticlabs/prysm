@@ -199,8 +199,8 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB: s.beaconDB,
-		pool:     s.operationService,
+		deprecatedDB: s.beaconDB,
+		pool:         s.operationService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

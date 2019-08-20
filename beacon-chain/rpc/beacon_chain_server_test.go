@@ -58,7 +58,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{})
@@ -93,7 +93,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	tests := []struct {
@@ -191,7 +191,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -235,7 +235,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.ListAttestationsRequest{}
@@ -256,13 +256,13 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	bs := &BeaconChainServer{
-		pool:     &mockPool{},
-		beaconDB: db,
+		pool:         &mockPool{},
+		deprecatedDB: db,
 	}
-	if err := bs.beaconDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
+	if err := bs.deprecatedDB.SaveBlock(&ethpb.BeaconBlock{Slot: 10}); err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
+	if err := bs.deprecatedDB.UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
 		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
@@ -297,7 +297,7 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	tests := []struct {
@@ -366,7 +366,7 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(count)}}
@@ -396,7 +396,7 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	received, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
@@ -431,7 +431,7 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	tests := []struct {
@@ -501,7 +501,7 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -542,7 +542,7 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.GetValidatorsRequest{}
@@ -577,7 +577,7 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{beaconDB: db}
+	bs := &BeaconChainServer{deprecatedDB: db}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
 	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
@@ -623,7 +623,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0})
@@ -680,7 +680,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
@@ -738,7 +738,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
@@ -857,13 +857,13 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
-	if err := bs.beaconDB.SaveState(context.Background(), s); err != nil {
+	if err := bs.deprecatedDB.SaveState(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
+	if err := bs.deprecatedDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -907,7 +907,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		deprecatedDB: db,
 	}
 
 	tests := []struct {
@@ -983,7 +983,7 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 
-	bs := &BeaconChainServer{beaconDB: db}
+	bs := &BeaconChainServer{deprecatedDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
