@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -120,8 +121,8 @@ func TestStore_OnAttestation(t *testing.T) {
 			if err := store.GenesisStore(ctx, tt.s); err != nil {
 				t.Fatal(err)
 			}
-
-			store.OnTick(tt.s.Slot * params.BeaconConfig().SecondsPerSlot)
+			s := tt.s.Slot * params.BeaconConfig().SecondsPerSlot
+			store.OnTick(time.Unix(int64(s), 0))
 
 			err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {

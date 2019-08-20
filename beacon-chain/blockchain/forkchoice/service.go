@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -21,14 +22,14 @@ import (
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	time             uint64
-	db               db.Database
-	justifiedCheckpt *ethpb.Checkpoint
-	finalizedCheckpt *ethpb.Checkpoint
-	lock             sync.RWMutex
-	checkptBlkRoot   map[[32]byte][32]byte
+	ctx               context.Context
+	cancel            context.CancelFunc
+	lastProcessedTime time.Time
+	db                db.Database
+	justifiedCheckpt  *ethpb.Checkpoint
+	finalizedCheckpt  *ethpb.Checkpoint
+	lock              sync.RWMutex
+	checkptBlkRoot    map[[32]byte][32]byte
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -73,7 +74,7 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 		return errors.Wrap(err, "could not tree hash genesis block")
 	}
 
-	s.time = genesisState.GenesisTime
+	s.lastProcessedTime = time.Unix(int64(genesisState.GenesisTime), 0)
 	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
@@ -235,11 +236,11 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	}
 }
 
-// OnTick tracks the last unix time of when a block or an attestation arrives.
+// OnTick tracks the last unix time of when a block or an attestation arrives to blockchain service.
 //
 // Spec pseudocode definition:
 //   def on_tick(store: Store, time: uint64) -> None:
 //    store.time = time
-func (s *Store) OnTick(t uint64) {
-	s.time = t
+func (s *Store) OnTick(t time.Time) {
+	s.lastProcessedTime = t
 }
