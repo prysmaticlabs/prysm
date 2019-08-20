@@ -1262,30 +1262,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_petar_gollrb",
-    commit = "33fb24c13b99c46c93183c291836c573ac382536",
-    importpath = "github.com/petar/GoLLRB",
-)
-
-go_repository(
-    name = "com_github_willf_bloom",
-    commit = "25ba46ef8744ddeba999dcd048dbb8b0fa87edb3",
-    importpath = "github.com/willf/bloom",
-)
-
-go_repository(
-    name = "com_github_irfansharif_cfilter",
-    commit = "d07d951ff29d52840ca5e798a17e80db4de8c820",
-    importpath = "github.com/irfansharif/cfilter",
-)
-
-go_repository(
-    name = "com_github_willf_bitset",
-    commit = "77892cd8d53fa6524772426bc444dd2e3b4fb18f",
-    importpath = "github.com/willf/bitset",
-)
-
-go_repository(
     name = "com_github_cloudflare_roughtime",
     commit = "6b7e31ac9cb2d6048096585d2e8563ee60b28f84",
     importpath = "github.com/cloudflare/roughtime",
