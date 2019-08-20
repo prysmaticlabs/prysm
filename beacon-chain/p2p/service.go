@@ -21,7 +21,7 @@ import (
 )
 
 var _ = shared.Service(&Service{})
-var pollingPeriod time.Duration = 1
+var pollingPeriod = 1 * time.Second // 1 second
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -126,7 +126,7 @@ func (s *Service) listenForNewNodes() {
 		log.Fatalf("could not parse bootstrap address: %v", err)
 	}
 	nodeID := node.ID
-	ticker := time.NewTicker(pollingPeriod * time.Second)
+	ticker := time.NewTicker(pollingPeriod)
 	for {
 		select {
 		case <-ticker.C:
