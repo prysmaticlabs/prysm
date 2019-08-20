@@ -63,10 +63,6 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 			log.Error("Node doesn't have an ip4 address")
 			continue
 		}
-		if node.TCP < 1024 {
-			log.Errorf("Invalid port, the tcp port of the node is a reserved port: %d", node.TCP)
-			continue
-		}
 		pubkey, err := node.ID.Pubkey()
 		if err != nil {
 			log.Errorf("Could not get pubkey from node ID: %v", err)
