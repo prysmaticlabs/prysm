@@ -31,10 +31,17 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	retrievedAtt, err := db.Attestation(ctx, attDataRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retrievedAtt != nil {
+		t.Errorf("Expected nil attestation, received %v", retrievedAtt)
+	}
 	if !db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to exist in the db")
 	}
-	retrievedAtt, err := db.Attestation(ctx, attDataRoot)
+	retrievedAtt, err = db.Attestation(ctx, attDataRoot)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,13 +13,14 @@ import (
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
 	buf := uint64ToBytes(validatorIdx)
-	latestVote := &pb.ValidatorLatestVote{}
+	var latestVote *pb.ValidatorLatestVote
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
 			return nil
 		}
+		latestVote = &pb.ValidatorLatestVote{}
 		return proto.Unmarshal(enc, latestVote)
 	})
 	return latestVote, err
