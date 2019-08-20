@@ -52,17 +52,15 @@ func (bs *BeaconChainServer) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
-	filter := filters.NewFilter()
-	switch f := req.QueryFilter.(type) {
+	switch req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
-		filter.SetStartSlot(f.Slot)
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Epoch:
-		filter.SetStartEpoch(f.Epoch)
+		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}
-	atts, err := bs.beaconDB.Attestations(ctx, filter)
+	atts, err := bs.beaconDB.Attestations(ctx, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
