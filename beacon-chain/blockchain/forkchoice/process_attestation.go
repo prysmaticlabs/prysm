@@ -90,7 +90,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -106,7 +105,7 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	return baseState, nil
 }
 
-// saveChkptState save the block root with check point to avoid excessive slot processing down the line.
+// saveChkptState saves the block root with check point to avoid excessive slot processing down the line.
 func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
 	h, err := hashutil.HashProto(c)
 	if err != nil {
@@ -136,7 +135,7 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 	return nil
 }
 
-// verifyAttestation validates input attestation.
+// verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
 	if err != nil {
