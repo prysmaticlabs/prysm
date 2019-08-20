@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -508,13 +507,14 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
@@ -529,12 +529,12 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	bs := &BeaconChainServer{
-		deprecatedDB: db,
+		beaconDB: db,
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0})
@@ -570,13 +570,14 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
@@ -586,12 +587,12 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	bs := &BeaconChainServer{
-		deprecatedDB: db,
+		beaconDB: db,
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
@@ -628,13 +629,14 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
@@ -644,12 +646,12 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	bs := &BeaconChainServer{
-		deprecatedDB: db,
+		beaconDB: db,
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
@@ -724,9 +726,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
 	epoch := uint64(1)
 	attestedBalance := uint64(1)
@@ -768,13 +769,20 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		deprecatedDB: db,
+		beaconDB: db,
 	}
 
-	if err := bs.deprecatedDB.SaveState(context.Background(), s); err != nil {
+	block := &ethpb.BeaconBlock{
+		Slot: 1,
+	}
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.deprecatedDB.SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
+	if err := bs.beaconDB.SaveState(context.Background(), s, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -796,8 +804,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -806,7 +814,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
-		if err := db.SaveBlock(b); err != nil {
+		if err := db.SaveBlock(ctx, b); err != nil {
 			t.Fatal(err)
 		}
 		blks[i] = b
@@ -818,7 +826,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		deprecatedDB: db,
+		beaconDB: db,
 	}
 
 	tests := []struct {
@@ -890,11 +898,11 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
 
-	bs := &BeaconChainServer{deprecatedDB: db}
+	bs := &BeaconChainServer{beaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
