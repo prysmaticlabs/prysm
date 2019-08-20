@@ -157,7 +157,6 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		s.db.HasValidatorLatestVote(ctx, i)
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
