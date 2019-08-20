@@ -8,6 +8,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -18,8 +19,10 @@ type Store struct {
 	databasePath string
 
 	// Caching layer properties.
-	blocksLock sync.RWMutex
-	blocks     map[[32]byte]*ethpb.BeaconBlock
+	blocksLock  sync.RWMutex
+	votesLock   sync.RWMutex
+	blocks      map[[32]byte]*ethpb.BeaconBlock
+	latestVotes map[uint64]*pb.ValidatorLatestVote
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -42,6 +45,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		db:           boltDB,
 		databasePath: dirPath,
 		blocks:       make(map[[32]byte]*ethpb.BeaconBlock),
+		latestVotes:  make(map[uint64]*pb.ValidatorLatestVote),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
