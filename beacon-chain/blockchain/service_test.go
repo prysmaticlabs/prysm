@@ -148,7 +148,7 @@ var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
-	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
+	if err := cs.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
 	parentHash, err := ssz.SigningRoot(genesis)
@@ -195,13 +195,13 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestat
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.HeadState(context.Background())
+	bState, err := service.deprecatedBeaconDB.HeadState(context.Background())
 	if err != nil {
 		return err
 	}
 
 	bState.Slot = slot
-	return service.beaconDB.SaveState(context.Background(), bState)
+	return service.deprecatedBeaconDB.SaveState(context.Background(), bState)
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {

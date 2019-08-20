@@ -57,14 +57,14 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parent, err := c.beaconDB.Block(parentRoot)
+	parent, err := c.deprecatedBeaconDB.Block(parentRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get parent block")
 	}
 	if parent == nil {
 		return nil, errors.New("parent does not exist in DB")
 	}
-	beaconState, err := c.beaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
+	beaconState, err := c.deprecatedBeaconDB.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
@@ -94,8 +94,8 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 		switch err.(type) {
 		case *BlockFailedProcessingErr:
 			// If the block fails processing, we mark it as blacklisted and delete it from our DB.
-			c.beaconDB.MarkEvilBlockHash(blockRoot)
-			if err := c.beaconDB.DeleteBlock(block); err != nil {
+			c.deprecatedBeaconDB.MarkEvilBlockHash(blockRoot)
+			if err := c.deprecatedBeaconDB.DeleteBlock(block); err != nil {
 				return nil, errors.Wrap(err, "could not delete bad block from db")
 			}
 			return beaconState, err
@@ -141,7 +141,7 @@ func (c *ChainService) VerifyBlockValidity(
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
-		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
+		c.deprecatedBeaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return errors.Wrap(err, "block does not fulfill pre-processing conditions")
 	}
 	return nil
@@ -155,10 +155,10 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *ethpb.B
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash incoming block")
 	}
-	if err := c.beaconDB.SaveBlock(block); err != nil {
+	if err := c.deprecatedBeaconDB.SaveBlock(block); err != nil {
 		return errors.Wrap(err, "failed to save block")
 	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+	if err := c.deprecatedBeaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            block.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		ParentRoot:      block.ParentRoot,
@@ -189,7 +189,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
-		c.beaconDB.DepositCache.RemovePendingDeposit(ctx, dep)
+		c.deprecatedBeaconDB.DepositCache.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
 }
@@ -214,7 +214,7 @@ func (c *ChainService) AdvanceStateDeprecated(
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if newState.FinalizedCheckpoint.Epoch > finalizedEpoch {
 		helpers.ClearAllCaches()
-		c.beaconDB.ClearBlockCache()
+		c.deprecatedBeaconDB.ClearBlockCache()
 	}
 
 	log.WithField(
@@ -231,7 +231,7 @@ func (c *ChainService) AdvanceStateDeprecated(
 			return nil, err
 		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
+		if err := c.deprecatedBeaconDB.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			return nil, errors.Wrap(err, "could not save historical state")
 		}
 	}
@@ -269,7 +269,7 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 			continue
 		}
 		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
+		if err := c.deprecatedBeaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return errors.Wrap(err, "could not save validator index")
 		}
 	}
@@ -287,7 +287,7 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
 	for _, idx := range exitedValidators {
 		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
+		if err := c.deprecatedBeaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return errors.Wrap(err, "could not delete validator index")
 		}
 	}
