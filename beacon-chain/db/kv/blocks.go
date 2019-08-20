@@ -144,6 +144,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	k.blocksLock.RLock()
 	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
 		return true
 	}
 	k.blocksLock.RUnlock()
