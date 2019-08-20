@@ -41,7 +41,7 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.GensisStore(genesisState); err != nil {
+	if err := store.GenesisStore(genesisState, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -167,7 +167,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 	s := &pb.BeaconState{Validators: validators}
 
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(s, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -264,7 +264,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(s, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
@@ -392,7 +392,7 @@ func TestStore_OnBlockErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GensisStore(tt.s); err != nil {
+			if err := store.GenesisStore(tt.s, nil); err != nil {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
@@ -510,7 +510,7 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GensisStore(tt.s); err != nil {
+			if err := store.GenesisStore(tt.s, nil); err != nil {
 				t.Fatal(err)
 			}
 

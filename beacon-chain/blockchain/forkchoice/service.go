@@ -23,14 +23,14 @@ import (
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	time               uint64
-	db                 db.Database
-	justifiedCheckpt   *ethpb.Checkpoint
-	finalizedCheckpt   *ethpb.Checkpoint
-	checkptBlkRootLock sync.RWMutex
-	checkptBlkRoot     map[[32]byte][32]byte
+	ctx              context.Context
+	cancel           context.CancelFunc
+	time             uint64
+	db               db.Database
+	justifiedCheckpt *ethpb.Checkpoint
+	finalizedCheckpt *ethpb.Checkpoint
+	lock             sync.RWMutex
+	checkptBlkRoot   map[[32]byte][32]byte
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -45,7 +45,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	}
 }
 
-// GensisStore initializes the store struct before beacon chain
+// GenesisStore initializes the store struct before beacon chain
 // starts to advance.
 //
 // Spec pseudocode definition:
@@ -62,7 +62,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 //        block_states={root: genesis_state.copy()},
 //        checkpoint_states={justified_checkpoint: genesis_state.copy()},
 //    )
-func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
+func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
@@ -79,15 +79,15 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
-	if err := s.db.SaveBlock(s.ctx, genesisBlk); err != nil {
+	if err := s.db.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.db.SaveState(s.ctx, genesisState, blkRoot); err != nil {
+	if err := s.db.SaveState(ctx, genesisState, blkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 
-	s.checkptBlkRootLock.Lock()
-	defer s.checkptBlkRootLock.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
 	if err != nil {
 		return errors.Wrap(err, "could not hash proto justified checkpoint")
@@ -104,8 +104,8 @@ func (s *Store) GensisStore(genesisState *pb.BeaconState) error {
 //    block = store.blocks[root]
 //    assert block.slot >= slot
 //    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
-func (s *Store) ancestor(root []byte, slot uint64) ([]byte, error) {
-	b, err := s.db.Block(s.ctx, bytesutil.ToBytes32(root))
+func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
+	b, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
@@ -120,7 +120,7 @@ func (s *Store) ancestor(root []byte, slot uint64) ([]byte, error) {
 		return root, nil
 	}
 
-	return s.ancestor(b.ParentRoot, slot)
+	return s.ancestor(ctx, b.ParentRoot, slot)
 }
 
 // latestAttestingBalance returns the staked balance of a block from the input block root.
@@ -134,16 +134,16 @@ func (s *Store) ancestor(root []byte, slot uint64) ([]byte, error) {
 //        if (i in store.latest_messages
 //            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
 //    ))
-func (s *Store) latestAttestingBalance(root []byte) (uint64, error) {
-	s.checkptBlkRootLock.RLock()
-	defer s.checkptBlkRootLock.RUnlock()
+func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not hash proto justified checkpoint")
 	}
 	lastJustifiedBlkRoot := s.checkptBlkRoot[h]
 
-	lastJustifiedState, err := s.db.State(s.ctx, lastJustifiedBlkRoot)
+	lastJustifiedState, err := s.db.State(ctx, lastJustifiedBlkRoot)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get checkpoint state")
 	}
@@ -157,26 +157,27 @@ func (s *Store) latestAttestingBalance(root []byte) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
 
-	wantedBlk, err := s.db.Block(s.ctx, bytesutil.ToBytes32(root))
+	wantedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get target block")
 	}
 
 	balances := uint64(0)
 	for _, i := range activeIndices {
-		if s.db.HasValidatorLatestVote(s.ctx, i) {
-			vote, err := s.db.ValidatorLatestVote(s.ctx, i)
-			if err != nil {
-				return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
-			}
+		if !s.db.HasValidatorLatestVote(ctx, i) {
+			continue
+		}
+		vote, err := s.db.ValidatorLatestVote(ctx, i)
+		if err != nil {
+			return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
+		}
 
-			wantedRoot, err := s.ancestor(vote.Root, wantedBlk.Slot)
-			if err != nil {
-				return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
-			}
-			if bytes.Equal(wantedRoot, root) {
-				balances += lastJustifiedState.Validators[i].EffectiveBalance
-			}
+		wantedRoot, err := s.ancestor(ctx, vote.Root, wantedBlk.Slot)
+		if err != nil {
+			return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
+		}
+		if bytes.Equal(wantedRoot, root) {
+			balances += lastJustifiedState.Validators[i].EffectiveBalance
 		}
 	}
 	return balances, nil
@@ -198,13 +199,13 @@ func (s *Store) latestAttestingBalance(root []byte) (uint64, error) {
 //            return head
 //        # Sort by latest attesting balance with ties broken lexicographically
 //        head = max(children, key=lambda root: (get_latest_attesting_balance(store, root), root))
-func (s *Store) Head() ([]byte, error) {
+func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	head := s.justifiedCheckpt.Root
 
 	for {
 		startSlot := s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch
 		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(startSlot)
-		children, err := s.db.BlockRoots(s.ctx, filter)
+		children, err := s.db.BlockRoots(ctx, filter)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve children info")
 		}
@@ -217,12 +218,12 @@ func (s *Store) Head() ([]byte, error) {
 		// know that this child will be the best child.
 		head = children[0]
 		if len(children) > 1 {
-			highest, err := s.latestAttestingBalance(head)
+			highest, err := s.latestAttestingBalance(ctx, head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get latest balance")
 			}
 			for _, child := range children[1:] {
-				balance, err := s.latestAttestingBalance(child)
+				balance, err := s.latestAttestingBalance(ctx, child)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
@@ -276,8 +277,8 @@ func (s *Store) OnTick(t uint64) {
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
-	preState, err := s.db.State(s.ctx, bytesutil.ToBytes32(b.ParentRoot))
+func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 	}
@@ -291,12 +292,12 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, s.time)
 	}
 
-	if err := s.db.SaveBlock(s.ctx, b); err != nil {
+	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
 	// Verify block is a descendent of a finalized block.
-	finalizedBlk, err := s.db.Block(s.ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	if err != nil || finalizedBlk == nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
@@ -305,7 +306,7 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
-	bFinalizedRoot, err := s.ancestor(root[:], finalizedBlk.Slot)
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", b.Slot)
 	}
@@ -318,15 +319,15 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 
 	// Apply new state transition for the block to the store.
 	// Make block root as bad to reject in sync.
-	postState, err := state.ExecuteStateTransition(s.ctx, preState, b)
+	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
-		if err := s.db.DeleteBlock(s.ctx, root); err != nil {
+		if err := s.db.DeleteBlock(ctx, root); err != nil {
 			return errors.Wrap(err, "could not delete bad block from db")
 		}
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if err := s.db.SaveState(s.ctx, postState, root); err != nil {
+	if err := s.db.SaveState(ctx, postState, root); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 
@@ -382,18 +383,18 @@ func (s *Store) OnBlock(b *ethpb.BeaconBlock) error {
 //    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Store) OnAttestation(a *ethpb.Attestation) error {
+func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	tgt := a.Data.Target
 
 	// Verify beacon node has seen the target block before.
-	if !s.db.HasBlock(s.ctx, bytesutil.ToBytes32(tgt.Root)) {
+	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
 		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	// If they are, delay consideration until the epoch arrives
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
-	baseState, err := s.db.State(s.ctx, bytesutil.ToBytes32(tgt.Root))
+	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
 	if err != nil {
 		return errors.Wrapf(err, "could not get pre state for slot %d", tgtSlot)
 	}
@@ -413,7 +414,7 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 	}
 	_, exists := s.checkptBlkRoot[h]
 	if !exists {
-		baseState, err = state.ProcessSlots(s.ctx, baseState, tgtSlot)
+		baseState, err = state.ProcessSlots(ctx, baseState, tgtSlot)
 		if err != nil {
 			return errors.Wrapf(err, "could not process slots up to %d", tgtSlot)
 		}
@@ -442,13 +443,13 @@ func (s *Store) OnAttestation(a *ethpb.Attestation) error {
 
 	// Update every validator's latest vote.
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		s.db.HasValidatorLatestVote(s.ctx, i)
-		vote, err := s.db.ValidatorLatestVote(s.ctx, i)
+		s.db.HasValidatorLatestVote(ctx, i)
+		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(s.ctx, i) || tgt.Epoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(s.ctx, i, &pb.ValidatorLatestVote{
+		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
+			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  a.Data.BeaconBlockRoot,
 			}); err != nil {
