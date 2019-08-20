@@ -5,17 +5,18 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func BenchmarkForkChoiceTree1(b *testing.B) {
 	ctx := context.Background()
-	db := internal.SetupDB(b)
+	db := testDB.SetupDB(b)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -29,13 +30,21 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		b.Fatal(err)
 	}
+
 	store.justifiedCheckpt.Root = roots[0]
-	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		b.Fatal(err)
+	}
+
+	h, err := hashutil.HashProto(store.justifiedCheckpt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// Spread out the votes evenly for all 3 leaf nodes
 	for i := 0; i < len(validators); i++ {
@@ -57,7 +66,7 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := store.Head()
+		_, err := store.Head(ctx)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -66,9 +75,9 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 
 func BenchmarkForkChoiceTree2(b *testing.B) {
 	ctx := context.Background()
-	db := internal.SetupDB(b)
+	db := testDB.SetupDB(b)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -82,13 +91,21 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		b.Fatal(err)
 	}
+
 	store.justifiedCheckpt.Root = roots[0]
-	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		b.Fatal(err)
+	}
+
+	h, err := hashutil.HashProto(store.justifiedCheckpt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// Spread out the votes evenly for all the leaf nodes. 8 to 15
 	nodeIndex := 8
@@ -103,7 +120,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := store.Head()
+		_, err := store.Head(ctx)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -112,9 +129,9 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 
 func BenchmarkForkChoiceTree3(b *testing.B) {
 	ctx := context.Background()
-	db := internal.SetupDB(b)
+	db := testDB.SetupDB(b)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -128,13 +145,21 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		b.Fatal(err)
 	}
+
 	store.justifiedCheckpt.Root = roots[0]
-	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		b.Fatal(err)
+	}
+
+	h, err := hashutil.HashProto(store.justifiedCheckpt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// All validators vote on the same head
 	for i := 0; i < len(validators); i++ {
@@ -145,7 +170,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := store.Head()
+		_, err := store.Head(ctx)
 		if err != nil {
 			b.Fatal(err)
 		}
