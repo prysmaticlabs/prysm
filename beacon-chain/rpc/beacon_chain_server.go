@@ -223,9 +223,12 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, err := bs.deprecatedDB.ValidatorIndex(pubKey)
+		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
 		}
 		filtered[index] = true
 
