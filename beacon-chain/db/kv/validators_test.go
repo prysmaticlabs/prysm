@@ -45,19 +45,26 @@ func TestStore_ValidatorIndexCRUD(t *testing.T) {
 func TestStore_ValidatorLatestVoteCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 	validatorIdx := uint64(100)
 	latestVote := &pb.ValidatorLatestVote{
 		Epoch: 1,
 		Root:  []byte("root"),
 	}
-	ctx := context.Background()
+	retrievedVote, err := db.ValidatorLatestVote(ctx, validatorIdx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retrievedVote != nil {
+		t.Errorf("Expected nil validator latest vote, received %v", retrievedVote)
+	}
 	if err := db.SaveValidatorLatestVote(ctx, validatorIdx, latestVote); err != nil {
 		t.Fatal(err)
 	}
 	if !db.HasValidatorLatestVote(ctx, validatorIdx) {
 		t.Error("Expected validator latest vote to exist in the db")
 	}
-	retrievedVote, err := db.ValidatorLatestVote(ctx, validatorIdx)
+	retrievedVote, err = db.ValidatorLatestVote(ctx, validatorIdx)
 	if err != nil {
 		t.Fatal(err)
 	}

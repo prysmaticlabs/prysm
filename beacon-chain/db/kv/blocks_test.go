@@ -13,22 +13,29 @@ import (
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 	block := &ethpb.BeaconBlock{
 		Slot:       20,
 		ParentRoot: []byte{1, 2, 3},
-	}
-	ctx := context.Background()
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatal(err)
 	}
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
+	retrievedBlock, err := db.Block(ctx, blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retrievedBlock != nil {
+		t.Errorf("Expected nil block, received %v", retrievedBlock)
+	}
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
 	}
-	retrievedBlock, err := db.Block(ctx, blockRoot)
+	retrievedBlock, err = db.Block(ctx, blockRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
