@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -10,10 +11,11 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,14 +41,14 @@ func TestGetHeadFromYaml(t *testing.T) {
 	err = yaml.Unmarshal(yamlFile, &c)
 
 	for _, test := range c.TestCases {
-		db := internal.SetupDB(t)
+		db := testDB.SetupDB(t)
 		kv := db.(*kv.Store)
-		defer internal.TeardownDB(t, kv)
+		defer testDB.TeardownDB(t, kv)
 
 		blksRoot := make(map[int][]byte)
-		// Construct block tree from yaml
+		// Construct block tree from yaml.
 		for _, blk := range test.Blocks {
-			// genesis block
+			// genesis block condition
 			if blk.Id == blk.Parent {
 				b := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
 				if err := db.SaveBlock(ctx, b); err != nil {
@@ -56,6 +58,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				t.Log(0, hex.EncodeToString(root[:]))
 				blksRoot[0] = root[:]
 			} else {
 				slot, err := strconv.Atoi(blk.Id[1:])
@@ -74,11 +77,12 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				t.Log(slot, hex.EncodeToString(root[:]))
 				blksRoot[slot] = root[:]
 			}
 		}
 
-		// Assign validator votes to the blocks as weights
+		// Assign validator votes to the blocks as weights.
 		count := 0
 		for blk, votes := range test.Weights {
 			slot, err := strconv.Atoi(blk[1:])
@@ -102,14 +106,21 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		s := &pb.BeaconState{Validators: validators}
 
-		if err := store.GensisStore(s); err != nil {
+		if err := store.GenesisStore(ctx, s); err != nil {
 			t.Fatal(err)
 		}
 
 		store.justifiedCheckpt.Root = blksRoot[0]
-		store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(blksRoot[0])
+		h, err := hashutil.HashProto(store.justifiedCheckpt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
+			t.Fatal(err)
+		}
+		store.checkptBlkRoot[h] = bytesutil.ToBytes32(blksRoot[0])
 
-		head, err := store.Head()
+		head, err := store.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
