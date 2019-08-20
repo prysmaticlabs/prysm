@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -15,10 +14,9 @@ import (
 func BenchmarkForkChoiceTree1(b *testing.B) {
 	ctx := context.Background()
 	db := testDB.SetupDB(b)
-	kv := db.(*kv.Store)
-	defer testDB.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, kv)
+	store := NewForkChoiceService(ctx, db)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -76,10 +74,9 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 func BenchmarkForkChoiceTree2(b *testing.B) {
 	ctx := context.Background()
 	db := testDB.SetupDB(b)
-	kv := db.(*kv.Store)
-	defer testDB.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, kv)
+	store := NewForkChoiceService(ctx, db)
 
 	roots, err := blockTree2(db)
 	if err != nil {
@@ -130,10 +127,9 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 func BenchmarkForkChoiceTree3(b *testing.B) {
 	ctx := context.Background()
 	db := testDB.SetupDB(b)
-	kv := db.(*kv.Store)
-	defer testDB.TeardownDB(b, kv)
+	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, kv)
+	store := NewForkChoiceService(ctx, db)
 
 	roots, err := blockTree3(db)
 	if err != nil {
