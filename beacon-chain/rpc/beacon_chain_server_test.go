@@ -594,11 +594,22 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -653,11 +664,22 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveState(ctx, s, [32]byte{}); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -791,10 +813,10 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.SaveState(ctx, s, blockRoot); err != nil {
+	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
+	if err := bs.beaconDB.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -826,10 +848,10 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
-		if err := db.SaveBlock(ctx, b); err != nil {
-			t.Fatal(err)
-		}
 		blks[i] = b
+	}
+	if err := db.SaveBlocks(ctx, blks); err != nil {
+		t.Fatal(err)
 	}
 
 	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
