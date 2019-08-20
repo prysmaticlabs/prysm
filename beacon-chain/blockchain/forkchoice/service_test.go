@@ -41,7 +41,7 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.GenesisStore(genesisState, nil); err != nil {
+	if err := store.GenesisStore(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -105,12 +105,12 @@ func TestStore_AncestorOk(t *testing.T) {
 		{args: &args{roots[7], 0}, want: roots[0]},
 	}
 	for _, tt := range tests {
-		got, err := store.ancestor(tt.args.root, tt.args.slot)
+		got, err := store.ancestor(ctx, tt.args.root, tt.args.slot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("Store.ancestor() = %v, want %v", got, tt.want)
+			t.Errorf("Store.ancestor(ctx, ) = %v, want %v", got, tt.want)
 		}
 	}
 }
@@ -131,14 +131,14 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	//    /- B1
 	// B0           /- B5 - B7
 	//    \- B3 - B4 - B6 - B8
-	root, err := store.ancestor(roots[8], 1)
+	root, err := store.ancestor(ctx, roots[8], 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if root != nil {
 		t.Error("block at slot 1 is not part of the chain")
 	}
-	root, err = store.ancestor(roots[8], 2)
+	root, err = store.ancestor(ctx, roots[8], 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 	s := &pb.BeaconState{Validators: validators}
 
-	if err := store.GenesisStore(s, nil); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -203,12 +203,12 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		{root: roots[8], want: 34 * 1e9},
 	}
 	for _, tt := range tests {
-		got, err := store.latestAttestingBalance(tt.root)
+		got, err := store.latestAttestingBalance(ctx, tt.root)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got != tt.want {
-			t.Errorf("Store.latestAttestingBalance() = %v, want %v", got, tt.want)
+			t.Errorf("Store.latestAttestingBalance(ctx, ) = %v, want %v", got, tt.want)
 		}
 	}
 }
@@ -264,7 +264,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(s, nil); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
@@ -298,7 +298,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	// Default head is B8
-	head, err := store.Head()
+	head, err := store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestStore_GetHead(t *testing.T) {
 	if err := store.db.SaveValidatorLatestVote(ctx, 50, &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
 		t.Fatal(err)
 	}
-	head, err = store.Head()
+	head, err = store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +325,7 @@ func TestStore_GetHead(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	head, err = store.Head()
+	head, err = store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,13 +392,13 @@ func TestStore_OnBlockErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(tt.s, nil); err != nil {
+			if err := store.GenesisStore(ctx, tt.s); err != nil {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
 			store.time = tt.time
 
-			err := store.OnBlock(tt.blk)
+			err := store.OnBlock(ctx, tt.blk)
 			fmt.Println(tt.wantErrString)
 			if err.Error() != tt.wantErrString {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
@@ -510,13 +510,13 @@ func TestStore_OnAttestationErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(tt.s, nil); err != nil {
+			if err := store.GenesisStore(ctx, tt.s); err != nil {
 				t.Fatal(err)
 			}
 
 			store.OnTick(tt.s.Slot * params.BeaconConfig().SecondsPerSlot)
 
-			err := store.OnAttestation(tt.a)
+			err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
