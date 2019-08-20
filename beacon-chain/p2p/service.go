@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	network "github.com/libp2p/go-libp2p-core/network"
@@ -15,6 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var _ = shared.Service(&Service{})
@@ -155,4 +158,11 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			log.Errorf("Could not connect with peer: %v", err)
 		}
 	}
+}
+
+// Subscribe to some topic.
+// TODO(3147): Remove
+// DEPRECATED: Do not use.
+func (s *Service) Subscribe(_ proto.Message, _ chan deprecatedp2p.Message) event.Subscription {
+	return nil
 }

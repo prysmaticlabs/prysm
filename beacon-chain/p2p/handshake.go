@@ -16,3 +16,8 @@ func (p *Service) AddHandshake(pid peer.ID, hello *pb.Hello) {
 	defer handshakeLock.Unlock()
 	handshakes[pid] = hello
 }
+
+// Handshakes has not been implemented yet and it may be moved to regular sync...
+func (p *Service) Handshakes() map[peer.ID]*pb.Hello {
+	return nil
+}

@@ -9,6 +9,7 @@ go_library(
         "regular_sync.go",
         "service.go",
     ],
+    deprecation = "Use github.com/prysmaticlabs/prysm/sync",
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -17,6 +18,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/deprecated-sync/initial-sync:go_default_library",
         "//beacon-chain/operations:go_default_library",
+        "//beacon-chain/p2p:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",

@@ -23,10 +23,11 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -67,8 +68,7 @@ func DefaultConfig() *Config {
 
 type p2pAPI interface {
 	p2p.Sender
-	p2p.ReputationManager
-	p2p.Subscriber
+	p2p.DeprecatedSubscriber
 }
 
 type powChainService interface {
@@ -97,8 +97,8 @@ type InitialSync struct {
 	chainService        chainService
 	db                  *db.BeaconDB
 	powchain            powChainService
-	batchedBlockBuf     chan p2p.Message
-	stateBuf            chan p2p.Message
+	batchedBlockBuf     chan deprecatedp2p.Message
+	stateBuf            chan deprecatedp2p.Message
 	syncPollingInterval time.Duration
 	syncedFeed          *event.Feed
 	stateReceived       bool
@@ -113,8 +113,8 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
+	stateBuf := make(chan deprecatedp2p.Message, cfg.StateBufferSize)
+	batchedBlockBuf := make(chan deprecatedp2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
 		ctx:                 ctx,
@@ -180,7 +180,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	}); err != nil {
 		return errors.Wrap(err, "failed to save attestation target")
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
+	state, err = s.chainService.AdvanceStateDeprecated(ctx, state, block)
 	if err != nil {
 		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
 		switch err.(type) {
@@ -290,13 +290,11 @@ func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.Chai
 			log.WithFields(fields).Info("Received batched blocks from peer")
 			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
 				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
-				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 				continue
 			}
 			if !s.nodeIsSynced {
 				return errors.New("node still not in sync after receiving batch blocks")
 			}
-			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
 			return nil
 		}
 	}
