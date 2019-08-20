@@ -3,32 +3,31 @@ package forkchoice
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"reflect"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestStore_GensisStoreOk(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
-	genesisTime := uint64(9999)
-	genesisState := &pb.BeaconState{GenesisTime: genesisTime}
+	genesisTime := time.Unix(9999, 0)
+	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
 	genesisStateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		t.Fatal(err)
@@ -40,12 +39,12 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.GensisStore(genesisState); err != nil {
+	if err := store.GenesisStore(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
 
-	if store.time != genesisTime {
-		t.Errorf("Wanted time %d, got time %d", genesisTime, store.time)
+	if store.lastProcessedTime != genesisTime {
+		t.Errorf("Wanted time %v, got time %v", genesisTime, store.lastProcessedTime)
 	}
 
 	genesisCheckpt := &ethpb.Checkpoint{Epoch: 0, Root: genesisBlkRoot[:]}
@@ -64,16 +63,20 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Error("Incorrect genesis block saved from store")
 	}
 
-	if store.checkptBlkRoot[genesisCheckpt] != genesisBlkRoot {
+	h, err := hashutil.HashProto(genesisCheckpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.checkptBlkRoot[h] != genesisBlkRoot {
 		t.Error("Incorrect genesis check point to block root saved from store")
 	}
 }
 
 func TestStore_AncestorOk(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -100,21 +103,21 @@ func TestStore_AncestorOk(t *testing.T) {
 		{args: &args{roots[7], 0}, want: roots[0]},
 	}
 	for _, tt := range tests {
-		got, err := store.Ancestor(tt.args.root, tt.args.slot)
+		got, err := store.ancestor(ctx, tt.args.root, tt.args.slot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("Store.Ancestor() = %v, want %v", got, tt.want)
+			t.Errorf("Store.ancestor(ctx, ) = %v, want %v", got, tt.want)
 		}
 	}
 }
 
 func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -126,14 +129,14 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	//    /- B1
 	// B0           /- B5 - B7
 	//    \- B3 - B4 - B6 - B8
-	root, err := store.Ancestor(roots[8], 1)
+	root, err := store.ancestor(ctx, roots[8], 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if root != nil {
 		t.Error("block at slot 1 is not part of the chain")
 	}
-	root, err = store.Ancestor(roots[8], 2)
+	root, err = store.ancestor(ctx, roots[8], 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,9 +147,9 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -162,7 +165,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 	s := &pb.BeaconState{Validators: validators}
 
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -198,21 +201,21 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		{root: roots[8], want: 34 * 1e9},
 	}
 	for _, tt := range tests {
-		got, err := store.LatestAttestingBalance(tt.root)
+		got, err := store.latestAttestingBalance(ctx, tt.root)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got != tt.want {
-			t.Errorf("Store.LatestAttestingBalance() = %v, want %v", got, tt.want)
+			t.Errorf("Store.latestAttestingBalance(ctx, ) = %v, want %v", got, tt.want)
 		}
 	}
 }
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -242,9 +245,9 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 
 func TestStore_GetHead(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDB(t)
+	db := testDB.SetupDB(t)
 	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, kv)
 
 	store := NewForkChoiceService(ctx, kv)
 
@@ -259,11 +262,18 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GensisStore(s); err != nil {
+	if err := store.GenesisStore(ctx, s); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
 		t.Fatal(err)
 	}
 	store.justifiedCheckpt.Root = roots[0]
-	store.checkptBlkRoot[store.justifiedCheckpt] = bytesutil.ToBytes32(roots[0])
+	h, err := hashutil.HashProto(store.justifiedCheckpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	//    /- B1 (33 votes)
 	// B0           /- B5 - B7 (33 votes)
@@ -286,7 +296,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	// Default head is B8
-	head, err := store.Head()
+	head, err := store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +308,7 @@ func TestStore_GetHead(t *testing.T) {
 	if err := store.db.SaveValidatorLatestVote(ctx, 50, &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
 		t.Fatal(err)
 	}
-	head, err = store.Head()
+	head, err = store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,205 +323,12 @@ func TestStore_GetHead(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	head, err = store.Head()
+	head, err = store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(head, roots[1]) {
 		t.Log(head)
 		t.Error("Incorrect head")
-	}
-}
-
-func TestStore_OnBlockErrors(t *testing.T) {
-	ctx := context.Background()
-	db := internal.SetupDB(t)
-	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
-
-	store := NewForkChoiceService(ctx, kv)
-
-	roots, err := blockTree1(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	randaomParentRoot := []byte{'a'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randaomParentRoot)); err != nil {
-		t.Fatal(err)
-	}
-	validGenesisRoot := []byte{'g'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(validGenesisRoot)); err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name          string
-		blk           *ethpb.BeaconBlock
-		s             *pb.BeaconState
-		time          uint64
-		wantErrString string
-	}{
-		{
-			name:          "parent block root does not have a state",
-			blk:           &ethpb.BeaconBlock{},
-			s:             &pb.BeaconState{},
-			wantErrString: "pre state of slot 0 does not exist",
-		},
-		{
-			name:          "block is from the feature",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot, Slot: 1},
-			s:             &pb.BeaconState{},
-			wantErrString: "could not process block from the future, slot time 6 > current time 0",
-		},
-		{
-			name:          "could not get finalized block",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot},
-			s:             &pb.BeaconState{},
-			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
-		},
-		{
-			name:          "same slot as finalized block",
-			blk:           &ethpb.BeaconBlock{Slot: 0, ParentRoot: validGenesisRoot},
-			s:             &pb.BeaconState{},
-			wantErrString: "block is equal or earlier than finalized block, slot 0 < slot 0",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GensisStore(tt.s); err != nil {
-				t.Fatal(err)
-			}
-			store.finalizedCheckpt.Root = roots[0]
-			store.time = tt.time
-
-			err := store.OnBlock(tt.blk)
-			fmt.Println(tt.wantErrString)
-			if err.Error() != tt.wantErrString {
-				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
-			}
-		})
-	}
-}
-
-func TestStore_OnAttestationErrors(t *testing.T) {
-	ctx := context.Background()
-	db := internal.SetupDB(t)
-	kv := db.(*kv.Store)
-	defer internal.TeardownDB(t, kv)
-
-	store := NewForkChoiceService(ctx, kv)
-
-	_, err := blockTree1(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	BlkWithOutState := &ethpb.BeaconBlock{}
-	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
-		t.Fatal(err)
-	}
-	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
-
-	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
-	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
-		t.Fatal(err)
-	}
-	BlkWithStateBadAttRoot, _ := ssz.SigningRoot(BlkWithStateBadAtt)
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
-	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
-		t.Fatal(err)
-	}
-	BlkWithValidStateRoot, _ := ssz.SigningRoot(BlkWithValidState)
-	if err := store.db.SaveState(ctx, &pb.BeaconState{
-		Fork: &pb.Fork{
-			Epoch:           0,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}, BlkWithValidStateRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name          string
-		a             *ethpb.Attestation
-		s             *pb.BeaconState
-		wantErr       bool
-		wantErrString string
-	}{
-		{
-			name:          "attestation's target root not in db",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
-			s:             &pb.BeaconState{},
-			wantErr:       true,
-			wantErrString: "target root 0x41 does not exist in db",
-		},
-		{
-			name:          "no pre state for attestations's target block",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
-			s:             &pb.BeaconState{},
-			wantErr:       true,
-			wantErrString: "pre state of target block 0 does not exist",
-		},
-		{
-			name:    "process attestation from future epoch",
-			a:       &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1, Root: BlkWithStateBadAttRoot[:]}}},
-			s:       &pb.BeaconState{},
-			wantErr: true,
-			wantErrString: fmt.Sprintf("could not process attestation from the future epoch, time %d > time 0",
-				params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot),
-		},
-		{
-			name: "process attestation before inclusion delay",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:       &pb.BeaconState{},
-			wantErr: true,
-			wantErrString: fmt.Sprintf("could not process attestation for fork choice until inclusion delay, time %d > time 0",
-				params.BeaconConfig().SecondsPerSlot),
-		},
-		{
-			name: "process attestation with invalid index",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not convert attestation to indexed attestation",
-		},
-		{
-			name: "process attestation with invalid signature",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not verify indexed attestation",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GensisStore(tt.s); err != nil {
-				t.Fatal(err)
-			}
-
-			store.OnTick(tt.s.Slot * params.BeaconConfig().SecondsPerSlot)
-
-			err := store.OnAttestation(tt.a)
-			if tt.wantErr {
-				if !strings.Contains(err.Error(), tt.wantErrString) {
-					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
-				}
-			} else {
-				t.Error(err)
-			}
-		})
 	}
 }

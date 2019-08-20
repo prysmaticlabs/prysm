@@ -1,4 +1,4 @@
 /*
-	Package forkchoice Add details on how forkchoice works.
+Package forkchoice TODO(3219): Add details on how this forkchoice service works.
 */
 package forkchoice
