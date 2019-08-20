@@ -67,7 +67,7 @@ func TestService_Broadcast(t *testing.T) {
 	}()
 
 	// Broadcast to peers and wait.
-	if err := p.Broadcast(msg); err != nil {
+	if err := p.Broadcast(context.Background(), msg); err != nil {
 		t.Fatal(err)
 	}
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -77,7 +77,7 @@ func TestService_Broadcast(t *testing.T) {
 
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{}
-	if err := p.Broadcast(&testpb.AddressBook{}); err != ErrMessageNotMapped {
+	if err := p.Broadcast(context.Background(), &testpb.AddressBook{}); err != ErrMessageNotMapped {
 		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
 	}
 }

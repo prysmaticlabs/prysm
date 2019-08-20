@@ -19,7 +19,8 @@ import (
 
 type mockBroadcaster struct{}
 
-func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) error {
+	return nil
 }
 
 func TestSubmitAttestation_OK(t *testing.T) {

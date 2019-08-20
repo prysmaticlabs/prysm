@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	network "github.com/libp2p/go-libp2p-core/network"
@@ -12,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var _ = shared.Service(&Service{})
@@ -100,5 +103,12 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 // Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
 	// TODO(3147): Implement disconnect
+	return nil
+}
+
+// Subscribe to some topic.
+// TODO(3147): Remove
+// DEPRECATED: Do not use.
+func (s *Service) Subscribe(_ proto.Message, _ chan deprecatedp2p.Message) event.Subscription {
 	return nil
 }
