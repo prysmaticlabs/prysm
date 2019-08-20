@@ -22,7 +22,7 @@ import (
 type Config struct {
 	TestCases []struct {
 		Blocks []struct {
-			Id     string `yaml:"id"`
+			ID     string `yaml:"id"`
 			Parent string `yaml:"parent"`
 		} `yaml:"blocks"`
 		Weights map[string]int `yaml:"weights"`
@@ -49,7 +49,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 		// Construct block tree from yaml.
 		for _, blk := range test.Blocks {
 			// genesis block condition
-			if blk.Id == blk.Parent {
+			if blk.ID == blk.Parent {
 				b := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
 				if err := db.SaveBlock(ctx, b); err != nil {
 					t.Fatal(err)
@@ -61,7 +61,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 				t.Log(0, hex.EncodeToString(root[:]))
 				blksRoot[0] = root[:]
 			} else {
-				slot, err := strconv.Atoi(blk.Id[1:])
+				slot, err := strconv.Atoi(blk.ID[1:])
 				if err != nil {
 					t.Fatal(err)
 				}
