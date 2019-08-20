@@ -506,12 +506,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_spaolacci_murmur3",
-    commit = "539464a789e9b9f01bc857458ffe2c5c1a2ed382",  # v1.1.0
-    importpath = "github.com/spaolacci/murmur3",
-)
-
-go_repository(
     name = "com_github_jbenet_go_temp_err_catcher",
     commit = "aac704a3f4f27190b4ccc05f303a4931fd1241ff",
     importpath = "github.com/jbenet/go-temp-err-catcher",
