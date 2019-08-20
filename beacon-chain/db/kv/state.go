@@ -22,7 +22,6 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 
 		var err error
 		s, err = createState(enc)
-
 		return err
 	})
 	return s, err
@@ -45,7 +44,6 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 		var err error
 		s, err = createState(enc)
-
 		return err
 	})
 	return s, err
