@@ -1023,7 +1023,7 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := verifyExit(beaconState, exit); err != nil {
+		if err := VerifyExit(beaconState, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
@@ -1034,7 +1034,28 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
+// VerifyExit implements the spec defined validation for voluntary exits.
+//
+// Spec pseudocode definition:
+//   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
+//    """
+//    Process ``VoluntaryExit`` operation.
+//    """
+//    validator = state.validator_registry[exit.validator_index]
+//    # Verify the validator is active
+//    assert is_active_validator(validator, get_current_epoch(state))
+//    # Verify the validator has not yet exited
+//    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+//    # Exits must specify an epoch when they become valid; they are not valid before then
+//    assert get_current_epoch(state) >= exit.epoch
+//    # Verify the validator has been active long enough
+//    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//    # Verify signature
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//    # Initiate exit
+//    initiate_validator_exit(state, exit.validator_index)
+func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}

@@ -17,10 +17,10 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -139,8 +139,9 @@ type mockBroadcaster struct {
 	broadcastCalled bool
 }
 
-func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	mb.broadcastCalled = true
+	return nil
 }
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
@@ -205,8 +206,8 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 
 	// Test the start function.
@@ -244,8 +245,8 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	chainService := setupBeaconChain(t, db, nil)
 

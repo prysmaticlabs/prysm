@@ -19,12 +19,13 @@ import (
 
 type mockBroadcaster struct{}
 
-func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) error {
+	return nil
 }
 
 func TestSubmitAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
@@ -80,8 +81,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	block := &ethpb.BeaconBlock{
@@ -193,8 +194,8 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())

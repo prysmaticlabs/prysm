@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -20,6 +23,9 @@ var log = logrus.WithField("prefix", "beacondb")
 // Database defines the necessary methods for Prysm's eth2 backend which may
 // be implemented by any key-value or relational database in practice.
 type Database interface {
+	io.Closer
+	DatabasePath() string
+
 	ClearDB() error
 	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
@@ -39,7 +45,7 @@ type Database interface {
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, f *filters.QueryFilter) (*pb.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
@@ -72,11 +78,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*DepositContainer
-	deposits              []*DepositContainer
-	depositsLock          sync.RWMutex
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
+	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -104,8 +106,8 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	return nil
 }
 
-// NewDB initializes a new DB. If the genesis block and states do not exist, this method creates it.
-func NewDB(dirPath string) (*BeaconDB, error) {
+// NewDBDeprecated initializes a new DB. If the genesis block and states do not exist, this method creates it.
+func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -118,7 +120,9 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
+	depCache := depositcache.NewDepositCache()
+
+	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
@@ -129,6 +133,11 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	return db, err
+}
+
+// NewDB initializes a new DB.
+func NewDB(dirPath string) (Database, error) {
+	return kv.NewKVStore(dirPath)
 }
 
 // ClearDB removes the previously stored directory at the data directory.

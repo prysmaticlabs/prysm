@@ -54,8 +54,8 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 }
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -94,15 +94,15 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err == nil {
 		t.Errorf("Expected receive block to fail, received nil: %v", err)
 	}
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -186,7 +186,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
+	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
@@ -194,8 +194,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -271,15 +271,15 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
+	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
 func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -340,7 +340,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = chainService.ReceiveBlock(context.Background(), block)
+	_, err = chainService.ReceiveBlockDeprecated(context.Background(), block)
 	switch err.(type) {
 	case *BlockFailedProcessingErr:
 		t.Log("Block failed processing as expected")
@@ -363,8 +363,8 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 
 func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -434,7 +434,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = chainService.ReceiveBlock(context.Background(), goodStateBlock)
+	_, err = chainService.ReceiveBlockDeprecated(context.Background(), goodStateBlock)
 	if err != nil {
 		t.Fatalf("error exists for good block %v", err)
 	}
@@ -442,8 +442,8 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 }
 
 func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
@@ -498,7 +498,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 	beaconState.Slot--
 
-	_, err = chainService.ReceiveBlock(context.Background(), invalidStateBlock)
+	_, err = chainService.ReceiveBlockDeprecated(context.Background(), invalidStateBlock)
 	if err == nil {
 		t.Fatal("no error for wrong block state root")
 	}
@@ -509,8 +509,8 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 
 func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	attsService := attestation.NewAttestationService(
@@ -636,10 +636,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	for _, dep := range pendingDeposits {
-		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
+		db.DepositCache.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0), 0, [32]byte{})
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
+	if len(db.DepositCache.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
 		t.Fatalf("Expected %d pending deposits", len(pendingDeposits))
 	}
 
@@ -650,7 +650,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := db.SaveHistoricalState(context.Background(), beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	computedState, err := chainService.ReceiveBlock(context.Background(), block)
+	computedState, err := chainService.ReceiveBlockDeprecated(context.Background(), block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -662,12 +662,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			}},
 		)
 	}
-	if err := chainService.ApplyForkChoiceRule(context.Background(), block, computedState); err != nil {
+	if err := chainService.ApplyForkChoiceRuleDeprecated(context.Background(), block, computedState); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != 0 {
-		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.PendingDeposits(chainService.ctx, nil))
+	if len(db.DepositCache.PendingDeposits(chainService.ctx, nil)) != 0 {
+		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.DepositCache.PendingDeposits(chainService.ctx, nil))
 	}
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
@@ -705,8 +705,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// we process F, the G. The expected behavior is that we load the historical
 	// state from slot 3 where the common ancestor block C is present.
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -777,7 +777,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		computedState, err := chainService.ReceiveBlock(ctx, block)
+		computedState, err := chainService.ReceiveBlockDeprecated(ctx, block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -853,7 +853,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Error(err)
 	}
 
-	computedState, err := chainService.ReceiveBlock(ctx, blockF)
+	computedState, err := chainService.ReceiveBlockDeprecated(ctx, blockF)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -904,7 +904,7 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Error(err)
 	}
 
-	computedState, err = chainService.ReceiveBlock(ctx, blockG)
+	computedState, err = chainService.ReceiveBlockDeprecated(ctx, blockG)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -915,8 +915,8 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 }
 
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db, nil)
@@ -1005,8 +1005,8 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 }
 
 func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(2)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	v.InsertExitedVal(epoch+1, []uint64{0, 2})
@@ -1048,8 +1048,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(1)
 	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
 	var validators []*ethpb.Validator
@@ -1084,8 +1084,8 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 }
 
 func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	epoch := uint64(100)
 
 	// Tried to insert 5 active indices to DB with only 3 validators in state

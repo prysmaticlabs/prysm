@@ -31,7 +31,8 @@ var _ = Pool(&Service{})
 type mockBroadcaster struct {
 }
 
-func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
+	return nil
 }
 
 func TestStop_OK(t *testing.T) {
@@ -70,8 +71,8 @@ func TestServiceStatus_Error(t *testing.T) {
 
 func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exit := &ethpb.VoluntaryExit{Epoch: 100}
@@ -84,8 +85,8 @@ func TestIncomingExits_Ok(t *testing.T) {
 }
 
 func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
@@ -164,8 +165,8 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 }
 
 func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
@@ -293,8 +294,8 @@ func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
 }
 
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	helpers.ClearAllCaches()
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
@@ -474,8 +475,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 func TestRetrieveAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
@@ -519,8 +520,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for slots 0 to 139.
@@ -569,8 +570,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 }
 
 func TestRemoveProcessedAttestations_Ok(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	attestations := make([]*ethpb.Attestation, 10)
@@ -615,8 +616,8 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	attestations := make([]*ethpb.Attestation, 10)
@@ -669,8 +670,8 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 func TestIsCanonical_CanGetCanonical(t *testing.T) {
 	t.Skip()
 	// TODO(#2307): This will be irrelevant after the revamp of our DB package post v0.6.
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
@@ -710,8 +711,8 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 }
 
 func TestIsCanonical_NilBlocks(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	canonical, err := s.IsAttCanonical(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{}})
