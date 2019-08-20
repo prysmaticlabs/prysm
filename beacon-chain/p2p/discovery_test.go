@@ -52,7 +52,7 @@ func TestCreateListener(t *testing.T) {
 	}
 }
 
-func TestStartDiscV5_OK(t *testing.T) {
+func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	bootListener := createListener(ipAddr, port, pkey)
