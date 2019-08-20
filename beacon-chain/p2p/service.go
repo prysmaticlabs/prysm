@@ -21,7 +21,7 @@ import (
 )
 
 var _ = shared.Service(&Service{})
-var pollingPeriod = 1 * time.Second // 1 second
+var pollingPeriod = 1 * time.Second
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
