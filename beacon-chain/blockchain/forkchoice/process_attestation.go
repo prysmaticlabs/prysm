@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -65,9 +66,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify Attestations cannot be from future epochs.
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
-	t := uint64(s.lastProcessedTime.Unix())
-	if slotTime > t {
-		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, t)
+	currentTime := uint64(time.Now().Unix())
+	if slotTime > currentTime {
+		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
 	}
 
 	// Store target checkpoint state if not yet seen.
@@ -130,9 +131,9 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 		return errors.Wrap(err, "could not get attestation slot")
 	}
 	slotTime := baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
-	t := uint64(s.lastProcessedTime.Unix())
-	if slotTime > t {
-		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, t)
+	currentTime := uint64(time.Now().Unix())
+	if slotTime > currentTime {
+		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, currentTime)
 	}
 	return nil
 }
