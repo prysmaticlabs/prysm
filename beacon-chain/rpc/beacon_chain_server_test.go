@@ -288,25 +288,7 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	ctx := context.Background()
-	count := 100
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
+	setupValidators(t, db, 100)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
@@ -360,32 +342,14 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	ctx := context.Background()
-	count := 1
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
+	_, balances := setupValidators(t, db, 1)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(count)}}
-	wanted := fmt.Sprintf("validator index %d >= balance list %d", count, len(balances))
+	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
+	wanted := fmt.Sprintf("validator index %d >= balance list %d", 1, len(balances))
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
@@ -395,23 +359,7 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	count := 100
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
-
+	validators, _ := setupValidators(t, db, 100)
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
@@ -430,25 +378,8 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	ctx := context.Background()
 	count := 100
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
+	setupValidators(t, db, count)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
@@ -506,23 +437,7 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	defer testutil.TeardownDB(t, db)
 
 	count := 1
-	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
-
+	validators, _ := setupValidators(t, db, count)
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
@@ -549,25 +464,7 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	ctx := context.Background()
-	count := 1000
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
+	validators, _ := setupValidators(t, db, 1000)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
@@ -590,26 +487,7 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
-	ctx := context.Background()
-	count := 1
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveState(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
-	); err != nil {
-		t.Fatal(err)
-	}
-
+	setupValidators(t, db, 1)
 	bs := &BeaconChainServer{beaconDB: db}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
@@ -1084,7 +962,7 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 }
 
-func setupValidatorsInState(t *testing.T, db db.Database, count int, state *pbp2p.BeaconState) {
+func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
 	ctx := context.Background()
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
@@ -1095,12 +973,12 @@ func setupValidatorsInState(t *testing.T, db db.Database, count int, state *pbp2
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
 	}
-
 	if err := db.SaveState(
-		ctx,
-		state,
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators, Balances: balances},
 		[32]byte{},
 	); err != nil {
 		t.Fatal(err)
 	}
+	return validators, balances
 }
