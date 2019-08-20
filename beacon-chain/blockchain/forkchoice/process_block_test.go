@@ -2,15 +2,15 @@ package forkchoice
 
 import (
 	"context"
-	"fmt"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -50,9 +50,9 @@ func TestStore_OnBlock(t *testing.T) {
 		},
 		{
 			name:          "block is from the feature",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot, Slot: 1},
+			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot, Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             &pb.BeaconState{},
-			wantErrString: "could not process block from the future, slot time 6 > current time 0",
+			wantErrString: "could not process block from the future",
 		},
 		{
 			name:          "could not get finalized block",
@@ -74,11 +74,9 @@ func TestStore_OnBlock(t *testing.T) {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
-			store.lastProcessedTime = time.Unix(int64(tt.time), 0)
 
 			err := store.OnBlock(ctx, tt.blk)
-			fmt.Println(tt.wantErrString)
-			if err.Error() != tt.wantErrString {
+			if !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
 		})

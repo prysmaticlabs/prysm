@@ -43,10 +43,6 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if store.lastProcessedTime != genesisTime {
-		t.Errorf("Wanted time %v, got time %v", genesisTime, store.lastProcessedTime)
-	}
-
 	genesisCheckpt := &ethpb.Checkpoint{Epoch: 0, Root: genesisBlkRoot[:]}
 	if !reflect.DeepEqual(store.justifiedCheckpt, genesisCheckpt) {
 		t.Error("Justified check point from genesis store did not match")
