@@ -111,9 +111,6 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	listener := createListener(ipAddr, port, pkey)
-	if err := addDiscv5protocol(); err != nil {
-		t.Fatalf("Could not add in protocol: %v", err)
-	}
 
 	_ = convertToMultiAddr([]*discv5.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
