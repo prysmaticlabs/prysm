@@ -3,10 +3,12 @@ package kv
 import (
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Store defines an implementation of the Prysm Database interface
@@ -14,6 +16,10 @@ import (
 type Store struct {
 	db           *bolt.DB
 	databasePath string
+
+	// Caching layer properties.
+	blocksLock sync.RWMutex
+	blocks     map[[32]byte]*ethpb.BeaconBlock
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -32,7 +38,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	kv := &Store{db: boltDB, databasePath: dirPath}
+	kv := &Store{
+		db:           boltDB,
+		databasePath: dirPath,
+		blocks:       make(map[[32]byte]*ethpb.BeaconBlock),
+	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
