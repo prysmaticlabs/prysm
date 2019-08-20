@@ -926,7 +926,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Error("Incorrect blocks response")
+			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.Blocks), len(res.Blocks))
 		}
 	}
 }
@@ -961,7 +961,6 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-
 	}
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}

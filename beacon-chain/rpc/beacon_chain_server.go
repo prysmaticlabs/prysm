@@ -120,16 +120,16 @@ func (bs *BeaconChainServer) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		startSlot := helpers.StartSlot(q.Epoch)
+		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot-1))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks: %v", err)
 		}
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlock, 0), TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
