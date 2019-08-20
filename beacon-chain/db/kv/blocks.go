@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 )
@@ -19,6 +20,13 @@ import (
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
+	k.blocksLock.RLock()
+	// Return block from cache if it exists.
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return blk, nil
+	}
+	k.blocksLock.RUnlock()
 	var block *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -145,6 +153,12 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
+	k.blocksLock.RLock()
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return true
+	}
+	k.blocksLock.RUnlock()
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
@@ -174,6 +188,9 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
+		k.blocksLock.Lock()
+		delete(k.blocks, blockRoot)
+		k.blocksLock.Unlock()
 		return bkt.Delete(blockRoot[:])
 	})
 }
@@ -186,6 +203,14 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
+
+	k.blocksLock.RLock()
+	// Skip saving block to DB if it exists in the cache.
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return nil
+	}
+	k.blocksLock.RUnlock()
 	enc, err := proto.Marshal(block)
 	if err != nil {
 		return err
@@ -196,6 +221,9 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
+		k.blocksLock.Lock()
+		k.blocks[blockRoot] = block
+		k.blocksLock.Unlock()
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
@@ -225,6 +253,9 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
+			k.blocksLock.Lock()
+			k.blocks[bytesutil.ToBytes32(keys[i])] = blocks[i]
+			k.blocksLock.Unlock()
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}

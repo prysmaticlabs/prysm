@@ -15,6 +15,15 @@ import (
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorLatestVote")
 	defer span.End()
+
+	k.votesLock.RLock()
+	// Return latest vote from cache if it exists.
+	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
+		k.votesLock.RUnlock()
+		return vote, nil
+	}
+	k.votesLock.RUnlock()
+
 	buf := uint64ToBytes(validatorIdx)
 	var latestVote *pb.ValidatorLatestVote
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -33,6 +42,14 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorLatestVote")
 	defer span.End()
+
+	k.votesLock.RLock()
+	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
+		k.votesLock.RUnlock()
+		return true
+	}
+	k.votesLock.RUnlock()
+
 	buf := uint64ToBytes(validatorIdx)
 	exists := false
 	// #nosec G104. Always returns nil.
@@ -55,6 +72,9 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
+		k.votesLock.Lock()
+		k.latestVotes[validatorIdx] = vote
+		k.votesLock.Unlock()
 		return bucket.Put(buf, enc)
 	})
 }
