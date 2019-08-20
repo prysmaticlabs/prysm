@@ -95,6 +95,9 @@ func (bs *BeaconChainServer) AttestationPool(
 	if err != nil {
 		return nil, err
 	}
+	if headBlock == nil {
+		return nil, status.Error(codes.Internal, "no head block found in db")
+	}
 	atts, err := bs.pool.AttestationPool(ctx, headBlock.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)

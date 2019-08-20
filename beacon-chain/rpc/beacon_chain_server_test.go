@@ -263,11 +263,14 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 10,
 	}
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
+	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := bs.beaconDB.SaveState(ctx, &pbp2p.BeaconState{Slot: 10}, blockRoot); err != nil {

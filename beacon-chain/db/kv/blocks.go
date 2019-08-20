@@ -33,7 +33,7 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 	var headBlock *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(validatorsBucket)
+		bkt := tx.Bucket(blocksBucket)
 		headRoot := bkt.Get(headBlockRootKey)
 		if headRoot == nil {
 			return nil
