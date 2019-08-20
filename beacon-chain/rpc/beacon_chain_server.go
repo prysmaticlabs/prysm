@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -92,7 +93,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.deprecatedDB.ChainHead()
+	headBlock, err := bs.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,15 +125,10 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := helpers.StartSlot(q.Epoch)
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
-		var blks []*ethpb.BeaconBlock
-		for i := startSlot; i < endSlot; i++ {
-			b, err := bs.deprecatedDB.BlocksBySlot(ctx, i)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
-			}
-			blks = append(blks, b...)
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve blocks: %v", err)
 		}
-
 		numBlks := len(blks)
 		if numBlks == 0 {
 			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
@@ -150,7 +146,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
-		blk, err := bs.deprecatedDB.Block(bytesutil.ToBytes32(q.Root))
+		blk, err := bs.beaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
 		}
@@ -165,7 +161,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.deprecatedDB.BlocksBySlot(ctx, q.Slot)
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
