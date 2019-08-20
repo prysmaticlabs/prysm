@@ -24,9 +24,6 @@ func TestStore_AttestationCRUD(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	if err := db.SaveAttestation(ctx, att); err != nil {
-		t.Fatal(err)
-	}
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		t.Fatal(err)
@@ -37,6 +34,9 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	}
 	if retrievedAtt != nil {
 		t.Errorf("Expected nil attestation, received %v", retrievedAtt)
+	}
+	if err := db.SaveAttestation(ctx, att); err != nil {
+		t.Fatal(err)
 	}
 	if !db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to exist in the db")
