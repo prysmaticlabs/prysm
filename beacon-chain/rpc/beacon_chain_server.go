@@ -210,14 +210,12 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	balances, err := bs.deprecatedDB.Balances(ctx)
+	headState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator balances: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
 	}
-	validators, err := bs.deprecatedDB.Validators(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
-	}
+	balances := headState.Balances
+	validators := headState.Validators
 
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key
