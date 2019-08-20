@@ -982,10 +982,20 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
 	}
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(
 		context.Background(),
 		&pbp2p.BeaconState{Validators: validators, Balances: balances},
-		[32]byte{},
+		blockRoot,
 	); err != nil {
 		t.Fatal(err)
 	}
