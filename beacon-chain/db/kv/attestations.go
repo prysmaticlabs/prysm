@@ -158,7 +158,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.Tx) map[*bolt.Bucket][]byte {
-	indicesByBucket := make(map[*bolt.Bucket][]byte)
+	indicesByBucket := make(map[string][]byte)
 	buckets := []*bolt.Bucket{
 		tx.Bucket(attestationShardIndicesBucket),
 		tx.Bucket(attestationParentRootIndicesBucket),
