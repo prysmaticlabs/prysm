@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -9,9 +10,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -62,20 +64,30 @@ func tcpPortFromHost(t *testing.T, host host.Host) int64 {
 	return port
 }
 
-func createPeer(t *testing.T, cfg *Config) (Listener, *testing2.TestP2P) {
+func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr = net.ParseIP("127.0.0.1")
-	privKey := convertToInterfacePrivkey(pkey)
-	peerNode := testing2.NewTestP2PWithKey(t, privKey)
-	port := tcpPortFromHost(t, peerNode.Host)
-
+	convertedKey := convertToInterfacePrivkey(pkey)
+	_, err := peer.IDFromPrivateKey(convertedKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
+	if err != nil {
+		t.Fatalf("Failed to p2p listen: %v", err)
+	}
+	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//port := tcpPortFromHost(t, h)
 	cfg.UDPPort = uint(port)
 	cfg.Port = uint(port)
 	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 	if err != nil {
 		t.Errorf("Could not start discovery for node: %v", err)
 	}
-	return listener, peerNode
+	return listener, h
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
@@ -130,22 +142,22 @@ func TestListenForNewNodes(t *testing.T) {
 	}
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
-		_, _ = createPeer(t, cfg)
-	}
-	listener, testp2p := createPeer(t, cfg)
-
-	s := &Service{
-		dv5Listener: listener,
-		host:        testp2p.Host,
-		pubsub:      testp2p.PubSub(),
-		cfg:         cfg,
-		ctx:         context.Background(),
+		_, _ = createPeer(t, cfg, port+i)
 	}
 
-	go s.listenForNewNodes()
+	cfg.Port = 4000
+	cfg.UDPPort = 4000
+
+	s, err := NewService(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s.Start()
+	defer s.Stop()
 
 	time.Sleep(2 * time.Second)
-	peers := testp2p.Host.Network().Peers()
+	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}

@@ -25,9 +25,8 @@ var pollingPeriod time.Duration = 1
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-
+	ctx         context.Context
+	cancel      context.CancelFunc
 	started     bool
 	cfg         *Config
 	startupErr  error

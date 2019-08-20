@@ -8,19 +8,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
-	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/metrics"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	swarm "github.com/libp2p/go-libp2p-swarm"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	tnet "github.com/libp2p/go-libp2p-testing/net"
-	"github.com/libp2p/go-tcp-transport"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
@@ -52,60 +45,6 @@ func NewTestP2P(t *testing.T) *TestP2P {
 		Host:   h,
 		pubsub: ps,
 	}
-}
-
-// NewTestP2PWithKey initializes a new p2p test service.
-func NewTestP2PWithKey(t *testing.T, privkey crypto.PrivKey) *TestP2P {
-	ctx := context.Background()
-	h := bhost.NewBlankHost(GenSwarmWithKey(ctx, t, privkey))
-	ps, err := pubsub.NewFloodSub(ctx, h,
-		pubsub.WithMessageSigning(false),
-		pubsub.WithStrictSignatureVerification(false),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return &TestP2P{
-		t:      t,
-		Host:   h,
-		pubsub: ps,
-	}
-}
-
-// GenSwarmWithKey generates a new test swarm. Modified from
-// "github.com/libp2p/go-libp2p-swarm/testing" for
-// internal testing
-func GenSwarmWithKey(ctx context.Context, t *testing.T, privKey crypto.PrivKey) *swarm.Swarm {
-	var err error
-	p := tnet.PeerNetParams{}
-	p.Addr = tnet.ZeroLocalTCPAddress
-	p.PrivKey = privKey
-	p.PubKey = privKey.GetPublic()
-	p.ID, err = peer.IDFromPublicKey(privKey.GetPublic())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ps := pstoremem.NewPeerstore()
-	ps.AddPubKey(p.ID, p.PubKey)
-	ps.AddPrivKey(p.ID, p.PrivKey)
-	s := swarm.NewSwarm(ctx, p.ID, ps, metrics.NewBandwidthCounter())
-
-	tcpTransport := tcp.NewTCPTransport(swarmt.GenUpgrader(s))
-	tcpTransport.DisableReuseport = false
-
-	if err := s.AddTransport(tcpTransport); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := s.Listen(p.Addr); err != nil {
-		t.Fatal(err)
-	}
-
-	s.Peerstore().AddAddrs(p.ID, s.ListenAddresses(), peerstore.PermanentAddrTTL)
-
-	return s
 }
 
 // Connect two test peers together.
