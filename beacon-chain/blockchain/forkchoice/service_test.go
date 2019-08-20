@@ -5,6 +5,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -25,8 +26,8 @@ func TestStore_GensisStoreOk(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, kv)
 
-	genesisTime := uint64(9999)
-	genesisState := &pb.BeaconState{GenesisTime: genesisTime}
+	genesisTime := time.Unix(9999, 0)
+	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
 	genesisStateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		t.Fatal(err)
@@ -42,8 +43,8 @@ func TestStore_GensisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if store.time != genesisTime {
-		t.Errorf("Wanted time %d, got time %d", genesisTime, store.time)
+	if store.lastProcessedTime != genesisTime {
+		t.Errorf("Wanted time %v, got time %v", genesisTime, store.lastProcessedTime)
 	}
 
 	genesisCheckpt := &ethpb.Checkpoint{Epoch: 0, Root: genesisBlkRoot[:]}

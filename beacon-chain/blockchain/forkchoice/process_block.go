@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -54,7 +55,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Verify block slot time is not from the feature.
-	if err := verifyBlkSlotTime(preState.GenesisTime, s.time, b.Slot); err != nil {
+	if err := verifyBlkSlotTime(preState.GenesisTime, s.lastProcessedTime, b.Slot); err != nil {
 		return err
 	}
 
@@ -145,10 +146,11 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 }
 
 // verifyBlkSlotTime validates the input block slot is not from the future.
-func verifyBlkSlotTime(gensisTime uint64, storeTime uint64, blkSlot uint64) error {
+func verifyBlkSlotTime(gensisTime uint64, storeTime time.Time, blkSlot uint64) error {
 	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
-	if slotTime > storeTime {
-		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, storeTime)
+	t := uint64(storeTime.Unix())
+	if slotTime > t {
+		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, t)
 	}
 	return nil
 }

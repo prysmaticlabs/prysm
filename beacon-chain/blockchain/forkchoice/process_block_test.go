@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -73,7 +74,7 @@ func TestStore_OnBlock(t *testing.T) {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
-			store.time = tt.time
+			store.lastProcessedTime = time.Unix(int64(tt.time), 0)
 
 			err := store.OnBlock(ctx, tt.blk)
 			fmt.Println(tt.wantErrString)

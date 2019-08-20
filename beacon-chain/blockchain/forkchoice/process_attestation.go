@@ -65,8 +65,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify Attestations cannot be from future epochs.
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
-	if slotTime > s.time {
-		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, s.time)
+	t := uint64(s.lastProcessedTime.Unix())
+	if slotTime > t {
+		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, t)
 	}
 
 	// Store target checkpoint state if not yet seen.
@@ -129,8 +130,9 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 		return errors.Wrap(err, "could not get attestation slot")
 	}
 	slotTime := baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
-	if slotTime > s.time {
-		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, s.time)
+	t := uint64(s.lastProcessedTime.Unix())
+	if slotTime > t {
+		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, t)
 	}
 	return nil
 }
