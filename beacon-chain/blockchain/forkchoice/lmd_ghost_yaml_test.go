@@ -3,14 +3,12 @@ package forkchoice
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -42,8 +40,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 	for _, test := range c.TestCases {
 		db := testDB.SetupDB(t)
-		kv := db.(*kv.Store)
-		defer testDB.TeardownDB(t, kv)
+		defer testDB.TeardownDB(t, db)
 
 		blksRoot := make(map[int][]byte)
 		// Construct block tree from yaml.
@@ -58,7 +55,6 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				t.Log(0, hex.EncodeToString(root[:]))
 				blksRoot[0] = root[:]
 			} else {
 				slot, err := strconv.Atoi(blk.ID[1:])
@@ -77,7 +73,6 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				t.Log(slot, hex.EncodeToString(root[:]))
 				blksRoot[slot] = root[:]
 			}
 		}
@@ -98,7 +93,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 		}
 
-		store := NewForkChoiceService(ctx, kv)
+		store := NewForkChoiceService(ctx, db)
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
