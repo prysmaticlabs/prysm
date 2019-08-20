@@ -22,9 +22,8 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	deprecatedDB *db.BeaconDB
-	beaconDB     db.Database
-	pool         operations.Pool
+	beaconDB db.Database
+	pool     operations.Pool
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -274,10 +273,11 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	validators, err := bs.deprecatedDB.Validators(ctx)
+	headState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
 	}
+	validators := headState.Validators
 	validatorCount := len(validators)
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
@@ -334,9 +334,12 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, err := bs.deprecatedDB.ValidatorIndex(pubKey)
+		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
 		}
 		filtered[index] = true
 
