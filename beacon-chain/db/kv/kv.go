@@ -38,11 +38,16 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return createBuckets(
 			tx,
 			attestationsBucket,
-			attestationIndicesBucket,
 			blocksBucket,
-			blockIndicesBucket,
 			stateBucket,
 			validatorsBucket,
+			// Indices buckets.
+			attestationShardIndicesBucket,
+			attestationParentRootIndicesBucket,
+			attestationStartEpochIndicesBucket,
+			attestationEndEpochIndicesBucket,
+			blockSlotIndicesBucket,
+			blockParentRootIndicesBucket,
 		)
 	}); err != nil {
 		return nil, err
