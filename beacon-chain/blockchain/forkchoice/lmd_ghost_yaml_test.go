@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -130,4 +131,6 @@ func TestGetHeadFromYaml(t *testing.T) {
 			t.Errorf("wanted root %#x, got root %#x", wantedHead, head)
 		}
 	}
+
+	helpers.ClearAllCaches()
 }
