@@ -45,7 +45,7 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 }
 
 func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
-	db := internal.SetupDB(t)
+	db := internal.SetupDBDeprecated(t)
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -68,7 +68,7 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 
 func TestStatus_NotSynced(t *testing.T) {
 	serviceNotSynced, db := setupTestSyncService(t, false)
-	defer internal.TeardownDB(t, db)
+	defer internal.TeardownDBDeprecated(t, db)
 	synced := serviceNotSynced.InitialSync.NodeIsSynced()
 	if synced {
 		t.Error("Wanted false, but got true")

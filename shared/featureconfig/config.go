@@ -30,6 +30,7 @@ type FeatureFlagConfig struct {
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
 	HashSlingingSlasher           bool // HashSlingingSlasher run a history storage instance for generating slashing proofs (storage requirements are high!).
+	UseNewP2P                     bool // UseNewP2P service.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -71,6 +72,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
+	}
+	if ctx.GlobalBool(UseNewP2PFlag.Name) {
+		log.Warn("Using new P2P service.")
+		cfg.UseNewP2P = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe active balance cache")

@@ -31,8 +31,8 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	// TODO(#2307): Fix test once v0.6 is merged.
 	t.Skip()
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 
 	ctx := context.Background()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
@@ -69,7 +69,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	canonicalBlockIndices := []int{1, 3, 5}
 	postState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, canonicalIndex := range canonicalBlockIndices {
-		postState, err = chainService.AdvanceState(ctx, postState, blocks[canonicalIndex])
+		postState, err = chainService.AdvanceStateDeprecated(ctx, postState, blocks[canonicalIndex])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +98,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	forkedBlockIndices := []int{2, 4}
 	forkState := proto.Clone(justifiedState).(*pb.BeaconState)
 	for _, forkIndex := range forkedBlockIndices {
-		forkState, err = chainService.AdvanceState(ctx, forkState, blocks[forkIndex])
+		forkState, err = chainService.AdvanceStateDeprecated(ctx, forkState, blocks[forkIndex])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -134,7 +134,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Applying the fork choice rule should reorg to B4 successfully.
-	if err := chainService.ApplyForkChoiceRule(ctx, blocks[4], block4State); err != nil {
+	if err := chainService.ApplyForkChoiceRuleDeprecated(ctx, blocks[4], block4State); err != nil {
 		t.Fatal(err)
 	}
 

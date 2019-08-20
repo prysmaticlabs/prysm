@@ -64,7 +64,7 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.Beaco
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) AdvanceState(
+func (ms *mockChainService) AdvanceStateDeprecated(
 	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{
@@ -80,7 +80,7 @@ func (ms *mockChainService) VerifyBlockValidity(
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
@@ -114,8 +114,8 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 }
 
 func TestProcessingBatchedBlocks_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
@@ -166,8 +166,8 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 }
 
 func TestProcessingBlocks_SkippedSlots(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	setUpGenesisStateAndBlock(db, t)
 	ctx := context.Background()
 

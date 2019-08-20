@@ -40,7 +40,8 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) error {
+	return nil
 }
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
@@ -72,14 +73,14 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	if err := ms.db.SaveBlock(block); err != nil {
 		return nil, err
 	}
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) AdvanceState(
+func (ms *mockChainService) AdvanceStateDeprecated(
 	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
@@ -89,7 +90,7 @@ func (ms *mockChainService) VerifyBlockValidity(ctx context.Context, block *ethp
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
@@ -138,8 +139,8 @@ func setupService(db *db.BeaconDB) *RegularSync {
 func TestProcessBlockRoot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := &RegularSyncConfig{
@@ -173,8 +174,8 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 func TestProcessBlock_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -250,8 +251,8 @@ func TestProcessBlock_OK(t *testing.T) {
 func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	validators := make([]*ethpb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
@@ -363,8 +364,8 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	os := &mockOperationService{}
 	ctx := context.Background()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	beaconState := &pb.BeaconState{
 		Slot:                2,
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
@@ -420,8 +421,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	os := &mockOperationService{}
 	ctx := context.Background()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	state := &pb.BeaconState{
 		Slot:                2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
@@ -471,8 +472,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 func TestReceiveExitReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	cfg := &RegularSyncConfig{
 		OperationService: os,
@@ -500,8 +501,8 @@ func TestReceiveExitReq_OK(t *testing.T) {
 func TestHandleStateReq_NOState(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 
 	ss := setupService(db)
 
@@ -531,8 +532,8 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 func TestHandleStateReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
@@ -579,8 +580,8 @@ func TestHandleStateReq_OK(t *testing.T) {
 }
 
 func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	// Construct the following chain:
@@ -621,8 +622,8 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 }
 
 func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	// Construct the following chain:
@@ -647,8 +648,8 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 }
 
 func TestCanonicalBlockList_NilBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	want := "nil block 0x42 from db"
@@ -658,8 +659,8 @@ func TestCanonicalBlockList_NilBlock(t *testing.T) {
 }
 
 func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, db)
 	ss := setupService(db)
 
 	block1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'B'}}
