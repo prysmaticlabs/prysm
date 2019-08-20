@@ -56,37 +56,37 @@ func (q *QueryFilter) Filters() map[FilterType]interface{} {
 	return q.queries
 }
 
-// SetParentRoot --
+// SetParentRoot allows for filtering by the parent root data attribute of an object.
 func (q *QueryFilter) SetParentRoot(val []byte) *QueryFilter {
 	q.queries[ParentRoot] = val
 	return q
 }
 
-// SetStartSlot --
+// SetStartSlot enables filtering by all the items that begin at a slot (inclusive).
 func (q *QueryFilter) SetStartSlot(val uint64) *QueryFilter {
 	q.queries[StartSlot] = val
 	return q
 }
 
-// SetEndSlot --
+// SetEndSlot enables filtering by all the items that end at a slot (inclusive).
 func (q *QueryFilter) SetEndSlot(val uint64) *QueryFilter {
 	q.queries[EndSlot] = val
 	return q
 }
 
-// SetStartEpoch --
+// SetStartEpoch enables filtering by the StartEpoch attribute of an object (inclusive).
 func (q *QueryFilter) SetStartEpoch(val uint64) *QueryFilter {
 	q.queries[StartEpoch] = val
 	return q
 }
 
-// SetEndEpoch --
+// SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
 func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
 	q.queries[EndEpoch] = val
 	return q
 }
 
-// SetShard --
+// SetShard enabled filtering by the Shard attribute of an object.
 func (q *QueryFilter) SetShard(val uint64) *QueryFilter {
 	q.queries[Shard] = val
 	return q
