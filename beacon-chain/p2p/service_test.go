@@ -140,9 +140,11 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
 	}
+	var listeners []*discv5.Network
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
-		_, _ = createPeer(t, cfg, port+i)
+		listener, _ := createPeer(t, cfg, port+i)
+		listeners = append(listeners, listener.(*discv5.Network))
 	}
 
 	cfg.Port = 4000
@@ -160,5 +162,9 @@ func TestListenForNewNodes(t *testing.T) {
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
+	}
+	// close down all peers
+	for _, listener := range listeners {
+		listener.Close()
 	}
 }
