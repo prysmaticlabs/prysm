@@ -31,7 +31,8 @@ var _ = Pool(&Service{})
 type mockBroadcaster struct {
 }
 
-func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
+	return nil
 }
 
 func TestStop_OK(t *testing.T) {

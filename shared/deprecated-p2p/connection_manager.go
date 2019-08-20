@@ -42,8 +42,9 @@ func (s *Server) Reputation(peer peer.ID, val int) {
 }
 
 // Disconnect will close all connections to the given peer.
-func (s *Server) Disconnect(peer peer.ID) {
+func (s *Server) Disconnect(peer peer.ID) error {
 	if err := s.host.Network().ClosePeer(peer); err != nil {
 		log.WithError(err).WithField("peer", peer.Pretty()).Error("Failed to close conn with peer")
 	}
+	return nil
 }

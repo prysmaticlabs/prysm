@@ -21,7 +21,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,13 +48,24 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	defer teardownDB(t, db)
 	blocks := []*ethpb.BeaconBlock{
 		{
+			Slot:       4,
 			ParentRoot: []byte("parent"),
 		},
 		{
+			Slot:       5,
 			ParentRoot: []byte("parent2"),
 		},
 		{
+			Slot:       6,
+			ParentRoot: []byte("parent2"),
+		},
+		{
+			Slot:       7,
 			ParentRoot: []byte("parent3"),
+		},
+		{
+			Slot:       8,
+			ParentRoot: []byte("parent4"),
 		},
 	}
 	ctx := context.Background()
@@ -68,17 +79,54 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	}{
 		{
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
-			expectedNumBlocks: 1,
+			expectedNumBlocks: 2,
 		},
 		{
 			// No specified filter should return all blocks.
 			filter:            nil,
-			expectedNumBlocks: 3,
+			expectedNumBlocks: 5,
 		},
 		{
 			// No block meets the criteria below.
 			filter:            filters.NewFilter().SetParentRoot([]byte{3, 4, 5}),
 			expectedNumBlocks: 0,
+		},
+		{
+			// Block slot range filter criteria.
+			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(7),
+			expectedNumBlocks: 3,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(7).SetEndSlot(7),
+			expectedNumBlocks: 1,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(8),
+			expectedNumBlocks: 5,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(5),
+			expectedNumBlocks: 2,
+		},
+		{
+			filter:            filters.NewFilter().SetStartSlot(5),
+			expectedNumBlocks: 4,
+		},
+		{
+			filter:            filters.NewFilter().SetEndSlot(7),
+			expectedNumBlocks: 4,
+		},
+		{
+			filter:            filters.NewFilter().SetEndSlot(8),
+			expectedNumBlocks: 5,
+		},
+		{
+			// Composite filter criteria.
+			filter: filters.NewFilter().
+				SetParentRoot([]byte("parent2")).
+				SetStartSlot(6).
+				SetEndSlot(8),
+			expectedNumBlocks: 1,
 		},
 	}
 	for _, tt := range tests {
@@ -89,5 +137,29 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		if len(retrievedBlocks) != tt.expectedNumBlocks {
 			t.Errorf("Expected %d blocks, received %d", tt.expectedNumBlocks, len(retrievedBlocks))
 		}
+	}
+}
+
+func TestStore_Blocks_RetrieveRange(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	b := make([]*ethpb.BeaconBlock, 500)
+	for i := 0; i < 500; i++ {
+		b[i] = &ethpb.BeaconBlock{
+			ParentRoot: []byte("parent"),
+			Slot:       uint64(i),
+		}
+	}
+	ctx := context.Background()
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 300
+	if len(retrieved) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
 }
