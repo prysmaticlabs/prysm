@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// blockTree1 constructs the following tree
+// blockTree1 constructs the following tree:
 //    /- B1
 // B0           /- B5 - B7
 //    \- B3 - B4 - B6 - B8
@@ -43,7 +43,7 @@ func blockTree1(db db.Database) ([][]byte, error) {
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
 }
 
-// blockTree2 constructs the following tree
+// blockTree2 constructs the following tree:
 // Scenario graph: shorturl.at/loyP6
 //
 //digraph G {
@@ -114,7 +114,8 @@ func blockTree2(db db.Database) ([][]byte, error) {
 	return [][]byte{r0[:], r1[:], r2[:], r3[:], r4[:], r5[:], r6[:], r7[:], r8[:], r9[:], r10[:], r11[:], r12[:], r13[:], r14[:], r15[:]}, nil
 }
 
-// blockTree3 constructs a tree with 512 blocks in a row.
+// blockTree3 constructs a tree that is 512 blocks in a row.
+// B0 - B1 - B2 - B3 - .... - B512
 func blockTree3(db db.Database) ([][]byte, error) {
 	blkCount := 512
 	roots := make([][]byte, 0, blkCount)

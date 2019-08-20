@@ -11,6 +11,7 @@ import (
 )
 
 // SetupDB instantiates and returns a simulated backend BeaconDB instance.
+// DEPRECATED: Use beacon-chain/db/testing.SetupDB
 func SetupDB() (*BeaconDB, error) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
@@ -24,6 +25,7 @@ func SetupDB() (*BeaconDB, error) {
 }
 
 // TeardownDB cleans up a simulated backend BeaconDB instance.
+// DEPRECATED: Use beacon-chain/db/testing.TeardownDB
 func TeardownDB(db *BeaconDB) {
 	if err := db.Close(); err != nil {
 		log.Fatalf("failed to close database: %v", err)
