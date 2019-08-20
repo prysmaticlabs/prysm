@@ -53,16 +53,17 @@ func (bs *BeaconChainServer) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
-
-	switch req.QueryFilter.(type) {
+	filter := filters.NewFilter()
+	switch f := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
+		filter.SetStartSlot(f.Slot)
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Epoch:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
+		filter.SetStartEpoch(f.Epoch)
 	}
-	atts, err := bs.deprecatedDB.Attestations()
+	atts, err := bs.beaconDB.Attestations(ctx, filter)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
@@ -322,7 +323,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}
 
 	e := req.Epoch
-	s, err := bs.deprecatedDB.HeadState(ctx)
+	s, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
@@ -437,8 +438,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-
-	s, err := bs.deprecatedDB.HeadState(ctx)
+	s, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
 	}
