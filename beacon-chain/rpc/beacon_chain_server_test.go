@@ -729,6 +729,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	epoch := uint64(1)
 	attestedBalance := uint64(1)
 	validatorCount := uint64(100)
@@ -779,14 +780,14 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.SaveState(context.Background(), s, blockRoot); err != nil {
+	if err := bs.beaconDB.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := bs.GetValidatorParticipation(context.Background(), &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
 	if err != nil {
 		t.Fatal(err)
 	}
