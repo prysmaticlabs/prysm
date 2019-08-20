@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -52,18 +50,6 @@ func (m *mockListener) SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *d
 	panic("implement me")
 }
 
-func tcpPortFromHost(t *testing.T, host host.Host) int64 {
-	pinfo := host.Peerstore().PeerInfo(host.ID())
-	addresses := multiaddr.Split(pinfo.Addrs[0])
-	tcpAddr := addresses[len(addresses)-1]
-	trimmedStr := strings.Trim(tcpAddr.String(), "/tcp/")
-	port, err := strconv.ParseInt(trimmedStr, 10, 64)
-	if err != nil {
-		t.Fatalf("Could not get tcp port from peer: %v", err)
-	}
-	return port
-}
-
 func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr = net.ParseIP("127.0.0.1")
@@ -80,7 +66,6 @@ func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//port := tcpPortFromHost(t, h)
 	cfg.UDPPort = uint(port)
 	cfg.Port = uint(port)
 	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
