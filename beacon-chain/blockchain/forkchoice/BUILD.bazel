@@ -33,14 +33,17 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "lmd_ghost_yaml_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
         "service_test.go",
         "tree_test.go",
     ],
+    data = ["lmd_ghost_test.yaml"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
@@ -50,5 +53,6 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@in_gopkg_yaml_v2//:go_default_library",
     ],
 )
