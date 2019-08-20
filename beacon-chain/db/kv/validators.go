@@ -8,10 +8,22 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"go.opencensus.io/trace"
 )
 
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorLatestVote")
+	defer span.End()
+
+	k.votesLock.RLock()
+	// Return latest vote from cache if it exists.
+	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
+		k.votesLock.RUnlock()
+		return vote, nil
+	}
+	k.votesLock.RUnlock()
+
 	buf := uint64ToBytes(validatorIdx)
 	var latestVote *pb.ValidatorLatestVote
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -28,6 +40,16 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 
 // HasValidatorLatestVote verifies if a validator index has a latest vote stored in the db.
 func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorLatestVote")
+	defer span.End()
+
+	k.votesLock.RLock()
+	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
+		k.votesLock.RUnlock()
+		return true
+	}
+	k.votesLock.RUnlock()
+
 	buf := uint64ToBytes(validatorIdx)
 	exists := false
 	// #nosec G104. Always returns nil.
@@ -41,6 +63,8 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 
 // SaveValidatorLatestVote by validator index.
 func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorLatestVote")
+	defer span.End()
 	buf := uint64ToBytes(validatorIdx)
 	enc, err := proto.Marshal(vote)
 	if err != nil {
@@ -48,12 +72,17 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
+		k.votesLock.Lock()
+		k.latestVotes[validatorIdx] = vote
+		k.votesLock.Unlock()
 		return bucket.Put(buf, enc)
 	})
 }
 
 // ValidatorIndex by public key.
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorIndex")
+	defer span.End()
 	var validatorIdx uint64
 	var ok bool
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -76,6 +105,8 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.
 func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorIndex")
+	defer span.End()
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
@@ -88,6 +119,8 @@ func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool 
 
 // DeleteValidatorIndex clears a validator index from the db by the validator's public key.
 func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteValidatorIndex")
+	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
 		return bucket.Delete(publicKey[:])
@@ -96,6 +129,8 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 
 // SaveValidatorIndex by public key in the db.
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorIndex")
+	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
 		buf := uint64ToBytes(validatorIdx)
