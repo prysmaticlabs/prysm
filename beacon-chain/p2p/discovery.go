@@ -11,16 +11,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-var discv5codec = 0x01C1
-var discv5Protocol = ma.Protocol{
-	Name:       "discv5",
-	Code:       discv5codec,
-	VCode:      ma.CodeToVarint(discv5codec),
-	Size:       ma.LengthPrefixedVarSize,
-	Transcoder: ma.TranscoderUnix, // doesn't do any transcoding since the argument to the protocol is a pubkey
-	// TODO(#3147): Add Transcoder to validate pubkey argument.
-}
-
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
 type Listener interface {
@@ -96,13 +86,4 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
-}
-
-func addDiscv5protocol() error {
-	for _, p := range ma.Protocols {
-		if p.Name == discv5Protocol.Name {
-			return nil
-		}
-	}
-	return ma.AddProtocol(discv5Protocol)
 }
