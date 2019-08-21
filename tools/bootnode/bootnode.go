@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"net"
 
-	curve "github.com/ethereum/go-ethereum/crypto"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 
 	logging "github.com/ipfs/go-log"
-	crypto "github.com/libp2p/go-libp2p-crypto"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	_ "go.uber.org/automaxprocs"
 )
@@ -33,9 +33,6 @@ var (
 
 	log = logging.Logger("prysm-bootnode")
 )
-
-// ECDSACurve is the default ecdsa curve used(secpk2561)
-var ECDSACurve = curve.S256()
 
 func main() {
 	flag.Parse()
@@ -52,7 +49,7 @@ func main() {
 	listener := createListener(defaultIP, *port, privKey)
 
 	node := listener.Self()
-	fmt.Printf("Running bootnode: /ip4/%s/udp/%d/discv5/%s\n", node.IP.String(), node.UDP, node.ID.String())
+	fmt.Printf("Running bootnode, url: %s", node.String())
 
 	select {}
 }
@@ -76,7 +73,6 @@ func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.
 
 func extractPrivateKey() *ecdsa.PrivateKey {
 	var privKey *ecdsa.PrivateKey
-	var err error
 	if *privateKey != "" {
 		b, err := crypto.ConfigDecodeKey(*privateKey)
 		if err != nil {
@@ -88,10 +84,11 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 
 	} else {
-		privKey, err = ecdsa.GenerateKey(ECDSACurve, rand.Reader)
+		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
+		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
 		log.Warning("No private key was provided. Using default/random private key")
 	}
 	return privKey
