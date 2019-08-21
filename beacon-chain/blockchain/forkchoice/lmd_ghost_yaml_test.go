@@ -129,8 +129,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		if !bytes.Equal(head, wantedHead) {
 			t.Errorf("wanted root %#x, got root %#x", wantedHead, head)
-		}
-	}
 
-	helpers.ClearAllCaches()
+		}
+		helpers.ClearAllCaches()
+	}
 }
