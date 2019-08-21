@@ -27,7 +27,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil)
+	chainService := setupBeaconChain(t, db)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -121,7 +121,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil)
+	chainService := setupBeaconChain(t, db)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -227,7 +227,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		Validators: validators,
 		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
-	chainService := setupBeaconChain(t, db, nil)
+	chainService := setupBeaconChain(t, db)
 	if err := chainService.saveValidatorIdx(ctx, state); err != nil {
 		t.Fatalf("Could not save validator idx: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
 		Validators: validators,
 		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
-	chainService := setupBeaconChain(t, db, nil)
+	chainService := setupBeaconChain(t, db)
 	if err := chainService.saveValidatorIdx(ctx, state); err != nil {
 		t.Fatalf("Could not save validator idx: %v", err)
 	}
