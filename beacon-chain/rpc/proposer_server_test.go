@@ -36,7 +36,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
+	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -1279,10 +1279,11 @@ func Benchmark_Eth1Data(b *testing.B) {
 		},
 	}
 
+	depositCache := depositcache.NewDepositCache()
 	for i, dp := range deposits {
 		var root [32]byte
 		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
-		beaconDB.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
+		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, root)
 	}
 	numOfVotes := 1000
 	for i := 0; i < numOfVotes; i++ {
@@ -1306,6 +1307,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight:    hashesByHeight,
 		},
+		depositCache: depositCache,
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1378,6 +1380,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
+	depositCache := depositcache.NewDepositCache()
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -1388,16 +1391,17 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	// It should also return the recent deposits after their follow window.

@@ -92,7 +92,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.HeadBlock(ctx)
+	headBlock, err := bs.beaconDB.(*db.BeaconDB).ChainHead()
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,22 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := helpers.StartSlot(q.Epoch)
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		var blks []*ethpb.BeaconBlock
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			for i := startSlot; i < endSlot; i++ {
+				b, err := d.BlocksBySlot(ctx, i)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+				}
+				blks = append(blks, b...)
+			}
+		} else {
+			var err error
+			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
+			}
+		}
 		numBlks := len(blks)
 		if numBlks == 0 {
 			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
@@ -157,7 +172,13 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		var blks []*ethpb.BeaconBlock
+		var err error
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			blks, err = d.BlocksBySlot(ctx, q.Slot)
+		} else {
+			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		}
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -205,9 +226,13 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	head, err := bs.beaconDB.HeadState(ctx)
+	balances, err := bs.beaconDB.(*db.BeaconDB).Balances(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve validator balances: %v", err)
+	}
+	validators, err := bs.beaconDB.(*db.BeaconDB).Validators(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
 	}
 
 	for _, pubKey := range req.PublicKeys {
@@ -216,35 +241,35 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, _, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, err := bs.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		filtered[index] = true
 
-		if int(index) >= len(head.Balances) {
+		if int(index) >= len(balances) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
-				index, len(head.Balances))
+				index, len(balances))
 		}
 
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
 			Index:     index,
-			Balance:   head.Balances[index],
+			Balance:   balances[index],
 		})
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(head.Balances) {
+		if int(index) >= len(balances) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
-				index, len(head.Balances))
+				index, len(balances))
 		}
 
 		if !filtered[index] {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: head.Validators[index].PublicKey,
+				PublicKey: validators[index].PublicKey,
 				Index:     index,
-				Balance:   head.Balances[index],
+				Balance:   balances[index],
 			})
 		}
 	}
@@ -325,7 +350,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, _, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, err := bs.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}

@@ -670,7 +670,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	if len(chainService.depositCache.PendingDeposits(chainService.ctx, nil)) != 0 {
-		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.DepositCache.PendingDeposits(chainService.ctx, nil))
+		t.Fatalf("Expected 0 pending deposits, but there are %+v", chainService.depositCache.PendingDeposits(chainService.ctx, nil))
 	}
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
