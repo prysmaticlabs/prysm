@@ -77,21 +77,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
-
-		// For demo purposes, set the genesis fork version to the first 4 bytes of the deposit
-		// contract address.
-		depAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
-		if depAddress == "" {
-			var err error
-			depAddress, err = fetchDepositContract()
-			if err != nil {
-				log.WithError(err).Fatal("Cannot fetch deposit contract")
-			}
-		}
-		cfg := params.BeaconConfig()
-		a := common.HexToAddress(depAddress)
-		cfg.GenesisForkVersion = a[0:4]
-		params.OverrideBeaconConfig(cfg)
 	}
 
 	featureconfig.ConfigureBeaconFeatures(ctx)
