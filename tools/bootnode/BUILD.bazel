@@ -10,10 +10,10 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//shared/version:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discv5:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
-        "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
         "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
@@ -31,10 +31,10 @@ go_image(
     visibility = ["//visibility:private"],
     deps = [
         "//shared/version:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discv5:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
-        "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
         "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
@@ -66,7 +66,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/iputils:go_default_library",
+        "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discv5:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
         "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
