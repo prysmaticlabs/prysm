@@ -12,7 +12,6 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/x509"
 	"flag"
 	"fmt"
 	"net"
@@ -78,10 +77,11 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-		privKey, err = x509.ParseECPrivateKey(b)
+		unmarshalledKey, err := crypto.UnmarshalPrivateKey(b)
 		if err != nil {
 			panic(err)
 		}
+		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
