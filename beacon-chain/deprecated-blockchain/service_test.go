@@ -197,6 +197,16 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, attsService *attestati
 	return chainService
 }
 
+func SetSlotInState(service *ChainService, slot uint64) error {
+	bState, err := service.beaconDB.HeadState(context.Background())
+	if err != nil {
+		return err
+	}
+
+	bState.Slot = slot
+	return service.beaconDB.SaveState(context.Background(), bState, [32]byte{})
+}
+
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	helpers.ClearAllCaches()
 

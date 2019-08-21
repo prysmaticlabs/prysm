@@ -15,9 +15,9 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dblockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
@@ -262,7 +262,24 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	}
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
-	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		blockchainService, err := dblockchain.NewChainService(context.Background(), &dblockchain.Config{
+			BeaconDB:       b.db,
+			DepositCache:   b.depositCache,
+			Web3Service:    web3Service,
+			OpsPoolService: opsService,
+			AttsService:    attsService,
+			P2p:            b.fetchP2P(ctx),
+			MaxRoutines:    maxRoutines,
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not register blockchain service")
+		}
+
+		return b.services.RegisterService(blockchainService)
+	}
+
+	deprecatedBlockchainService, err := dblockchain.NewChainService(context.Background(), &dblockchain.Config{
 		BeaconDB:       b.db,
 		DepositCache:   b.depositCache,
 		Web3Service:    web3Service,
@@ -272,9 +289,9 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		MaxRoutines:    maxRoutines,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not register blockchain service")
+		return errors.Wrap(err, "could not register deprecated blockchain service")
 	}
-	return b.services.RegisterService(blockchainService)
+	return b.services.RegisterService(deprecatedBlockchainService)
 }
 
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
@@ -343,7 +360,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
+	var chainService *dblockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -388,7 +405,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
+	var chainService *dblockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}

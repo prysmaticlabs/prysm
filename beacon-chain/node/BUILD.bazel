@@ -11,9 +11,9 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/attestation:go_default_library",
-        "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/deprecated-blockchain:go_default_library",
         "//beacon-chain/deprecated-sync:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/gateway:go_default_library",
