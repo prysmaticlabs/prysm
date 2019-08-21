@@ -49,7 +49,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		log.WithError(err).Warn("Received invalid attester slashing")
 		return false
 	}
-	seenAttesterSlashings.Set(cacheKey, true /*value*/, OneYear /*TTL*/)
+	seenAttesterSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
 
 	if err := p.Broadcast(ctx, slashing); err != nil {
 		log.WithError(err).Error("Failed to propagate attester slashing")

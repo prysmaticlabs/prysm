@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
-var OneYear = 365 * 24 * time.Hour
+var oneYear = 365 * 24 * time.Hour
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
