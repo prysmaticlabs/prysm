@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -78,7 +79,7 @@ type Config struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.db)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
@@ -87,6 +88,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
+		forkChoiceStore:      store,
 		canonicalBlockFeed:   new(event.Feed),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
@@ -99,7 +101,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.deprecatedBeaconDB.HeadState(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}

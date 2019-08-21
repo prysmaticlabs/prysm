@@ -46,7 +46,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		StateRoot: []byte{},
 	}
 
-	chainService := setupBeaconChain(t, beaconDB, nil, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil)
 
 	// Construct a forked chain that looks as follows:
 	//    /------B1 ----B3 ----- B5 (current head)
