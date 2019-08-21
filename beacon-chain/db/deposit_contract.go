@@ -7,6 +7,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
@@ -28,6 +29,11 @@ func (db *BeaconDB) DepositContractAddress(ctx context.Context) ([]byte, error) 
 		return nil, err
 	}
 	return addr, nil
+}
+
+// SaveDepositContractAddress is deprecated - use the kv store in beacon-chain/db/kv instead.
+func (db *BeaconDB) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
+	return errors.New("unimplemented")
 }
 
 // VerifyContractAddress that represents the data in this database. The
