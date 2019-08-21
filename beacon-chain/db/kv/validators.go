@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/karlseguin/ccache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
+
+var votesCache = ccache.New(ccache.Configure())
 
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorLatestVote")
 	defer span.End()
 
-	k.votesLock.RLock()
 	// Return latest vote from cache if it exists.
-	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
-		k.votesLock.RUnlock()
-		return vote, nil
+	if v := votesCache.Get(string(validatorIdx)); v != nil {
+		return v.Value().(*pb.ValidatorLatestVote), nil
 	}
-	k.votesLock.RUnlock()
 
 	buf := uint64ToBytes(validatorIdx)
 	var latestVote *pb.ValidatorLatestVote
@@ -43,12 +44,9 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorLatestVote")
 	defer span.End()
 
-	k.votesLock.RLock()
-	if vote, exists := k.latestVotes[validatorIdx]; exists && vote != nil {
-		k.votesLock.RUnlock()
+	if v := votesCache.Get(string(validatorIdx)); v != nil {
 		return true
 	}
-	k.votesLock.RUnlock()
 
 	buf := uint64ToBytes(validatorIdx)
 	exists := false
@@ -72,9 +70,7 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
-		k.votesLock.Lock()
-		k.latestVotes[validatorIdx] = vote
-		k.votesLock.Unlock()
+		votesCache.Set(string(validatorIdx), vote, time.Hour)
 		return bucket.Put(buf, enc)
 	})
 }
@@ -89,9 +85,7 @@ func (k *Store) DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint
 		if enc == nil {
 			return nil
 		}
-		k.votesLock.Lock()
-		delete(k.latestVotes, validatorIdx)
-		k.votesLock.Unlock()
+		votesCache.Delete(string(validatorIdx))
 		return bkt.Delete(uint64ToBytes(validatorIdx))
 	})
 }
