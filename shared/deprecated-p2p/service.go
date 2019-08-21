@@ -170,6 +170,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}, nil
 }
 
+// Status always returns true as this library starts in the constructor.
 func (s *Server) Started() bool {
 	return true
 }
