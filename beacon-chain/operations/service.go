@@ -217,7 +217,6 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	if err != nil {
 		return err
 	}
-	// TODO
 	if err := s.beaconDB.(*db.BeaconDB).SaveExit(ctx, exit); err != nil {
 		return err
 	}
