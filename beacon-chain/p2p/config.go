@@ -14,5 +14,5 @@ type Config struct {
 	MaxPeers          uint
 	WhitelistCIDR     string
 	EnableUPnP        bool
-	Encoding          int
+	Encoding          string
 }

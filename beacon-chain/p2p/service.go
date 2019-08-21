@@ -105,7 +105,7 @@ func (s *Service) Status() error {
 
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
-	encoding := encoder.Encoding(s.cfg.Encoding)
+	encoding := s.cfg.Encoding
 	switch encoding {
 	case encoder.SSZ:
 		return &encoder.SszNetworkEncoder{}
