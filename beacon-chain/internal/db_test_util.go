@@ -38,7 +38,7 @@ func TeardownDBDeprecated(t testing.TB, db *db.BeaconDB) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
-	if err := os.RemoveAll(db.DatabasePath); err != nil {
+	if err := os.RemoveAll(db.DatabasePath()); err != nil {
 		t.Fatalf("Could not remove tmp db dir: %v", err)
 	}
 }
