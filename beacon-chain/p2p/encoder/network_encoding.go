@@ -8,7 +8,7 @@ import (
 
 // Defines the different encoding formats
 const (
-	SSZ       = iota // SSZ only.
+	SSZ       = iota // SSZ is SSZ only.
 	SSZSnappy        // SSZSnappy is SSZ with snappy compression.
 )
 
