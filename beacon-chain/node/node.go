@@ -2,6 +2,7 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -334,9 +335,12 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
-
-	if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
+	knownContract, err := b.db.DepositContractAddress(ctx)
+	if err != nil {
 		return err
+	}
+	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
 
 	return b.services.RegisterService(web3Service)
