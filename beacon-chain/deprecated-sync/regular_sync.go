@@ -399,10 +399,10 @@ func (rs *RegularSync) receiveAttestation(msg deprecatedp2p.Message) error {
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attestationDataHash)
+	hasAttestation := rs.db.HasAttestationDeprecated(attestationDataHash)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		dbAttestation, err := rs.db.Attestation(attestationDataHash)
+		dbAttestation, err := rs.db.AttestationDeprecated(attestationDataHash)
 		if err != nil {
 			return err
 		}
@@ -478,7 +478,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg deprecatedp2p.Message) error
 
 	data := msg.Data.(*pb.BeaconBlockRequest)
 	root := bytesutil.ToBytes32(data.Hash)
-	block, err := rs.db.Block(root)
+	block, err := rs.db.BlockDeprecated(root)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -541,7 +541,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		return nil, nil
 	}
 
-	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
+	b, err := rs.db.BlockDeprecated(bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return nil, err
 	}
@@ -555,7 +555,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		b, err = rs.db.Block(bytesutil.ToBytes32(parentRoot))
+		b, err = rs.db.BlockDeprecated(bytesutil.ToBytes32(parentRoot))
 		if err != nil {
 			return nil, err
 		}

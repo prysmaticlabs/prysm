@@ -27,7 +27,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *ethpb.Beaco
 	if block.Slot < helpers.StartSlot(beaconState.FinalizedCheckpoint.Epoch) {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
-	// Attestation from proposer not verified as, other nodes only store blocks not proposer
+	// AttestationDeprecated from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
 	return nil
 }

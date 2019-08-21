@@ -1178,7 +1178,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 }
 
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
-	// Attestation passes with an empty signature
+	// Attestation with an empty signature
 	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
