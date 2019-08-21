@@ -215,6 +215,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 			MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
 			WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
 			EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
+			Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
 		})
 		if err != nil {
 			return err
