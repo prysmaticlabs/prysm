@@ -17,7 +17,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var blockCache = ccache.New(ccache.Configure())
+// We store 4 epochs worth of blocks as each block when full is around 1.2Mb.
+var blockCache = ccache.New(ccache.Configure().MaxSize(256))
 
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {

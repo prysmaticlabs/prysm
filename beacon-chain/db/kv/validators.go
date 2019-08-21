@@ -13,7 +13,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var votesCache = ccache.New(ccache.Configure())
+// For 1 million validators, caching latest votes would be a memory footprint
+// of approximately 50Mb, which is reasonable.
+var votesCache = ccache.New(ccache.Configure().MaxSize(1000000))
 
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
