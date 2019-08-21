@@ -225,7 +225,7 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 				}
 				// When there's a tie, it's broken lexicographically to favor the higher one.
 				if balance > highest ||
-					balance == highest && bytes.Compare(child, head)> 0{
+					balance == highest && bytes.Compare(child, head) > 0 {
 					highest = balance
 					head = child
 				}
