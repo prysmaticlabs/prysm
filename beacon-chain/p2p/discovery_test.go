@@ -20,7 +20,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 		t.Fatalf("Could not get ip: %v", err)
 	}
 	ipAddr := net.ParseIP(ip)
-	pkey, err := privKey("")
+	pkey, err := privKey(&Config{})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}

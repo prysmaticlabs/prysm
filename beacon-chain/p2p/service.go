@@ -54,8 +54,15 @@ func (s *Service) Start() {
 	}
 	s.started = true
 
+	ipAddr := ipAddr(s.cfg)
+	privKey, err := privKey(s.cfg)
+	if err != nil {
+		s.startupErr = err
+		return
+	}
+
 	// TODO(3147): Add host options
-	opts, ipAddr, privKey := buildOptions(s.cfg)
+	opts := buildOptions(s.cfg, ipAddr, privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err

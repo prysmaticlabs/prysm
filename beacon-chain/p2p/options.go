@@ -8,31 +8,22 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
 // buildOptions for the libp2p host.
-func buildOptions(cfg *Config) ([]libp2p.Option, net.IP, *ecdsa.PrivateKey) {
-	ip, err := iputils.ExternalIPv4()
-	if err != nil {
-		log.Fatalf("Could not get IPv4 address: %v", err)
-	}
-	privateKey, err := privKey(cfg.PrivateKey)
-	if err != nil {
-		log.Fatalf("Could not create private key %v", err)
-	}
+func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
 	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.Port))
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
 	options := []libp2p.Option{
-		privKeyOption(privateKey),
+		privKeyOption(priKey),
 		libp2p.ListenAddrs(listen),
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
 	}
-	return options, net.ParseIP(ip), privateKey
+	return options
 }
 
 // Adds a private key to the libp2p option if the option was provided.

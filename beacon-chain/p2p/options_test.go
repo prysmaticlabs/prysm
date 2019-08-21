@@ -28,7 +28,10 @@ func TestPrivateKeyLoading(t *testing.T) {
 		t.Fatalf("Could not write key to file: %v", err)
 	}
 	log.WithField("file", file.Name()).WithField("key", keyStr).Info("Wrote key to file")
-	pKey, err := privKey(file.Name())
+	cfg := &Config{
+		PrivateKey: file.Name(),
+	}
+	pKey, err := privKey(cfg)
 	if err != nil {
 		t.Fatalf("Could not apply option: %v", err)
 	}
