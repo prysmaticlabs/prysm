@@ -22,10 +22,9 @@ import (
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
-	t      *testing.T
-	Host   host.Host
-	pubsub *pubsub.PubSub
-
+	t               *testing.T
+	Host            host.Host
+	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 }
 
@@ -56,8 +55,8 @@ func (p *TestP2P) Connect(b *TestP2P) {
 }
 
 func connect(a, b host.Host) error {
-	pinfo := a.Peerstore().PeerInfo(a.ID())
-	return b.Connect(context.Background(), pinfo)
+	pinfo := b.Peerstore().PeerInfo(b.ID())
+	return a.Connect(context.Background(), pinfo)
 }
 
 // ReceiveRPC simulates an incoming RPC.
