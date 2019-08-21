@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -57,7 +56,6 @@ type ChainService struct {
 type Config struct {
 	BeaconBlockBuf int
 	Web3Service    *powchain.Web3Service
-	AttsService    attestation.TargetHandler
 	BeaconDB       db.Database
 	DepositCache   *depositcache.DepositCache
 	OpsPoolService operations.OperationFeeds

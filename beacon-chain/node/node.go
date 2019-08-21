@@ -15,6 +15,7 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dblockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
@@ -256,27 +257,27 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
-	var attsService *attestation.Service
-	if err := b.services.FetchService(&attsService); err != nil {
-		return err
-	}
+
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
 	if featureconfig.FeatureConfig().UseNewBlockChainService {
-		blockchainService, err := dblockchain.NewChainService(context.Background(), &dblockchain.Config{
+		blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 			BeaconDB:       b.db,
 			DepositCache:   b.depositCache,
 			Web3Service:    web3Service,
 			OpsPoolService: opsService,
-			AttsService:    attsService,
 			P2p:            b.fetchP2P(ctx),
 			MaxRoutines:    maxRoutines,
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not register blockchain service")
 		}
-
 		return b.services.RegisterService(blockchainService)
+	}
+
+	var attsService *attestation.Service
+	if err := b.services.FetchService(&attsService); err != nil {
+		return err
 	}
 
 	deprecatedBlockchainService, err := dblockchain.NewChainService(context.Background(), &dblockchain.Config{
