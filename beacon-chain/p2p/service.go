@@ -109,6 +109,7 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// Started returns true if the p2p service has successfully started.
 func (s *Service) Started() bool {
 	return s.started
 }

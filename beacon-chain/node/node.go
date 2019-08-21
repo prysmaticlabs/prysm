@@ -335,9 +335,9 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
-	//if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
-	//	return err
-	//}
+	if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
+		return err
+	}
 
 	return b.services.RegisterService(web3Service)
 }
