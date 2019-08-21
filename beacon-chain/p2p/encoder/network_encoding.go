@@ -25,6 +25,7 @@ type NetworkEncoding interface {
 // Encoding defines the network encoding format as an int.
 type Encoding int
 
+// String returns the encoding type in string format.
 func (e Encoding) String() string {
 	formats := []string{"SSZ", "SSZ_SNAPPY"}
 	if int(e) >= len(formats) {
