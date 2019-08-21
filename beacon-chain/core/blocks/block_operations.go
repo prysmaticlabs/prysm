@@ -285,9 +285,18 @@ func ProcessRandao(
 	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 
-	var currentEpoch uint64
-	var err error
-	if _, currentEpoch, err = ValidateBlockRandao(beaconState, body); err != nil {
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get beacon proposer index")
+	}
+	proposerPub := beaconState.Validators[proposerIdx].PublicKey
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
+
+	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
@@ -301,29 +310,6 @@ func ProcessRandao(
 	}
 	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
-}
-
-// ValidateBlockRandao given a block and a state this function validates
-// that valid proposer for the current state signed it and returns its id.
-func ValidateBlockRandao(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (proposerID uint64, epoch uint64, err error) {
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return 0, 0, errors.Wrap(err, "could not get beacon proposer index")
-	}
-	proposerPub := beaconState.Validators[proposerIdx].PublicKey
-
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
-
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
-		return 0, 0, errors.Wrap(err, "could not verify block randao")
-	}
-	return proposerIdx, currentEpoch, nil
 }
 
 // ProcessProposerSlashings is one of the operations performed

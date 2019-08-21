@@ -73,17 +73,6 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon block")
 	}
-	validatorID, epoch, err := b.ValidateBlockRandao(beaconState, block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	header, err := b.HeaderFromBlock(block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not extract header from block")
-	}
-	c.beaconDB.SaveBlockHeader(epoch, validatorID, header)
-
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(ctx, block, beaconState); err != nil {
 		return beaconState, errors.Wrapf(err, "block with slot %d is not ready for processing", block.Slot)
