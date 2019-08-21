@@ -86,7 +86,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			context.Background(),
 			&attestation.Config{BeaconDB: beaconDb})
 
-		chainService := setupBeaconChain(t, beaconDb, attsService)
+		chainService := setupBeaconChain(t, beaconDb, nil, attsService)
 		if err := chainService.deprecatedBeaconDB.SaveBlock(
 			genesis); err != nil {
 			t.Fatal(err)
@@ -270,7 +270,7 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	attsService.InsertAttestationIntoStore(pubKey48, att)
 
-	chainService := setupBeaconChain(t, beaconDB, attsService)
+	chainService := setupBeaconChain(t, beaconDB, nil, attsService)
 	attestationTargets, err := chainService.AttestationTargets(beaconState)
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
@@ -287,7 +287,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	beaconState := &pb.BeaconState{
 		Slot: 3,
@@ -355,7 +355,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
@@ -432,7 +432,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	beaconState := &pb.BeaconState{
 		Slot: 10,
@@ -506,7 +506,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		Validators: []*ethpb.Validator{{}},
 	}
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	// Construct the following chain:
 	// B1 - B2 (State is slot 2)
@@ -578,7 +578,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
 	}
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	// Construct the following chain:
 	//    /- B2
@@ -681,7 +681,7 @@ func TestIsDescendant_Ok(t *testing.T) {
 	t.Skip()
 	beaconDB := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, beaconDB)
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	// Construct the following chain:
 	// B1  - B2 - B3
@@ -784,7 +784,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
 	}
 
-	chainService := setupBeaconChain(t, beaconDB, nil)
+	chainService := setupBeaconChain(t, beaconDB, nil, nil)
 
 	// Construct the following chain:
 	//    /- B2 - B4 - B6
@@ -1242,11 +1242,11 @@ func setupBeaconChainBenchmark(b *testing.B, beaconDB *db.BeaconDB) *ChainServic
 	}
 
 	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       beaconDB,
-		Web3Service:    web3Service,
-		OpsPoolService: &mockOperationService{},
-		AttsService:    nil,
+		BeaconBlockBuf:     0,
+		deprecatedBeaconDB: beaconDB,
+		Web3Service:        web3Service,
+		OpsPoolService:     &mockOperationService{},
+		AttsService:        nil,
 	}
 	if err != nil {
 		b.Fatalf("could not register blockchain service: %v", err)
@@ -1267,7 +1267,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	chainSvc := setupBeaconChain(t, beaconDB, nil)
+	chainSvc := setupBeaconChain(t, beaconDB, nil, nil)
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
 
 	if err := chainSvc.deprecatedBeaconDB.SaveBlock(gBlock); err != nil {
@@ -1342,7 +1342,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	genesisSlot := uint64(0)
 	beaconDB := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, beaconDB)
-	chainSvc := setupBeaconChain(t, beaconDB, nil)
+	chainSvc := setupBeaconChain(t, beaconDB, nil, nil)
 	ctx := context.Background()
 
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
@@ -1426,7 +1426,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	chainSvc := setupBeaconChain(t, beaconDB, nil)
+	chainSvc := setupBeaconChain(t, beaconDB, nil, nil)
 	gBlockRoot, gBlock, gState, privKeys := setupFFGTest(t)
 	if err := chainSvc.deprecatedBeaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)

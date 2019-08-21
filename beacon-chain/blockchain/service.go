@@ -65,24 +65,28 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf int
-	Web3Service    *powchain.Web3Service
-	AttsService    attestation.TargetHandler
-	BeaconDB       *db.BeaconDB
-	OpsPoolService operations.OperationFeeds
-	DevMode        bool
-	P2p            p2p.Broadcaster
-	MaxRoutines    int64
+	BeaconBlockBuf     int
+	Web3Service        *powchain.Web3Service
+	AttsService        attestation.TargetHandler
+	deprecatedBeaconDB *db.BeaconDB
+	db                 db.Database
+	OpsPoolService     operations.OperationFeeds
+	DevMode            bool
+	P2p                p2p.Broadcaster
+	MaxRoutines        int64
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.db)
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
-		deprecatedBeaconDB:   cfg.BeaconDB,
+		db:                   cfg.db,
+		forkChoiceStore:      store,
+		deprecatedBeaconDB:   cfg.deprecatedBeaconDB,
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
@@ -92,6 +96,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		p2p:                  cfg.P2p,
 		canonicalBlocks:      make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
+		canonicalRoots:       make(map[uint64][]byte),
 	}, nil
 }
 

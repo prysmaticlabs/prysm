@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -147,10 +146,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		SlotNumber: block.Slot,
 	})
 
-	// Update fork choice service's time tracker to current time.
-	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
-	// Apply state transition on the incoming newly received block.
-	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+	// Apply state transition on the new block.
+	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
@@ -158,8 +155,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		"root":  hex.EncodeToString(root[:]),
 	}).Info("Finished state transition and updated fork choice store for block")
 
-	// Run fork choice for head block and head block.
-	headRoot, err := c.forkChoiceStore.Head()
+	// Run fork choice after applying state transition on the new block.
+	headRoot, err := c.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
@@ -167,6 +164,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
+	log.WithFields(logrus.Fields{
+		"headSlot": headBlk.Slot,
+		"headRoot": hex.EncodeToString(headRoot),
+	}).Info("Finished fork choice")
 
 	// Save head info after success upon running fork choice.
 	c.canonicalRootsLock.Lock()
@@ -177,8 +178,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	log.WithFields(logrus.Fields{
-		"slots": headBlk.Slot,
-		"root":  hex.EncodeToString(headRoot),
+		"slot": headBlk.Slot,
+		"root": hex.EncodeToString(headRoot),
 	}).Info("Saved head info")
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
@@ -203,19 +204,17 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	// Update fork choice service's time tracker to current time.
-	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
-	// Apply state transition on the incoming newly received block.
-	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+	// Apply state transition on the new block.
+	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
-		"slots": block.Slot,
-		"root":  hex.EncodeToString(root[:]),
+		"slot": block.Slot,
+		"root": hex.EncodeToString(root[:]),
 	}).Info("Finished state transition and updated fork choice store for block")
 
-	// Run fork choice for head block and head block.
-	headRoot, err := c.forkChoiceStore.Head()
+	// Run fork choice after applying state transition on the new block.
+	headRoot, err := c.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
@@ -223,8 +222,12 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
+	log.WithFields(logrus.Fields{
+		"headSlot": headBlk.Slot,
+		"headRoot": hex.EncodeToString(headRoot),
+	}).Info("Finished fork choice")
 
-	// Save head info after success upon running fork choice.
+	// Save head info after running fork choice.
 	c.canonicalRootsLock.Lock()
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
@@ -233,8 +236,8 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	log.WithFields(logrus.Fields{
-		"slots": headBlk.Slot,
-		"root":  hex.EncodeToString(headRoot),
+		"headSlot": headBlk.Slot,
+		"headRoot": hex.EncodeToString(headRoot),
 	}).Info("Saved head info")
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
@@ -265,10 +268,8 @@ func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethp
 		SlotNumber: block.Slot,
 	})
 
-	// Update fork choice service's time tracker to current time.
-	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
 	// Apply state transition on the incoming newly received block.
-	if err := c.forkChoiceStore.OnBlock(block); err != nil {
+	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	log.WithFields(logrus.Fields{
