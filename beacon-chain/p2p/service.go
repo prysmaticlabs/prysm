@@ -105,8 +105,15 @@ func (s *Service) Status() error {
 
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
-	// TODO(3147): Return based on flag value
-	return &encoder.SszNetworkEncoder{}
+	encoding := s.cfg.Encoding
+	switch encoding {
+	case encoder.SSZ:
+		return &encoder.SszNetworkEncoder{}
+	case encoder.SSZSnappy:
+		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
+	default:
+		panic("Invalid Network Encoding Flag Provided")
+	}
 }
 
 // PubSub returns the p2p pubsub framework.
