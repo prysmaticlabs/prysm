@@ -36,7 +36,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -60,7 +60,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		Slot:       5,
 		ParentRoot: []byte("parent-hash"),
 	}
-	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
+	if err := proposerServer.beaconDB.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
@@ -88,7 +88,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
@@ -235,7 +235,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		chainService: &mockChainService{},
 		beaconDB:     db,
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,7 +243,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		Slot: beaconState.Slot,
 	}
 
-	if err := db.SaveBlock(blk); err != nil {
+	if err := db.SaveBlockDeprecated(blk); err != nil {
 		t.Fatalf("failed to save block %v", err)
 	}
 
@@ -396,7 +396,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		beaconDB:         db,
 	}
 
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -404,7 +404,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		Slot: beaconState.Slot,
 	}
 
-	if err := db.SaveBlock(blk); err != nil {
+	if err := db.SaveBlockDeprecated(blk); err != nil {
 		t.Fatalf("failed to save block %v", err)
 	}
 
@@ -490,7 +490,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Eth1DepositIndex: 2,
 		Eth1DataVotes:    votes,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -566,7 +566,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		Eth1DepositIndex: 2,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -619,6 +619,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 				}},
 		},
 	}
+	depositCache := depositcache.NewDepositCache()
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
@@ -633,16 +634,17 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -701,7 +703,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		Eth1DepositIndex: 1,
 		Eth1DataVotes:    votes,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -754,6 +756,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 				}},
 		},
 	}
+	depositCache := depositcache.NewDepositCache()
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
@@ -768,16 +771,17 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -824,7 +828,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		},
 		Eth1DepositIndex: 10,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -868,6 +872,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
+	depositCache := depositcache.NewDepositCache()
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -878,16 +883,17 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -926,7 +932,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		},
 		Eth1DepositIndex: 2,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	var mockSig [96]byte
@@ -969,6 +975,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
+	depositCache := depositcache.NewDepositCache()
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -979,16 +986,17 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -1025,7 +1033,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 		},
 		Eth1DepositIndex: 2,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	var mockSig [96]byte
@@ -1068,6 +1076,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
+	depositCache := depositcache.NewDepositCache()
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -1078,16 +1087,17 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 			t.Fatalf("Unable to insert deposit into trie %v", err)
 		}
 
-		d.DepositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		d.DepositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
 	bs := &ProposerServer{
 		beaconDB:        d,
 		powChainService: p,
 		chainService:    newMockChainService(),
+		depositCache:    depositCache,
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -1122,7 +1132,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
-	if err := proposerServer.beaconDB.SaveState(ctx, beaconState); err != nil {
+	if err := proposerServer.beaconDB.SaveState(ctx, beaconState, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
@@ -1163,8 +1173,9 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
+	depositCache := depositcache.NewDepositCache()
 	for _, dp := range deps {
-		beaconDB.DepositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
 	powChainService := &mockPOWChainService{
@@ -1177,6 +1188,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	proposerServer := &ProposerServer{
 		beaconDB:        beaconDB,
 		powChainService: powChainService,
+		depositCache:    depositCache,
 	}
 
 	defEth1Data := &ethpb.Eth1Data{
@@ -1216,7 +1228,8 @@ func TestEth1Data(t *testing.T) {
 				DepositCount: 55,
 			},
 		},
-		beaconDB: beaconDB,
+		beaconDB:     beaconDB,
+		depositCache: depositcache.NewDepositCache(),
 	}
 
 	ctx := context.Background()
@@ -1283,7 +1296,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	hashesByHeight[numOfVotes+1] = []byte("stub")
 
-	if err := beaconDB.SaveState(ctx, beaconState); err != nil {
+	if err := beaconDB.SaveStateDeprecated(ctx, beaconState); err != nil {
 		b.Fatal(err)
 	}
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
@@ -1322,7 +1335,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 		},
 		Eth1DepositIndex: 2,
 	}
-	if err := d.SaveState(ctx, beaconState); err != nil {
+	if err := d.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	var mockSig [96]byte

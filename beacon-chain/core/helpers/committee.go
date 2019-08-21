@@ -57,7 +57,7 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 // CrosslinkCommittee returns the crosslink committee of a given epoch.
 //
 // Spec pseudocode definition:
-//   def get_crosslink_committee(state: BeaconState, epoch: Epoch, shard: Shard) -> Sequence[ValidatorIndex]:
+//   def get_crosslink_committee(state: BeaconState, epoch: Epoch, shard: Shard) -> Sequence[ValidatorIndexDeprecated]:
 //    """
 //    Return the crosslink committee at ``epoch`` for ``shard``.
 //    """
@@ -97,16 +97,16 @@ func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]ui
 // validator indices and seed.
 //
 // Spec pseudocode definition:
-//  def compute_committee(indices: Sequence[ValidatorIndex],
+//  def compute_committee(indices: Sequence[ValidatorIndexDeprecated],
 //                      seed: Hash,
 //                      index: uint64,
-//                      count: uint64) -> Sequence[ValidatorIndex]:
+//                      count: uint64) -> Sequence[ValidatorIndexDeprecated]:
 //    """
 //    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
 //    """
 //    start = (len(indices) * index) // count
 //    end = (len(indices) * (index + 1)) // count
-//    return [indices[compute_shuffled_index(ValidatorIndex(i), len(indices), seed)] for i in range(start, end)
+//    return [indices[compute_shuffled_index(ValidatorIndexDeprecated(i), len(indices), seed)] for i in range(start, end)
 func ComputeCommittee(
 	validatorIndices []uint64,
 	seed [32]byte,
@@ -150,7 +150,7 @@ func ComputeCommittee(
 // Spec pseudocode definition:
 //   def get_attesting_indices(state: BeaconState,
 //                          data: AttestationData,
-//                          bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]) -> Set[ValidatorIndex]:
+//                          bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]) -> Set[ValidatorIndexDeprecated]:
 //    """
 //    Return the set of attesting indices corresponding to ``data`` and ``bits``.
 //    """
@@ -192,7 +192,7 @@ func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
 // Spec pseudocode definition:
 //   def get_committee_assignment(state: BeaconState,
 //                             epoch: Epoch,
-//                             validator_index: ValidatorIndex) -> Optional[Tuple[Sequence[ValidatorIndex], Shard, Slot]]:
+//                             validator_index: ValidatorIndexDeprecated) -> Optional[Tuple[Sequence[ValidatorIndexDeprecated], Shard, Slot]]:
 //    """
 //    Return the committee assignment in the ``epoch`` for ``validator_index``.
 //    ``assignment`` returned is a tuple of the following form:

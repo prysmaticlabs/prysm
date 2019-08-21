@@ -32,7 +32,7 @@ var VStore = validatorStore{
 // validator with correct voluntary exit parameters.
 //
 // Spec pseudocode definition:
-//  def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
+//  def initiate_validator_exit(state: BeaconState, index: ValidatorIndexDeprecated) -> None:
 //    """
 //    Initiate the exit of the validator with index ``index``.
 //    """
@@ -96,7 +96,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 // keeping work to exit validator with entry exit delay.
 //
 // Spec pseudocode definition:
-//  def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//  def exit_validator(state: BeaconState, index: ValidatorIndexDeprecated) -> None:
 //    """
 //    Exit the validator of the given ``index``.
 //    Note that this function mutates ``state``.
@@ -123,8 +123,8 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //
 // Spec pseudocode definition:
 //  def slash_validator(state: BeaconState,
-//                    slashed_index: ValidatorIndex,
-//                    whistleblower_index: ValidatorIndex=None) -> None:
+//                    slashed_index: ValidatorIndexDeprecated,
+//                    whistleblower_index: ValidatorIndexDeprecated=None) -> None:
 //    """
 //    Slash the validator with index ``slashed_index``.
 //    """

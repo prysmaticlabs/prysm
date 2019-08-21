@@ -11,13 +11,28 @@ import (
 
 var _ = shared.Service(&RegularSync{})
 
+type Config struct {
+	P2P        p2p.P2P
+	DB         db.Database
+	Operations *operations.Service
+}
+
+func NewRegularSync(cfg *Config) *RegularSync {
+	return &RegularSync{
+		ctx:        context.Background(),
+		db:         cfg.DB,
+		p2p:        cfg.P2P,
+		operations: cfg.Operations,
+	}
+}
+
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
 	ctx        context.Context
 	p2p        p2p.P2P
 	db         db.Database
-	operations operations.Service
+	operations *operations.Service
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.

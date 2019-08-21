@@ -397,7 +397,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 //            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
 //			  penalty_numerator = validator.effective_balance // increment * min(sum(state.slashings) * 3, total_balance)
 //            penalty = penalty_numerator // total_balance * increment
-//            decrease_balance(state, ValidatorIndex(index), penalty)
+//            decrease_balance(state, ValidatorIndexDeprecated(index), penalty)
 func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
@@ -448,7 +448,7 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    # Set active index root
 //    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
 //    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
-//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+//    indices_list = List[ValidatorIndexDeprecated, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
 //    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
 //    # Set committees root
 //    committee_root_position = next_epoch % EPOCHS_PER_HISTORICAL_VECTOR
@@ -496,7 +496,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Set active index root.
 	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
 	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
-	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+	//    indices_list = List[ValidatorIndexDeprecated, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
 	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
 	activationDelay := params.BeaconConfig().ActivationExitDelay
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
@@ -551,7 +551,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // it sorts the indices and filters out the slashed ones.
 //
 // Spec pseudocode definition:
-//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
+//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndexDeprecated]:
 //    output = set()
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
@@ -582,7 +582,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 // Spec pseudocode definition:
 //  def get_winning_crosslink_and_attesting_indices(state: BeaconState,
 //                                                epoch: Epoch,
-//                                                shard: Shard) -> Tuple[Crosslink, List[ValidatorIndex]]:
+//                                                shard: Shard) -> Tuple[Crosslink, List[ValidatorIndexDeprecated]]:
 //    attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.crosslink.shard == shard]
 //    crosslinks = list(filter(
 //        lambda c: hash_tree_root(state.current_crosslinks[shard]) in (c.parent_root, hash_tree_root(c)),
@@ -670,7 +670,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 // to repeat the same calculation for every validator versus just doing it once.
 //
 // Spec pseudocode definition:
-//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndexDeprecated) -> Gwei:
 //      total_balance = get_total_active_balance(state)
 //	    effective_balance = state.validator_registry[index].effective_balance
 //	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
@@ -700,7 +700,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //    rewards = [Gwei(0) for _ in range(len(state.validators))]
 //    penalties = [Gwei(0) for _ in range(len(state.validators))]
 //    eligible_validator_indices = [
-//        ValidatorIndex(index) for index, v in enumerate(state.validators)
+//        ValidatorIndexDeprecated(index) for index, v in enumerate(state.validators)
 //        if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
 //    ]
 //
@@ -719,7 +719,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //
 //    # Proposer and inclusion delay micro-rewards
 //    for index in get_unslashed_attesting_indices(state, matching_source_attestations):
-//        index = ValidatorIndex(index)
+//        index = ValidatorIndexDeprecated(index)
 //        attestation = min([
 //            a for a in matching_source_attestations
 //            if index in get_attesting_indices(state, a.data, a.aggregation_bits)
@@ -738,7 +738,7 @@ func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //    if finality_delay > MIN_EPOCHS_TO_INACTIVITY_PENALTY:
 //        matching_target_attesting_indices = get_unslashed_attesting_indices(state, matching_target_attestations)
 //        for index in eligible_validator_indices:
-//            index = ValidatorIndex(index)
+//            index = ValidatorIndexDeprecated(index)
 //            penalties[index] += Gwei(BASE_REWARDS_PER_EPOCH * get_base_reward(state, index))
 //            if index not in matching_target_attesting_indices:
 //                penalties[index] += Gwei(

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,7 +22,7 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB *db.BeaconDB
+	beaconDB db.Database
 	pool     operations.Pool
 }
 
@@ -36,7 +37,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
-// Attestations are sorted by crosslink shard by default.
+// AttestationsDeprecated are sorted by crosslink shard by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
@@ -60,7 +61,7 @@ func (bs *BeaconChainServer) ListAttestations(
 	case *ethpb.ListAttestationsRequest_Epoch:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}
-	atts, err := bs.beaconDB.Attestations()
+	atts, err := bs.beaconDB.Attestations(ctx, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
@@ -91,7 +92,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.ChainHead()
+	headBlock, err := bs.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -123,15 +124,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := helpers.StartSlot(q.Epoch)
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
-		var blks []*ethpb.BeaconBlock
-		for i := startSlot; i < endSlot; i++ {
-			b, err := bs.beaconDB.BlocksBySlot(ctx, i)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
-			}
-			blks = append(blks, b...)
-		}
-
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 		numBlks := len(blks)
 		if numBlks == 0 {
 			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
@@ -149,7 +142,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
-		blk, err := bs.beaconDB.Block(bytesutil.ToBytes32(q.Root))
+		blk, err := bs.beaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
 		}
@@ -164,7 +157,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.beaconDB.BlocksBySlot(ctx, q.Slot)
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -212,13 +205,9 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	balances, err := bs.beaconDB.Balances(ctx)
+	head, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator balances: %v", err)
-	}
-	validators, err := bs.beaconDB.Validators(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
 	}
 
 	for _, pubKey := range req.PublicKeys {
@@ -227,35 +216,35 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		index, _, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if int(index) >= len(head.Balances) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
-				index, len(balances))
+				index, len(head.Balances))
 		}
 
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
 			Index:     index,
-			Balance:   balances[index],
+			Balance:   head.Balances[index],
 		})
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if int(index) >= len(head.Balances) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
-				index, len(balances))
+				index, len(head.Balances))
 		}
 
 		if !filtered[index] {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: validators[index].PublicKey,
+				PublicKey: head.Validators[index].PublicKey,
 				Index:     index,
-				Balance:   balances[index],
+				Balance:   head.Balances[index],
 			})
 		}
 	}
@@ -275,11 +264,12 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	validators, err := bs.beaconDB.Validators(ctx)
+	head, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validators: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
 	}
-	validatorCount := len(validators)
+
+	validatorCount := len(head.Validators)
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
@@ -287,7 +277,7 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 
 	res := &ethpb.Validators{
-		Validators:    validators[start:end],
+		Validators:    head.Validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}
@@ -335,7 +325,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, err := bs.beaconDB.ValidatorIndex(pubKey)
+		index, _, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}

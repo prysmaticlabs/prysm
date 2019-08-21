@@ -155,7 +155,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 		return nil
 	}
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parent, err := s.db.Block(parentRoot)
+	parent, err := s.db.BlockDeprecated(parentRoot)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
 		return err
 	}
-	if err := s.db.SaveBlock(block); err != nil {
+	if err := s.db.SaveBlockDeprecated(block); err != nil {
 		return err
 	}
 	root, err := ssz.SigningRoot(block)
@@ -186,7 +186,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBl
 		switch err.(type) {
 		case *blockchain.BlockFailedProcessingErr:
 			// If the block fails processing, we delete it from our DB.
-			if err := s.db.DeleteBlock(block); err != nil {
+			if err := s.db.DeleteBlockDeprecated(block); err != nil {
 				return errors.Wrap(err, "could not delete bad block from db")
 			}
 			return errors.Wrap(err, "could not apply block state transition")

@@ -21,7 +21,7 @@ import (
 type NodeServer struct {
 	syncChecker sync.Checker
 	server      *grpc.Server
-	beaconDB    *db.BeaconDB
+	beaconDB    db.Database
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -33,11 +33,13 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	beaconState, err := ns.beaconDB.FinalizedState()
+	// TODO(3045): Use the db.Database interface only.
+	beaconState, err := ns.beaconDB.(*db.BeaconDB).FinalizedState()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve beacon state: %v", err)
 	}
-	address, err := ns.beaconDB.DepositContractAddress(ctx)
+	// TODO(3045): Use the db.Database interface only.
+	address, err := ns.beaconDB.(*db.BeaconDB).DepositContractAddress(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve deposit contract address: %v", err)
 	}

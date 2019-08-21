@@ -54,11 +54,14 @@ type Database interface {
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
 }
 
+var _ = Database(&BeaconDB{})
+
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
 // but instead reflect the beacon chain logic.
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
+// DEPRECATED: Use github.com/prysmaticlabs/prysm/db/kv instead.
 type BeaconDB struct {
 	// state objects and caches
 	stateLock         sync.RWMutex
@@ -67,7 +70,7 @@ type BeaconDB struct {
 	validatorRegistry []*ethpb.Validator
 	validatorBalances []uint64
 	db                *bolt.DB
-	DatabasePath      string
+	databasePath      string
 
 	// Beacon block info in memory.
 	highestBlockSlot uint64
@@ -78,6 +81,7 @@ type BeaconDB struct {
 	blocksLock     sync.RWMutex
 
 	// Beacon chain deposits in memory.
+	// DEPRECATED: Do not use.
 	DepositCache *depositcache.DepositCache
 }
 
@@ -107,6 +111,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 }
 
 // NewDBDeprecated initializes a new DB. If the genesis block and states do not exist, this method creates it.
+// DEPRECATED: Use github.com/prysmaticlabs/prysm/db.NewDB instead.
 func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
@@ -122,7 +127,7 @@ func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 
 	depCache := depositcache.NewDepositCache()
 
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
+	db := &BeaconDB{db: boltDB, databasePath: dirPath, DepositCache: depCache}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
@@ -146,4 +151,12 @@ func ClearDB(dirPath string) error {
 		return nil
 	}
 	return os.RemoveAll(dirPath)
+}
+func (db *BeaconDB) DatabasePath() string {
+	return db.databasePath
+}
+
+// ClearDB removes the previously stored directory at the data directory.
+func (db *BeaconDB) ClearDB() error {
+	return ClearDB(db.databasePath)
 }

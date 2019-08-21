@@ -14,9 +14,9 @@ import (
 
 const blkHeaderPrefix = "tests/operations/block_header/"
 
-// Block header test is actually a full block processing test. Not sure why it
+// BlockDeprecated header test is actually a full block processing test. Not sure why it
 // was named "block_header". The note in the test format readme says "Note that
-// block_header is not strictly an operation (and is a full Block), but
+// block_header is not strictly an operation (and is a full BlockDeprecated), but
 // processed in the same manner, and hence included here."
 func runBlockHeaderTest(t *testing.T, filename string) {
 	file, err := ioutil.ReadFile(filename)

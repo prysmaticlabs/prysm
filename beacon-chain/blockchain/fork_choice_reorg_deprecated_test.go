@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -54,16 +55,16 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 
 	// We then setup a canonical chain of the following blocks:
 	// B0->B1->B3->B5.
-	if err := chainService.beaconDB.SaveBlock(blocks[0]); err != nil {
+	if err := chainService.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(blocks[0]); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveJustifiedState(justifiedState); err != nil {
+	if err := chainService.beaconDB.(*db2.BeaconDB).SaveJustifiedState(justifiedState); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveJustifiedBlock(blocks[0]); err != nil {
+	if err := chainService.beaconDB.(*db2.BeaconDB).SaveJustifiedBlock(blocks[0]); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.UpdateChainHead(ctx, blocks[0], justifiedState); err != nil {
+	if err := chainService.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, blocks[0], justifiedState); err != nil {
 		t.Fatal(err)
 	}
 	canonicalBlockIndices := []int{1, 3, 5}
@@ -73,15 +74,15 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveBlock(blocks[canonicalIndex]); err != nil {
+		if err := chainService.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(blocks[canonicalIndex]); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.UpdateChainHead(ctx, blocks[canonicalIndex], postState); err != nil {
+		if err := chainService.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, blocks[canonicalIndex], postState); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	chainHead, err := chainService.beaconDB.ChainHead()
+	chainHead, err := chainService.beaconDB.(*db2.BeaconDB).ChainHead()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,10 +103,10 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveBlock(blocks[forkIndex]); err != nil {
+		if err := chainService.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(blocks[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.beaconDB.SaveHistoricalState(ctx, forkState, roots[forkIndex]); err != nil {
+		if err := chainService.beaconDB.(*db2.BeaconDB).SaveHistoricalState(ctx, forkState, roots[forkIndex]); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -129,7 +130,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 	}
 	chainService.attsService = attHandler
 
-	block4State, err := chainService.beaconDB.HistoricalStateFromSlot(ctx, blocks[4].Slot, roots[4])
+	block4State, err := chainService.beaconDB.(*db2.BeaconDB).HistoricalStateFromSlot(ctx, blocks[4].Slot, roots[4])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +139,7 @@ func TestApplyForkChoice_ChainSplitReorg(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newHead, err := chainService.beaconDB.ChainHead()
+	newHead, err := chainService.beaconDB.(*db2.BeaconDB).ChainHead()
 	if err != nil {
 		t.Fatal(err)
 	}

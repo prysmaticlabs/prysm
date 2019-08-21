@@ -30,7 +30,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	if err := s.db.SaveBlock(finalizedBlock); err != nil {
+	if err := s.db.SaveBlockDeprecated(finalizedBlock); err != nil {
 		log.Errorf("Could not save block %v", err)
 		return nil
 	}

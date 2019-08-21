@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//beacon-chain/attestation:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/deprecated-sync:go_default_library",
         "//beacon-chain/flags:go_default_library",
@@ -20,6 +21,7 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc:go_default_library",
+        "//beacon-chain/sync:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared:go_default_library",

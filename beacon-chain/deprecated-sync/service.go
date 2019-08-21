@@ -29,7 +29,7 @@ type Service struct {
 // Config defines the configured services required for sync to work.
 type Config struct {
 	ChainService     chainService
-	BeaconDB         *db.BeaconDB
+	BeaconDB         db.Database
 	P2P              p2pAPI
 	AttsService      attsService
 	OperationService operations.OperationFeeds
@@ -40,20 +40,20 @@ type Config struct {
 // given.
 func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	sqCfg := DefaultQuerierConfig()
-	sqCfg.BeaconDB = cfg.BeaconDB
+	sqCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
 	sqCfg.P2P = cfg.P2P
 	sqCfg.PowChain = cfg.PowChainService
 	sqCfg.ChainService = cfg.ChainService
 
 	isCfg := initialsync.DefaultConfig()
-	isCfg.BeaconDB = cfg.BeaconDB
+	isCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
 	isCfg.P2P = cfg.P2P
 	isCfg.PowChain = cfg.PowChainService
 	isCfg.ChainService = cfg.ChainService
 
 	rsCfg := DefaultRegularSyncConfig()
 	rsCfg.ChainService = cfg.ChainService
-	rsCfg.BeaconDB = cfg.BeaconDB
+	rsCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
 	rsCfg.P2P = cfg.P2P
 	rsCfg.AttsService = cfg.AttsService
 	rsCfg.OperationService = cfg.OperationService

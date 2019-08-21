@@ -520,7 +520,7 @@ func ProcessAttestationsNoVerify(
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
 //    """
-//    Process ``Attestation`` operation.
+//    Process ``AttestationDeprecated`` operation.
 //    """
 //    data = attestation.data
 //    attestation_slot = get_attestation_data_slot(state, data)
