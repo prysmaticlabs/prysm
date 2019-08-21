@@ -2,7 +2,9 @@ package sync
 
 import (
 	"context"
+	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -34,13 +36,19 @@ type RegularSync struct {
 	ctx        context.Context
 	p2p        p2p.P2P
 	db         db.Database
+	chain      *blockchain.ChainService
 	operations *operations.Service
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.
 func (r *RegularSync) Start() {
+	log.Info("Starting regular sync")
+	for !r.p2p.Started() {
+		time.Sleep(200 * time.Millisecond)
+	}
 	r.registerRPCHandlers()
 	r.registerSubscribers()
+	log.Info("Regular sync started")
 }
 
 // Stop the regular sync service.
@@ -51,4 +59,17 @@ func (r *RegularSync) Stop() error {
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
+}
+
+// Syncing returns true if the node is currently syncing with the network.
+func (r *RegularSync) Syncing() bool {
+	// TODO(3147): Use real value.
+	return false
+}
+
+// Checker defines a struct which can verify whether a node is currently
+// synchronizing a chain with the rest of peers in the network.
+type Checker interface {
+	Syncing() bool
+	Status() error
 }
