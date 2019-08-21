@@ -46,11 +46,5 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		return nil
 	}
 
-	// TODO: ReceiveBlock also re-broadcasts this block, maybe this needs to be refactored.
-	postState, err := r.chain.ReceiveBlock(ctx, block)
-	if err != nil {
-		return err
-	}
-
-	return r.chain.ApplyForkChoiceRule(ctx, block, postState)
+	return r.chain.ReceiveBlockNoPubsub(ctx, block)
 }
