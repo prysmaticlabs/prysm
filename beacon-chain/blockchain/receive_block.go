@@ -140,7 +140,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	// Announce the new block to the network. Todo: replace this with the new pubsub implementation.
+	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       root[:],
 		SlotNumber: block.Slot,
@@ -262,7 +262,7 @@ func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethp
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	// Announce the new block to the network. Todo: replace this with the new pubsub implementation.
+	// Announce the new block to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       root[:],
 		SlotNumber: block.Slot,
