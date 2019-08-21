@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -55,7 +55,7 @@ type Querier struct {
 	currentHeadSlot           uint64
 	currentStateRoot          []byte
 	currentFinalizedStateRoot [32]byte
-	responseBuf               chan p2p.Message
+	responseBuf               chan deprecatedp2p.Message
 	chainStartBuf             chan time.Time
 	powchain                  powChainService
 	chainStarted              bool
@@ -73,7 +73,7 @@ func NewQuerierService(ctx context.Context,
 ) *Querier {
 	ctx, cancel := context.WithCancel(ctx)
 
-	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
+	responseBuf := make(chan deprecatedp2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
 		ctx:                ctx,

@@ -64,7 +64,7 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.Beaco
 	return &pb.BeaconState{}, nil
 }
 
-func (ms *mockChainService) AdvanceState(
+func (ms *mockChainService) AdvanceStateDeprecated(
 	ctx context.Context, beaconState *pb.BeaconState, block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{
@@ -80,7 +80,7 @@ func (ms *mockChainService) VerifyBlockValidity(
 	return nil
 }
 
-func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
@@ -105,7 +105,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
-	if err := beaconDB.SaveBlock(genBlock); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
@@ -206,8 +206,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 
 		// Save the block and set the parent hash of the next block
 		// as the hash of the current block.
-		if err := ss.db.SaveBlock(block); err != nil {
-			t.Fatalf("Block unable to be saved %v", err)
+		if err := ss.db.SaveBlockDeprecated(block); err != nil {
+			t.Fatalf("BlockDeprecated unable to be saved %v", err)
 		}
 
 		hash, err := ssz.SigningRoot(block)

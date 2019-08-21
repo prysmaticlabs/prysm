@@ -14,13 +14,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -39,20 +41,23 @@ type ChainFeeds interface {
 type ChainService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	beaconDB             *db.BeaconDB
+	beaconDB             db.Database
+	depositCache         *depositcache.DepositCache
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
+	forkChoiceStore      *forkchoice.Store
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
-	canonicalBlocks      map[uint64][]byte
-	canonicalBlocksLock  sync.RWMutex
+	canonicalRoots       map[uint64][]byte
+	canonicalRootsLock   sync.RWMutex
 	receiveBlockLock     sync.Mutex
 	maxRoutines          int64
+	headSlot             uint64
 }
 
 // Config options for the service.
@@ -60,7 +65,8 @@ type Config struct {
 	BeaconBlockBuf int
 	Web3Service    *powchain.Web3Service
 	AttsService    attestation.TargetHandler
-	BeaconDB       *db.BeaconDB
+	BeaconDB       db.Database
+	DepositCache   *depositcache.DepositCache
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
 	P2p            p2p.Broadcaster
@@ -71,18 +77,21 @@ type Config struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
+		forkChoiceStore:      store,
 		canonicalBlockFeed:   new(event.Feed),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
-		canonicalBlocks:      make(map[uint64][]byte),
+		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
 	}, nil
 }
@@ -135,10 +144,16 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
+	// TODO(3219): Use new fork choice service.
+	db, isLegacyDB := c.beaconDB.(*db.BeaconDB)
+	if !isLegacyDB {
+		panic("Chain service cannot operate with the new database interface due to in-progress fork choice changes")
+	}
+
+	if err := db.InitializeState(ctx, unixTime, deposits, eth1data); err != nil {
 		return nil, errors.Wrap(err, "could not initialize beacon state to disk")
 	}
-	beaconState, err := c.beaconDB.HeadState(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not attempt fetch beacon state")
 	}
@@ -153,29 +168,30 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, errors.Wrap(err, "could not hash beacon block")
 	}
 
-	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
+	if err := c.beaconDB.SaveBlock(ctx, genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block to disk")
 	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+
+	if err := db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            genBlock.Slot,
 		BeaconBlockRoot: genBlockRoot[:],
 		ParentRoot:      genBlock.ParentRoot,
 	}); err != nil {
 		return nil, errors.Wrap(err, "failed to save attestation target")
 	}
-	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not set chain head")
 	}
-	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
+	if err := db.SaveJustifiedBlock(genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block as justified block")
 	}
-	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
+	if err := db.SaveFinalizedBlock(genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block as finalized block")
 	}
-	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
+	if err := db.SaveJustifiedState(beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis state as justified state")
 	}
-	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
+	if err := db.SaveFinalizedState(beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis state as finalized state")
 	}
 	return beaconState, nil
@@ -212,8 +228,8 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 
 // ChainHeadRoot returns the hash root of the last beacon block processed by the
 // block chain service.
-func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
-	head, err := c.beaconDB.ChainHead()
+func (c *ChainService) ChainHeadRoot(ctx context.Context) ([32]byte, error) {
+	head, err := c.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not retrieve chain head")
 	}
@@ -227,17 +243,17 @@ func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
 
 // UpdateCanonicalRoots sets a new head into the canonical block roots map.
 func (c *ChainService) UpdateCanonicalRoots(newHead *ethpb.BeaconBlock, newHeadRoot [32]byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.canonicalRoots[newHead.Slot] = newHeadRoot[:]
 }
 
 // IsCanonical returns true if the input block hash of the corresponding slot
 // is part of the canonical chain. False otherwise.
 func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
-	c.canonicalBlocksLock.RLock()
-	defer c.canonicalBlocksLock.RUnlock()
-	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
+	if canonicalHash, ok := c.canonicalRoots[slot]; ok {
 		return bytes.Equal(canonicalHash, hash)
 	}
 	return false

@@ -42,8 +42,8 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateVoluntaryExit,
+		r.voluntaryExitSubscriber,
 	)
 	r.subscribe(
 		"/eth2/proposer_slashing",

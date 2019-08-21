@@ -50,7 +50,6 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message, chainHead *pb.ChainH
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
 		// Do not process empty responses.
-		s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
 		return nil
 	}
 
@@ -100,7 +99,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err != nil {
 		return err
 	}
-	if s.db.HasBlock(root) {
+	if s.db.HasBlockDeprecated(root) {
 		log.WithField("block", fmt.Sprintf("%#x", root)).
 			Warn("Skipping block in db already")
 		return nil
@@ -117,7 +116,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parentBlock, err := s.db.Block(parentRoot)
+	parentBlock, err := s.db.BlockDeprecated(parentRoot)
 	if err != nil {
 		return err
 	}
@@ -133,7 +132,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
 		return err
 	}
-	if err := s.db.SaveBlock(block); err != nil {
+	if err := s.db.SaveBlockDeprecated(block); err != nil {
 		return err
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
@@ -143,7 +142,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	}); err != nil {
 		return errors.Wrap(err, "could not to save attestation target")
 	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
+	state, err = s.chainService.AdvanceStateDeprecated(ctx, state, block)
 	if err != nil {
 		return errors.Wrap(err, "could not apply block state transition")
 	}

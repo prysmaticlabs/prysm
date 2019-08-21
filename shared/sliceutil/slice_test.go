@@ -23,7 +23,6 @@ func TestSubsetUint64(t *testing.T) {
 		if result != tt.out {
 			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
 		}
-
 	}
 }
 
@@ -47,7 +46,6 @@ func TestIntersectionUint64(t *testing.T) {
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
-
 	}
 }
 
@@ -66,7 +64,6 @@ func TestIsSortedUint64(t *testing.T) {
 		if result != tt.out {
 			t.Errorf("got %v, want %v", result, tt.out)
 		}
-
 	}
 }
 
@@ -90,9 +87,7 @@ func TestIntersectionInt64(t *testing.T) {
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
-
 	}
-
 }
 
 func TestUnionUint64(t *testing.T) {
@@ -116,6 +111,16 @@ func TestUnionUint64(t *testing.T) {
 		}
 
 	}
+	items := [][]uint64{
+		{3, 4, 5},
+		{6, 7, 8},
+		{9, 10, 11},
+	}
+	variadicResult := UnionUint64(items...)
+	want := []uint64{3, 4, 5, 6, 7, 8, 9, 10, 11}
+	if !reflect.DeepEqual(want, variadicResult) {
+		t.Errorf("Received %v, wanted %v", variadicResult, want)
+	}
 }
 
 func TestUnionInt64(t *testing.T) {
@@ -137,9 +142,17 @@ func TestUnionInt64(t *testing.T) {
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
-
 	}
-
+	items := [][]int64{
+		{3, 4, 5},
+		{6, 7, 8},
+		{9, 10, 11},
+	}
+	variadicResult := UnionInt64(items...)
+	want := []int64{3, 4, 5, 6, 7, 8, 9, 10, 11}
+	if !reflect.DeepEqual(want, variadicResult) {
+		t.Errorf("Received %v, wanted %v", variadicResult, want)
+	}
 }
 
 func TestNotUint64(t *testing.T) {
@@ -223,6 +236,51 @@ func TestIsInInt64(t *testing.T) {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
 		}
+	}
+}
+
+func TestUnionByteSlices(t *testing.T) {
+	testCases := []struct {
+		setA [][]byte
+		setB [][]byte
+		out  [][]byte
+	}{
+		{
+			[][]byte{[]byte("hello"), []byte("world")},
+			[][]byte{[]byte("world"), {}},
+			[][]byte{[]byte("hello"), []byte("world"), {}},
+		},
+		{
+			[][]byte{[]byte("hello")},
+			[][]byte{[]byte("hello")},
+			[][]byte{[]byte("hello")},
+		},
+	}
+	for _, tt := range testCases {
+		result := UnionByteSlices(tt.setA, tt.setB)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+	items := [][][]byte{
+		{
+			{1, 2, 3},
+		},
+		{
+			{4, 5, 6},
+		},
+		{
+			{7, 8, 9},
+		},
+	}
+	variadicResult := UnionByteSlices(items...)
+	want := [][]byte{
+		{1, 2, 3},
+		{4, 5, 6},
+		{7, 8, 9},
+	}
+	if !reflect.DeepEqual(want, variadicResult) {
+		t.Errorf("Received %v, wanted %v", variadicResult, want)
 	}
 }
 

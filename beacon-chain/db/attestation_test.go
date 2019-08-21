@@ -30,11 +30,11 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 
 	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
-		t.Fatalf("Failed to hash Attestation: %v", err)
+		t.Fatalf("Failed to hash AttestationDeprecated: %v", err)
 	}
-	aPrime, err := db.Attestation(aDataHash)
+	aPrime, err := db.AttestationDeprecated(aDataHash)
 	if err != nil {
-		t.Fatalf("Failed to call Attestation: %v", err)
+		t.Fatalf("Failed to call AttestationDeprecated: %v", err)
 	}
 
 	aEnc, err := proto.Marshal(a)
@@ -69,7 +69,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		}
 	}
 
-	retrievedAttestations, err := db.Attestations()
+	retrievedAttestations, err := db.AttestationsDeprecated()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -101,22 +101,22 @@ func TestDeleteAttestation_OK(t *testing.T) {
 
 	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
-		t.Fatalf("Failed to hash Attestation: %v", err)
+		t.Fatalf("Failed to hash AttestationDeprecated: %v", err)
 	}
-	aPrime, err := db.Attestation(aDataHash)
+	aPrime, err := db.AttestationDeprecated(aDataHash)
 	if err != nil {
-		t.Fatalf("Could not call Attestation: %v", err)
+		t.Fatalf("Could not call AttestationDeprecated: %v", err)
 	}
 
 	if !reflect.DeepEqual(aPrime, a) {
 		t.Errorf("Saved attestation and retrieved attestation are not equal")
 	}
 
-	if err := db.DeleteAttestation(a); err != nil {
+	if err := db.DeleteAttestationDeprecated(a); err != nil {
 		t.Fatalf("Could not delete attestation: %v", err)
 	}
 
-	if db.HasAttestation(aDataHash) {
+	if db.HasAttestationDeprecated(aDataHash) {
 		t.Error("Deleted attestation still there")
 	}
 }
@@ -126,7 +126,7 @@ func TestNilAttestation_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	nilHash := [32]byte{}
-	a, err := db.Attestation(nilHash)
+	a, err := db.AttestationDeprecated(nilHash)
 	if err != nil {
 		t.Fatalf("Failed to retrieve nilHash: %v", err)
 	}
@@ -148,17 +148,17 @@ func TestHasAttestation_OK(t *testing.T) {
 	}
 	aDataHash, err := hashutil.HashProto(a.Data)
 	if err != nil {
-		t.Fatalf("Failed to hash Attestation: %v", err)
+		t.Fatalf("Failed to hash AttestationDeprecated: %v", err)
 	}
 
-	if db.HasAttestation(aDataHash) {
-		t.Fatal("Expected HasAttestation to return false")
+	if db.HasAttestationDeprecated(aDataHash) {
+		t.Fatal("Expected HasAttestationDeprecated to return false")
 	}
 
 	if err := db.SaveAttestation(context.Background(), a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
-	if !db.HasAttestation(aDataHash) {
-		t.Fatal("Expected HasAttestation to return true")
+	if !db.HasAttestationDeprecated(aDataHash) {
+		t.Fatal("Expected HasAttestationDeprecated to return true")
 	}
 }
