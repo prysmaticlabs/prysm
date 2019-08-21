@@ -111,8 +111,9 @@ func (s *Service) Encoding() encoder.NetworkEncoding {
 		return &encoder.SszNetworkEncoder{}
 	case encoder.SSZSnappy:
 		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
+	default:
+		panic("Invalid Network Encoding Flag Provided")
 	}
-	return &encoder.SszNetworkEncoder{}
 }
 
 // PubSub returns the p2p pubsub framework.
