@@ -147,52 +147,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return errors.Wrap(err, "could not broadcast block")
 	}
 
-	// Apply state transition on the new block.
-	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
-		return errors.Wrap(err, "could not process block from fork choice service")
-	}
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
-	log.WithFields(logrus.Fields{
-		"slots": block.Slot,
-		"root":  hex.EncodeToString(root[:]),
-	}).Info("Finished state transition and updated fork choice store for block")
-
-	// Run fork choice after applying state transition on the new block.
-	headRoot, err := c.forkChoiceStore.Head(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head from fork choice service")
-	}
-	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
-	}
-	log.WithFields(logrus.Fields{
-		"headSlot": headBlk.Slot,
-		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Finished fork choice")
-
-	// Save head info after running fork choice.
-	c.canonicalRootsLock.Lock()
-	defer c.canonicalRootsLock.Unlock()
-	c.headSlot = headBlk.Slot
-	c.canonicalRoots[headBlk.Slot] = headRoot
-	if err := c.beaconDB.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
-	}
-	log.WithFields(logrus.Fields{
-		"slot": headBlk.Slot,
-		"root": hex.EncodeToString(headRoot),
-	}).Info("Saved head info")
-
-	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
-	}
-
-	return nil
+	return c.ReceiveBlockNoPubsub(ctx, block)
 }
 
 // ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
@@ -232,17 +187,9 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	}).Info("Finished fork choice")
 
 	// Save head info after running fork choice.
-	c.canonicalRootsLock.Lock()
-	defer c.canonicalRootsLock.Unlock()
-	c.headSlot = headBlk.Slot
-	c.canonicalRoots[headBlk.Slot] = headRoot
-	if err := c.beaconDB.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
+	if err := c.saveHead(ctx, block, root); err != nil {
+		return errors.Wrap(err, "could not save head")
 	}
-	log.WithFields(logrus.Fields{
-		"headSlot": headBlk.Slot,
-		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Saved head info")
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
@@ -274,17 +221,9 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	}).Info("Finished state transition and updated fork choice store for block")
 
 	// Save new block as head.
-	c.canonicalRootsLock.Lock()
-	defer c.canonicalRootsLock.Unlock()
-	c.headSlot = block.Slot
-	c.canonicalRoots[block.Slot] = root[:]
-	if err := c.beaconDB.SaveHeadBlockRoot(ctx, root); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
+	if err := c.saveHead(ctx, block, root); err != nil {
+		return errors.Wrap(err, "could not save head")
 	}
-	log.WithFields(logrus.Fields{
-		"slots": block.Slot,
-		"root":  hex.EncodeToString(root[:]),
-	}).Info("Saved head info")
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
@@ -466,6 +405,23 @@ func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconS
 		}
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
+	return nil
+}
+
+// This gets called to update canonical root mapping.
+func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = b.Slot
+	c.canonicalRoots[b.Slot] = r[:]
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": b.Slot,
+		"root":  hex.EncodeToString(r[:]),
+	}).Info("Saved head info")
+
 	return nil
 }
 
