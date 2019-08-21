@@ -30,6 +30,7 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
+	helpers.ClearAllCaches()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	mockChain := &mockChainService{}

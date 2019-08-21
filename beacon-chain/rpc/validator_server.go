@@ -78,7 +78,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	index, _, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, err := vs.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(req.PublicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get validator index")
 	}
