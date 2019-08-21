@@ -32,7 +32,7 @@ func (db *BeaconDB) DepositContractAddress(ctx context.Context) ([]byte, error) 
 	return addr, nil
 }
 
-// SaveDepositContract address to the db.
+// SaveDepositContractAddress to the db.
 // DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	return errors.New("unimplemented")

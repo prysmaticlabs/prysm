@@ -21,6 +21,8 @@ type P2P interface {
 	HandshakeManager
 	Sender
 	DeprecatedSubscriber
+
+	Started() bool
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
