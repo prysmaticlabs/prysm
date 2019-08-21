@@ -149,7 +149,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished fork choice")
 }
 
-func TestReceiveBlockNoForkchoice_ProcessCorrectly(t *testing.T) {
+func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -236,7 +236,7 @@ func TestReceiveBlockNoForkchoice_ProcessCorrectly(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.ReceiveBlockNoForkchoice(context.Background(), block); err != nil {
+	if err := chainService.ReceiveBlockNoPubsubForkchoice(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")

@@ -256,7 +256,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 // that are preformed blocks that is received from initial sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Save latest head info
-func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
 
