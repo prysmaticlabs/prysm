@@ -77,7 +77,7 @@ type syncService interface {
 type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	beaconDB            *db.BeaconDB
+	beaconDB            db.Database
 	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
@@ -98,7 +98,7 @@ type Config struct {
 	Port             string
 	CertFlag         string
 	KeyFlag          string
-	BeaconDB         *db.BeaconDB
+	BeaconDB         db.Database
 	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService

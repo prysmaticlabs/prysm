@@ -16,6 +16,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -33,9 +34,12 @@ import (
 func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
+	if err := db.SaveStateDeprecated(context.Background(), &pbp2p.BeaconState{}); err != nil {
+		t.Fatal(err)
+	}
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -52,8 +56,8 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestValidatorIndex_InStateNotInDB(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	d := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, d)
 
 	pubKey := []byte{'A'}
 
@@ -62,12 +66,12 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 		Validators: []*ethpb.Validator{{PublicKey: []byte{0}}, {PublicKey: []byte{'A'}}, {PublicKey: []byte{'B'}}},
 	}
 
-	if err := db.SaveState(context.Background(), s); err != nil {
+	if err := d.SaveStateDeprecated(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 
 	validatorServer := &ValidatorServer{
-		beaconDB: db,
+		beaconDB: d,
 	}
 
 	req := &pb.ValidatorIndexRequest{
@@ -84,7 +88,7 @@ func TestValidatorIndex_InStateNotInDB(t *testing.T) {
 	}
 
 	// Verify index is also saved in DB.
-	idx, err := validatorServer.beaconDB.ValidatorIndex(pubKey)
+	idx, err := validatorServer.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(pubKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,11 +108,11 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(context.Background(), beaconState); err != nil {
+	if err := db.SaveStateDeprecated(context.Background(), beaconState); err != nil {
 		t.Fatal(err)
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(block); err != nil {
+	if err := db.SaveBlockDeprecated(block); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, block, beaconState); err != nil {
@@ -132,7 +136,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -164,7 +168,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
@@ -245,7 +249,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
@@ -301,7 +305,7 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
@@ -359,12 +363,12 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{Validators: []*ethpb.Validator{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{Validators: []*ethpb.Validator{
 		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: pubKey},
 	},
 		Slot: 5000,
@@ -384,7 +388,8 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -394,6 +399,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -416,7 +422,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -433,11 +439,12 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
@@ -456,6 +463,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 				int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -481,7 +489,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -490,7 +498,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
@@ -513,7 +521,8 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -522,6 +531,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -541,14 +551,14 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Withdrawable exit because current epoch is after validator withdrawable epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		Slot: 10000,
 		Validators: []*ethpb.Validator{{
 			WithdrawableEpoch: epoch - 1,
@@ -570,7 +580,8 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -579,6 +590,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -598,14 +610,14 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
@@ -627,7 +639,8 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -636,6 +649,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -655,14 +669,14 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Exit because only exit epoch is =< current epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
@@ -683,7 +697,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -692,6 +707,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -711,11 +727,11 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
 		Slot: 0,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: 0,
@@ -737,7 +753,8 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
 		beaconDB: db,
@@ -746,6 +763,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 				0: uint64(height),
 			},
 		},
+		depositCache: depositCache,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -768,7 +786,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
@@ -779,6 +797,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		chainService:       newMockChainService(),
 		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		depositCache:       depositcache.NewDepositCache(),
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{[]byte("A")},
@@ -821,10 +840,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey1, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKey2, 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey2, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -843,7 +862,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			},
 		},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -864,11 +883,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(pubKey1, 0); err != nil {
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	if err := db.SaveValidatorIndexDeprecated(pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKey2, 1); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKey2, 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
@@ -877,6 +897,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
+		depositCache:       depositCache,
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -917,10 +938,10 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	ctx := context.Background()
 
 	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
-	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKeys[0], 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKeys[1], 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -940,7 +961,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 				PublicKey:       pubKeys[2]},
 		},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -957,7 +978,8 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	db.DepositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
 		PublicKey:             []byte{'C'},
 		Signature:             []byte("hi"),
@@ -969,15 +991,15 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		Data: depData,
 	}
 	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
-	db.DepositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
+	depositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
 
-	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKeys[1], 1); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKeys[1], 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(pubKeys[2], 2); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(pubKeys[2], 2); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
@@ -986,6 +1008,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
+		depositCache:       depositCache,
 	}
 	activeExists, response, err := vs.MultipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
@@ -1016,10 +1039,10 @@ func BenchmarkAssignment(b *testing.B) {
 	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	db, _ := db.NewDBDeprecated(path)
 	defer db.Close()
-	os.RemoveAll(db.DatabasePath)
+	os.RemoveAll(db.DatabasePath())
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
+	if err := db.SaveBlockDeprecated(genesis); err != nil {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4

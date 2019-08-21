@@ -110,7 +110,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Could not read DV beacon state from DB: %v", err)
 	}
 	state.Slot++
-	err = db.SaveState(ctx, state)
+	err = db.SaveStateDeprecated(ctx, state)
 	if err != nil {
 		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
 	}

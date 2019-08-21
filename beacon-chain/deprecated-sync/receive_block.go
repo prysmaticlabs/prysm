@@ -42,7 +42,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 		return nil
 	}
 
-	hasBlock := rs.db.HasBlock(h)
+	hasBlock := rs.db.HasBlockDeprecated(h)
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
 	if hasBlock {
@@ -124,7 +124,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).
 		Debug("Processing response to block request")
-	hasBlock := rs.db.HasBlock(blockRoot)
+	hasBlock := rs.db.HasBlockDeprecated(blockRoot)
 	if hasBlock {
 		log.Debug("Received a block that already exists. Exiting...")
 		span.AddAttributes(trace.BoolAttribute("invalidBlock", true))
@@ -151,7 +151,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 
 	// We check if we have the block's parents saved locally.
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	hasParent := rs.db.HasBlock(parentRoot)
+	hasParent := rs.db.HasBlockDeprecated(parentRoot)
 	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
 
 	if !hasParent {
@@ -193,7 +193,7 @@ func (rs *RegularSync) validateAndProcessBlock(
 		log.WithFields(logrus.Fields{
 			"slot": block.Slot,
 			"root": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))},
-		).Warn("Received Block from a forked chain")
+		).Warn("Received BlockDeprecated from a forked chain")
 		if err := rs.db.SaveHistoricalState(ctx, beaconState, blockRoot); err != nil {
 			log.Errorf("Could not save historical state %v", err)
 			return nil, nil, false, err

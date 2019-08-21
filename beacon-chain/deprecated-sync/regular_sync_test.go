@@ -74,7 +74,7 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	if err := ms.db.SaveBlock(block); err != nil {
+	if err := ms.db.SaveBlockDeprecated(block); err != nil {
 		return nil, err
 	}
 	return &pb.BeaconState{}, nil
@@ -203,7 +203,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	parentBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	if err := db.SaveBlock(parentBlock); err != nil {
+	if err := db.SaveBlockDeprecated(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(parentBlock)
@@ -281,7 +281,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	parentBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	if err := db.SaveBlock(parentBlock); err != nil {
+	if err := db.SaveBlockDeprecated(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(parentBlock)
@@ -370,13 +370,13 @@ func TestReceiveAttestation_OK(t *testing.T) {
 		Slot:                2,
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	beaconBlock := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	if err := db.SaveBlock(beaconBlock); err != nil {
+	if err := db.SaveBlockDeprecated(beaconBlock); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.UpdateChainHead(ctx, beaconBlock, beaconState); err != nil {
@@ -427,11 +427,11 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		Slot:                2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
 	}
-	if err := db.SaveState(ctx, state); err != nil {
+	if err := db.SaveStateDeprecated(ctx, state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	headBlock := &ethpb.BeaconBlock{Slot: state.Slot}
-	if err := db.SaveBlock(headBlock); err != nil {
+	if err := db.SaveBlockDeprecated(headBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, headBlock, state); err != nil {
@@ -592,21 +592,21 @@ func TestCanonicalBlockList_CanRetrieveCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = ss.db.SaveBlock(block1); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: root1[:]}
 	root2, _ := ssz.SigningRoot(block2)
-	if err = ss.db.SaveBlock(block2); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: root1[:]}
-	if err = ss.db.SaveBlock(block3); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 	block4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: root2[:]}
 	root4, _ := ssz.SigningRoot(block4)
-	if err = ss.db.SaveBlock(block4); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
@@ -633,7 +633,7 @@ func TestCanonicalBlockList_SameFinalizedAndHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = ss.db.SaveBlock(block1); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 
@@ -668,7 +668,7 @@ func TestCanonicalBlockList_NilParentBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	if err = ss.db.SaveBlock(block1); err != nil {
+	if err = ss.db.SaveBlockDeprecated(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
 

@@ -14,7 +14,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -148,7 +150,7 @@ var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
-	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
+	if err := cs.beaconDB.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
 	parentHash, err := ssz.SigningRoot(genesis)
@@ -158,7 +160,7 @@ func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconB
 	return parentHash, genesis
 }
 
-func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestation.Service) *ChainService {
+func setupBeaconChain(t *testing.T, beaconDB db.Database, attsService *attestation.Service) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
@@ -178,6 +180,7 @@ func setupBeaconChain(t *testing.T, beaconDB *db.BeaconDB, attsService *attestat
 	cfg := &Config{
 		BeaconBlockBuf: 0,
 		BeaconDB:       beaconDB,
+		DepositCache:   depositcache.NewDepositCache(),
 		Web3Service:    web3Service,
 		OpsPoolService: &mockOperationService{},
 		AttsService:    attsService,
@@ -201,10 +204,12 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	}
 
 	bState.Slot = slot
-	return service.beaconDB.SaveState(context.Background(), bState)
+	return service.beaconDB.SaveState(context.Background(), bState, [32]byte{})
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
