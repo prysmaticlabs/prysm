@@ -10,7 +10,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/attestation:go_default_library",
         "//beacon-chain/blockchain/forkchoice:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
