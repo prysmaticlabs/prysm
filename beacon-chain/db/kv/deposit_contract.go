@@ -24,7 +24,7 @@ func (k *Store) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	return addr, nil
 }
 
-// SaveDepositContract address to the db.
+// SaveDepositContractAddress to the db. It returns an error if an address has been previously saved.
 func (k *Store) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.VerifyContractAddress")
 	defer span.End()
