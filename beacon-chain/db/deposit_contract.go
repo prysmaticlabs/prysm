@@ -13,6 +13,8 @@ import (
 
 var depositContractAddressKey = []byte("deposit-contract")
 
+// DepositContractAddress returns contract address is the address of
+// the deposit contract on the proof of work chain.
 // DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositContractAddress")
@@ -30,11 +32,16 @@ func (db *BeaconDB) DepositContractAddress(ctx context.Context) ([]byte, error) 
 	return addr, nil
 }
 
+// SaveDepositContract address to the db.
 // DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	return errors.New("unimplemented")
 }
 
+// VerifyContractAddress that represents the data in this database. The
+// contract address is the address of the deposit contract on the proof of work
+// Ethereum chain. This value will never change or all of the data in the
+// database would be made invalid.
 // DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) VerifyContractAddress(ctx context.Context, addr common.Address) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.VerifyContractAddress")
