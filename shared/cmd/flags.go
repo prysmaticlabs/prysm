@@ -110,7 +110,7 @@ var (
 	// P2PEncoding defines the encoding format for p2p messages.
 	P2PEncoding = cli.IntFlag{
 		Name:  "p2p-encoding",
-		Usage: "The encoding format of messages sent over the wire. The default is ssz",
+		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
 		Value: 0,
 	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
