@@ -24,14 +24,15 @@ var log = logrus.WithField("prefix", "beacondb")
 type Database interface {
 	io.Closer
 	DatabasePath() string
-
 	ClearDB() error
+	// Attestation related methods.
 	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(ctx context.Context, attRoot [32]byte) bool
 	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
+	// Block related methods.
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
 	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
@@ -41,16 +42,27 @@ type Database interface {
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
-	HeadState(ctx context.Context) (*pb.BeaconState, error)
-	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
+	// State related methods.
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
+	// Slashing operations.
+	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
+	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error)
+	SaveProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error
+	SaveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) error
+	HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool
+	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
+	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
+	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
 }
 
 var _ = Database(&BeaconDB{})
