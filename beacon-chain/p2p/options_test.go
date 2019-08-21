@@ -12,12 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestBuildOptions(t *testing.T) {
-	opts, _, _ := buildOptions(&Config{})
-
-	_ = opts
-}
-
 func TestPrivateKeyLoading(t *testing.T) {
 	file, err := ioutil.TempFile(testutil.TempDir(), "key")
 	if err != nil {
