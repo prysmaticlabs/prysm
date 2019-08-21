@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+var badObject = "badObject"
+
 // seenAttesterSlashings represents a cache of all the seen slashings
 var seenAttesterSlashings = ccache.New(ccache.Configure())
 
@@ -35,10 +37,13 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		return false
 	}
 
+	badKey := badObject + cacheKey
+	if seenAttesterSlashings.Get(badKey) != nil {
+		return false
+	}
 	if seenAttesterSlashings.Get(cacheKey) != nil {
 		return false
 	}
-
 	state, err := r.db.HeadState(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to get head state")
@@ -47,6 +52,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 
 	if err := blocks.VerifyAttesterSlashing(state, slashing); err != nil {
 		log.WithError(err).Warn("Received invalid attester slashing")
+		seenAttesterSlashings.Set(badKey, true /*value*/, oneYear /*TTL*/)
 		return false
 	}
 	seenAttesterSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)

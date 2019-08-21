@@ -120,7 +120,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r. validateAttesterSlashing(ctx, slashing, p2p) {
+	if r.validateAttesterSlashing(ctx, slashing, p2p) {
 		t.Error("Passed validation when should have failed")
 	}
 
