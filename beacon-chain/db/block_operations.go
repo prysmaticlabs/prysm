@@ -11,6 +11,30 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// VoluntaryExit by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
+func (db *BeaconDB) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error) {
+	return nil, errors.New("unimplemented")
+}
+
+// SaveVoluntaryExit by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
+func (db *BeaconDB) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
+	return errors.New("unimplemented")
+}
+
+// HasVoluntaryExit by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
+func (db *BeaconDB) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
+	return false
+}
+
+// DeleteVoluntaryExit by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
+func (db *BeaconDB) DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
+	return errors.New("unimplemented")
+}
+
 // ProposerSlashing retrieval from the db.
 // DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error) {
