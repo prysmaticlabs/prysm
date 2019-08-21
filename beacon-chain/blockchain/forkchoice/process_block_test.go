@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -16,10 +15,9 @@ import (
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	kv := db.(*kv.Store)
-	defer testDB.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, kv)
+	store := NewForkChoiceService(ctx, db)
 
 	roots, err := blockTree1(db)
 	if err != nil {
