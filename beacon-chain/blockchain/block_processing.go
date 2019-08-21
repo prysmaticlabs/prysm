@@ -235,7 +235,7 @@ func (c *ChainService) AdvanceStateDeprecated(
 	if block != nil {
 		log.WithField(
 			"slotsSinceGenesis", newState.Slot,
-		).Info("BlockDeprecated transition successfully processed")
+		).Info("Block transition successfully processed")
 
 		blockRoot, err := ssz.SigningRoot(block)
 		if err != nil {

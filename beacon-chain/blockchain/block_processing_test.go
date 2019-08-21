@@ -275,7 +275,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err != nil {
-		t.Errorf("BlockDeprecated failed processing: %v", err)
+		t.Errorf("Block failed processing: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
@@ -346,7 +346,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	_, err = chainService.ReceiveBlockDeprecated(context.Background(), block)
 	switch err.(type) {
 	case *BlockFailedProcessingErr:
-		t.Log("BlockDeprecated failed processing as expected")
+		t.Log("Block failed processing as expected")
 	default:
 		t.Errorf("Expected block processing to fail, received: %v", err)
 	}

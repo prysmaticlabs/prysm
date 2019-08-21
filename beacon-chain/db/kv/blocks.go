@@ -16,7 +16,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// BlockDeprecated retrieval by root.
+// Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
@@ -149,7 +149,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 	return roots, nil
 }
 
-// HasBlockDeprecated checks if a block by root exists in the db.
+// HasBlock checks if a block by root exists in the db.
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
@@ -169,7 +169,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteBlockDeprecated by block root.
+// DeleteBlock by block root.
 // TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
@@ -195,7 +195,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
-// SaveBlockDeprecated to the db.
+// SaveBlock to the db.
 func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
 	defer span.End()

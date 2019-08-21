@@ -56,11 +56,11 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 // need the active validator indices for some specific reason.
 //
 // Spec pseudocode definition:
-//  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndexDeprecated]:
+//  def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
 //    """
 //    Return the sequence of active validator indices at ``epoch``.
 //    """
-//    return [ValidatorIndexDeprecated(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
+//    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
 	if err != nil {
@@ -152,7 +152,7 @@ func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 // BeaconProposerIndex returns proposer index of a current slot.
 //
 // Spec pseudocode definition:
-//  def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndexDeprecated:
+//  def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 //    """
 //    Return the beacon proposer index at the current slot.
 //    """
@@ -169,7 +169,7 @@ func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 //        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
 //        effective_balance = state.validators[candidate_index].effective_balance
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            return ValidatorIndexDeprecated(candidate_index)
+//            return ValidatorIndex(candidate_index)
 //        i += 1
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// Calculate the offset for slot and shard

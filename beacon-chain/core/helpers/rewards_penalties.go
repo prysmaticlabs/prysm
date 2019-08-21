@@ -13,7 +13,7 @@ var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 // of input validators.
 //
 // Spec pseudocode definition:
-//   def get_total_balance(state: BeaconState, indices: Set[ValidatorIndexDeprecated]) -> Gwei:
+//   def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 //    """
 //    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
@@ -70,7 +70,7 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
 //
 // Spec pseudocode definition:
-//  def increase_balance(state: BeaconState, index: ValidatorIndexDeprecated, delta: Gwei) -> None:
+//  def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
 //    Increase the validator balance at index ``index`` by ``delta``.
 //    """
@@ -83,7 +83,7 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
 //
 // Spec pseudocode definition:
-//  def decrease_balance(state: BeaconState, index: ValidatorIndexDeprecated, delta: Gwei) -> None:
+//  def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
 //    """
 //    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """

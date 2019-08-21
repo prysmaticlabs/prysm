@@ -79,7 +79,7 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	})
 }
 
-// ValidatorIndexDeprecated by public key.
+// ValidatorIndex by public key.
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorIndex")
 	defer span.End()
@@ -117,7 +117,7 @@ func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool 
 	return exists
 }
 
-// DeleteValidatorIndexDeprecated clears a validator index from the db by the validator's public key.
+// DeleteValidatorIndex clears a validator index from the db by the validator's public key.
 func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteValidatorIndex")
 	defer span.End()
@@ -127,7 +127,7 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 	})
 }
 
-// SaveValidatorIndexDeprecated by public key in the db.
+// SaveValidatorIndex by public key in the db.
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorIndex")
 	defer span.End()

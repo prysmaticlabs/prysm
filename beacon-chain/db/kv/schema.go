@@ -20,6 +20,6 @@ var (
 	attestationStartEpochIndicesBucket = []byte("attestation-start-epoch-indices")
 	attestationEndEpochIndicesBucket   = []byte("attestation-end-epoch-indices")
 
-	// BlockDeprecated keys.
+	// Block keys.
 	headBlockRootKey = []byte("head-root")
 )

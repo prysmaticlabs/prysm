@@ -25,7 +25,7 @@ func IsValidBlock(
 	genesisTime time.Time) error {
 
 	// Pre-Processing Condition 1:
-	// Check that the parent BlockDeprecated has been processed and saved.
+	// Check that the parent Block has been processed and saved.
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
 	parentBlock := HasBlock(ctx, parentRoot)
 	if !parentBlock {

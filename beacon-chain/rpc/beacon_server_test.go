@@ -254,7 +254,7 @@ func TestBlockTree_OK(t *testing.T) {
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
-	// [Justified BlockDeprecated]->[C, Slot 3, 2 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
 	var validators []*ethpb.Validator
 	for i := 0; i < 13; i++ {
@@ -475,7 +475,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
-	// [Justified BlockDeprecated]->[C, Slot 3, 2 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
 	justifiedState := &pbp2p.BeaconState{
 		Slot:     0,
@@ -686,7 +686,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	// We want to ensure that if our block tree looks as follows, the RPC response
 	// returns the correct information.
 	//                   /->[A, Slot 3, 3 Votes]->[B, Slot 4, 3 Votes]
-	// [Justified BlockDeprecated]->[C, Slot 3, 2 Votes]
+	// [Justified Block]->[C, Slot 3, 2 Votes]
 	//                   \->[D, Slot 3, 2 Votes]->[SKIP SLOT]->[E, Slot 5, 1 Vote]
 	justifiedState := &pbp2p.BeaconState{
 		Slot:     0,

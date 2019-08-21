@@ -81,19 +81,19 @@ func (mr *MockValidatorServiceServerMockRecorder) ExitedValidators(arg0, arg1 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExitedValidators", reflect.TypeOf((*MockValidatorServiceServer)(nil).ExitedValidators), arg0, arg1)
 }
 
-// ValidatorIndexDeprecated mocks base method
+// ValidatorIndex mocks base method
 func (m *MockValidatorServiceServer) ValidatorIndex(arg0 context.Context, arg1 *v1.ValidatorIndexRequest) (*v1.ValidatorIndexResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidatorIndexDeprecated", arg0, arg1)
+	ret := m.ctrl.Call(m, "ValidatorIndex", arg0, arg1)
 	ret0, _ := ret[0].(*v1.ValidatorIndexResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ValidatorIndexDeprecated indicates an expected call of ValidatorIndexDeprecated
+// ValidatorIndex indicates an expected call of ValidatorIndex
 func (mr *MockValidatorServiceServerMockRecorder) ValidatorIndex(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndexDeprecated", reflect.TypeOf((*MockValidatorServiceServer)(nil).ValidatorIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndex", reflect.TypeOf((*MockValidatorServiceServer)(nil).ValidatorIndex), arg0, arg1)
 }
 
 // ValidatorPerformance mocks base method

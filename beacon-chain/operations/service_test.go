@@ -614,7 +614,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 
 	retrievedAtts, _ = s.AttestationPool(context.Background(), 15)
 	if len(retrievedAtts) != 0 {
-		t.Errorf("AttestationDeprecated pool should be empty but got a length of %d", len(retrievedAtts))
+		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
 	}
 }
 
@@ -649,7 +649,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 
 	atts, _ := s.AttestationPool(context.Background(), 15)
 	if len(atts) != len(attestations) {
-		t.Errorf("AttestationDeprecated pool should be %d but got a length of %d",
+		t.Errorf("Attestation pool should be %d but got a length of %d",
 			len(attestations), len(atts))
 	}
 
@@ -666,7 +666,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 
 	atts, _ = s.AttestationPool(context.Background(), 15)
 	if len(atts) != 0 {
-		t.Errorf("AttestationDeprecated pool should be empty but got a length of %d", len(atts))
+		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
 }
 
@@ -694,7 +694,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !canonical {
-		t.Error("AttestationDeprecated should be canonical")
+		t.Error("Attestation should be canonical")
 	}
 
 	cb2 := &ethpb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
@@ -709,7 +709,7 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 		t.Fatal(err)
 	}
 	if canonical {
-		t.Error("AttestationDeprecated should not be canonical")
+		t.Error("Attestation should not be canonical")
 	}
 }
 
@@ -723,7 +723,7 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if canonical {
-		t.Error("AttestationDeprecated shouldn't be canonical")
+		t.Error("Attestation shouldn't be canonical")
 	}
 
 	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
@@ -740,6 +740,6 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if canonical {
-		t.Error("AttestationDeprecated shouldn't be canonical")
+		t.Error("Attestation shouldn't be canonical")
 	}
 }

@@ -54,7 +54,7 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return s, err
 }
 
-// SaveStateDeprecated stores a state to the db using block's signing root which was used to generate the state.
+// SaveState stores a state to the db using block's signing root which was used to generate the state.
 func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()

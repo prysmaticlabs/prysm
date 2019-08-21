@@ -112,7 +112,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	}
 
 	if !bytes.Equal(hash.Bytes(), wanted.Bytes()) {
-		t.Fatalf("BlockDeprecated hash did not equal expected hash, expected: %v, got: %v", wanted, hash)
+		t.Fatalf("Block hash did not equal expected hash, expected: %v, got: %v", wanted, hash)
 	}
 
 	exists, _, err := web3Service.blockCache.BlockInfoByHash(wanted)
@@ -151,7 +151,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 		t.Fatal("Expected BlockExists to return true.")
 	}
 	if height.Cmp(block.Number()) != 0 {
-		t.Fatalf("BlockDeprecated height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
+		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
 	}
 
 	exists, _, err = web3Service.blockCache.BlockInfoByHeight(height)
@@ -209,7 +209,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 		t.Fatal("Expected BlockExists to return true.")
 	}
 	if height.Cmp(block.Number()) != 0 {
-		t.Fatalf("BlockDeprecated height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
+		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
 	}
 }
 

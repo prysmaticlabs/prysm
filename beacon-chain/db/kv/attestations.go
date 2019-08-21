@@ -14,7 +14,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestationDeprecated retrieval by attestation data root.
+// Attestation retrieval by attestation data root.
 func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
@@ -31,7 +31,7 @@ func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.A
 	return att, err
 }
 
-// AttestationsDeprecated retrieves a list of attestations by filter criteria.
+// Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestations")
 	defer span.End()
@@ -76,7 +76,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	return atts, err
 }
 
-// HasAttestationDeprecated checks if an attestation by its attestation data root exists in the db.
+// HasAttestation checks if an attestation by its attestation data root exists in the db.
 func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttestation")
 	defer span.End()
@@ -90,7 +90,7 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteAttestationDeprecated by attestation data root.
+// DeleteAttestation by attestation data root.
 // TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")

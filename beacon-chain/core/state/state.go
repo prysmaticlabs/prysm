@@ -45,7 +45,7 @@ import (
 //             validator.activation_epoch = GENESIS_EPOCH
 //
 //     # Populate active_index_roots and compact_committees_roots
-//     indices_list = List[ValidatorIndexDeprecated, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, GENESIS_EPOCH))
+//     indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, GENESIS_EPOCH))
 //     active_index_root = hash_tree_root(indices_list)
 //     committee_root = get_compact_committees_root(state, GENESIS_EPOCH)
 //     for index in range(EPOCHS_PER_HISTORICAL_VECTOR):

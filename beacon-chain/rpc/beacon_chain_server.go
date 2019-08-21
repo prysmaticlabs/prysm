@@ -37,7 +37,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
-// AttestationsDeprecated are sorted by crosslink shard by default.
+// Attestations are sorted by crosslink shard by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter

@@ -74,7 +74,7 @@ func (a *Service) Start() {
 	go a.attestationPool()
 }
 
-// Stop the AttestationDeprecated service's main event loop and associated goroutines.
+// Stop the Attestation service's main event loop and associated goroutines.
 func (a *Service) Stop() error {
 	defer a.cancel()
 	log.Info("Stopping service")
@@ -97,7 +97,7 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 // the highest slotNumber attestation in attestation pool gets returned.
 //
 // Spec pseudocode definition:
-//	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndexDeprecated) ->
+//	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
 func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uint64) (*pb.AttestationTarget, error) {
@@ -275,7 +275,7 @@ func (a *Service) updateAttestation(beaconState *pb.BeaconState, attestation *et
 					"attTargetBoundarySlot": attTargetBoundarySlot,
 					"sourceEpoch":           attestation.Data.Source.Epoch,
 				},
-			).Debug("AttestationDeprecated store updated")
+			).Debug("Attestation store updated")
 		}
 		a.store.Unlock()
 	}
