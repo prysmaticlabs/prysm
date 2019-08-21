@@ -19,7 +19,6 @@ go_library(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/operations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",

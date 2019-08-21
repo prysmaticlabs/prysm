@@ -133,7 +133,7 @@ func (c *ChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
-// blocks that is received from p2p layer or rpc. The operations consists of:
+// blocks that is received from rpc service. The operations consists of:
 //   1. Gossip block to other peers
 //   2. Validate block, apply state transition and update check points
 //   3. Apply fork choice to the processed block
@@ -142,20 +142,18 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
+	// Broadcast the new block to the network.
+	if err := c.p2p.Broadcast(ctx, block); err != nil {
+		return errors.Wrap(err, "could not broadcast block")
 	}
-
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       root[:],
-		SlotNumber: block.Slot,
-	})
 
 	// Apply state transition on the new block.
 	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
 	}
 	log.WithFields(logrus.Fields{
 		"slots": block.Slot,
@@ -167,7 +165,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := c.db.Block(ctx, bytesutil.ToBytes32(headRoot))
+	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
@@ -176,12 +174,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		"headRoot": hex.EncodeToString(headRoot),
 	}).Info("Finished fork choice")
 
-	// Save head info after success upon running fork choice.
+	// Save head info after running fork choice.
 	c.canonicalRootsLock.Lock()
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
-	if err := c.db.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	log.WithFields(logrus.Fields{
@@ -198,7 +196,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 }
 
 // ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
-// that are preformed on blocks that is received from p2p layer or rpc. The operations consists of:
+// that are preformed on blocks that is received from regular sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
@@ -206,14 +204,13 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
 
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
-
 	// Apply state transition on the new block.
 	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
 	}
 	log.WithFields(logrus.Fields{
 		"slot": block.Slot,
@@ -225,7 +222,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := c.db.Block(ctx, bytesutil.ToBytes32(headRoot))
+	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
@@ -239,7 +236,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = headBlk.Slot
 	c.canonicalRoots[headBlk.Slot] = headRoot
-	if err := c.db.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	log.WithFields(logrus.Fields{
@@ -255,41 +252,33 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	return nil
 }
 
-// ReceiveBlockNoForkchoice is a function that defines the all operations (minus applying forkchoice)
-// that are preformed blocks that is received from p2p layer or rpc. The operations consists of:
-//   1. Gossip block to other peers
-//   2. Validate block, apply state transition and update check points
-//   3. Save latest head info
+// ReceiveBlockNoPubsubForkchoice is a function that defines the all operations (minus pubsub and forkchoice)
+// that are preformed blocks that is received from initial sync service. The operations consists of:
+//   1. Validate block, apply state transition and update check points
+//   2. Save latest head info
 func (c *ChainService) ReceiveBlockNoForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
 
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
-
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       root[:],
-		SlotNumber: block.Slot,
-	})
-
 	// Apply state transition on the incoming newly received block.
 	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
 	}
 	log.WithFields(logrus.Fields{
 		"slots": block.Slot,
 		"root":  hex.EncodeToString(root[:]),
 	}).Info("Finished state transition and updated fork choice store for block")
 
-	// Save head info after success upon running fork choice.
+	// Save new block as head.
 	c.canonicalRootsLock.Lock()
 	defer c.canonicalRootsLock.Unlock()
 	c.headSlot = block.Slot
 	c.canonicalRoots[block.Slot] = root[:]
-	if err := c.db.SaveHeadBlockRoot(ctx, root); err != nil {
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, root); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	log.WithFields(logrus.Fields{
@@ -322,7 +311,7 @@ func (c *ChainService) VerifyBlockValidity(
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
-		c.deprecatedBeaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
+		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return errors.Wrap(err, "block does not fulfill pre-processing conditions")
 	}
 	return nil

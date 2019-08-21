@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -60,7 +61,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, nil, db, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -87,7 +88,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 		StateRoot:  genesis.StateRoot,
 	}
-	if err := chainService.db.SaveBlock(ctx, genesis); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(genesis)
@@ -138,7 +139,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.db.SaveBlock(ctx, block); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService.ReceiveBlock(context.Background(), block); err != nil {
@@ -154,7 +155,7 @@ func TestReceiveBlockNoForkchoice_ProcessCorrectly(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, nil, db, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -181,7 +182,7 @@ func TestReceiveBlockNoForkchoice_ProcessCorrectly(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 		StateRoot:  genesis.StateRoot,
 	}
-	if err := chainService.db.SaveBlock(ctx, genesis); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
 	parentRoot, err := ssz.SigningRoot(genesis)
@@ -232,7 +233,7 @@ func TestReceiveBlockNoForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := chainService.db.SaveBlock(ctx, block); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService.ReceiveBlockNoForkchoice(context.Background(), block); err != nil {
@@ -296,7 +297,7 @@ func TestReceiveBlockDeprecated_ProcessCorrectly(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -389,7 +390,7 @@ func TestReceiveBlockDeprecated_UsesParentBlockState(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -476,7 +477,7 @@ func TestReceiveBlockDeprecated_DeletesBadBlock(t *testing.T) {
 	attsService := attestation.NewAttestationService(
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
-	chainService := setupBeaconChain(t, db, nil, attsService)
+	chainService := setupBeaconChain(t, db, attsService)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -561,7 +562,7 @@ func TestReceiveBlockDeprecated_CheckBlockStateRoot_GoodState(t *testing.T) {
 	attsService := attestation.NewAttestationService(
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
-	chainService := setupBeaconChain(t, db, nil, attsService)
+	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -636,7 +637,7 @@ func TestReceiveBlockDeprecated_CheckBlockStateRoot_BadState(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
-	chainService := setupBeaconChain(t, db, nil, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -707,7 +708,7 @@ func TestReceiveBlockDeprecated_RemovesPendingDeposits(t *testing.T) {
 	attsService := attestation.NewAttestationService(
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
-	chainService := setupBeaconChain(t, db, nil, attsService)
+	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -900,7 +901,7 @@ func TestReceiveBlockDeprecated_OnChainSplit(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
@@ -1110,7 +1111,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, db, nil, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
