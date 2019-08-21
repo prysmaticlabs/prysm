@@ -223,8 +223,9 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
-
-				if balance > highest {
+				// When there's a tie, it's broken lexicographically to favor the higher one.
+				if balance > highest ||
+					balance == highest && bytes.Compare(child, head) > 0 {
 					highest = balance
 					head = child
 				}
