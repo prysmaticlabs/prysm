@@ -335,9 +335,9 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
-	if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
-		return err
-	}
+	//if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
+	//	return err
+	//}
 
 	return b.services.RegisterService(web3Service)
 }
@@ -403,9 +403,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *rbcsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
+	var syncChecker prysmsync.Checker
+	if featureconfig.FeatureConfig().UseNewSync {
+		var syncService *prysmsync.RegularSync
+		if err := b.services.FetchService(&syncService); err != nil {
+			return err
+		}
+		syncChecker = syncService
+	} else {
+		var syncService *rbcsync.Service
+		if err := b.services.FetchService(&syncService); err != nil {
+			return err
+		}
+		syncChecker = syncService
 	}
 
 	port := ctx.GlobalString(flags.RPCPort.Name)
@@ -420,7 +430,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
-		SyncService:      syncService,
+		SyncService:      syncChecker,
 	})
 
 	return b.services.RegisterService(rpcService)

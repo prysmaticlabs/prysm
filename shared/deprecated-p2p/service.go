@@ -170,6 +170,10 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}, nil
 }
 
+func (s *Server) Started() bool {
+	return true
+}
+
 func checkAvailablePort(port int) bool {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {

@@ -4,20 +4,15 @@ import (
 	"context"
 	"errors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
-	"github.com/sirupsen/logrus"
 )
 
 var slog = logrus.WithField("prefix", "sync")
-
-// Checker defines a struct which can verify whether a node is currently
-// synchronizing a chain with the rest of peers in the network.
-type Checker interface {
-	Syncing() bool
-}
 
 // Service defines the main routines used in the sync service.
 type Service struct {
