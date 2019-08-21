@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -43,7 +42,6 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	deprecatedBeaconDB   *db.BeaconDB
 	db                   db.Database
-	newBeaconDB          *kv.Store
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
