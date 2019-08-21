@@ -13,6 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// SaveAttestations in the db.
 func (db *BeaconDB) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	for _, a := range atts {
 		if err := db.SaveAttestation(ctx, a); err != nil {
@@ -154,6 +155,7 @@ func (db *BeaconDB) AttestationTarget(hash [32]byte) (*pb.AttestationTarget, err
 	return attTgt, err
 }
 
+// HasAttestation checks if the attestaiton exists.
 func (db *BeaconDB) HasAttestation(_ context.Context, hash [32]byte) bool {
 	exists := false
 	// #nosec G104

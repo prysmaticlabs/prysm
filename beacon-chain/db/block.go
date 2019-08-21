@@ -46,7 +46,7 @@ func createBlock(enc []byte) (*ethpb.BeaconBlock, error) {
 	return protoBlock, nil
 }
 
-// BlockDeprecated accepts a block root and returns the corresponding block.
+// Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
 func (db *BeaconDB) Block(_ context.Context, root [32]byte) (*ethpb.BeaconBlock, error) {
 	return db.BlockDeprecated(root)

@@ -11,12 +11,14 @@ import (
 
 var _ = shared.Service(&RegularSync{})
 
+// Config to set up the regular sync service.
 type Config struct {
 	P2P        p2p.P2P
 	DB         db.Database
 	Operations *operations.Service
 }
 
+// NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	return &RegularSync{
 		ctx:        context.Background(),

@@ -145,6 +145,8 @@ func ClearDB(dirPath string) error {
 	}
 	return os.RemoveAll(dirPath)
 }
+
+// DatabasePath returns the filepath to the database directory.
 func (db *BeaconDB) DatabasePath() string {
 	return db.databasePath
 }
