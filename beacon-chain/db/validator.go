@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/boltdb/bolt"
@@ -11,8 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// SaveValidatorIndex accepts a public key and validator index and writes them to disk.
-func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
+// SaveValidatorIndex in db.
+func (db *BeaconDB) SaveValidatorIndex(ctx context.Context, pubkey [48]byte, idx uint64) error {
+	return db.SaveValidatorIndexDeprecated(pubkey[:], int(idx))
+}
+
+// SaveValidatorIndexDeprecated accepts a public key and validator index and writes them to disk.
+func (db *BeaconDB) SaveValidatorIndexDeprecated(pubKey []byte, index int) error {
 	h := hashutil.Hash(pubKey)
 
 	return db.update(func(tx *bolt.Tx) error {
@@ -23,6 +29,11 @@ func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
 
 		return bucket.Put(h[:], buf[:n])
 	})
+}
+
+// SaveValidatorLatestVote not implemented.
+func (db *BeaconDB) SaveValidatorLatestVote(_ context.Context, _ uint64, _ *pb.ValidatorLatestVote) error {
+	return errors.New("not implemented")
 }
 
 // SaveValidatorIndexBatch accepts a public key and validator index and writes them to disk.
@@ -38,10 +49,16 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 
 }
 
-// ValidatorIndex accepts a public key and returns the corresponding validator index.
+// ValidatorIndex returns validator index from database.
+func (db *BeaconDB) ValidatorIndex(_ context.Context, pubkey [48]byte) (uint64, bool, error) {
+	idx, err := db.ValidatorIndexDeprecated(pubkey[:])
+	return idx, true, err
+}
+
+// ValidatorIndexDeprecated accepts a public key and returns the corresponding validator index.
 // If the validator index is not found in DB, as a fail over, it searches the state and
 // saves it to the DB when found.
-func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
+func (db *BeaconDB) ValidatorIndexDeprecated(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
 		state, err := db.HeadState(context.Background())
 		if err != nil {
@@ -50,7 +67,7 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 		for i := 0; i < len(state.Validators); i++ {
 			v := state.Validators[i]
 			if bytes.Equal(v.PublicKey, pubKey) {
-				if err := db.SaveValidatorIndex(pubKey, i); err != nil {
+				if err := db.SaveValidatorIndexDeprecated(pubKey, i); err != nil {
 					return 0, err
 				}
 				return uint64(i), nil
@@ -78,7 +95,13 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 }
 
 // DeleteValidatorIndex deletes the validator index map record.
-func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
+func (db *BeaconDB) DeleteValidatorIndex(_ context.Context, pubkey [48]byte) error {
+	return db.DeleteValidatorIndexDeprecated(pubkey[:])
+}
+
+// DeleteValidatorIndexDeprecated deletes the validator index map record.
+// DEPRECATED: Do not use.
+func (db *BeaconDB) DeleteValidatorIndexDeprecated(pubKey []byte) error {
 	h := hashutil.Hash(pubKey)
 
 	return db.update(func(tx *bolt.Tx) error {
@@ -88,11 +111,22 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	})
 }
 
+// HasValidatorIndex returns hasValidator(pubkey).
+func (db *BeaconDB) HasValidatorIndex(_ context.Context, pubkey [48]byte) bool {
+	return db.HasValidator(pubkey[:])
+}
+
+// HasValidatorLatestVote always returns false. Don't use this.
+// DEPRECATED: Do not use.
+func (db *BeaconDB) HasValidatorLatestVote(_ context.Context, _ uint64) bool {
+	return false
+}
+
 // HasValidator checks if a validator index map exists.
 func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	exists := false
 	h := hashutil.Hash(pubKey)
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	// #nosec G104, similar to HasBlockDeprecated, HasAttestationDeprecated... etc
 	db.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorBucket)
 
@@ -106,7 +140,7 @@ func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 // are in the bucket.
 func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (bool, error) {
 	exists := false
-	// #nosec G104, similar to HasBlock, HasAttestation... etc
+	// #nosec G104, similar to HasBlockDeprecated, HasAttestationDeprecated... etc
 	db.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorBucket)
 		for _, pk := range pubKeys {
@@ -122,7 +156,7 @@ func (db *BeaconDB) HasAnyValidators(state *pb.BeaconState, pubKeys [][]byte) (b
 			for i := 0; i < len(state.Validators); i++ {
 				v := state.Validators[i]
 				if bytes.Equal(v.PublicKey, pubKey) {
-					if err := db.SaveValidatorIndex(pubKey, i); err != nil {
+					if err := db.SaveValidatorIndexDeprecated(pubKey, i); err != nil {
 						return false, err
 					}
 					exists = true

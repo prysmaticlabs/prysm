@@ -20,12 +20,12 @@ func TestNilDB_OK(t *testing.T) {
 	block := &ethpb.BeaconBlock{}
 	h, _ := ssz.SigningRoot(block)
 
-	hasBlock := db.HasBlock(h)
+	hasBlock := db.HasBlockDeprecated(h)
 	if hasBlock {
 		t.Fatal("HashBlock should return false")
 	}
 
-	bPrime, err := db.Block(h)
+	bPrime, err := db.BlockDeprecated(h)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -41,12 +41,12 @@ func TestSaveBlock_OK(t *testing.T) {
 	block1 := &ethpb.BeaconBlock{}
 	h1, _ := ssz.SigningRoot(block1)
 
-	err := db.SaveBlock(block1)
+	err := db.SaveBlockDeprecated(block1)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	b1Prime, err := db.Block(h1)
+	b1Prime, err := db.BlockDeprecated(h1)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -61,12 +61,12 @@ func TestSaveBlock_OK(t *testing.T) {
 	}
 	h2, _ := ssz.SigningRoot(block2)
 
-	err = db.SaveBlock(block2)
+	err = db.SaveBlockDeprecated(block2)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	b2Prime, err := db.Block(h2)
+	b2Prime, err := db.BlockDeprecated(h2)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -86,11 +86,11 @@ func TestSaveBlock_NilBlkInCache(t *testing.T) {
 	// Save a nil block to with block root.
 	db.blocks[h1] = nil
 
-	if err := db.SaveBlock(block); err != nil {
+	if err := db.SaveBlockDeprecated(block); err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	savedBlock, err := db.Block(h1)
+	savedBlock, err := db.BlockDeprecated(h1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestSaveBlockInCache_OK(t *testing.T) {
 	block := &ethpb.BeaconBlock{Slot: 999}
 	h, _ := ssz.SigningRoot(block)
 
-	err := db.SaveBlock(block)
+	err := db.SaveBlockDeprecated(block)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestSaveBlockInCache_OK(t *testing.T) {
 		t.Error("Could not save block in cache")
 	}
 
-	savedBlock, err := db.Block(h)
+	savedBlock, err := db.BlockDeprecated(h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,22 +136,22 @@ func TestDeleteBlock_OK(t *testing.T) {
 	block := &ethpb.BeaconBlock{Slot: 0}
 	h, _ := ssz.SigningRoot(block)
 
-	err := db.SaveBlock(block)
+	err := db.SaveBlockDeprecated(block)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	savedBlock, err := db.Block(h)
+	savedBlock, err := db.BlockDeprecated(h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(block, savedBlock) {
 		t.Fatal(err)
 	}
-	if err := db.DeleteBlock(block); err != nil {
+	if err := db.DeleteBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
-	savedBlock, err = db.Block(h)
+	savedBlock, err = db.BlockDeprecated(h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,12 +167,12 @@ func TestDeleteBlockInCache_OK(t *testing.T) {
 	block := &ethpb.BeaconBlock{Slot: 0}
 	h, _ := ssz.SigningRoot(block)
 
-	err := db.SaveBlock(block)
+	err := db.SaveBlockDeprecated(block)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	if err := db.DeleteBlock(block); err != nil {
+	if err := db.DeleteBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,13 +217,13 @@ func TestBlocksBySlot_MultipleBlocks(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: []byte("C"),
 		}}
-	if err := db.SaveBlock(b1); err != nil {
+	if err := db.SaveBlockDeprecated(b1); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveBlock(b2); err != nil {
+	if err := db.SaveBlockDeprecated(b2); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveBlock(b3); err != nil {
+	if err := db.SaveBlockDeprecated(b3); err != nil {
 		t.Fatal(err)
 	}
 
@@ -289,7 +289,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to hash b2: %v", err)
 	}
-	if err := db.SaveBlock(block2); err != nil {
+	if err := db.SaveBlockDeprecated(block2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
@@ -341,7 +341,7 @@ func TestChainProgress_OK(t *testing.T) {
 	cycleLength := params.BeaconConfig().SlotsPerEpoch
 
 	block1 := &ethpb.BeaconBlock{Slot: 1}
-	if err := db.SaveBlock(block1); err != nil {
+	if err := db.SaveBlockDeprecated(block1); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, block1, beaconState); err != nil {
@@ -356,7 +356,7 @@ func TestChainProgress_OK(t *testing.T) {
 	}
 
 	block2 := &ethpb.BeaconBlock{Slot: cycleLength}
-	if err := db.SaveBlock(block2); err != nil {
+	if err := db.SaveBlockDeprecated(block2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, block2, beaconState); err != nil {
@@ -371,7 +371,7 @@ func TestChainProgress_OK(t *testing.T) {
 	}
 
 	block3 := &ethpb.BeaconBlock{Slot: 3}
-	if err := db.SaveBlock(block3); err != nil {
+	if err := db.SaveBlockDeprecated(block3); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
 	if err := db.UpdateChainHead(ctx, block3, beaconState); err != nil {
@@ -465,12 +465,12 @@ func TestHasBlock_returnsTrue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveBlock(block); err != nil {
+	if err := db.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 
-	if !db.HasBlock(root) {
-		t.Fatal("db.HasBlock returned false for block just saved")
+	if !db.HasBlockDeprecated(root) {
+		t.Fatal("db.HasBlockDeprecated returned false for block just saved")
 	}
 }
 
@@ -482,7 +482,7 @@ func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
 		Slot: 23,
 	}
 
-	if err := db.SaveBlock(block); err != nil {
+	if err := db.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -491,7 +491,7 @@ func TestHighestBlockSlot_UpdatedOnSaveBlock(t *testing.T) {
 	}
 
 	block.Slot = 55
-	if err := db.SaveBlock(block); err != nil {
+	if err := db.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -506,7 +506,7 @@ func TestClearBlockCache_OK(t *testing.T) {
 
 	block := &ethpb.BeaconBlock{Slot: 0}
 
-	err := db.SaveBlock(block)
+	err := db.SaveBlockDeprecated(block)
 	if err != nil {
 		t.Fatalf("save block failed: %v", err)
 	}

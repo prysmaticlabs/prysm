@@ -37,7 +37,7 @@ type attestationStore struct {
 type Service struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
-	beaconDB     *db.BeaconDB
+	beaconDB     db.Database
 	incomingFeed *event.Feed
 	incomingChan chan *ethpb.Attestation
 	// store is the mapping of individual
@@ -49,7 +49,7 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconDB *db.BeaconDB
+	BeaconDB db.Database
 }
 
 // NewAttestationService instantiates a new service instance that will
@@ -118,11 +118,12 @@ func (a *Service) LatestAttestationTarget(beaconState *pb.BeaconState, index uin
 		return nil, nil
 	}
 	targetRoot := bytesutil.ToBytes32(attestation.Data.BeaconBlockRoot)
-	if !a.beaconDB.HasBlock(targetRoot) {
+	if !a.beaconDB.HasBlock(context.TODO(), targetRoot) {
 		return nil, nil
 	}
 
-	return a.beaconDB.AttestationTarget(targetRoot)
+	// TODO(3219): remove after fork choice service changes.
+	return a.beaconDB.(*db.BeaconDB).AttestationTarget(targetRoot)
 }
 
 // attestationPool takes an newly received attestation from sync service
@@ -133,7 +134,7 @@ func (a *Service) attestationPool() {
 	for {
 		select {
 		case <-a.ctx.Done():
-			log.Debug("Attestation pool closed, exiting goroutine")
+			log.Debug("AttestationDeprecated pool closed, exiting goroutine")
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestations := <-a.incomingChan:

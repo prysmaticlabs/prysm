@@ -20,14 +20,14 @@ func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
-	HasBlock func(hash [32]byte) bool,
+	HasBlock func(ctx context.Context, hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
 	genesisTime time.Time) error {
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parentBlock := HasBlock(parentRoot)
+	parentBlock := HasBlock(ctx, parentRoot)
 	if !parentBlock {
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}

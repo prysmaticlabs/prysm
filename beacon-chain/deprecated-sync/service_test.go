@@ -35,7 +35,7 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 
 	services := NewSyncService(ctx, cfg)
 
-	sqCfg.BeaconDB = cfg.BeaconDB
+	sqCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
 	sqCfg.P2P = cfg.P2P
 	sq := NewQuerierService(ctx, sqCfg)
 
