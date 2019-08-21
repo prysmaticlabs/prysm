@@ -10,7 +10,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -79,10 +78,6 @@ type BeaconDB struct {
 	badBlocksLock  sync.RWMutex
 	blocks         map[[32]byte]*ethpb.BeaconBlock
 	blocksLock     sync.RWMutex
-
-	// Beacon chain deposits in memory.
-	// DEPRECATED: Do not use.
-	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -125,9 +120,7 @@ func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	depCache := depositcache.NewDepositCache()
-
-	db := &BeaconDB{db: boltDB, databasePath: dirPath, DepositCache: depCache}
+	db := &BeaconDB{db: boltDB, databasePath: dirPath}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {

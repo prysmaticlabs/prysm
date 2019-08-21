@@ -391,6 +391,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		P2P:              b.fetchP2P(ctx),
 		BeaconDB:         b.db,
+		DepositCache:     b.depositCache,
 		OperationService: operationService,
 		PowChainService:  web3Service,
 		AttsService:      attsService,

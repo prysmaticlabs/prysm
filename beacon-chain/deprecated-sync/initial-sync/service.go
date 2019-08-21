@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -48,6 +49,7 @@ type Config struct {
 	BatchedBlockBufferSize int
 	StateBufferSize        int
 	BeaconDB               *db.BeaconDB
+	DepositCache           *depositcache.DepositCache
 	P2P                    p2pAPI
 	SyncService            syncService
 	ChainService           chainService
@@ -96,6 +98,7 @@ type InitialSync struct {
 	syncService         syncService
 	chainService        chainService
 	db                  *db.BeaconDB
+	depositCache        *depositcache.DepositCache
 	powchain            powChainService
 	batchedBlockBuf     chan deprecatedp2p.Message
 	stateBuf            chan deprecatedp2p.Message
@@ -122,6 +125,7 @@ func NewInitialSyncService(ctx context.Context,
 		p2p:                 cfg.P2P,
 		syncService:         cfg.SyncService,
 		db:                  cfg.BeaconDB,
+		depositCache:        cfg.DepositCache,
 		powchain:            cfg.PowChain,
 		chainService:        cfg.ChainService,
 		stateBuf:            stateBuf,

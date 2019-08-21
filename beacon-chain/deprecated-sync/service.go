@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -30,6 +31,7 @@ type Service struct {
 type Config struct {
 	ChainService     chainService
 	BeaconDB         db.Database
+	DepositCache     *depositcache.DepositCache
 	P2P              p2pAPI
 	AttsService      attsService
 	OperationService operations.OperationFeeds
@@ -47,6 +49,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 
 	isCfg := initialsync.DefaultConfig()
 	isCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
+	isCfg.DepositCache = cfg.DepositCache
 	isCfg.P2P = cfg.P2P
 	isCfg.PowChain = cfg.PowChainService
 	isCfg.ChainService = cfg.ChainService
