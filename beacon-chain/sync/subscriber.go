@@ -55,8 +55,8 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/attester_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateAttesterSlashing,
+		r.attesterSlashingSubscriber,
 	)
 }
 
