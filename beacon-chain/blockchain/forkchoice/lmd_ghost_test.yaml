@@ -30,7 +30,7 @@ test_cases:
       b2: 4
       b3: 3
     head: 'b1'
-  # Equal weights children, GHOST chooses b2 because it is lower lexicographically than b3
+  # Equal weights children, GHOST chooses b2 because it is higher lexicographically than b3
   - blocks:
       - id: 'b0'
         parent: 'b0'
@@ -45,7 +45,7 @@ test_cases:
       b2: 6
       b3: 6
     head: 'b2'
-  # Equal weights children, GHOST chooses b1 because it is lower lexicographically than b2
+  # Equal weights children, GHOST chooses b2 because it is higher lexicographically than b1
   - blocks:
       - id: 'b0'
         parent: 'b0'
@@ -56,4 +56,4 @@ test_cases:
     weights:
       b1: 0
       b2: 0
-    head: 'b1'
+    head: 'b2'
