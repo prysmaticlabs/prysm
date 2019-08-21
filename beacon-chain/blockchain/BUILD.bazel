@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "chain_info.go",
         "fork_choice_deprecated.go",
         "receive_block.go",
         "service.go",
@@ -40,6 +41,7 @@ go_test(
     name = "go_default_test",
     size = "medium",
     srcs = [
+        "chain_info_test.go",
         "fork_choice_deprecated_test.go",
         "fork_choice_reorg_deprecated_test.go",
         "receive_block_test.go",
