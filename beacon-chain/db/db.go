@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -68,6 +69,9 @@ type Database interface {
 	SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error
 	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
 	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
+	// Deposit contract related handlers.
+	DepositContractAddress(ctx context.Context) ([]byte, error)
+	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 }
 
 var _ = Database(&BeaconDB{})
