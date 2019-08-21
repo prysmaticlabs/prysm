@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -54,7 +55,195 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 	return block, nil
 }
 
-func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
+func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Eth1DepositIndex = 100
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+		StateRoot:  genesis.StateRoot,
+	}
+	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
+		t.Fatalf("Could not save block to db: %v", err)
+	}
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := beaconState.Slot + 1
+	epoch := helpers.SlotToEpoch(slot)
+	beaconState.Slot++
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot--
+
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: parentRoot[:],
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
+				DepositCount: uint64(len(deposits)),
+				DepositRoot:  []byte("a"),
+				BlockHash:    []byte("b"),
+			},
+			RandaoReveal: randaoReveal[:],
+			Attestations: nil,
+		},
+	}
+
+	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = stateRoot[:]
+
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.ReceiveBlock(context.Background(), block); err != nil {
+		t.Errorf("Block failed processing: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsContain(t, hook, "Finished fork choice")
+}
+
+func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Eth1DepositIndex = 100
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		Slot:       genesis.Slot,
+		ParentRoot: genesis.ParentRoot,
+		BodyRoot:   bodyRoot[:],
+		StateRoot:  genesis.StateRoot,
+	}
+	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
+		t.Fatalf("Could not save block to db: %v", err)
+	}
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := beaconState.Slot + 1
+	epoch := helpers.SlotToEpoch(slot)
+	beaconState.Slot++
+	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot--
+
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: parentRoot[:],
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data: &ethpb.Eth1Data{
+				DepositCount: uint64(len(deposits)),
+				DepositRoot:  []byte("a"),
+				BlockHash:    []byte("b"),
+			},
+			RandaoReveal: randaoReveal[:],
+			Attestations: nil,
+		},
+	}
+
+	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = stateRoot[:]
+
+	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.ReceiveBlockNoPubsubForkchoice(context.Background(), block); err != nil {
+		t.Errorf("Block failed processing: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
+}
+
+func TestReceiveBlockDeprecated_FaultyPOWChain(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
@@ -102,7 +291,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+func TestReceiveBlockDeprecated_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -195,7 +384,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
-func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
+func TestReceiveBlockDeprecated_UsesParentBlockState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -280,7 +469,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
-func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+func TestReceiveBlockDeprecated_DeletesBadBlock(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
@@ -364,7 +553,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
+func TestReceiveBlockDeprecated_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -444,7 +633,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
 
-func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
+func TestReceiveBlockDeprecated_CheckBlockStateRoot_BadState(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
@@ -510,7 +699,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
+func TestReceiveBlockDeprecated_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -702,7 +891,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 //
 //    1->2->3->4->5->6->7->8->9[arrowhead=none];
 //}
-func TestReceiveBlock_OnChainSplit(t *testing.T) {
+func TestReceiveBlockDeprecated_OnChainSplit(t *testing.T) {
 	// The scenario to test is that we think that the canonical head is block H
 	// and then we receive block G. We don't have block F, so we request it. Then
 	// we process F, the G. The expected behavior is that we load the historical

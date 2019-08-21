@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -45,16 +46,18 @@ type ChainService struct {
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
+	forkChoiceStore      *forkchoice.Store
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
-	canonicalBlocks      map[uint64][]byte
-	canonicalBlocksLock  sync.RWMutex
+	canonicalRoots       map[uint64][]byte
+	canonicalRootsLock   sync.RWMutex
 	receiveBlockLock     sync.Mutex
 	maxRoutines          int64
+	headSlot             uint64
 }
 
 // Config options for the service.
@@ -74,6 +77,7 @@ type Config struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
@@ -82,11 +86,12 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
+		forkChoiceStore:      store,
 		canonicalBlockFeed:   new(event.Feed),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
-		canonicalBlocks:      make(map[uint64][]byte),
+		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
 	}, nil
 }
@@ -238,17 +243,17 @@ func (c *ChainService) ChainHeadRoot(ctx context.Context) ([32]byte, error) {
 
 // UpdateCanonicalRoots sets a new head into the canonical block roots map.
 func (c *ChainService) UpdateCanonicalRoots(newHead *ethpb.BeaconBlock, newHeadRoot [32]byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.canonicalRoots[newHead.Slot] = newHeadRoot[:]
 }
 
 // IsCanonical returns true if the input block hash of the corresponding slot
 // is part of the canonical chain. False otherwise.
 func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
-	c.canonicalBlocksLock.RLock()
-	defer c.canonicalBlocksLock.RUnlock()
-	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
+	c.canonicalRootsLock.RLock()
+	defer c.canonicalRootsLock.RUnlock()
+	if canonicalHash, ok := c.canonicalRoots[slot]; ok {
 		return bytes.Equal(canonicalHash, hash)
 	}
 	return false
