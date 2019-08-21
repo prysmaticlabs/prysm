@@ -284,7 +284,6 @@ func ProcessRandao(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
-
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon proposer index")
