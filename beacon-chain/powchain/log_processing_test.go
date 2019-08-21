@@ -40,10 +40,9 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB: &db.BeaconDB{
-			DepositCache: depositcache.NewDepositCache(),
-		},
-		BlockFetcher: &goodFetcher{},
+		BeaconDB:        &db.BeaconDB{},
+		DepositCache:    depositcache.NewDepositCache(),
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -103,9 +102,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB: &db.BeaconDB{
-			DepositCache: depositcache.NewDepositCache(),
-		},
+		BeaconDB:        &db.BeaconDB{},
+		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -154,7 +152,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.ProcessDepositLog(logs[0])
 	web3Service.ProcessDepositLog(logs[1])
-	pendingDeposits := web3Service.beaconDB.DepositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 2 deposit, got %+v", pendingDeposits)
 	}
@@ -251,10 +249,9 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB: &db.BeaconDB{
-			DepositCache: depositcache.NewDepositCache(),
-		},
-		BlockFetcher: &goodFetcher{},
+		BeaconDB:        &db.BeaconDB{},
+		DepositCache:    depositcache.NewDepositCache(),
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -321,10 +318,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB: &db.BeaconDB{
-			DepositCache: depositcache.NewDepositCache(),
-		},
-		BlockFetcher: &goodFetcher{},
+		BeaconDB:        &db.BeaconDB{},
+		DepositCache:    depositcache.NewDepositCache(),
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -402,10 +398,9 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		Logger:          &goodLogger{},
 		HTTPLogger:      testAcc.Backend,
 		ContractBackend: testAcc.Backend,
-		BeaconDB: &db.BeaconDB{
-			DepositCache: depositcache.NewDepositCache(),
-		},
-		BlockFetcher: &goodFetcher{},
+		BeaconDB:        &db.BeaconDB{},
+		DepositCache:    depositcache.NewDepositCache(),
+		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

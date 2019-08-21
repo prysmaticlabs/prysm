@@ -113,10 +113,10 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		Slot:                0,
 		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 0},
 	}
-	if err := db.SaveBlock(genesisBlock); err != nil {
+	if err := db.SaveBlockDeprecated(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, genesisState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, genesisState); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.UpdateChainHead(ctx, genesisBlock, genesisState); err != nil {

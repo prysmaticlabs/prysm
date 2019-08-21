@@ -36,6 +36,21 @@ var (
 		Name:  "experimental-p2p",
 		Usage: "Use the new experimental p2p library. See issue #3147.",
 	}
+	// UseNewSyncFlag to start the beacon chain using the new sync library.
+	UseNewSyncFlag = cli.BoolFlag{
+		Name:  "experimental-sync",
+		Usage: "Use the new experimental sync libraries. See issue #3147.",
+	}
+	// UseNewDatabaseFlag to start the beacon chain using new database library.
+	UseNewDatabaseFlag = cli.BoolFlag{
+		Name:  "experimental-db",
+		Usage: "Use the new experimental database library.",
+	}
+	// NextFlag to enable all experimental features.
+	NextFlag = cli.BoolFlag{
+		Name:  "next",
+		Usage: "Use next version experimental features.",
+	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-balance-cache",
@@ -84,6 +99,9 @@ var BeaconChainFlags = []cli.Flag{
 	EnableExcessDepositsFlag,
 	NoGenesisDelayFlag,
 	UseNewP2PFlag,
+	UseNewSyncFlag,
+	UseNewDatabaseFlag,
+	NextFlag,
 	EnableActiveBalanceCacheFlag,
 	EnableAttestationCacheFlag,
 	EnableAncestorBlockCacheFlag,
