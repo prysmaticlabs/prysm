@@ -64,11 +64,6 @@ type Database interface {
 	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
 	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
 	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
-	// Block operations.
-	VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error)
-	SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error
-	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
-	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
 }
 
 // BeaconDB manages the data layer of the beacon chain implementation.
