@@ -14,6 +14,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -148,7 +149,7 @@ var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
-	if err := cs.deprecatedBeaconDB.SaveBlock(genesis); err != nil {
+	if err := cs.beaconDB.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
 	parentHash, err := ssz.SigningRoot(genesis)
@@ -176,13 +177,13 @@ func setupBeaconChain(t *testing.T, deprecatedBeaconDB *db.BeaconDB, db db.Datab
 	}
 
 	cfg := &Config{
-		BeaconBlockBuf:     0,
-		deprecatedBeaconDB: deprecatedBeaconDB,
-		db:                 db,
-		Web3Service:        web3Service,
-		OpsPoolService:     &mockOperationService{},
-		AttsService:        attsService,
-		P2p:                &mockBroadcaster{},
+		BeaconBlockBuf: 0,
+		BeaconDB:       beaconDB,
+		DepositCache:   depositcache.NewDepositCache(),
+		Web3Service:    web3Service,
+		OpsPoolService: &mockOperationService{},
+		AttsService:    attsService,
+		P2p:            &mockBroadcaster{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -202,7 +203,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	}
 
 	bState.Slot = slot
-	return service.deprecatedBeaconDB.SaveState(context.Background(), bState)
+	return service.beaconDB.SaveState(context.Background(), bState, [32]byte{})
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {

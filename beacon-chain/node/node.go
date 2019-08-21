@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -46,11 +48,12 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx      *cli.Context
-	services *shared.ServiceRegistry
-	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications.
-	db       *db.BeaconDB
+	ctx          *cli.Context
+	services     *shared.ServiceRegistry
+	lock         sync.RWMutex
+	stop         chan struct{} // Channel to wait for termination notifications.
+	db           db.Database
+	depositCache *depositcache.DepositCache
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -182,13 +185,20 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		}
 	}
 
-	db, err := db.NewDBDeprecated(dbPath)
+	var d db.Database
+	var err error
+	if featureconfig.FeatureConfig().UseNewDatabase {
+		d, err = db.NewDB(dbPath)
+	} else {
+		d, err = db.NewDBDeprecated(dbPath)
+	}
 	if err != nil {
 		return err
 	}
 
 	log.WithField("path", dbPath).Info("Checking db")
-	b.db = db
+	b.db = d
+	b.depositCache = depositcache.NewDepositCache()
 	return nil
 }
 
@@ -253,6 +263,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
+		DepositCache:   b.depositCache,
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
 		AttsService:    attsService,
@@ -316,13 +327,14 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BlockFetcher:    httpClient,
 		ContractBackend: httpClient,
 		BeaconDB:        b.db,
+		DepositCache:    b.depositCache,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
-	if err := b.db.VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
+	if err := b.db.(*db.BeaconDB).VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
 		return err
 	}
 
@@ -350,10 +362,21 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
+	if featureconfig.FeatureConfig().UseNewSync {
+		rs := prysmsync.NewRegularSync(&prysmsync.Config{
+			DB:         b.db,
+			P2P:        b.fetchP2P(ctx),
+			Operations: operationService,
+		})
+
+		return b.services.RegisterService(rs)
+	}
+
 	cfg := &rbcsync.Config{
 		ChainService:     chainService,
 		P2P:              b.fetchP2P(ctx),
 		BeaconDB:         b.db,
+		DepositCache:     b.depositCache,
 		OperationService: operationService,
 		PowChainService:  web3Service,
 		AttsService:      attsService,

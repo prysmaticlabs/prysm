@@ -30,6 +30,8 @@ type FeatureFlagConfig struct {
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
 	UseNewP2P                     bool // UseNewP2P service.
+	UseNewSync                    bool // UseNewSync services.
+	UseNewDatabase                bool // UseNewDatabase service.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -72,9 +74,17 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(UseNewP2PFlag.Name) {
+	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewP2PFlag.Name) {
 		log.Warn("Using new P2P service.")
 		cfg.UseNewP2P = true
+	}
+	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewSyncFlag.Name) {
+		log.Warn("Using new sync services.")
+		cfg.UseNewSync = true
+	}
+	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewDatabaseFlag.Name) {
+		log.Warn("Using new database service.")
+		cfg.UseNewDatabase = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe active balance cache")

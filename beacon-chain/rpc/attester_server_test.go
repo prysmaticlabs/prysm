@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -26,6 +27,8 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) erro
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
+	ctx := context.Background()
+
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
@@ -37,7 +40,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		Slot:       999,
 		ParentRoot: []byte{'a'},
 	}
-	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
+	if err := attesterServer.beaconDB.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
 	root, err := ssz.SigningRoot(head)
@@ -60,7 +63,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := db.SaveState(context.Background(), state); err != nil {
+	if err := db.SaveStateDeprecated(context.Background(), state); err != nil {
 		t.Fatal(err)
 	}
 
@@ -133,22 +136,22 @@ func TestRequestAttestation_OK(t *testing.T) {
 		p2p:      &mockBroadcaster{},
 		cache:    cache.NewAttestationCache(),
 	}
-	if err := attesterServer.beaconDB.SaveBlock(targetBlock); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(targetBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, targetBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, targetBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.SaveBlock(justifiedBlock); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(justifiedBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationRequest{
@@ -253,22 +256,22 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		p2p:      &mockBroadcaster{},
 		cache:    cache.NewAttestationCache(),
 	}
-	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, epochBoundaryBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, epochBoundaryBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.SaveBlock(justifiedBlock); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(justifiedBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
+	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationRequest{

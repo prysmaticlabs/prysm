@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -40,8 +40,8 @@ type ChainFeeds interface {
 type ChainService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	deprecatedBeaconDB   *db.BeaconDB
-	db                   db.Database
+	beaconDB             db.Database
+	depositCache         *depositcache.DepositCache
 	web3Service          *powchain.Web3Service
 	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
@@ -63,15 +63,15 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf     int
-	Web3Service        *powchain.Web3Service
-	AttsService        attestation.TargetHandler
-	deprecatedBeaconDB *db.BeaconDB
-	db                 db.Database
-	OpsPoolService     operations.OperationFeeds
-	DevMode            bool
-	P2p                p2p.Broadcaster
-	MaxRoutines        int64
+	BeaconBlockBuf int
+	Web3Service    *powchain.Web3Service
+	AttsService    attestation.TargetHandler
+	BeaconDB       db.Database
+	DepositCache   *depositcache.DepositCache
+	OpsPoolService operations.OperationFeeds
+	DevMode        bool
+	P2p            p2p.Broadcaster
+	MaxRoutines    int64
 }
 
 // NewChainService instantiates a new service instance that will
@@ -82,9 +82,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
-		db:                   cfg.db,
-		forkChoiceStore:      store,
-		deprecatedBeaconDB:   cfg.deprecatedBeaconDB,
+		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
@@ -146,10 +145,16 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.deprecatedBeaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
+	// TODO(3219): Use new fork choice service.
+	db, isLegacyDB := c.beaconDB.(*db.BeaconDB)
+	if !isLegacyDB {
+		panic("Chain service cannot operate with the new database interface due to in-progress fork choice changes")
+	}
+
+	if err := db.InitializeState(ctx, unixTime, deposits, eth1data); err != nil {
 		return nil, errors.Wrap(err, "could not initialize beacon state to disk")
 	}
-	beaconState, err := c.deprecatedBeaconDB.HeadState(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not attempt fetch beacon state")
 	}
@@ -164,29 +169,30 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 		return nil, errors.Wrap(err, "could not hash beacon block")
 	}
 
-	if err := c.deprecatedBeaconDB.SaveBlock(genBlock); err != nil {
+	if err := c.beaconDB.SaveBlock(ctx, genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block to disk")
 	}
-	if err := c.deprecatedBeaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
+
+	if err := db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
 		Slot:            genBlock.Slot,
 		BeaconBlockRoot: genBlockRoot[:],
 		ParentRoot:      genBlock.ParentRoot,
 	}); err != nil {
 		return nil, errors.Wrap(err, "failed to save attestation target")
 	}
-	if err := c.deprecatedBeaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not set chain head")
 	}
-	if err := c.deprecatedBeaconDB.SaveJustifiedBlock(genBlock); err != nil {
+	if err := db.SaveJustifiedBlock(genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block as justified block")
 	}
-	if err := c.deprecatedBeaconDB.SaveFinalizedBlock(genBlock); err != nil {
+	if err := db.SaveFinalizedBlock(genBlock); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis block as finalized block")
 	}
-	if err := c.deprecatedBeaconDB.SaveJustifiedState(beaconState); err != nil {
+	if err := db.SaveJustifiedState(beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis state as justified state")
 	}
-	if err := c.deprecatedBeaconDB.SaveFinalizedState(beaconState); err != nil {
+	if err := db.SaveFinalizedState(beaconState); err != nil {
 		return nil, errors.Wrap(err, "could not save genesis state as finalized state")
 	}
 	return beaconState, nil
@@ -223,8 +229,8 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 
 // ChainHeadRoot returns the hash root of the last beacon block processed by the
 // block chain service.
-func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
-	head, err := c.deprecatedBeaconDB.ChainHead()
+func (c *ChainService) ChainHeadRoot(ctx context.Context) ([32]byte, error) {
+	head, err := c.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not retrieve chain head")
 	}

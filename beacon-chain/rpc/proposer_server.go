@@ -25,11 +25,12 @@ import (
 // providing RPC endpoints for computing state transitions and state roots, proposing
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
-	beaconDB           *db.BeaconDB
+	beaconDB           db.Database
 	chainService       chainService
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
+	depositCache       *depositcache.DepositCache
 }
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
@@ -37,7 +38,7 @@ type ProposerServer struct {
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 
 	// Retrieve the parent block as the current head of the canonical chain
-	parent, err := ps.beaconDB.ChainHead()
+	parent, err := ps.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get canonical head block")
 	}
@@ -115,8 +116,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
-	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		return nil, errors.Wrap(err, "failed to update chain")
+	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
+	if isLegacyDB {
+		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+			return nil, errors.Wrap(err, "failed to update chain")
+		}
 	}
 
 	ps.chainService.UpdateCanonicalRoots(blk, root)
@@ -179,7 +183,12 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 				"slot":     slot,
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
-			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+
+			hash, err := ssz.HashTreeRoot(att)
+			if err != nil {
+				return nil, err
+			}
+			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
 			}
 			continue
@@ -187,7 +196,11 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
 		if err != nil {
 			// Delete attestation that failed to verify as canonical.
-			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
+			hash, err := ssz.HashTreeRoot(att)
+			if err != nil {
+				return nil, err
+			}
+			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
 			}
 			return nil, errors.Wrap(err, "could not verify canonical attestation")
@@ -268,7 +281,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := ps.beaconDB.DepositCache.AllDeposits(ctx, latestEth1DataHeight)
+	upToEth1DataDeposits := ps.depositCache.AllDeposits(ctx, latestEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
@@ -283,7 +296,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}
 
-	allPendingContainers := ps.beaconDB.DepositCache.PendingContainers(ctx, latestEth1DataHeight)
+	allPendingContainers := ps.depositCache.PendingContainers(ctx, latestEth1DataHeight)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
@@ -349,7 +362,7 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.beaconDB.DepositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	depositsTillHeight, depositRoot := ps.depositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
 		return ps.powChainService.ChainStartETH1Data(), nil
 	}
