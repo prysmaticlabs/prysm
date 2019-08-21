@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "attestations.go",
         "blocks.go",
+        "deposit_contract.go",
         "kv.go",
         "schema.go",
         "slashings.go",
@@ -21,6 +22,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/sliceutil:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -33,6 +35,7 @@ go_test(
     srcs = [
         "attestations_test.go",
         "blocks_test.go",
+        "deposit_contract_test.go",
         "kv_test.go",
         "slashings_test.go",
         "state_test.go",
@@ -44,6 +47,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],

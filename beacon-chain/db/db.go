@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -63,6 +64,9 @@ type Database interface {
 	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
 	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
 	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
+	// Deposit contract related handlers.
+	DepositContractAddress(ctx context.Context) ([]byte, error)
+	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 }
 
 var _ = Database(&BeaconDB{})

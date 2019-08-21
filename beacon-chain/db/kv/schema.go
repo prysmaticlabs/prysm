@@ -14,6 +14,7 @@ var (
 	proposerSlashingsBucket = []byte("proposer-slashings")
 	attesterSlashingsBucket = []byte("attester-slashings")
 	voluntaryExitsBucket    = []byte("voluntary-exits")
+	chainMetadataBucket     = []byte("chain-metadata")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket       = []byte("block-parent-root-indices")
@@ -23,6 +24,7 @@ var (
 	attestationStartEpochIndicesBucket = []byte("attestation-start-epoch-indices")
 	attestationEndEpochIndicesBucket   = []byte("attestation-end-epoch-indices")
 
-	// Block keys.
-	headBlockRootKey = []byte("head-root")
+	// Specific item keys.
+	headBlockRootKey          = []byte("head-root")
+	depositContractAddressKey = []byte("deposit-contract")
 )

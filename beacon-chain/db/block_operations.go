@@ -11,42 +11,50 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProposerSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// ProposerSlashing retrieval from the db.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error) {
 	return nil, errors.New("unimplemented")
 }
 
-// AttesterSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// AttesterSlashing retrieval from the db.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error) {
 	return nil, errors.New("unimplemented")
 }
 
-// SaveProposerSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// SaveProposerSlashing to the db.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) SaveProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error {
 	return errors.New("unimplemented")
 }
 
-// SaveAttesterSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// SaveAttesterSlashing to the db.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) error {
 	return errors.New("unimplemented")
 }
 
-// HasProposerSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// HasProposerSlashing by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	return false
 }
 
-// HasAttesterSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// HasAttesterSlashing by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	return false
 }
 
-// DeleteProposerSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// DeleteProposerSlashing by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
 	return errors.New("unimplemented")
 }
 
-// DeleteAttesterSlashing is deprecated - use the kv store in beacon-chain/db/kv instead.
+// DeleteAttesterSlashing by root.
+// DEPRECATED: Use the kv store in beacon-chain/db/kv instead.
 func (db *BeaconDB) DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
 	return errors.New("unimplemented")
 }
