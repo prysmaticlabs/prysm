@@ -11,10 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 // Attestation retrieval by attestation data root.
 func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
+	defer span.End()
 	var att *ethpb.Attestation
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
@@ -30,6 +33,8 @@ func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.A
 
 // Attestations retrieves a list of attestations by filter criteria.
 func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestations")
+	defer span.End()
 	atts := make([]*ethpb.Attestation, 0)
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
@@ -73,6 +78,8 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 
 // HasAttestation checks if an attestation by its attestation data root exists in the db.
 func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttestation")
+	defer span.End()
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
@@ -86,6 +93,8 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 // DeleteAttestation by attestation data root.
 // TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
+	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
@@ -106,6 +115,8 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 
 // SaveAttestation to the db.
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
+	defer span.End()
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
@@ -126,6 +137,8 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 
 // SaveAttestations via batch updates to the db.
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
+	defer span.End()
 	encodedValues := make([][]byte, len(atts))
 	keys := make([][]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
