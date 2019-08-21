@@ -118,9 +118,9 @@ func (k *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attest
 	})
 }
 
-// DeleteProposerSlashing clears an attester slashing from the db by its hash tree root.
+// DeleteAttesterSlashing clears an attester slashing from the db by its hash tree root.
 func (k *Store) DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteProposerSlashing")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttesterSlashing")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attesterSlashingsBucket)
