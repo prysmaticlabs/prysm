@@ -109,7 +109,7 @@ func (s *Service) Encoding() encoder.NetworkEncoding {
 	switch encoding {
 	case encoder.SSZ:
 		return &encoder.SszNetworkEncoder{}
-	case encoder.SSZ_SNAPPY:
+	case encoder.SSZSnappy:
 		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
 	}
 	return &encoder.SszNetworkEncoder{}

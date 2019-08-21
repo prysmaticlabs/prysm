@@ -6,9 +6,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+// Defines the different encoding formats
 const (
-	SSZ = iota
-	SSZ_SNAPPY
+	SSZ       = iota // SSZ only.
+	SSZSnappy        // SSZSnappy is SSZ with snappy compression.
 )
 
 // NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
@@ -21,6 +22,7 @@ type NetworkEncoding interface {
 	ProtocolSuffix() string
 }
 
+// Encoding defines the network encoding format as an int.
 type Encoding int
 
 func (e Encoding) String() string {
