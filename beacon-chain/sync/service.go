@@ -61,6 +61,7 @@ func (r *RegularSync) Status() error {
 	return nil
 }
 
+// Syncing returns true if the node is currently syncing with the network.
 func (r *RegularSync) Syncing() bool {
 	// TODO(3147): Use real value.
 	return false

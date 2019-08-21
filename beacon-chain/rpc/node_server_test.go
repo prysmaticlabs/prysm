@@ -25,6 +25,10 @@ func (m *mockSyncChecker) Syncing() bool {
 	return m.syncing
 }
 
+func (m *mockSyncChecker) Status() error {
+	return nil
+}
+
 func TestNodeServer_GetSyncStatus(t *testing.T) {
 	mSync := &mockSyncChecker{false}
 	ns := &NodeServer{
