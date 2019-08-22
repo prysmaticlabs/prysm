@@ -509,12 +509,12 @@ func TestValidatorStatus_Active(t *testing.T) {
 }
 
 func TestValidatorStatus_InitiatedExit(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -523,14 +523,25 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			ActivationEpoch:   0,
 			ExitEpoch:         exitEpoch,
 			WithdrawableEpoch: withdrawableEpoch},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -571,25 +582,36 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 }
 
 func TestValidatorStatus_Withdrawable(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Withdrawable exit because current epoch is after validator withdrawable epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 10000,
 		Validators: []*ethpb.Validator{{
 			WithdrawableEpoch: epoch - 1,
 			ExitEpoch:         epoch - 2,
 			PublicKey:         pubKey},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -630,25 +652,36 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 }
 
 func TestValidatorStatus_ExitedSlashed(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -689,24 +722,35 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 }
 
 func TestValidatorStatus_Exited(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Exit because only exit epoch is =< current epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -747,22 +791,33 @@ func TestValidatorStatus_Exited(t *testing.T) {
 }
 
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		Slot: 0,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -803,15 +858,26 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	}
-	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
@@ -847,8 +913,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -865,10 +931,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndexDeprecated(pubKey1, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndexDeprecated(pubKey2, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -887,7 +953,18 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			},
 		},
 	}
-	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -910,10 +987,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndexDeprecated(pubKey1, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndexDeprecated(pubKey2, 1); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
@@ -958,15 +1035,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 }
 
 func TestMultipleValidatorStatus_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
-	if err := db.SaveValidatorIndexDeprecated(pubKeys[0], 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndexDeprecated(pubKeys[1], 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[1]), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -986,7 +1063,18 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 				PublicKey:       pubKeys[2]},
 		},
 	}
-	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -1018,13 +1106,13 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
 
-	if err := db.SaveValidatorIndexDeprecated(pubKeys[0], 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndexDeprecated(pubKeys[1], 1); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[1]), 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndexDeprecated(pubKeys[2], 2); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[2]), 2); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
