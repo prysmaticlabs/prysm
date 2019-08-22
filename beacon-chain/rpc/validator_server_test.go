@@ -137,15 +137,11 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 
 func TestCommitteeAssignment_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
 	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
@@ -153,16 +149,26 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -218,15 +224,11 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
 	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
@@ -235,16 +237,27 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
 	state.Slot = 5 // Set state to non-epoch start slot.
-	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -274,31 +287,38 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 }
 
-func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, genesis, state); err != nil {
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(deposits[index].Data.PublicKey, index)
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -332,22 +352,31 @@ func TestCommitteeAssignment_multipleKeys_OK(t *testing.T) {
 	}
 }
 
+// TODO: Failing
 func TestValidatorStatus_PendingActive(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{Validators: []*ethpb.Validator{
-		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: pubKey},
-	},
-		Slot: 5000,
-	}); err != nil {
+	if err := db.SaveState(
+		ctx,
+		&pbp2p.BeaconState{
+			Validators: []*ethpb.Validator{
+				{
+					ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+					PublicKey:       pubKey,
+				},
+			},
+			Slot: 5000,
+		},
+		[32]byte{},
+	); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
