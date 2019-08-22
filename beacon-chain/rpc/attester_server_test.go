@@ -88,8 +88,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	block := &ethpb.BeaconBlock{
@@ -140,19 +140,14 @@ func TestRequestAttestation_OK(t *testing.T) {
 		p2p:      &mockBroadcaster{},
 		cache:    cache.NewAttestationCache(),
 	}
-	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(targetBlock); err != nil {
+	if err := db.SaveBlock(ctx, targetBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, targetBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(justifiedBlock); err != nil {
+
+	if err := db.SaveBlock(ctx, justifiedBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
-	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(block); err != nil {
+	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
 	if err := attesterServer.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, block, beaconState); err != nil {
