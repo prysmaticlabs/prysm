@@ -46,6 +46,7 @@ type Database interface {
 	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
+	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
