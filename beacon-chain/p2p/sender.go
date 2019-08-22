@@ -17,10 +17,10 @@ func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) 
 	topic := RPCTypeMapping[reflect.TypeOf(message)]
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
-	ctx, cancel := context.WithTimeout(ctx, 15 * time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	stream, err := s.host.NewStream(ctx,  pid, protocol.ID(topic))
+	stream, err := s.host.NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
 		return nil, err
 	}
