@@ -6,14 +6,23 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 )
+
+// BlockCacheSize specifies 4 epochs worth of blocks cached.
+const BlockCacheSize = 256
+
+// VotesCacheSize with 1M validators will only be around 50Mb.
+const VotesCacheSize = 1000000
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db           *bolt.DB
 	databasePath string
+	blockCache   *ccache.Cache
+	votesCache   *ccache.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -32,7 +41,12 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	kv := &Store{db: boltDB, databasePath: dirPath}
+	kv := &Store{
+		db:           boltDB,
+		databasePath: dirPath,
+		blockCache:   ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
+		votesCache:   ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -41,6 +55,10 @@ func NewKVStore(dirPath string) (*Store, error) {
 			blocksBucket,
 			stateBucket,
 			validatorsBucket,
+			proposerSlashingsBucket,
+			attesterSlashingsBucket,
+			voluntaryExitsBucket,
+			chainMetadataBucket,
 			// Indices buckets.
 			attestationShardIndicesBucket,
 			attestationParentRootIndicesBucket,

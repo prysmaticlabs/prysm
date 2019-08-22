@@ -343,7 +343,6 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
-
 	_, balances := setupValidators(t, db, 1)
 
 	bs := &BeaconChainServer{
@@ -467,7 +466,6 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	defer testutil.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
-
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}

@@ -7,12 +7,13 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-var _ = Checker(&Service{})
+var _ = sync.Checker(&Service{})
 
 func NotSyncQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
@@ -35,7 +36,7 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 
 	services := NewSyncService(ctx, cfg)
 
-	sqCfg.BeaconDB = cfg.BeaconDB
+	sqCfg.BeaconDB = cfg.BeaconDB.(*db.BeaconDB)
 	sqCfg.P2P = cfg.P2P
 	sq := NewQuerierService(ctx, sqCfg)
 

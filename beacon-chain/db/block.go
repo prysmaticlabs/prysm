@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
@@ -46,7 +47,14 @@ func createBlock(enc []byte) (*ethpb.BeaconBlock, error) {
 
 // Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) Block(root [32]byte) (*ethpb.BeaconBlock, error) {
+func (db *BeaconDB) Block(_ context.Context, root [32]byte) (*ethpb.BeaconBlock, error) {
+	return db.BlockDeprecated(root)
+}
+
+// BlockDeprecated accepts a block root and returns the corresponding block.
+// Returns nil if the block does not exist.
+// DEPRECATED: Use Block.
+func (db *BeaconDB) BlockDeprecated(root [32]byte) (*ethpb.BeaconBlock, error) {
 	db.blocksLock.RLock()
 
 	// Return block from cache if it exists
@@ -84,7 +92,7 @@ func (db *BeaconDB) Block(root [32]byte) (*ethpb.BeaconBlock, error) {
 }
 
 // HasBlock accepts a block root and returns true if the block does not exist.
-func (db *BeaconDB) HasBlock(root [32]byte) bool {
+func (db *BeaconDB) HasBlock(_ context.Context, root [32]byte) bool {
 	db.blocksLock.RLock()
 	defer db.blocksLock.RUnlock()
 
@@ -104,6 +112,17 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	})
 
 	return hasBlock
+}
+
+// HasBlockDeprecated accepts a block root and returns true if the block does not exist.
+func (db *BeaconDB) HasBlockDeprecated(root [32]byte) bool {
+	return db.HasBlock(context.Background(), root)
+}
+
+// HeadBlock is not implemented.
+// DEPRECATED: Do not use. Not implemented.
+func (db *BeaconDB) HeadBlock(_ context.Context) (*ethpb.BeaconBlock, error) {
+	return nil, errors.New("not implemented")
 }
 
 // IsEvilBlockHash determines if a certain block root has been blacklisted
@@ -130,8 +149,29 @@ func (db *BeaconDB) MarkEvilBlockHash(root [32]byte) {
 	badBlockCount.Inc()
 }
 
-// SaveBlock accepts a block and writes it to disk.
-func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
+// SaveHeadBlockRoot is not implemented.
+func (db *BeaconDB) SaveHeadBlockRoot(_ context.Context, root [32]byte) error {
+	return errors.New("not implemented")
+}
+
+// SaveBlocks in db.
+func (db *BeaconDB) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
+	for _, blk := range blocks {
+		if err := db.SaveBlock(ctx, blk); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SaveBlock in db.
+func (db *BeaconDB) SaveBlock(_ context.Context, block *ethpb.BeaconBlock) error {
+	return db.SaveBlockDeprecated(block)
+}
+
+// SaveBlockDeprecated accepts a block and writes it to disk.
+// DEPRECATED: Use SaveBlock.
+func (db *BeaconDB) SaveBlockDeprecated(block *ethpb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
@@ -168,7 +208,15 @@ func (db *BeaconDB) SaveBlock(block *ethpb.BeaconBlock) error {
 }
 
 // DeleteBlock deletes a block using the slot and its root as keys in their respective buckets.
-func (db *BeaconDB) DeleteBlock(block *ethpb.BeaconBlock) error {
+func (db *BeaconDB) DeleteBlock(_ context.Context, hash [32]byte) error {
+	return db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blockBucket)
+		return bucket.Delete(hash[:])
+	})
+}
+
+// DeleteBlockDeprecated deletes a block using the slot and its root as keys in their respective buckets.
+func (db *BeaconDB) DeleteBlockDeprecated(block *ethpb.BeaconBlock) error {
 	db.blocksLock.Lock()
 	defer db.blocksLock.Unlock()
 
@@ -296,7 +344,7 @@ func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *ethpb.BeaconBloc
 		db.highestBlockSlot = block.Slot
 	}
 
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		return errors.Wrap(err, "failed to save beacon state as canonical")
 	}
 
@@ -396,4 +444,16 @@ func (db *BeaconDB) ClearBlockCache() {
 	defer db.blocksLock.Unlock()
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 	blockCacheSize.Set(float64(len(db.blocks)))
+}
+
+// BlockRoots retrieves a list of beacon block roots by filter criteria.
+// DEPRECATED: Not implemented at all. Use github.com/prysmaticlabs/prysm/db/kv
+func (db *BeaconDB) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
+	return nil, errors.New("not implemented")
+}
+
+// Blocks retrieves a list of beacon blocks by filter criteria.
+// DEPRECATED: Not implemented at all. Use github.com/prysmaticlabs/prysm/db/kv
+func (db *BeaconDB) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error) {
+	return nil, errors.New("not implemented")
 }

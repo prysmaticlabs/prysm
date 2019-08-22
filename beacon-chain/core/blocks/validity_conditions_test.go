@@ -23,7 +23,7 @@ type mockDB struct {
 	hasBlock bool
 }
 
-func (f *mockDB) HasBlock(h [32]byte) bool {
+func (f *mockDB) HasBlock(ctx context.Context, h [32]byte) bool {
 	return f.hasBlock
 }
 

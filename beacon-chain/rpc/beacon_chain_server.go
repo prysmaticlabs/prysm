@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -91,7 +92,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.HeadBlock(ctx)
+	headBlock, err := bs.beaconDB.(*kv.Store).HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -126,9 +127,21 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot-1))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve blocks: %v", err)
+		var blks []*ethpb.BeaconBlock
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			for i := startSlot; i < endSlot; i++ {
+				b, err := d.BlocksBySlot(ctx, i)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
+				}
+				blks = append(blks, b...)
+			}
+		} else {
+			var err error
+			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
+			}
 		}
 		numBlks := len(blks)
 		if numBlks == 0 {
@@ -162,7 +175,13 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		var blks []*ethpb.BeaconBlock
+		var err error
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			blks, err = d.BlocksBySlot(ctx, q.Slot)
+		} else {
+			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		}
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -274,20 +293,19 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState, err := bs.beaconDB.HeadState(ctx)
+	head, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
 	}
-	validators := headState.Validators
-	validatorCount := len(validators)
 
+	validatorCount := len(head.Validators)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ethpb.Validators{
-		Validators:    validators[start:end],
+		Validators:    head.Validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}
