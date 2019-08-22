@@ -352,7 +352,6 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 }
 
-// TODO: Failing
 func TestValidatorStatus_PendingActive(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -362,7 +361,17 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
 	// Pending active because activation epoch is still defaulted at far future slot.
 	if err := db.SaveState(
 		ctx,
@@ -375,7 +384,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 			},
 			Slot: 5000,
 		},
-		[32]byte{},
+		genesisRoot,
 	); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -418,15 +427,15 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 }
 
 func TestValidatorStatus_Active(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -448,14 +457,26 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
-	if err := db.SaveStateDeprecated(ctx, &pbp2p.BeaconState{
+
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}); err != nil {
+		}}, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
