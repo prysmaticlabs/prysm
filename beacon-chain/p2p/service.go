@@ -80,6 +80,14 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
+	if len(s.cfg.StaticPeers) > 0 {
+		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
+		if err != nil {
+			log.Errorf("Could not connect to static peer: %v", err)
+		}
+		s.connectWithAllPeers(addrs)
+	}
+
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
