@@ -15,66 +15,71 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestationReceiver interface defines the methods in the blockchain service which
-// directly receives a new attestation from other services and applies the full processing pipeline.
-type AttestationReceiver interface {
-	ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error
-}
 
 // ReceiveAttestation is a function that defines the operations that are preformed on
-// any attestation that is received from p2p layer or rpc.
+// attestation that is received from regular sync. The operations consist of:
+//  1. Gossip attestation to other peers
+//  2. Validate attestation, update validator's latest vote
+//  3. Apply fork choice to the processed attestation
+//  4. Save latest head info
 func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestation")
 	defer span.End()
 
-	root, err := ssz.SigningRoot(att)
-	if err != nil {
-		return errors.Wrap(err, "could not sign root attestation")
+	// Broadcast the new attestation to the network.
+	if err := c.p2p.Broadcast(ctx, att); err != nil {
+		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	// broadcast the attestation to other peers.
-	c.p2p.Broadcast(ctx, att)
+	return c.ReceiveAttestationNoPubsub(ctx, att)
+}
+
+// ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
+// attestation that is received from regular sync. The operations consist of:
+//  1. Validate attestation, update validator's latest vote
+//  2. Apply fork choice to the processed attestation
+//  3. Save latest head info
+func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
+	defer span.End()
 
 	// Delay attestation inclusion until the attested slot is in the past.
 	if err := c.waitForAttInclDelay(ctx, att); err != nil {
 		return errors.Wrap(err, "could not delay attestation inclusion")
 	}
 
-	c.forkChoiceStore.OnTick(uint64(time.Now().Unix()))
-
+	// Update forkchoice store for the new attestation
 	if err := c.forkChoiceStore.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
+	}
+	root, err := ssz.SigningRoot(att)
+	if err != nil {
+		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
 		"root": hex.EncodeToString(root[:]),
 	}).Info("Finished update fork choice store for attestation")
 
-	// Run fork choice for head block and head block.
-	// The spec says to run fork choice on every aggregated attestation, we can
-	// remove this if we don't feel it's necessary. But i think this will be good
-	// for interopt to gain stability.
+	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := c.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := c.deprecatedBeaconDB.Block(bytesutil.ToBytes32(headRoot))
+	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 
 	}
 
-	c.canonicalRootsLock.Lock()
-	defer c.canonicalRootsLock.Unlock()
-	c.headSlot = headBlk.Slot
-	c.canonicalRoots[headBlk.Slot] = headRoot
-	if err := c.db.SaveHeadBlockRoot(ctx, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
+	// Save head info after running fork choice.
+	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+		return errors.Wrap(err, "could not save head")
 	}
 
 	log.WithFields(logrus.Fields{
 		"slots": headBlk.Slot,
 		"root":  hex.EncodeToString(headRoot),
-	}).Info("Finished fork choice for attestation")
+	}).Info("Finished fork choice")
 
 	return nil
 }
@@ -86,7 +91,7 @@ func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attesta
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
 	defer span.End()
 
-	s, err := c.db.State(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+	s, err := c.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get state")
 	}
