@@ -249,10 +249,10 @@ func TestSyncedInRestarts(t *testing.T) {
 
 	bState := &pb.BeaconState{Slot: 0}
 	blk := &ethpb.BeaconBlock{Slot: 0}
-	if err := db.SaveState(context.Background(), bState); err != nil {
+	if err := db.SaveStateDeprecated(context.Background(), bState); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
-	if err := db.SaveBlock(blk); err != nil {
+	if err := db.SaveBlockDeprecated(blk); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
 	if err := db.UpdateChainHead(context.Background(), blk, bState); err != nil {

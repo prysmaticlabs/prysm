@@ -11,18 +11,30 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
-	block := &ethpb.BeaconBlock{}
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
+	defer span.End()
+	k.blocksLock.RLock()
+	// Return block from cache if it exists.
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return blk, nil
+	}
+	k.blocksLock.RUnlock()
+	var block *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
+		block = &ethpb.BeaconBlock{}
 		return proto.Unmarshal(enc, block)
 	})
 	return block, err
@@ -30,7 +42,9 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 
 // HeadBlock returns the latest canonical block in eth2.
 func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
-	headBlock := &ethpb.BeaconBlock{}
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
+	defer span.End()
+	var headBlock *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
 		headRoot := bkt.Get(headBlockRootKey)
@@ -41,6 +55,7 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 		if enc == nil {
 			return nil
 		}
+		headBlock = &ethpb.BeaconBlock{}
 		return proto.Unmarshal(enc, headBlock)
 	})
 	return headBlock, err
@@ -48,6 +63,8 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 
 // Blocks retrieves a list of beacon blocks by filter criteria.
 func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")
+	defer span.End()
 	blocks := make([]*ethpb.BeaconBlock, 0)
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -67,7 +84,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
-		indicesByBucket, err := createBlockIndicesFromFilters(f, tx.Bucket)
+		indicesByBucket, err := createBlockIndicesFromFilters(f)
 		if err != nil {
 			return errors.Wrap(err, "could not determine block lookup indices")
 		}
@@ -84,7 +101,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the block. These block will
 		// meet the filter criteria.
-		indices := lookupValuesForIndices(indicesByBucket)
+		indices := lookupValuesForIndices(indicesByBucket, tx)
 		keys := rootsBySlotRange
 		if len(indices) > 0 {
 			// If we have found indices that meet the filter criteria, and there are also
@@ -115,6 +132,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
 func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoots")
+	defer span.End()
 	blocks, err := k.Blocks(ctx, f)
 	if err != nil {
 		return nil, err
@@ -132,6 +151,14 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 
 // HasBlock checks if a block by root exists in the db.
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
+	defer span.End()
+	k.blocksLock.RLock()
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return true
+	}
+	k.blocksLock.RUnlock()
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
@@ -145,6 +172,8 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 // DeleteBlock by block root.
 // TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
+	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
@@ -156,19 +185,32 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
-		if err := deleteValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
+		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
+		k.blocksLock.Lock()
+		delete(k.blocks, blockRoot)
+		k.blocksLock.Unlock()
 		return bkt.Delete(blockRoot[:])
 	})
 }
 
 // SaveBlock to the db.
 func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
+	defer span.End()
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return err
 	}
+
+	k.blocksLock.RLock()
+	// Skip saving block to DB if it exists in the cache.
+	if blk, exists := k.blocks[blockRoot]; exists && blk != nil {
+		k.blocksLock.RUnlock()
+		return nil
+	}
+	k.blocksLock.RUnlock()
 	enc, err := proto.Marshal(block)
 	if err != nil {
 		return err
@@ -176,15 +218,20 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
-		if err := updateValueForIndices(indicesByBucket, blockRoot[:]); err != nil {
+		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
+		k.blocksLock.Lock()
+		k.blocks[blockRoot] = block
+		k.blocksLock.Unlock()
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
 
 // SaveBlocks via batch updates to the db.
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
+	defer span.End()
 	encodedValues := make([][]byte, len(blocks))
 	keys := make([][]byte, len(blocks))
 	for i := 0; i < len(blocks); i++ {
@@ -203,9 +250,12 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 		bucket := tx.Bucket(blocksBucket)
 		for i := 0; i < len(blocks); i++ {
 			indicesByBucket := createBlockIndicesFromBlock(blocks[i], tx)
-			if err := updateValueForIndices(indicesByBucket, keys[i]); err != nil {
+			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
+			k.blocksLock.Lock()
+			k.blocks[bytesutil.ToBytes32(keys[i])] = blocks[i]
+			k.blocksLock.Unlock()
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}
@@ -216,6 +266,8 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 
 // SaveHeadBlockRoot to the db.
 func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
+	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
@@ -264,22 +316,22 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bolt.Bucket][]byte {
-	indicesByBucket := make(map[*bolt.Bucket][]byte)
+func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[string][]byte {
+	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
 	// range scans for filtering across keys.
-	buckets := []*bolt.Bucket{
-		tx.Bucket(blockSlotIndicesBucket),
+	buckets := [][]byte{
+		blockSlotIndicesBucket,
 	}
 	indices := [][]byte{
 		[]byte(fmt.Sprintf("%07d", block.Slot)),
 	}
 	if block.ParentRoot != nil && len(block.ParentRoot) > 0 {
-		buckets = append(buckets, tx.Bucket(blockParentRootIndicesBucket))
+		buckets = append(buckets, blockParentRootIndicesBucket)
 		indices = append(indices, block.ParentRoot)
 	}
 	for i := 0; i < len(buckets); i++ {
-		indicesByBucket[buckets[i]] = indices[i]
+		indicesByBucket[string(buckets[i])] = indices[i]
 	}
 	return indicesByBucket
 }
@@ -291,13 +343,13 @@ func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[*bol
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to
 // blocks, an appropriate error is returned.
-func createBlockIndicesFromFilters(f *filters.QueryFilter, readBucket func(b []byte) *bolt.Bucket) (map[*bolt.Bucket][]byte, error) {
-	indicesByBucket := make(map[*bolt.Bucket][]byte)
+func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, error) {
+	indicesByBucket := make(map[string][]byte)
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
-			indicesByBucket[readBucket(blockParentRootIndicesBucket)] = parentRoot
+			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
 		default:

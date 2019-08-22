@@ -411,7 +411,7 @@ func ProcessAttesterSlashings(
 	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := verifyAttesterSlashing(beaconState, slashing); err != nil {
+		if err := VerifyAttesterSlashing(beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -438,7 +438,8 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
+// VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
+func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -828,17 +829,23 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		pubkeys = append(pubkeys, pubkey)
 	}
 
+	var msgs [][32]byte
 	cus0 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
 	cus1 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
-	cus0Root, err := ssz.HashTreeRoot(cus0)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash att data and custody bit 0")
+	if len(custodyBit0Indices) > 0 {
+		cus0Root, err := ssz.HashTreeRoot(cus0)
+		if err != nil {
+			return errors.Wrap(err, "could not tree hash att data and custody bit 0")
+		}
+		msgs = append(msgs, cus0Root)
 	}
-	cus1Root, err := ssz.HashTreeRoot(cus1)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash att data and custody bit 1")
+	if len(custodyBit1Indices) > 0 {
+		cus1Root, err := ssz.HashTreeRoot(cus1)
+		if err != nil {
+			return errors.Wrap(err, "could not tree hash att data and custody bit 1")
+		}
+		msgs = append(msgs, cus1Root)
 	}
-	msgs := append(cus0Root[:], cus1Root[:]...)
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
