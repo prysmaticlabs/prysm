@@ -194,8 +194,8 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		// TODO(#3064): Add new db here.
-		pool: s.operationService,
+		beaconDB: s.beaconDB,
+		pool:     s.operationService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
