@@ -71,4 +71,10 @@ func TestStore_ValidatorLatestVoteCRUD(t *testing.T) {
 	if !proto.Equal(latestVote, retrievedVote) {
 		t.Errorf("Wanted %d, received %d", latestVote, retrievedVote)
 	}
+	if err := db.DeleteValidatorLatestVote(ctx, validatorIdx); err != nil {
+		t.Fatal(err)
+	}
+	if db.HasValidatorLatestVote(ctx, validatorIdx) {
+		t.Error("Expected validator latest vote to have been deleted from the db")
+	}
 }

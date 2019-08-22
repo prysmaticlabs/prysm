@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func TestStore_GensisStoreOk(t *testing.T) {
+func TestStore_GenesisStoreOk(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)

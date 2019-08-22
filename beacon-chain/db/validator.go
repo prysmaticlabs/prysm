@@ -122,6 +122,12 @@ func (db *BeaconDB) HasValidatorLatestVote(_ context.Context, _ uint64) bool {
 	return false
 }
 
+// DeleteValidatorLatestVote by validator index.
+// DEPRECATED: Do not use.
+func (db *BeaconDB) DeleteValidatorLatestVote(_ context.Context, _ uint64) error {
+	return errors.New("unimplemented")
+}
+
 // HasValidator checks if a validator index map exists.
 func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	exists := false
