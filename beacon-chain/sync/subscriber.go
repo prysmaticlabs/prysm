@@ -13,6 +13,9 @@ import (
 
 var oneYear = 365 * 24 * time.Hour
 
+// prefix to add to keys, so that we can represent invalid objects
+var invalid = "invalidObject"
+
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 

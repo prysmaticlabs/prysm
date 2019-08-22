@@ -26,8 +26,8 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 		return false
 	}
 	cacheKey := exitCacheKey(exit)
-	badKey := badObject + cacheKey
-	if seenExits.Get(badKey) != nil {
+	invalidKey := invalid + cacheKey
+	if seenExits.Get(invalidKey) != nil {
 		return false
 	}
 	if seenExits.Get(cacheKey) != nil {
@@ -40,7 +40,7 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 	if err := blocks.VerifyExit(state, exit); err != nil {
 		log.WithError(err).Warn("Received invalid voluntary exit")
-		seenExits.Set(badKey, true /*value*/, oneYear /*TTL*/)
+		seenExits.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
 		return false
 	}
 	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
