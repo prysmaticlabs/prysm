@@ -109,10 +109,26 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
-// VerifyAggregate verifies each public key against a message.
+// VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+	if len(pubKeys) == 0 {
+		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+	}
+	var keys []*g1.PublicKey
+	for _, v := range pubKeys {
+		keys = append(keys, v.val)
+	}
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return s.val.VerifyAggregateWithDomain(keys, msg, bytesutil.ToBytes8(b))
+}
+
+// VerifyAggregateCommon verifies each public key against its respective message.
+// This is vulnerable to rogue public-key attack. Each user must
+// provide a proof-of-knowledge of the public key.
+func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
 	if len(pubKeys) == 0 {
 		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
 	}
