@@ -65,6 +65,6 @@ func truncateItems(data []uint64, minItemVal uint64) (truncate bool, truncatedLi
 		return false, data, []uint64{}
 	}
 	itemsToTruncate = data[:index]
-	truncatedList = data[index+1:]
+	truncatedList = data[index:]
 	return true, truncatedList, itemsToTruncate
 }
