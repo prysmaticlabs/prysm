@@ -21,25 +21,28 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	if err := db.SaveStateDeprecated(context.Background(), &pbp2p.BeaconState{}); err != nil {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{}, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndexDeprecated(pubKey, 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -55,52 +58,10 @@ func TestValidatorIndex_OK(t *testing.T) {
 	}
 }
 
-func TestValidatorIndex_InStateNotInDB(t *testing.T) {
-	d := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, d)
-
-	pubKey := []byte{'A'}
-
-	// Wanted validator with public key 'A' is in index '1'.
-	s := &pbp2p.BeaconState{
-		Validators: []*ethpb.Validator{{PublicKey: []byte{0}}, {PublicKey: []byte{'A'}}, {PublicKey: []byte{'B'}}},
-	}
-
-	if err := d.SaveStateDeprecated(context.Background(), s); err != nil {
-		t.Fatal(err)
-	}
-
-	validatorServer := &ValidatorServer{
-		beaconDB: d,
-	}
-
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey,
-	}
-
-	// Verify index can be retrieved from state when it's not saved in DB.
-	res, err := validatorServer.ValidatorIndex(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.Index != 1 {
-		t.Errorf("Wanted index 1 got %d", res.Index)
-	}
-
-	// Verify index is also saved in DB.
-	idx, err := validatorServer.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(pubKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != 1 {
-		t.Errorf("Wanted index 1 in DB got %d", res.Index)
-	}
-}
-
 func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	defer internal.TeardownDBDeprecated(t, db)
 	helpers.ClearAllCaches()
 
 	deposits, _ := testutil.SetupInitialDeposits(t, 8)
@@ -108,15 +69,21 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveStateDeprecated(context.Background(), beaconState); err != nil {
-		t.Fatal(err)
-	}
 	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(block); err != nil {
-		t.Fatalf("Could not save block: %v", err)
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	if err := db.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("Could not update head: %v", err)
+	genesisRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
@@ -132,19 +99,27 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 }
 
 func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	db.UpdateChainHead(ctx, genesis, state)
+	genesis := blk.NewGenesisBlock([]byte{})
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
