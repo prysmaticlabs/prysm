@@ -3,7 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["p2p.go"],
+    srcs = [
+        "mock_broadcaster.go",
+        "p2p.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
