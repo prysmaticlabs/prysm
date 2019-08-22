@@ -355,6 +355,7 @@ func ProcessProposerSlashings(
 	return beaconState, nil
 }
 
+// VerifyProposerSlashing verifies that the data provided fro slashing is valid.
 func VerifyProposerSlashing(
 	beaconState *pb.BeaconState,
 	slashing *ethpb.ProposerSlashing,
