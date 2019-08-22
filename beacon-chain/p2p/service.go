@@ -99,6 +99,9 @@ func (s *Service) Start() {
 	s.pubsub = gs
 
 	s.started = true
+
+	multiAddrs := s.host.Network().ListenAddresses()
+	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }
 
 // Stop the p2p service and terminate all peer connections.
