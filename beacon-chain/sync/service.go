@@ -18,6 +18,7 @@ type Config struct {
 	P2P        p2p.P2P
 	DB         db.Database
 	Operations *operations.Service
+	Chain      *blockchain.ChainService
 }
 
 // NewRegularSync service.
@@ -27,6 +28,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		db:         cfg.DB,
 		p2p:        cfg.P2P,
 		operations: cfg.Operations,
+		chain:      cfg.Chain,
 	}
 }
 
@@ -36,8 +38,8 @@ type RegularSync struct {
 	ctx        context.Context
 	p2p        p2p.P2P
 	db         db.Database
-	chain      *blockchain.ChainService
 	operations *operations.Service
+	chain      *blockchain.ChainService
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.

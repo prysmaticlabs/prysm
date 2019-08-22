@@ -9,6 +9,7 @@ go_library(
         "is_empty.go",
         "json_to_pb_converter.go",
         "log.go",
+        "random_bytes.go",
         "tempdir.go",
         "wait_timeout.go",
     ],
