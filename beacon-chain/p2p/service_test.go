@@ -126,11 +126,20 @@ func TestListenForNewNodes(t *testing.T) {
 		BootstrapNodeAddr: bootNode.String(),
 	}
 	var listeners []*discv5.Network
+	var hosts []host.Host
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
-		listener, _ := createPeer(t, cfg, port+i)
+		listener, h := createPeer(t, cfg, port+i)
 		listeners = append(listeners, listener.(*discv5.Network))
+		hosts = append(hosts, h)
 	}
+
+	// close peers upon exit of test
+	defer func() {
+		for _, h := range hosts {
+			_ = h.Close()
+		}
+	}()
 
 	cfg.Port = 4000
 	cfg.UDPPort = 4000

@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -120,15 +121,22 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-
 	cfg := &Config{}
-	port := 2000
+	port := 3000
 	var staticPeers []string
+	var hosts []host.Host
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
 		h, _, ipaddr := createHost(t, port+i)
 		staticPeers = append(staticPeers, fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, port+i, h.ID()))
+		hosts = append(hosts, h)
 	}
+
+	defer func() {
+		for _, h := range hosts {
+			_ = h.Close()
+		}
+	}()
 
 	cfg.Port = 4000
 	cfg.UDPPort = 4000
