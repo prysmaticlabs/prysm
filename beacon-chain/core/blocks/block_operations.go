@@ -411,7 +411,7 @@ func ProcessAttesterSlashings(
 	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := verifyAttesterSlashing(beaconState, slashing); err != nil {
+		if err := VerifyAttesterSlashing(beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -438,7 +438,8 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
+// VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
+func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data

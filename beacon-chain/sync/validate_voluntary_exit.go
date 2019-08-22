@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
@@ -22,11 +21,18 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
 func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
-	exit := msg.(*ethpb.VoluntaryExit)
-	if seenExits.Get(exitCacheKey(exit)) != nil {
+	exit, ok := msg.(*ethpb.VoluntaryExit)
+	if !ok {
 		return false
 	}
-
+	cacheKey := exitCacheKey(exit)
+	invalidKey := invalid + cacheKey
+	if seenExits.Get(invalidKey) != nil {
+		return false
+	}
+	if seenExits.Get(cacheKey) != nil {
+		return false
+	}
 	state, err := r.db.HeadState(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to get head state")
@@ -34,9 +40,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 	if err := blocks.VerifyExit(state, exit); err != nil {
 		log.WithError(err).Warn("Received invalid voluntary exit")
+		seenExits.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
 		return false
 	}
-	seenExits.Set(exitCacheKey(exit), true /*value*/, 365*24*time.Hour /*TTL*/)
+	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
 
 	if err := p.Broadcast(ctx, exit); err != nil {
 		log.WithError(err).Error("Failed to propagate voluntary exit")
