@@ -41,7 +41,7 @@ type ChainService struct {
 	depositCache         *depositcache.DepositCache
 	web3Service          *powchain.Web3Service
 	opsPoolService       operations.OperationFeeds
-	forkChoiceStore      *forkchoice.Store
+	forkChoiceStore      forkchoice.ForkChoicer
 	chainStartChan       chan time.Time
 	genesisTime          time.Time
 	stateInitializedFeed *event.Feed
@@ -86,7 +86,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.deprecatedBeaconDB.HeadState(c.ctx)
+	beaconState, err := c.beaconDB.HeadState(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}

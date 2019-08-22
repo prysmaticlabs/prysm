@@ -149,7 +149,7 @@ func (c *ChainService) VerifyBlockValidity(
 	}
 	powBlockFetcher := c.web3Service.Client().BlockByHash
 	if err := b.IsValidBlock(ctx, beaconState, block,
-		c.deprecatedBeaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
+		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return errors.Wrap(err, "block does not fulfill pre-processing conditions")
 	}
 	return nil

@@ -5,16 +5,15 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
 
 // ReceiveAttestation is a function that defines the operations that are preformed on
 // attestation that is received from regular sync. The operations consist of:
@@ -30,6 +29,9 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	if err := c.p2p.Broadcast(ctx, att); err != nil {
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
+	log.WithFields(logrus.Fields{
+		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+	}).Info("Broadcasting attestation")
 
 	return c.ReceiveAttestationNoPubsub(ctx, att)
 }
@@ -57,8 +59,9 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"root": hex.EncodeToString(root[:]),
-	}).Info("Finished update fork choice store for attestation")
+		"attRoot":     hex.EncodeToString(root[:]),
+		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+	}).Info("Finished updating fork choice store for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := c.forkChoiceStore.Head(ctx)
@@ -70,16 +73,15 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		return errors.Wrap(err, "could not compute state from block head")
 
 	}
+	log.WithFields(logrus.Fields{
+		"headSlot": headBlk.Slot,
+		"headRoot": hex.EncodeToString(headRoot),
+	}).Info("Finished applying fork choice")
 
 	// Save head info after running fork choice.
 	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
-
-	log.WithFields(logrus.Fields{
-		"slots": headBlk.Slot,
-		"root":  hex.EncodeToString(headRoot),
-	}).Info("Finished fork choice")
 
 	return nil
 }
