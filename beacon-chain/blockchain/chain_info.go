@@ -1,16 +1,31 @@
 package blockchain
 
 import (
+	"time"
+
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // ChainInfoRetriever defines a common interface for methods in blockchain service which
 // directly retrieves chain head related data.
 type ChainInfoRetriever interface {
-	FinalizedCheckpt() *ethpb.Checkpoint
+	HeadRetriever
+	CanonicalRetriever
+	FinalizationRetriever
+	GenesisTime() time.Time
+}
+
+type HeadRetriever interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
+}
+
+type CanonicalRetriever interface {
 	CanonicalRoot(slot uint64) []byte
+}
+
+type FinalizationRetriever interface {
+	FinalizedCheckpt() *ethpb.Checkpoint
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
@@ -37,4 +52,9 @@ func (c *ChainService) CanonicalRoot(slot uint64) []byte {
 	defer c.canonicalRootsLock.RUnlock()
 
 	return c.canonicalRoots[slot]
+}
+
+// CanonicalRoot returns the genesis time of beacon chain.
+func (c *ChainService) GenesisTime() time.Time {
+	return c.genesisTime
 }
