@@ -12,7 +12,6 @@ func TestRegularSync_generateErrorResponse(t *testing.T) {
 	r := &RegularSync{
 		p2p: p2ptest.NewTestP2P(t),
 	}
-
 	data, err := r.generateErrorResponse(responseCodeServerError, "something bad happened")
 	if err != nil {
 		t.Fatal(err)
