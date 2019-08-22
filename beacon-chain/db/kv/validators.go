@@ -8,14 +8,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
-
-// For 1 million validators, caching latest votes would be a memory footprint
-// of approximately 50Mb, which is reasonable.
-var votesCache = ccache.New(ccache.Configure().MaxSize(1000000))
 
 // ValidatorLatestVote retrieval by validator index.
 func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error) {
@@ -23,7 +18,7 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 	defer span.End()
 
 	// Return latest vote from cache if it exists.
-	if v := votesCache.Get(string(validatorIdx)); v != nil {
+	if v := k.votesCache.Get(string(validatorIdx)); v != nil {
 		return v.Value().(*pb.ValidatorLatestVote), nil
 	}
 
@@ -46,7 +41,7 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorLatestVote")
 	defer span.End()
 
-	if v := votesCache.Get(string(validatorIdx)); v != nil {
+	if v := k.votesCache.Get(string(validatorIdx)); v != nil {
 		return true
 	}
 
@@ -72,7 +67,7 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
-		votesCache.Set(string(validatorIdx), vote, time.Hour)
+		k.votesCache.Set(string(validatorIdx), vote, time.Hour)
 		return bucket.Put(buf, enc)
 	})
 }
@@ -87,7 +82,7 @@ func (k *Store) DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint
 		if enc == nil {
 			return nil
 		}
-		votesCache.Delete(string(validatorIdx))
+		k.votesCache.Delete(string(validatorIdx))
 		return bkt.Delete(uint64ToBytes(validatorIdx))
 	})
 }

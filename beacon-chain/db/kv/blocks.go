@@ -8,7 +8,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -17,15 +16,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// We store 4 epochs worth of blocks as each block when full is around 1.2Mb.
-var blockCache = ccache.New(ccache.Configure().MaxSize(256))
-
 // Block retrieval by root.
 func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
 	// Return block from cache if it exists.
-	if v := blockCache.Get(string(blockRoot[:])); v != nil {
+	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return v.Value().(*ethpb.BeaconBlock), nil
 	}
 	var block *ethpb.BeaconBlock
@@ -154,7 +150,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
-	if v := blockCache.Get(string(blockRoot[:])); v != nil {
+	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return true
 	}
 	exists := false
@@ -186,7 +182,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
-		blockCache.Delete(string(blockRoot[:]))
+		k.blockCache.Delete(string(blockRoot[:]))
 		return bkt.Delete(blockRoot[:])
 	})
 }
@@ -200,7 +196,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		return err
 	}
 
-	if v := blockCache.Get(string(blockRoot[:])); v != nil {
+	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return nil
 	}
 
@@ -214,7 +210,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		blockCache.Set(string(blockRoot[:]), block, time.Hour)
+		k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
@@ -244,7 +240,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			blockCache.Set(string(keys[i]), blocks[i], time.Hour)
+			k.blockCache.Set(string(keys[i]), blocks[i], time.Hour)
 			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
 				return err
 			}
