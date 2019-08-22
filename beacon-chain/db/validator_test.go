@@ -19,24 +19,24 @@ func TestSaveAndRetrieveValidatorIndex_OK(t *testing.T) {
 	p1 := []byte{'A', 'B', 'C'}
 	p2 := []byte{'D', 'E', 'F'}
 
-	if err := db.SaveValidatorIndex(p1, 1); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(p1, 1); err != nil {
 		t.Fatalf("Failed to save vallidator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(p2, 2); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(p2, 2); err != nil {
 		t.Fatalf("Failed to save vallidator index: %v", err)
 	}
 
-	index1, err := db.ValidatorIndex(p1)
+	index1, err := db.ValidatorIndexDeprecated(p1)
 	if err != nil {
-		t.Fatalf("Failed to call Attestation: %v", err)
+		t.Fatalf("Failed to call AttestationDeprecated: %v", err)
 	}
 	if index1 != 1 {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 1, index1)
 	}
 
-	index2, err := db.ValidatorIndex(p2)
+	index2, err := db.ValidatorIndexDeprecated(p2)
 	if err != nil {
-		t.Fatalf("Failed to call Attestation: %v", err)
+		t.Fatalf("Failed to call AttestationDeprecated: %v", err)
 	}
 	if index2 != 2 {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 2, index2)
@@ -49,13 +49,13 @@ func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
 
 	p1 := []byte{'1', '2', '3'}
 
-	if err := db.SaveValidatorIndex(p1, 3); err != nil {
+	if err := db.SaveValidatorIndexDeprecated(p1, 3); err != nil {
 		t.Fatalf("Failed to save validator index: %v", err)
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{}); err != nil {
+	if err := db.SaveStateDeprecated(context.Background(), &pb.BeaconState{}); err != nil {
 		t.Fatalf("Failed to save state: %v", err)
 	}
-	index, err := db.ValidatorIndex(p1)
+	index, err := db.ValidatorIndexDeprecated(p1)
 	if err != nil {
 		t.Fatalf("Failed to call validator Index: %v", err)
 	}
@@ -63,10 +63,10 @@ func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 3, index)
 	}
 
-	if err := db.DeleteValidatorIndex(p1); err != nil {
+	if err := db.DeleteValidatorIndexDeprecated(p1); err != nil {
 		t.Fatalf("Could not delete attestation: %v", err)
 	}
-	_, err = db.ValidatorIndex(p1)
+	_, err = db.ValidatorIndexDeprecated(p1)
 	want := fmt.Sprintf("validator %#x does not exist", p1)
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Want: %v, got: %v", want, err.Error())

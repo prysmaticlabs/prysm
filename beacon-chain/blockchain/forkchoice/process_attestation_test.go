@@ -2,13 +2,10 @@ package forkchoice
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -18,10 +15,9 @@ import (
 func TestStore_OnAttestation(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	kv := db.(*kv.Store)
-	defer testDB.TeardownDB(t, kv)
+	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, kv)
+	store := NewForkChoiceService(ctx, db)
 
 	_, err := blockTree1(db)
 	if err != nil {
@@ -82,21 +78,12 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErrString: "pre state of target block 0 does not exist",
 		},
 		{
-			name:    "process attestation from future epoch",
-			a:       &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1, Root: BlkWithStateBadAttRoot[:]}}},
-			s:       &pb.BeaconState{},
-			wantErr: true,
-			wantErrString: fmt.Sprintf("could not process attestation from the future epoch, time %d > time 0",
-				params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot),
-		},
-		{
-			name: "process attestation before inclusion delay",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:       &pb.BeaconState{},
-			wantErr: true,
-			wantErrString: fmt.Sprintf("could not process attestation for fork choice until inclusion delay, time %d > time 0",
-				params.BeaconConfig().SecondsPerSlot),
+			name: "process attestation from future epoch",
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: params.BeaconConfig().FarFutureEpoch,
+				Root: BlkWithStateBadAttRoot[:]}}},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "could not process attestation from the future epoch",
 		},
 		{
 			name: "process attestation with invalid index",
@@ -121,8 +108,6 @@ func TestStore_OnAttestation(t *testing.T) {
 			if err := store.GenesisStore(ctx, tt.s); err != nil {
 				t.Fatal(err)
 			}
-			s := tt.s.Slot * params.BeaconConfig().SecondsPerSlot
-			store.OnTick(time.Unix(int64(s), 0))
 
 			err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {

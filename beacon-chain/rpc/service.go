@@ -13,12 +13,12 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	sync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
+	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -68,20 +68,15 @@ type powChainService interface {
 	ChainStartETH1Data() *ethpb.Eth1Data
 }
 
-type syncService interface {
-	Status() error
-	sync.Checker
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	beaconDB            *db.BeaconDB
+	beaconDB            db.Database
 	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
-	syncService         syncService
+	syncService         sync.Checker
 	port                string
 	listener            net.Listener
 	withCert            string
@@ -98,11 +93,11 @@ type Config struct {
 	Port             string
 	CertFlag         string
 	KeyFlag          string
-	BeaconDB         *db.BeaconDB
+	BeaconDB         db.Database
 	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService
-	SyncService      syncService
+	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
 }
 

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,14 +25,15 @@ var log = logrus.WithField("prefix", "beacondb")
 type Database interface {
 	io.Closer
 	DatabasePath() string
-
 	ClearDB() error
+	// Attestation related methods.
 	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(ctx context.Context, attRoot [32]byte) bool
 	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
+	// Block related methods.
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
 	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
@@ -42,23 +43,45 @@ type Database interface {
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
-	HeadState(ctx context.Context) (*pb.BeaconState, error)
-	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
+	// State related methods.
+	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
+	// Slashing operations.
+	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
+	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error)
+	SaveProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error
+	SaveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) error
+	HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool
+	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
+	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
+	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
+	// Block operations.
+	VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error)
+	SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error
+	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
+	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
+	// Deposit contract related handlers.
+	DepositContractAddress(ctx context.Context) ([]byte, error)
+	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 }
+
+var _ = Database(&BeaconDB{})
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
 // but instead reflect the beacon chain logic.
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
+// DEPRECATED: Use github.com/prysmaticlabs/prysm/db/kv instead.
 type BeaconDB struct {
 	// state objects and caches
 	stateLock         sync.RWMutex
@@ -67,7 +90,7 @@ type BeaconDB struct {
 	validatorRegistry []*ethpb.Validator
 	validatorBalances []uint64
 	db                *bolt.DB
-	DatabasePath      string
+	databasePath      string
 
 	// Beacon block info in memory.
 	highestBlockSlot uint64
@@ -76,9 +99,6 @@ type BeaconDB struct {
 	badBlocksLock  sync.RWMutex
 	blocks         map[[32]byte]*ethpb.BeaconBlock
 	blocksLock     sync.RWMutex
-
-	// Beacon chain deposits in memory.
-	DepositCache *depositcache.DepositCache
 }
 
 // Close closes the underlying boltdb database.
@@ -107,6 +127,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 }
 
 // NewDBDeprecated initializes a new DB. If the genesis block and states do not exist, this method creates it.
+// DEPRECATED: Use github.com/prysmaticlabs/prysm/db.NewDB instead.
 func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
@@ -120,9 +141,7 @@ func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	depCache := depositcache.NewDepositCache()
-
-	db := &BeaconDB{db: boltDB, DatabasePath: dirPath, DepositCache: depCache}
+	db := &BeaconDB{db: boltDB, databasePath: dirPath}
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err := db.update(func(tx *bolt.Tx) error {
@@ -146,4 +165,14 @@ func ClearDB(dirPath string) error {
 		return nil
 	}
 	return os.RemoveAll(dirPath)
+}
+
+// DatabasePath returns the filepath to the database directory.
+func (db *BeaconDB) DatabasePath() string {
+	return db.databasePath
+}
+
+// ClearDB removes the previously stored directory at the data directory.
+func (db *BeaconDB) ClearDB() error {
+	return ClearDB(db.databasePath)
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -22,14 +21,13 @@ import (
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	lastProcessedTime time.Time
-	db                db.Database
-	justifiedCheckpt  *ethpb.Checkpoint
-	finalizedCheckpt  *ethpb.Checkpoint
-	lock              sync.RWMutex
-	checkptBlkRoot    map[[32]byte][32]byte
+	ctx              context.Context
+	cancel           context.CancelFunc
+	db               db.Database
+	justifiedCheckpt *ethpb.Checkpoint
+	finalizedCheckpt *ethpb.Checkpoint
+	lock             sync.RWMutex
+	checkptBlkRoot   map[[32]byte][32]byte
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -74,7 +72,6 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 		return errors.Wrap(err, "could not tree hash genesis block")
 	}
 
-	s.lastProcessedTime = time.Unix(int64(genesisState.GenesisTime), 0)
 	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
 
@@ -163,12 +160,12 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 
 	balances := uint64(0)
 	for _, i := range activeIndices {
-		if !s.db.HasValidatorLatestVote(ctx, i) {
-			continue
-		}
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
+		}
+		if vote == nil {
+			continue
 		}
 
 		wantedRoot, err := s.ancestor(ctx, vote.Root, wantedBlk.Slot)
@@ -226,8 +223,9 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
-
-				if balance > highest {
+				// When there's a tie, it's broken lexicographically to favor the higher one.
+				if balance > highest ||
+					balance == highest && bytes.Compare(child, head) > 0 {
 					highest = balance
 					head = child
 				}
@@ -236,11 +234,7 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	}
 }
 
-// OnTick tracks the last unix time of when a block or an attestation arrives to blockchain service.
-//
-// Spec pseudocode definition:
-//   def on_tick(store: Store, time: uint64) -> None:
-//    store.time = time
-func (s *Store) OnTick(t time.Time) {
-	s.lastProcessedTime = t
+// FinalizedCheckpt returns the latest finalized check point from fork choice store.
+func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return s.finalizedCheckpt
 }
