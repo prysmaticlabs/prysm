@@ -73,13 +73,14 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 // by a validator when it is their time to propose or attest.
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
 	var headBlock *ethpb.BeaconBlock
+	var err error
 	if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
 		headBlock, err = d.ChainHead()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get canonical head block")
 		}
 	} else {
-		headBlock, err = as.beaconDB.(*kv.Store).HeadBlock(ctx)
+		headBlock, err = bs.beaconDB.(*kv.Store).HeadBlock(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get canonical head block")
 		}
