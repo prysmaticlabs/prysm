@@ -28,7 +28,7 @@ type CanonicalRetriever interface {
 	CanonicalRoot(slot uint64) []byte
 }
 
-// CanonicalRetriever defines a common interface for methods in blockchain service which
+// FinalizationRetriever defines a common interface for methods in blockchain service which
 // directly retrieves finalization related data.
 type FinalizationRetriever interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
