@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ForkChoicer:wq:wq defines a common interface for methods useful for directly applying fork choice
+// to beacon blocks to compute head.
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
