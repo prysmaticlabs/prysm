@@ -175,15 +175,17 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.T
 	indicesByBucket := make(map[string][]byte)
 	buckets := [][]byte{
 		attestationShardIndicesBucket,
-		attestationParentRootIndicesBucket,
 		attestationStartEpochIndicesBucket,
 		attestationEndEpochIndicesBucket,
 	}
 	indices := [][]byte{
 		uint64ToBytes(attData.Crosslink.Shard),
-		attData.Crosslink.ParentRoot,
 		uint64ToBytes(attData.Crosslink.StartEpoch),
 		uint64ToBytes(attData.Crosslink.EndEpoch),
+	}
+	if attData.Crosslink.ParentRoot != nil && len(attData.Crosslink.ParentRoot) > 0 {
+		buckets = append(buckets, attestationParentRootIndicesBucket)
+		indices = append(indices, attData.Crosslink.ParentRoot)
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
