@@ -107,6 +107,12 @@ var (
 			"would whitelist connections to peers on your local network only. The default " +
 			"is to accept all connections.",
 	}
+	// P2PEncoding defines the encoding format for p2p messages.
+	P2PEncoding = cli.StringFlag{
+		Name:  "p2p-encoding",
+		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
+		Value: "ssz",
+	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{
 		Name:  "clear-db",

@@ -54,55 +54,7 @@ func initBlockStateRoot(t *testing.T, block *ethpb.BeaconBlock, chainService *Ch
 	return block, nil
 }
 
-func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	ctx := context.Background()
-
-	chainService := setupBeaconChain(t, db, nil)
-	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-
-	if err := SetSlotInState(chainService, 1); err != nil {
-		t.Fatal(err)
-	}
-
-	parentBlock := &ethpb.BeaconBlock{
-		Slot: 1,
-	}
-
-	parentRoot, err := ssz.SigningRoot(parentBlock)
-	if err != nil {
-		t.Fatalf("Unable to tree hash block %v", err)
-	}
-
-	if err := chainService.beaconDB.SaveBlock(ctx, parentBlock); err != nil {
-		t.Fatalf("Unable to save block %v", err)
-	}
-
-	block := &ethpb.BeaconBlock{
-		Slot:       2,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte("a"),
-				BlockHash:   []byte("b"),
-			},
-		},
-	}
-
-	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := chainService.ReceiveBlockDeprecated(context.Background(), block); err == nil {
-		t.Errorf("Expected receive block to fail, received nil: %v", err)
-	}
-}
-
-func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
+func TestReceiveBlockDeprecated_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -195,7 +147,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
-func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
+func TestReceiveBlockDeprecated_UsesParentBlockState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -280,7 +232,7 @@ func TestReceiveBlock_UsesParentBlockState(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished processing beacon block")
 }
 
-func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
+func TestReceiveBlockDeprecated_DeletesBadBlock(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
@@ -364,7 +316,7 @@ func TestReceiveBlock_DeletesBadBlock(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
+func TestReceiveBlockDeprecated_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -444,7 +396,7 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
 
-func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
+func TestReceiveBlockDeprecated_CheckBlockStateRoot_BadState(t *testing.T) {
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
@@ -510,7 +462,7 @@ func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
+func TestReceiveBlockDeprecated_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
@@ -702,7 +654,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 //
 //    1->2->3->4->5->6->7->8->9[arrowhead=none];
 //}
-func TestReceiveBlock_OnChainSplit(t *testing.T) {
+func TestReceiveBlockDeprecated_OnChainSplit(t *testing.T) {
 	// The scenario to test is that we think that the canonical head is block H
 	// and then we receive block G. We don't have block F, so we request it. Then
 	// we process F, the G. The expected behavior is that we load the historical

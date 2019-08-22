@@ -46,6 +46,11 @@ var (
 		Name:  "experimental-db",
 		Usage: "Use the new experimental database library.",
 	}
+	// UseNewBlockChainFlag to start the beacon chain using new blockchain library.
+	UseNewBlockChainFlag = cli.BoolFlag{
+		Name:  "experimental-blockchain",
+		Usage: "Use the new experimental blockchain library.",
+	}
 	// NextFlag to enable all experimental features.
 	NextFlag = cli.BoolFlag{
 		Name:  "next",

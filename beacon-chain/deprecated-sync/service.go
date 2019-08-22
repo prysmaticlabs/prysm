@@ -13,12 +13,6 @@ import (
 
 var slog = logrus.WithField("prefix", "sync")
 
-// Checker defines a struct which can verify whether a node is currently
-// synchronizing a chain with the rest of peers in the network.
-type Checker interface {
-	Syncing() bool
-}
-
 // Service defines the main routines used in the sync service.
 type Service struct {
 	RegularSync     *RegularSync

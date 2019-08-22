@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -303,6 +304,23 @@ func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconS
 		}
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
+	return nil
+}
+
+// This gets called to update canonical root mapping.
+func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.headSlot = b.Slot
+	c.canonicalRoots[b.Slot] = r[:]
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	log.WithFields(logrus.Fields{
+		"slots": b.Slot,
+		"root":  hex.EncodeToString(r[:]),
+	}).Info("Saved head info")
+
 	return nil
 }
 
