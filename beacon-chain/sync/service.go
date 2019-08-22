@@ -38,7 +38,6 @@ type RegularSync struct {
 	ctx        context.Context
 	p2p        p2p.P2P
 	db         db.Database
-	chain      *blockchain.ChainService
 	operations *operations.Service
 	chain      *blockchain.ChainService
 }

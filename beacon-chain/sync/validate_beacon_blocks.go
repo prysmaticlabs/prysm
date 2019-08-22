@@ -35,7 +35,7 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 
 	_, err = bls.SignatureFromBytes(m.Signature)
 	if err == nil {
-		p.Broadcast(m)
+		p.Broadcast(ctx, m)
 	}
 	return err == nil
 }
