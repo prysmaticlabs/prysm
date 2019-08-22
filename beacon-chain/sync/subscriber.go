@@ -122,7 +122,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 			go pipeline(msg.Data)
 		}
-	}
+	}nm
 
 	go messageLoop()
 }
