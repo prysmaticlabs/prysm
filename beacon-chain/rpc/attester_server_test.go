@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -25,8 +26,8 @@ func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) erro
 }
 
 func TestSubmitAttestation_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	mockOperationService := &mockOperationService{}
@@ -40,7 +41,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		Slot:       999,
 		ParentRoot: []byte{'a'},
 	}
-	if err := attesterServer.beaconDB.SaveBlock(ctx, head); err != nil {
+	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
 	root, err := ssz.SigningRoot(head)
@@ -63,7 +64,10 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := db.SaveStateDeprecated(context.Background(), state); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
 	}
 
