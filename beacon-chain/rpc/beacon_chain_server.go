@@ -92,9 +92,18 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.(*kv.Store).HeadBlock(ctx)
-	if err != nil {
-		return nil, err
+	var headBlock *ethpb.BeaconBlock
+	var err error
+	if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		headBlock, err = d.ChainHead()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		headBlock, err = bs.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "no head block found in db")
@@ -242,13 +251,23 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		var index uint64
+		var ok bool
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			index, err = d.ValidatorIndexDeprecated(pubKey)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			}
+		} else {
+			index, ok, err = bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			}
+			if !ok {
+				return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
+			}
 		}
-		if !ok {
-			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
-		}
+
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
@@ -353,13 +372,23 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		var index uint64
+		var ok bool
+		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+			index, err = d.ValidatorIndexDeprecated(pubKey)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			}
+		} else {
+			index, ok, err = bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			}
+			if !ok {
+				return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
+			}
 		}
-		if !ok {
-			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
-		}
+
 		filtered[index] = true
 
 		if int(index) >= len(s.Validators) {
