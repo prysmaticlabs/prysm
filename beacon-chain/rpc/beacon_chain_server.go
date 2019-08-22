@@ -125,7 +125,7 @@ func (bs *BeaconChainServer) ListBlocks(
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
 		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
-		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
 
 		var blks []*ethpb.BeaconBlock
 		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
