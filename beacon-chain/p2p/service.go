@@ -80,6 +80,14 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
+	if len(s.cfg.StaticPeers) > 0 {
+		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
+		if err != nil {
+			log.Errorf("Could not connect to static peer: %v", err)
+		}
+		s.connectWithAllPeers(addrs)
+	}
+
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
@@ -91,6 +99,9 @@ func (s *Service) Start() {
 	s.pubsub = gs
 
 	s.started = true
+
+	multiAddrs := s.host.Network().ListenAddresses()
+	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }
 
 // Stop the p2p service and terminate all peer connections.

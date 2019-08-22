@@ -38,8 +38,8 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 func (r *RegularSync) registerSubscribers() {
 	r.subscribe(
 		"/eth2/beacon_block",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateBeaconBlockPubSub,
+		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
 		"/eth2/beacon_attestation",
@@ -53,8 +53,8 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/proposer_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateProposerSlashing,
+		r.proposerSlashingSubscriber,
 	)
 	r.subscribe(
 		"/eth2/attester_slashing",

@@ -386,10 +386,16 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	if featureconfig.FeatureConfig().UseNewSync {
+		var chainService *blockchain.ChainService
+		if err := b.services.FetchService(&chainService); err != nil {
+			return err
+		}
+
 		rs := prysmsync.NewRegularSync(&prysmsync.Config{
 			DB:         b.db,
 			P2P:        b.fetchP2P(ctx),
 			Operations: operationService,
+			Chain:      chainService,
 		})
 
 		return b.services.RegisterService(rs)

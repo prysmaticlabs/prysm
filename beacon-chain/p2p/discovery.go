@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
+	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -82,4 +84,24 @@ func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
+}
+
+func manyMultiAddrsFromString(addrs []string) ([]ma.Multiaddr, error) {
+	var allAddrs []ma.Multiaddr
+	for _, stringAddr := range addrs {
+		addr, err := multiAddrFromString(stringAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get multiaddr from string")
+		}
+		allAddrs = append(allAddrs, addr)
+	}
+	return allAddrs, nil
+}
+
+func multiAddrFromString(address string) (ma.Multiaddr, error) {
+	addr, err := iaddr.ParseString(address)
+	if err != nil {
+		return nil, err
+	}
+	return addr.Multiaddr(), nil
 }
