@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"net"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -51,13 +51,19 @@ func (m *mockListener) SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *d
 }
 
 func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
+	h, pkey, ipAddr := createHost(t, port)
+	cfg.UDPPort = uint(port)
+	cfg.Port = uint(port)
+	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+	if err != nil {
+		t.Errorf("Could not start discovery for node: %v", err)
+	}
+	return listener, h
+}
+
+func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr = net.ParseIP("127.0.0.1")
-	convertedKey := convertToInterfacePrivkey(pkey)
-	_, err := peer.IDFromPrivateKey(convertedKey)
-	if err != nil {
-		t.Fatal(err)
-	}
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	if err != nil {
 		t.Fatalf("Failed to p2p listen: %v", err)
@@ -66,13 +72,7 @@ func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.UDPPort = uint(port)
-	cfg.Port = uint(port)
-	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
-	if err != nil {
-		t.Errorf("Could not start discovery for node: %v", err)
-	}
-	return listener, h
+	return h, pkey, ipAddr
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
@@ -126,11 +126,20 @@ func TestListenForNewNodes(t *testing.T) {
 		BootstrapNodeAddr: bootNode.String(),
 	}
 	var listeners []*discv5.Network
+	var hosts []host.Host
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
-		listener, _ := createPeer(t, cfg, port+i)
+		listener, h := createPeer(t, cfg, port+i)
 		listeners = append(listeners, listener.(*discv5.Network))
+		hosts = append(hosts, h)
 	}
+
+	// close peers upon exit of test
+	defer func() {
+		for _, h := range hosts {
+			_ = h.Close()
+		}
+	}()
 
 	cfg.Port = 4000
 	cfg.UDPPort = 4000

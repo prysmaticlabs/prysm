@@ -5,10 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
+
+var oneYear = 365 * 24 * time.Hour
+
+// prefix to add to keys, so that we can represent invalid objects
+var invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -47,13 +53,13 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/proposer_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateProposerSlashing,
+		r.proposerSlashingSubscriber,
 	)
 	r.subscribe(
 		"/eth2/attester_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateAttesterSlashing,
+		r.attesterSlashingSubscriber,
 	)
 }
 

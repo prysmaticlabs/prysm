@@ -170,6 +170,11 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}, nil
 }
 
+// Started always returns true as this library starts in the constructor.
+func (s *Server) Started() bool {
+	return true
+}
+
 func checkAvailablePort(port int) bool {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {

@@ -52,7 +52,6 @@ func (s *Service) Start() {
 		log.Error("Attempted to start p2p service when it was already started")
 		return
 	}
-	s.started = true
 
 	ipAddr := ipAddr(s.cfg)
 	privKey, err := privKey(s.cfg)
@@ -69,22 +68,40 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
-	listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
-	if err != nil {
-		s.startupErr = err
-		return
-	}
-	s.dv5Listener = listener
+	if s.cfg.BootstrapNodeAddr != "" {
+		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
+		if err != nil {
+			log.WithError(err).Error("Failed to start discovery")
+			s.startupErr = err
+			return
+		}
+		s.dv5Listener = listener
 
-	go s.listenForNewNodes()
+		go s.listenForNewNodes()
+	}
+
+	if len(s.cfg.StaticPeers) > 0 {
+		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
+		if err != nil {
+			log.Errorf("Could not connect to static peer: %v", err)
+		}
+		s.connectWithAllPeers(addrs)
+	}
 
 	// TODO(3147): Add gossip sub options
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
 		s.startupErr = err
+
+		log.WithError(err).Error("Failed to start pubsub")
 		return
 	}
 	s.pubsub = gs
+
+	s.started = true
+
+	multiAddrs := s.host.Network().ListenAddresses()
+	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -101,6 +118,11 @@ func (s *Service) Status() error {
 		return errors.New("not running")
 	}
 	return nil
+}
+
+// Started returns true if the p2p service has successfully started.
+func (s *Service) Started() bool {
+	return s.started
 }
 
 // Encoding returns the configured networking encoding.

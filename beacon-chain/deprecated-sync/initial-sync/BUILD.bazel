@@ -13,11 +13,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync/initial-sync",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/deprecated-blockchain:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
