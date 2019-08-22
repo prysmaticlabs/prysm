@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +18,6 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -1148,14 +1145,12 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 
 func BenchmarkAssignment(b *testing.B) {
 	b.StopTimer()
-	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
-	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	db, _ := db.NewDBDeprecated(path)
-	defer db.Close()
-	os.RemoveAll(db.DatabasePath())
+	db := dbutil.SetupDB(b)
+	defer dbutil.TeardownDB(b, db)
+	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
+	if err := db.SaveBlock(ctx, genesis); err != nil {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
@@ -1163,8 +1158,15 @@ func BenchmarkAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
-	if err := db.UpdateChainHead(context.Background(), genesis, state); err != nil {
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		b.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		b.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+		b.Fatalf("could not save state: %v", err)
 	}
 	var wg sync.WaitGroup
 	errs := make(chan error, validatorCount)
@@ -1173,7 +1175,7 @@ func BenchmarkAssignment(b *testing.B) {
 		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndexBatch(pubKeyBuf, index)
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeyBuf), uint64(index))
 			wg.Done()
 		}(i)
 	}
