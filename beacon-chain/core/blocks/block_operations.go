@@ -342,8 +342,7 @@ func ProcessProposerSlashings(
 		if int(slashing.ProposerIndex) >= len(beaconState.Validators) {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
-		proposer := beaconState.Validators[slashing.ProposerIndex]
-		if err = verifyProposerSlashing(beaconState, proposer, slashing); err != nil {
+		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		beaconState, err = v.SlashValidator(
@@ -356,13 +355,15 @@ func ProcessProposerSlashings(
 	return beaconState, nil
 }
 
-func verifyProposerSlashing(
+// VerifyProposerSlashing verifies that the data provided fro slashing is valid.
+func VerifyProposerSlashing(
 	beaconState *pb.BeaconState,
-	proposer *ethpb.Validator,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
 	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
+	proposer := beaconState.Validators[slashing.ProposerIndex]
+
 	if headerEpoch1 != headerEpoch2 {
 		return fmt.Errorf("mismatched header epochs, received %d == %d", headerEpoch1, headerEpoch2)
 	}
