@@ -71,7 +71,6 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
-
 	}
 	log.WithFields(logrus.Fields{
 		"headSlot": headBlk.Slot,
