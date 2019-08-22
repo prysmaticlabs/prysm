@@ -838,7 +838,7 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash att data and custody bit 1")
 	}
-	msgs := append(cus0Root[:], cus1Root[:]...)
+	msgs := [][32]byte{cus0Root, cus1Root}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
