@@ -3,6 +3,7 @@ test --test_verbose_timeout_warnings
 
 # Only build test targets when running bazel test //...
 test --build_tests_only
+test --test_output=errors
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2

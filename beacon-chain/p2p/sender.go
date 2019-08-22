@@ -14,7 +14,7 @@ import (
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
 // closed for writing.
 func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) (network.Stream, error) {
-	topic := RPCTypeMapping[reflect.TypeOf(message)]
+	topic := RPCTypeMapping[reflect.TypeOf(message)] + s.Encoding().ProtocolSuffix()
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
