@@ -13,6 +13,7 @@ go_library(
         "interfaces.go",
         "log.go",
         "options.go",
+        "rpc_topic_mappings.go",
         "sender.go",
         "service.go",
         "utils.go",
