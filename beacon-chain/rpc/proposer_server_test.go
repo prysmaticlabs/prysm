@@ -15,6 +15,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -31,8 +32,8 @@ func init() {
 
 func TestProposeBlock_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 	ctx := context.Background()
 
@@ -48,7 +49,14 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -70,8 +78,8 @@ func TestProposeBlock_OK(t *testing.T) {
 }
 
 func TestComputeStateRoot_OK(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
@@ -89,17 +97,21 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlockDeprecated(genesis); err != nil {
+	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	if err := db.UpdateChainHead(ctx, genesis, beaconState); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	proposerServer := &ProposerServer{
