@@ -150,3 +150,8 @@ func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) ev
 	// TODO(3147): remove this.
 	return nil
 }
+
+// Started always returns true.
+func (p *TestP2P) Started() bool {
+	return true
+}

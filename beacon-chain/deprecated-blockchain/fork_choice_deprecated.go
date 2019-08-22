@@ -165,9 +165,9 @@ func (c *ChainService) ApplyForkChoiceRuleDeprecated(
 	if err != nil {
 		return errors.Wrap(err, "could not hash new head block")
 	}
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
+	c.canonicalRootsLock.Lock()
+	defer c.canonicalRootsLock.Unlock()
+	c.canonicalRoots[newHead.Slot] = newHeadRoot[:]
 
 	currentHead, err := c.beaconDB.(*db.BeaconDB).ChainHead()
 	if err != nil {
@@ -198,7 +198,7 @@ func (c *ChainService) ApplyForkChoiceRuleDeprecated(
 		}
 
 		for revertedSlot := currentHead.Slot; revertedSlot > newHead.Slot; revertedSlot-- {
-			delete(c.canonicalBlocks, revertedSlot)
+			delete(c.canonicalRoots, revertedSlot)
 		}
 		reorgCount.Inc()
 	}

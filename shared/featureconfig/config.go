@@ -32,6 +32,7 @@ type FeatureFlagConfig struct {
 	UseNewP2P                     bool // UseNewP2P service.
 	UseNewSync                    bool // UseNewSync services.
 	UseNewDatabase                bool // UseNewDatabase service.
+	UseNewBlockChainService       bool // UseNewBlockChainService service.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -85,6 +86,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewDatabaseFlag.Name) {
 		log.Warn("Using new database service.")
 		cfg.UseNewDatabase = true
+	}
+	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewBlockChainFlag.Name) {
+		log.Warn("Using new blockchain service.")
+		cfg.UseNewBlockChainService = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe active balance cache")
