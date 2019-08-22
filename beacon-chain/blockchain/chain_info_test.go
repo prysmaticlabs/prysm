@@ -17,7 +17,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	c := setupBeaconChain(t, db, nil)
+	c := setupBeaconChain(t, db)
 
 	s := &pb.BeaconState{}
 	if err := c.forkChoiceStore.GenesisStore(ctx, s); err != nil {
