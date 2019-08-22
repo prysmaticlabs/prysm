@@ -7,7 +7,7 @@ import (
 )
 
 // ChainInfoRetriever defines a common interface for methods in blockchain service which
-// directly retrieves chain head related data.
+// directly retrieves chain info related data.
 type ChainInfoRetriever interface {
 	HeadRetriever
 	CanonicalRetriever
@@ -15,15 +15,21 @@ type ChainInfoRetriever interface {
 	GenesisTime() time.Time
 }
 
+// HeadRetriever defines a common interface for methods in blockchain service which
+// directly retrieves head related data.
 type HeadRetriever interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
 }
 
+// CanonicalRetriever defines a common interface for methods in blockchain service which
+// directly retrieves canonical roots related data.
 type CanonicalRetriever interface {
 	CanonicalRoot(slot uint64) []byte
 }
 
+// CanonicalRetriever defines a common interface for methods in blockchain service which
+// directly retrieves finalization related data.
 type FinalizationRetriever interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
@@ -54,7 +60,7 @@ func (c *ChainService) CanonicalRoot(slot uint64) []byte {
 	return c.canonicalRoots[slot]
 }
 
-// CanonicalRoot returns the genesis time of beacon chain.
+// GenesisTime returns the genesis time of beacon chain.
 func (c *ChainService) GenesisTime() time.Time {
 	return c.genesisTime
 }
