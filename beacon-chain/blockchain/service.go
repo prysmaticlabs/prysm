@@ -217,11 +217,13 @@ func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconS
 
 // This gets called to update canonical root mapping.
 func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
-	c.canonicalRootsLock.Lock()
-	defer c.canonicalRootsLock.Unlock()
 
 	c.headSlot = b.Slot
+
+	c.canonicalRootsLock.Lock()
 	c.canonicalRoots[b.Slot] = r[:]
+	defer c.canonicalRootsLock.Unlock()
+
 	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
