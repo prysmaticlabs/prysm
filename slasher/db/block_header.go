@@ -6,7 +6,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -23,7 +22,7 @@ func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
 
 // BlockHeader accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
+func (db *SlasherDB) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
 	var bha []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
@@ -41,7 +40,7 @@ func (db *BeaconDB) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.Beac
 }
 
 // HasBlockHeader accepts an epoch and validator id and returns true if the block header exists.
-func (db *BeaconDB) HasBlockHeader(epoch uint64, validatorID uint64) bool {
+func (db *SlasherDB) HasBlockHeader(epoch uint64, validatorID uint64) bool {
 	prefix := encodeEpochValidatorID(epoch, validatorID)
 	var hasBlockHeader bool
 	// #nosec G104
@@ -59,7 +58,7 @@ func (db *BeaconDB) HasBlockHeader(epoch uint64, validatorID uint64) bool {
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *BeaconDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
+func (db *SlasherDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
@@ -89,7 +88,7 @@ func (db *BeaconDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeade
 }
 
 // DeleteBlockHeader deletes a block header using the slot and its root as keys in their respective buckets.
-func (db *BeaconDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
+func (db *SlasherDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 
@@ -102,7 +101,7 @@ func (db *BeaconDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHea
 	})
 }
 
-func (db *BeaconDB) pruneHistory(currentEpoch uint64, historySize uint64) error {
+func (db *SlasherDB) pruneHistory(currentEpoch uint64, historySize uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
