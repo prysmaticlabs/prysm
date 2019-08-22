@@ -2,15 +2,16 @@ package p2p
 
 import (
 	"context"
+	"reflect"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"reflect"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestService_Send(t *testing.T) {
@@ -20,7 +21,7 @@ func TestService_Send(t *testing.T) {
 
 	svc := &Service{
 		host: p1.Host,
-		cfg: &Config{Encoding: "ssz"},
+		cfg:  &Config{Encoding: "ssz"},
 	}
 
 	msg := &testpb.TestSimpleMessage{
