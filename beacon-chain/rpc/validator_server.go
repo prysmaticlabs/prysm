@@ -40,6 +40,7 @@ type ValidatorServer struct {
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 	activeValidatorExists, validatorStatuses, err := vs.MultipleValidatorStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
+		fmt.Println("fails right here")
 		return err
 	}
 	res := &pb.ValidatorActivationResponse{
@@ -276,6 +277,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 	beaconState, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
+		fmt.Println("head state does not exist")
 		return false, nil, err
 	}
 	chainStarted := vs.powChainService.HasChainStarted()
