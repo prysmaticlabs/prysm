@@ -12,6 +12,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// BlockReceiver interface defines the methods of chain service receive and processing new blocks.
+type BlockReceiver interface {
+	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
+	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error
+	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error
+}
+
 // ReceiveBlock is a function that defines the operations that are preformed on
 // blocks that is received from rpc service. The operations consists of:
 //   1. Gossip block to other peers
