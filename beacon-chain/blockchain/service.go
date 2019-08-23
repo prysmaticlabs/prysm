@@ -152,7 +152,7 @@ func (c *ChainService) initializeBeaconChain(
 	}
 
 	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not start gensis store for fork choice")
+		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
 	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
