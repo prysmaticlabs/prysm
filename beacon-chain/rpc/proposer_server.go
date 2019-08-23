@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -111,8 +112,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	beaconState, err := ps.chainService.ReceiveBlockDeprecated(ctx, blk)
-	if err != nil {
+	if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
