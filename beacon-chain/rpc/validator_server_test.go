@@ -882,7 +882,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                ctx,
-		chainService:       newMockChainService(),
 		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		depositCache:       depositcache.NewDepositCache(),
@@ -993,7 +992,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
-		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 		depositCache:       depositCache,
@@ -1115,7 +1113,6 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
-		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 		depositCache:       depositCache,

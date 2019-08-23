@@ -12,6 +12,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// BlockReceiver interface defines the methods of chain service receive and processing new blocks.
+type BlockReceiver interface {
+	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
+	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error
+	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error
+}
+
 // ReceiveBlock is a function that defines the operations that are preformed on
 // blocks that is received from rpc service. The operations consists of:
 //   1. Gossip block to other peers
@@ -35,7 +42,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		"attDataRoot": hex.EncodeToString(root[:]),
 	}).Info("Broadcasting block")
 
-	return c.ReceiveBlockNoPubsub(ctx, block)
+	if err := c.ReceiveBlockNoPubsub(ctx, block); err != nil {
+		return err
+	}
+
+	processedBlk.Inc()
+	return nil
 }
 
 // ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
@@ -74,6 +86,8 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 		"headRoot": hex.EncodeToString(headRoot),
 	}).Info("Finished fork choice")
 
+	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
+
 	// Save head info after running fork choice.
 	if err := c.saveHead(ctx, block, root); err != nil {
 		return errors.Wrap(err, "could not save head")
@@ -84,6 +98,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	processedBlkNoPubsub.Inc()
 	return nil
 }
 
@@ -118,6 +133,7 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
 

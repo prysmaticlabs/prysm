@@ -43,28 +43,18 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 
 	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
-	state, err := r.db.HeadState(ctx)
-	if err != nil {
-		log.WithError(err).Error("Failed to get head state")
-		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
-		if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Error("Failed to write to stream")
-		}
-		return err
-	}
-
 	resp := &pb.Hello{
 		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-		FinalizedRoot:  state.FinalizedCheckpoint.Root,
-		FinalizedEpoch: state.FinalizedCheckpoint.Epoch,
-		HeadRoot:       state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot],
-		HeadSlot:       state.Slot,
+		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:       r.chain.HeadRoot(),
+		HeadSlot:       r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err = r.p2p.Encoding().Encode(stream, resp)
+	_, err := r.p2p.Encoding().Encode(stream, resp)
 
 	return err
 }

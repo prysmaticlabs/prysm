@@ -7,12 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -27,7 +29,7 @@ import (
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
 	beaconDB           db.Database
-	chainService       chainService
+	chainService       interface{}
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
@@ -120,25 +122,22 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	beaconState, err := ps.chainService.ReceiveBlockDeprecated(ctx, blk)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process beacon block")
-	}
-
-	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-		if err := d.UpdateChainHead(ctx, blk, beaconState); err != nil {
+	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
+	if srv, isLegacyService := ps.chainService.(*blockchain.ChainService); isLegacyService && isLegacyDB {
+		beaconState, err := srv.ReceiveBlockDeprecated(ctx, blk)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
+		}
+		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 			return nil, errors.Wrap(err, "failed to update chain")
 		}
+		ps.chainService.(*blockchain.ChainService).UpdateCanonicalRoots(blk, root)
 	} else {
-		if err := ps.beaconDB.(*kv.Store).SaveHeadBlockRoot(ctx, root); err != nil {
-			return nil, err
-		}
-		if err := ps.beaconDB.(*kv.Store).SaveState(ctx, beaconState, root); err != nil {
-			return nil, err
+		if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
 		}
 	}
 
-	ps.chainService.UpdateCanonicalRoots(blk, root)
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"headSlot": blk.Slot,
