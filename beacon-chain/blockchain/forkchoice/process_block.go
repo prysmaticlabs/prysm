@@ -14,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // OnBlock is called whenever a block is received. It runs state transition on the block and
@@ -48,6 +49,9 @@ import (
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
 func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
+	defer span.End()
+
 	// Verify incoming block has a valid pre state.
 	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
