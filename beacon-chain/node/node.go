@@ -416,9 +416,19 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *dblockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
+	var chainService interface{}
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		var newChain *blockchain.ChainService
+		if err := b.services.FetchService(&newChain); err != nil {
+			return err
+		}
+		chainService = newChain
+	} else {
+		var deprecatedChain *dblockchain.ChainService
+		if err := b.services.FetchService(&deprecatedChain); err != nil {
+			return err
+		}
+		chainService = deprecatedChain
 	}
 
 	var operationService *operations.Service

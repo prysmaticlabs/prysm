@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "doc.go",
         "log.go",
-        "metrics.go",
         "process_attestation.go",
         "process_block.go",
         "service.go",

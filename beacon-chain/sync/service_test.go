@@ -44,3 +44,11 @@ func (ms *mockChainService) HeadState() *pb.BeaconState {
 func (ms *mockChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ms.finalizedCheckpt
 }
+
+func (ms *mockChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) error {
+	return nil
+}
+
+func (ms *mockChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
+	return nil
+}
