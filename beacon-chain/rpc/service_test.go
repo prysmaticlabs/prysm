@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -76,56 +74,6 @@ func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot 
 			},
 		},
 	}, nil
-}
-
-type mockChainService struct {
-	blockFeed            *event.Feed
-	stateFeed            *event.Feed
-	attestationFeed      *event.Feed
-	stateInitializedFeed *event.Feed
-	canonicalBlocks      map[uint64][]byte
-	targets              map[uint64]*pb.AttestationTarget
-}
-
-func (m *mockChainService) StateInitializedFeed() *event.Feed {
-	return m.stateInitializedFeed
-}
-
-func (m *mockChainService) ReceiveBlockDeprecated(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
-}
-
-func (m *mockChainService) ApplyForkChoiceRuleDeprecated(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
-	return nil
-}
-
-func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (m *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
-
-}
-
-func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	return nil
-}
-
-func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
-	return bytes.Equal(m.canonicalBlocks[slot], hash)
-}
-
-func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	return m.targets, nil
-}
-
-func newMockChainService() *mockChainService {
-	return &mockChainService{
-		blockFeed:            new(event.Feed),
-		stateFeed:            new(event.Feed),
-		attestationFeed:      new(event.Feed),
-		stateInitializedFeed: new(event.Feed),
-	}
 }
 
 type mockSyncService struct {
