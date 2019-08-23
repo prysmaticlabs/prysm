@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -160,5 +161,41 @@ func TestListenForNewNodes(t *testing.T) {
 	// close down all peers
 	for _, listener := range listeners {
 		listener.Close()
+	}
+}
+
+func TestPeer_Disconnect(t *testing.T) {
+	h1, _, _ := createHost(t, 5000)
+	defer h1.Close()
+
+	s := &Service{
+		host: h1,
+	}
+
+	h2, _, ipaddr := createHost(t, 5001)
+	defer h2.Close()
+
+	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 5001, h2.ID()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	addrInfo, err := peer.AddrInfoFromP2pAddr(h2Addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.host.Connect(context.Background(), *addrInfo); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.host.Network().Peers()) != 1 {
+		t.Fatalf("Number of peers is %d when it was supposed to be %d", len(s.host.Network().Peers()), 1)
+	}
+	if len(s.host.Network().Conns()) != 1 {
+		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 1)
+	}
+	if err := s.Disconnect(h2.ID()); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.host.Network().Conns()) != 0 {
+		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
 	}
 }
