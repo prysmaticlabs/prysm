@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -66,10 +65,6 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	if err := c.forkChoiceStore.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
-	root, err := ssz.SigningRoot(att)
-	if err != nil {
-		return errors.Wrap(err, "could not sign root attestation")
-	}
 	log.WithFields(logrus.Fields{
 		"attSlot":     slot,
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
@@ -89,7 +84,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		"headRoot": hex.EncodeToString(headRoot),
 	}).Info("Finished applying fork choice")
 
-	isCompetingAtts(root[:], slot, headRoot, headBlk.Slot)
+	isCompetingAtts(att.Data.BeaconBlockRoot[:], headRoot)
 
 	// Save head info after running fork choice.
 	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
