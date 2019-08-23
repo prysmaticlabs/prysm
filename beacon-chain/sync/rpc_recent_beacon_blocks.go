@@ -17,12 +17,12 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
+	log := log.WithField("handler", "recent_beacon_blocks")
 
 	m := msg.(*pb.RecentBeaconBlocksRequest)
-
 	blockRoots := m.BlockRoots
 	if len(blockRoots) == 0 {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "invalid")
+		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -36,6 +36,7 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
+			log.WithError(err).Error("Failed to fetch block")
 			resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
 				log.WithError(err).Error("Failed to generate a response error")
