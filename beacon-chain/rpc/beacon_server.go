@@ -9,14 +9,18 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type stateFeedListener interface {
+	StateInitializedFeed() *event.Feed
+}
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
 // providing RPC endpoints for obtaining the canonical beacon chain head,
@@ -25,8 +29,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	powChainService     powChainService
-	chainService        chainService
-	targetsFetcher      blockchain.TargetsFetcher
+	chainService        stateFeedListener
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
