@@ -140,9 +140,8 @@ func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
 }
 
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) error {
-	// TODO(3147): add this.
-	return nil
+func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (network.Stream, error) {
+	return nil, nil
 }
 
 // Subscribe to some topic. Not implemented.
