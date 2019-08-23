@@ -258,12 +258,10 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 }
 
 // This checks if the attestation is from a competing chain, emits warning and updates metrics.
-func isCompetingAtts(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
+func isCompetingAtts(root []byte, headRoot []byte) {
 	if !bytes.Equal(root[:], headRoot) {
 		log.WithFields(logrus.Fields{
-			"attSlot":  slot,
-			"attRoot":  hex.EncodeToString(root[:]),
-			"headSlot": headSlot,
+			"attDataRoot":  hex.EncodeToString(root[:]),
 			"headRoot": hex.EncodeToString(headRoot),
 		}).Warn("Calculated head diffs from new attestation")
 		competingAtts.Inc()
