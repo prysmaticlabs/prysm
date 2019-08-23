@@ -153,7 +153,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
-		chainService:        s.chainService,
+		chainService:        s.chainService.(stateFeedListener),
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,

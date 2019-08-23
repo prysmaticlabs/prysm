@@ -7,9 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -19,6 +17,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type stateFeedListener interface {
+	StateInitializedFeed() *event.Feed
+}
+
 // BeaconServer defines a server implementation of the gRPC Beacon service,
 // providing RPC endpoints for obtaining the canonical beacon chain head,
 // fetching latest observed attestations, and more.
@@ -26,7 +28,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	powChainService     powChainService
-	chainService        interface{}
+	chainService        stateFeedListener
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -50,12 +52,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return stream.Send(res)
 	}
 
-	var sub event.Subscription
-	if srv, isLegacyService := bs.chainService.(*blockchain.ChainService); isLegacyService {
-		sub = srv.StateInitializedFeed().Subscribe(bs.chainStartChan)
-	} else {
-		sub = bs.chainService.(*newBlockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
-	}
+	sub := bs.chainService.StateInitializedFeed().Subscribe(bs.chainStartChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
