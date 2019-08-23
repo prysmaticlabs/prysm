@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -121,9 +122,9 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 			return nil, errors.Wrap(err, "failed to update chain")
 		}
+		ps.chainService.(*blockchain.ChainService).UpdateCanonicalRoots(blk, root)
 	}
 
-	ps.chainService.UpdateCanonicalRoots(blk, root)
 	log.WithFields(logrus.Fields{
 		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"headSlot": blk.Slot,
