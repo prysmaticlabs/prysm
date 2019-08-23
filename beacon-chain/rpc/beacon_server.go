@@ -13,6 +13,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,7 +51,12 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return stream.Send(res)
 	}
 
-	sub := bs.chainService.(*newBlockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
+	var sub event.Subscription
+	if srv, isLegacyService := bs.chainService.(*newBlockchain.ChainService); isLegacyService {
+		sub = srv.StateInitializedFeed().Subscribe(bs.chainStartChan)
+	} else {
+		sub = bs.chainService.(*blockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
+	}
 	defer sub.Unsubscribe()
 	for {
 		select {
