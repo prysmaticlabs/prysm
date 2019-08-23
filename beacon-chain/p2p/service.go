@@ -57,6 +57,7 @@ func (s *Service) Start() {
 	privKey, err := privKey(s.cfg)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to generate p2p private key")
 		return
 	}
 
@@ -65,10 +66,11 @@ func (s *Service) Start() {
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to create p2p host")
 		return
 	}
 	s.host = h
-	if s.cfg.BootstrapNodeAddr != "" {
+	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
