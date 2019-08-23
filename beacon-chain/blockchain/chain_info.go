@@ -3,6 +3,7 @@ package blockchain
 import (
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -20,6 +21,8 @@ type ChainInfoRetriever interface {
 type HeadRetriever interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
+	HeadBlock() *ethpb.BeaconBlock
+	HeadState() *pb.BeaconState
 }
 
 // CanonicalRetriever defines a common interface for methods in blockchain service which
@@ -50,6 +53,16 @@ func (c *ChainService) HeadRoot() []byte {
 	defer c.canonicalRootsLock.RUnlock()
 
 	return c.canonicalRoots[c.headSlot]
+}
+
+// HeadBlock returns the head block of the chain.
+func (c *ChainService) HeadBlock() *ethpb.BeaconBlock {
+	return c.headBlock
+}
+
+// HeadState returns the head state of the chain.
+func (c *ChainService) HeadState() *pb.BeaconState {
+	return c.headState
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
