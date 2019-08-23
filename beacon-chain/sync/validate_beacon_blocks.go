@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/base64"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,11 +26,10 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 		log.WithField("validate", "beacon block").WithError(err).Error("Failed to get signing root of block")
 		return false
 	}
-	b64BlockRoot := base64.StdEncoding.EncodeToString(blockRoot[:])
-	if recentlySeenRoots.Get(b64BlockRoot) != nil || r.db.HasBlock(ctx, blockRoot) {
+	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
 		return false
 	}
-	recentlySeenRoots.Set(b64BlockRoot, true /*value*/, 365*24*time.Hour /*TTL*/)
+	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	_, err = bls.SignatureFromBytes(m.Signature)
 	if err == nil {
