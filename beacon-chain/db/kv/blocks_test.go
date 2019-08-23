@@ -50,6 +50,47 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 }
 
+func TestStore_BlocksCRUD_NoCache(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	block := &ethpb.BeaconBlock{
+		Slot:       20,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retrievedBlock, err := db.Block(ctx, blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retrievedBlock != nil {
+		t.Errorf("Expected nil block, received %v", retrievedBlock)
+	}
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	db.blockCache.Delete(string(blockRoot[:]))
+	if !db.HasBlock(ctx, blockRoot) {
+		t.Error("Expected block to exist in the db")
+	}
+	retrievedBlock, err = db.Block(ctx, blockRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, retrievedBlock) {
+		t.Errorf("Wanted %v, received %v", block, retrievedBlock)
+	}
+	if err := db.DeleteBlock(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if db.HasBlock(ctx, blockRoot) {
+		t.Error("Expected block to have been deleted from the db")
+	}
+}
+
 func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
