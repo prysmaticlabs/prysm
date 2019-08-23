@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"github.com/libp2p/go-libp2p-core/network"
 	"testing"
 	"time"
 
@@ -29,8 +30,8 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 
 func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
-func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	return nil
+func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {
+	return nil, nil
 }
 
 func (mp *mockP2P) Reputation(_ peer.ID, _ int) {
