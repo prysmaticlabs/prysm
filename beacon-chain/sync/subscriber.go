@@ -43,8 +43,8 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/beacon_attestation",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateBeaconAttestation,
+		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
