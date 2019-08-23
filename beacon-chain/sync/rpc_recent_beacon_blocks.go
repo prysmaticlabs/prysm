@@ -18,18 +18,7 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*pb.RecentBeaconBlocksRequest)
-	if !ok {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "invalid")
-		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
-			}
-		}
-		return errors.New("incorrect request type provided")
-	}
+	m := msg.(*pb.RecentBeaconBlocksRequest)
 
 	blockRoots := m.BlockRoots
 	if len(blockRoots) == 0 {

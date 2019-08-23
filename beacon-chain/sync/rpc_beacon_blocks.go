@@ -18,18 +18,7 @@ func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg proto.Mess
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*pb.BeaconBlocksRequest)
-	if !ok {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "invalid")
-		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
-			}
-		}
-		return errors.New("incorrect request type provided")
-	}
+	m := msg.(*pb.BeaconBlocksRequest)
 
 	startSlot := m.HeadSlot
 	endSlot := startSlot + (m.Step * m.Count)
