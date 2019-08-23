@@ -39,7 +39,12 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Info("Broadcasting attestation")
 
-	return c.ReceiveAttestationNoPubsub(ctx, att)
+	if err := c.ReceiveAttestationNoPubsub(ctx, att); err != nil {
+		return err
+	}
+
+	processedAtt.Inc()
+	return nil
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
@@ -52,7 +57,8 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	defer span.End()
 
 	// Delay attestation inclusion until the attested slot is in the past.
-	if err := c.waitForAttInclDelay(ctx, att); err != nil {
+	slot, err := c.waitForAttInclDelay(ctx, att)
+	if err != nil {
 		return errors.Wrap(err, "could not delay attestation inclusion")
 	}
 
@@ -65,7 +71,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		return errors.Wrap(err, "could not sign root attestation")
 	}
 	log.WithFields(logrus.Fields{
-		"attRoot":     hex.EncodeToString(root[:]),
+		"attSlot":     slot,
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Info("Finished updating fork choice store for attestation")
 
@@ -83,28 +89,31 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		"headRoot": hex.EncodeToString(headRoot),
 	}).Info("Finished applying fork choice")
 
+	isCompetingAtts(root[:], slot, headRoot, headBlk.Slot)
+
 	// Save head info after running fork choice.
 	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
+	processedAttNoPubsub.Inc()
 	return nil
 }
 
 // waitForAttInclDelay waits until the next slot because attestation can only affect
 // fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
 // until the attested slot is in the past.
-func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation) error {
+func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
 	defer span.End()
 
 	s, err := c.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
 	if err != nil {
-		return errors.Wrap(err, "could not get state")
+		return 0, errors.Wrap(err, "could not get state")
 	}
 	slot, err := helpers.AttestationDataSlot(s, a.Data)
 	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
+		return 0, errors.Wrap(err, "could not get attestation slot")
 	}
 
 	nextSlot := slot + 1
@@ -112,5 +121,5 @@ func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attesta
 	timeToInclude := time.Unix(int64(s.GenesisTime), 0).Add(duration)
 
 	time.Sleep(time.Until(timeToInclude))
-	return nil
+	return slot, nil
 }
