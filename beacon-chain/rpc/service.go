@@ -15,7 +15,6 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -36,13 +35,6 @@ var log logrus.FieldLogger
 
 func init() {
 	log = logrus.WithField("prefix", "rpc")
-}
-
-type chainService interface {
-	StateInitializedFeed() *event.Feed
-	blockchain.BlockReceiver
-	blockchain.ForkChoice
-	blockchain.TargetsFetcher
 }
 
 type operationService interface {
@@ -73,7 +65,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
-	chainService        chainService
+	chainService        interface{}
 	powChainService     powChainService
 	operationService    operationService
 	syncService         sync.Checker
@@ -94,7 +86,7 @@ type Config struct {
 	CertFlag         string
 	KeyFlag          string
 	BeaconDB         db.Database
-	ChainService     chainService
+	ChainService     interface{}
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      sync.Checker
@@ -162,7 +154,6 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
-		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -184,7 +175,6 @@ func (s *Service) Start() {
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 	}

@@ -27,7 +27,6 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        interface{}
-	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
