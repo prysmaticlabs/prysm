@@ -30,10 +30,11 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
+	// TODO(3225): Unskip after we have fully deprecated the old chain service.
+	t.Skip()
 	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	mockChain := &mockChainService{}
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
@@ -60,7 +61,6 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
@@ -81,8 +81,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
-
-	mockChain := &mockChainService{}
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -114,7 +112,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
@@ -243,8 +240,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		operationService: &mockOperationService{
 			pendingAttestations: []*ethpb.Attestation{att},
 		},
-		chainService: &mockChainService{},
-		beaconDB:     db,
+		beaconDB: db,
 	}
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
@@ -405,7 +401,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	expectedNumberOfAttestations := 3
 	proposerServer := &ProposerServer{
 		operationService: opService,
-		chainService:     &mockChainService{},
 		beaconDB:         db,
 	}
 
@@ -510,7 +505,6 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -688,7 +682,6 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
@@ -841,7 +834,6 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
@@ -966,7 +958,6 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
@@ -1083,7 +1074,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
@@ -1198,7 +1188,6 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
@@ -1529,7 +1518,6 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	bs := &ProposerServer{
 		beaconDB:        db,
 		powChainService: p,
-		chainService:    newMockChainService(),
 		depositCache:    depositCache,
 	}
 
