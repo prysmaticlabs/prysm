@@ -416,7 +416,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *dblockchain.ChainService
+	var chainService interface{}
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
