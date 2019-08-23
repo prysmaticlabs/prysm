@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-core/network"
 	"io/ioutil"
 	"reflect"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
