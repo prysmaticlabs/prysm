@@ -29,8 +29,8 @@ func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
 	}
 }
 
-// expectClosedStream status code from a stream in regular sync.
-func expectClosedStream(t *testing.T, r *RegularSync, stream network.Stream) {
+// expectResetStream status code from a stream in regular sync.
+func expectResetStream(t *testing.T, r *RegularSync, stream network.Stream) {
 	expectedErr := "stream reset"
 	_, _, err := r.readStatusCode(stream)
 	if err.Error() != expectedErr {
