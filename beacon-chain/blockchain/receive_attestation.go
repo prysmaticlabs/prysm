@@ -15,6 +15,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
+type AttestationReceiver interface {
+	ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error
+	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
+}
+
 // ReceiveAttestation is a function that defines the operations that are preformed on
 // attestation that is received from regular sync. The operations consist of:
 //  1. Gossip attestation to other peers
