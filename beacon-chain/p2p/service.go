@@ -151,8 +151,7 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 
 // Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
-	// TODO(3147): Implement disconnect
-	return nil
+	return s.host.Network().ClosePeer(pid)
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.

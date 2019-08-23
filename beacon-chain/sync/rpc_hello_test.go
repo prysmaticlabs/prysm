@@ -11,7 +11,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -73,9 +72,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
+	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
@@ -90,20 +87,18 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	}
 	genesisState.Slot = 111
 	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = headRoot[:]
-	genesisState.FinalizedCheckpoint = &ethpb.Checkpoint{
+	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
 	}
-	if err := d.SaveHeadBlockRoot(context.Background(), headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := d.SaveState(context.Background(), genesisState, headRoot); err != nil {
-		t.Fatal(err)
-	}
 
 	r := &RegularSync{
-		db:  d,
 		p2p: p1,
+		chain: &mockChainService{
+			headState:        genesisState,
+			finalizedCheckpt: finalizedCheckpt,
+			headRoot:         headRoot[:],
+		},
 	}
 
 	// Setup streams
