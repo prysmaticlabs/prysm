@@ -21,10 +21,7 @@ var pendingBlocks = ccache.New(ccache.Configure())
 func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	block := msg.(*ethpb.BeaconBlock)
 
-	headState, err := r.db.HeadState(ctx)
-	if err != nil {
-		return err
-	}
+	headState := r.chain.HeadState()
 
 	// Ignore block older than last finalized checkpoint.
 	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch+1) {

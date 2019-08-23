@@ -18,7 +18,14 @@ type Config struct {
 	P2P        p2p.P2P
 	DB         db.Database
 	Operations *operations.Service
-	Chain      *blockchain.ChainService
+	Chain      blockchainService
+}
+
+// This defines the interface for interacting with block chain service
+type blockchainService interface {
+	blockchain.BlockReceiver
+	blockchain.HeadRetriever
+	blockchain.FinalizationRetriever
 }
 
 // NewRegularSync service.
@@ -39,7 +46,7 @@ type RegularSync struct {
 	p2p        p2p.P2P
 	db         db.Database
 	operations *operations.Service
-	chain      *blockchain.ChainService
+	chain      blockchainService
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.
