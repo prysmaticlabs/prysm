@@ -2,9 +2,10 @@ package initialsync
 
 import (
 	"context"
-	"github.com/libp2p/go-libp2p-core/network"
 	"testing"
 	"time"
+
+	"github.com/libp2p/go-libp2p-core/network"
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"

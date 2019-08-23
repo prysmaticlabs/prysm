@@ -14,6 +14,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -86,6 +87,7 @@ type Service struct {
 	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
 	p2p                 p2p.Broadcaster
+	depositCache        *depositcache.DepositCache
 }
 
 // Config options for the beacon node RPC server.
@@ -99,6 +101,7 @@ type Config struct {
 	OperationService operationService
 	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
+	DepositCache     *depositcache.DepositCache
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -117,6 +120,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
+		depositCache:        cfg.DepositCache,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
@@ -174,6 +178,7 @@ func (s *Service) Start() {
 		powChainService:    s.powChainService,
 		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
+		depositCache:       s.depositCache,
 	}
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
@@ -187,6 +192,7 @@ func (s *Service) Start() {
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
+		depositCache:       s.depositCache,
 	}
 	nodeServer := &NodeServer{
 		beaconDB:    s.beaconDB,

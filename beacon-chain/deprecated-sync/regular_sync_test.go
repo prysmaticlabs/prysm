@@ -3,12 +3,13 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-core/network"
 	"io/ioutil"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/libp2p/go-libp2p-core/network"
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"

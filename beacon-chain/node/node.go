@@ -459,6 +459,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		OperationService: operationService,
 		POWChainService:  web3Service,
 		SyncService:      syncChecker,
+		DepositCache:     b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)
