@@ -18,6 +18,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -78,11 +80,23 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	index, err := vs.beaconDB.(*db.BeaconDB).ValidatorIndexDeprecated(req.PublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get validator index")
+	var index uint64
+	var ok bool
+	var err error
+	if d, isLegacyDB := vs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		index, err = d.ValidatorIndexDeprecated(req.PublicKey)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+	} else {
+		index, ok, err = vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", req.PublicKey)
+		}
 	}
-
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
 }
 
@@ -91,9 +105,22 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 func (vs *ValidatorServer) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	index, _, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get validator index")
+	var index uint64
+	var ok bool
+	var err error
+	if d, isLegacyDB := vs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		index, err = d.ValidatorIndexDeprecated(req.PublicKey)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+	} else {
+		index, ok, err = vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", req.PublicKey)
+		}
 	}
 	head, err := vs.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -186,10 +213,22 @@ func (vs *ValidatorServer) assignment(
 			len(pubkey),
 		)
 	}
-
-	idx, _, err := vs.beaconDB.ValidatorIndex(context.TODO(), bytesutil.ToBytes48(pubkey))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active validator index")
+	var idx uint64
+	var err error
+	if d, isLegacyDB := vs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		idx, err = d.ValidatorIndexDeprecated(pubkey)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+	} else {
+		var ok bool
+		idx, ok, err = vs.beaconDB.ValidatorIndex(context.Background(), bytesutil.ToBytes48(pubkey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubkey)
+		}
 	}
 
 	committee, shard, slot, isProposer, err :=
