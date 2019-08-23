@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ForkChoicer defines a common interface for methods useful for directly applying fork choice
@@ -111,6 +112,9 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 //    assert block.slot >= slot
 //    return root if block.slot == slot else get_ancestor(store, block.parent_root, slot)
 func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
+	defer span.End()
+
 	b, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
@@ -141,6 +145,9 @@ func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte,
 //            and get_ancestor(store, store.latest_messages[i].root, store.blocks[root].slot) == root)
 //    ))
 func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
+	defer span.End()
+
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	h, err := hashutil.HashProto(s.justifiedCheckpt)
@@ -206,6 +213,9 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 //        # Sort by latest attesting balance with ties broken lexicographically
 //        head = max(children, key=lambda root: (get_latest_attesting_balance(store, root), root))
 func (s *Store) Head(ctx context.Context) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.head")
+	defer span.End()
+
 	head := s.justifiedCheckpt.Root
 
 	for {
