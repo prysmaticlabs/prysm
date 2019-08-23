@@ -3,11 +3,13 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Ensure ChainService implements chain info interface.
@@ -47,11 +49,28 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	}
 }
 
+func TestHeadBlock_CanRetrieve(t *testing.T) {
+	b := &ethpb.BeaconBlock{Slot: 1}
+	c := &ChainService{headBlock: b}
+	if !reflect.DeepEqual(b, c.HeadBlock()) {
+		t.Error("incorrect head block received")
+	}
+}
+
+func TestHeadState_CanRetrieve(t *testing.T) {
+	s := &pb.BeaconState{Slot: 2}
+	c := &ChainService{headState: s}
+	if !reflect.DeepEqual(s, c.HeadState()) {
+		t.Error("incorrect head state received")
+	}
+}
+
 func TestCanonicalRoot_CanRetrieve(t *testing.T) {
 	c := &ChainService{canonicalRoots: make(map[uint64][]byte)}
 	slot := uint64(123)
-	c.canonicalRoots[slot] = []byte{'B'}
-	if !bytes.Equal([]byte{'B'}, c.CanonicalRoot(slot)) {
+	r := []byte{'B'}
+	c.canonicalRoots[slot] = r
+	if !bytes.Equal(r, c.CanonicalRoot(slot)) {
 		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.CanonicalRoot(slot))
 	}
 }
