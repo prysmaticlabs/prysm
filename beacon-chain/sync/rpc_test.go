@@ -29,6 +29,15 @@ func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
 	}
 }
 
+// expectResetStream status code from a stream in regular sync.
+func expectResetStream(t *testing.T, r *RegularSync, stream network.Stream) {
+	expectedErr := "stream reset"
+	_, _, err := r.readStatusCode(stream)
+	if err.Error() != expectedErr {
+		t.Fatalf("Wanted this error %s but got %v instead", expectedErr, err)
+	}
+}
+
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := &RegularSync{
