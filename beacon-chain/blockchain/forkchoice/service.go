@@ -18,6 +18,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ForkChoicer defines a common interface for methods useful for directly applying fork choice
+// to beacon blocks to compute head.
+type ForkChoicer interface {
+	Head(ctx context.Context) ([]byte, error)
+	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
+	GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error
+	FinalizedCheckpt() *ethpb.Checkpoint
+}
+
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
