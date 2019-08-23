@@ -171,6 +171,12 @@ func (m *mockPOWChainService) ChainStartETH1Data() *ethpb.Eth1Data {
 	return m.eth1Data
 }
 
+type mockStateFeedListener struct{}
+
+func (m *mockStateFeedListener) StateInitializedFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
@@ -178,7 +184,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		powChainService: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: newMockChainService(),
+		chainService: &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -200,7 +206,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: newMockChainService(),
+		chainService: &mockStateFeedListener{},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -224,7 +230,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		powChainService: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: newMockChainService(),
+		chainService: &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -453,8 +459,7 @@ func TestBlockTree_OK(t *testing.T) {
 	}
 
 	bs := &BeaconServer{
-		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
+		beaconDB: db,
 	}
 	sort.Slice(tree, func(i, j int) bool {
 		return string(tree[i].Block.StateRoot) < string(tree[j].Block.StateRoot)
@@ -663,8 +668,7 @@ func TestBlockTreeBySlots_ArgsValildation(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &BeaconServer{
-		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
+		beaconDB: db,
 	}
 	if _, err := bs.BlockTreeBySlots(ctx, nil); err == nil {
 		// There should be a "argument 'TreeBlockSlotRequest' cannot be nil" error
@@ -881,8 +885,7 @@ func TestBlockTreeBySlots_OK(t *testing.T) {
 	}
 
 	bs := &BeaconServer{
-		beaconDB:       db,
-		targetsFetcher: &mockChainService{targets: attestationTargets},
+		beaconDB: db,
 	}
 	slotRange := &pb.TreeBlockSlotRequest{
 		SlotFrom: 3,
