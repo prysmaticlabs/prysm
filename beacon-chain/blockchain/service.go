@@ -138,16 +138,22 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	beaconState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
+	genesisState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
 
-	if err := c.forkChoiceStore.GenesisStore(c.ctx, beaconState); err != nil {
+	// For every single validator, we store their indices in the DB.
+	for i, v := range genesisState.Validators {
+		if err := c.beaconDB.SaveValidatorIndex(c.ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
+	}
+	if err := c.forkChoiceStore.GenesisStore(c.ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not start gensis store for fork choice")
 	}
 
-	c.canonicalRoots[beaconState.Slot] = c.FinalizedCheckpt().Root
+	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil
 }
