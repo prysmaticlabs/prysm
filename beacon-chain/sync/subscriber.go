@@ -44,7 +44,7 @@ func (r *RegularSync) registerSubscribers() {
 	r.subscribe(
 		"/eth2/beacon_attestation",
 		r.validateBeaconAttestation,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
