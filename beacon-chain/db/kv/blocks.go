@@ -31,7 +31,6 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 		if enc == nil {
 			return nil
 		}
-		block = &ethpb.BeaconBlock{}
 		return proto.Unmarshal(enc, block)
 	})
 	return block, err
