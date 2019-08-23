@@ -38,7 +38,6 @@ type ProposerServer struct {
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
-
 	// Retrieve the parent block as the current head of the canonical chain
 	parent, err := ps.beaconDB.HeadBlock(ctx)
 	if err != nil {
@@ -113,16 +112,20 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
-		return nil, errors.Wrap(err, "could not process beacon block")
-	}
-
 	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
-	if isLegacyDB {
+	if srv, isLegacyService := ps.chainService.(*blockchain.ChainService); isLegacyService && isLegacyDB {
+		beaconState, err := srv.ReceiveBlockDeprecated(ctx, blk)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
+		}
 		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
 			return nil, errors.Wrap(err, "failed to update chain")
 		}
 		ps.chainService.(*blockchain.ChainService).UpdateCanonicalRoots(blk, root)
+	} else {
+		if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
+		}
 	}
 
 	log.WithFields(logrus.Fields{

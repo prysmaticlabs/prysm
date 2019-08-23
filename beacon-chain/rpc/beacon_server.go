@@ -52,10 +52,10 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	}
 
 	var sub event.Subscription
-	if srv, isLegacyService := bs.chainService.(*newBlockchain.ChainService); isLegacyService {
+	if srv, isLegacyService := bs.chainService.(*blockchain.ChainService); isLegacyService {
 		sub = srv.StateInitializedFeed().Subscribe(bs.chainStartChan)
 	} else {
-		sub = bs.chainService.(*blockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
+		sub = bs.chainService.(*newBlockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
 	}
 	defer sub.Unsubscribe()
 	for {
