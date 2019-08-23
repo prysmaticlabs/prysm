@@ -27,7 +27,6 @@ import (
 type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
-	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
 	depositCache       *depositcache.DepositCache
