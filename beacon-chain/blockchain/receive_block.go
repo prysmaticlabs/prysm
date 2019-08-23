@@ -25,10 +25,18 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
+	root, err := ssz.SigningRoot(block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
+	}
+
 	// Broadcast the new block to the network.
 	if err := c.p2p.Broadcast(ctx, block); err != nil {
 		return errors.Wrap(err, "could not broadcast block")
 	}
+	log.WithFields(logrus.Fields{
+		"attDataRoot": hex.EncodeToString(root[:]),
+	}).Info("Broadcasting block")
 
 	return c.ReceiveBlockNoPubsub(ctx, block)
 }

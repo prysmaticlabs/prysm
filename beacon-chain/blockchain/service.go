@@ -41,7 +41,7 @@ type ChainService struct {
 	depositCache         *depositcache.DepositCache
 	web3Service          *powchain.Web3Service
 	opsPoolService       operations.OperationFeeds
-	forkChoiceStore      *forkchoice.Store
+	forkChoiceStore      forkchoice.ForkChoicer
 	chainStartChan       chan time.Time
 	genesisTime          time.Time
 	stateInitializedFeed *event.Feed
