@@ -70,7 +70,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
-	if s.cfg.BootstrapNodeAddr != "" {
+	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
