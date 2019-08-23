@@ -87,9 +87,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
-	if err := s.db.SaveHeadBlockRoot(ctx, root); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
