@@ -7,18 +7,14 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupValidProposerSlashing(t *testing.T, db db.Database) *ethpb.ProposerSlashing {
-	ctx := context.Background()
+func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.BeaconState) {
 	validators := make([]*ethpb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -35,7 +31,7 @@ func setupValidProposerSlashing(t *testing.T, db db.Database) *ethpb.ProposerSla
 	}
 
 	currentSlot := uint64(0)
-	beaconState := &pb.BeaconState{
+	state := &pb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,
@@ -50,8 +46,8 @@ func setupValidProposerSlashing(t *testing.T, db db.Database) *ethpb.ProposerSla
 	}
 
 	domain := helpers.Domain(
-		beaconState,
-		helpers.CurrentEpoch(beaconState),
+		state,
+		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
 	privKey, err := bls.RandKey(rand.Reader)
@@ -85,33 +81,25 @@ func setupValidProposerSlashing(t *testing.T, db db.Database) *ethpb.ProposerSla
 		Header_2:      header2,
 	}
 
-	beaconState.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
+	state.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		t.Fatal(err)
 	}
-	headBlockRoot := bytesutil.ToBytes32(b)
-	if err := db.SaveState(ctx, beaconState, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	return slashing
+
+	return slashing, state
 }
 
 func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	slashing := setupValidProposerSlashing(t, db)
+	slashing, s := setupValidProposerSlashing(t)
 
 	r := &RegularSync{
-		p2p: p2p,
-		db:  db,
+		p2p:   p2p,
+		chain: &mockChainService{headState: s},
 	}
 
 	if !r.validateProposerSlashing(ctx, slashing, p2p) {

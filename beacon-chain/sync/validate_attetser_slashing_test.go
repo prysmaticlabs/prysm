@@ -8,22 +8,18 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func setupValidAttesterSlashing(t *testing.T, db db.Database) *ethpb.AttesterSlashing {
-	ctx := context.Background()
+func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 5)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	for _, vv := range beaconState.Validators {
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	for _, vv := range state.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
 
@@ -45,7 +41,7 @@ func setupValidAttesterSlashing(t *testing.T, db db.Database) *ethpb.AttesterSla
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(state, 0, params.BeaconConfig().DomainAttestation)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -80,33 +76,25 @@ func setupValidAttesterSlashing(t *testing.T, db db.Database) *ethpb.AttesterSla
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	beaconState.Slot = currentSlot
+	state.Slot = currentSlot
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		t.Fatal(err)
 	}
-	headBlockRoot := bytesutil.ToBytes32(b)
-	if err := db.SaveState(ctx, beaconState, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	return slashing
+
+	return slashing, state
 }
 
 func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	slashing := setupValidAttesterSlashing(t, db)
+	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &RegularSync{
-		p2p: p2p,
-		db:  db,
+		p2p:   p2p,
+		chain: &mockChainService{headState: s},
 	}
 
 	if !r.validateAttesterSlashing(ctx, slashing, p2p) {
