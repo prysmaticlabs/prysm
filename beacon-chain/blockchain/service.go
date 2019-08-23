@@ -31,6 +31,12 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
+// ChainFeeds interface defines the methods of the ChainService which provide
+// information feeds.
+type ChainFeeds interface {
+	StateInitializedFeed() *event.Feed
+}
+
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
