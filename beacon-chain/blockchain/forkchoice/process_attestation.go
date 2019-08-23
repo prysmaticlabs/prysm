@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // OnAttestation is called whenever an attestation is received, it updates validators latest vote,
@@ -50,6 +51,9 @@ import (
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
 func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
+	defer span.End()
+
 	tgt := a.Data.Target
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
