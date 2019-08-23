@@ -315,7 +315,7 @@ func (rs *RegularSync) handleStateRequest(msg deprecatedp2p.Message) error {
 		FinalizedState: fState,
 		FinalizedBlock: finalizedBlk,
 	}
-	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
+	if _, err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -372,7 +372,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg deprecatedp2p.Message) error {
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()
 	defer sentChainHead.Inc()
-	if err := rs.p2p.Send(ctx, req, msg.Peer); err != nil {
+	if _, err := rs.p2p.Send(ctx, req, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -488,7 +488,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg deprecatedp2p.Message) error
 	}
 
 	defer sentBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
+	if _, err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -515,7 +515,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg deprecatedp2p.Message) erro
 	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 
 	defer sentBatchedBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
+	if _, err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer); err != nil {
 		log.Error(err)

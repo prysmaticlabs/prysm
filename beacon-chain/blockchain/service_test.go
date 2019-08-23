@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,6 +34,29 @@ var _ = ChainFeeds(&ChainService{})
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+}
+
+type store struct{}
+
+func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+	return nil
+}
+
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+	return nil
+}
+
+func (s *store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
+	return nil
+}
+
+func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (s *store) Head(ctx context.Context) ([]byte, error) {
+	r, _ := ssz.SigningRoot(&ethpb.BeaconBlock{})
+	return r[:], nil
 }
 
 type mockOperationService struct{}

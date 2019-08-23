@@ -79,7 +79,7 @@ func (s *InitialSync) requestBatchedBlocks(ctx context.Context, FinalizedRoot []
 		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(FinalizedRoot[:])),
 		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
-	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
+	if _, err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		FinalizedRoot: FinalizedRoot,
 		CanonicalRoot: canonicalRoot,
 	}, peer); err != nil {

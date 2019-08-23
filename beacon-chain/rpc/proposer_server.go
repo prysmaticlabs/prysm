@@ -39,9 +39,18 @@ type ProposerServer struct {
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	// Retrieve the parent block as the current head of the canonical chain
-	parent, err := ps.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get canonical head block")
+	var parent *ethpb.BeaconBlock
+	var err error
+	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		parent, err = d.ChainHead()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
+	} else {
+		parent, err = ps.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
 	}
 
 	parentRoot, err := ssz.SigningRoot(parent)
@@ -188,9 +197,17 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 
-			hash, err := ssz.HashTreeRoot(att)
-			if err != nil {
-				return nil, err
+			var hash [32]byte
+			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+				hash, err = ssz.HashTreeRoot(att)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				hash, err = ssz.HashTreeRoot(att.Data)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
@@ -200,9 +217,17 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
 		if err != nil {
 			// Delete attestation that failed to verify as canonical.
-			hash, err := ssz.HashTreeRoot(att)
-			if err != nil {
-				return nil, err
+			var hash [32]byte
+			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+				hash, err = ssz.HashTreeRoot(att)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				hash, err = ssz.HashTreeRoot(att.Data)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")

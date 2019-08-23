@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -44,9 +45,9 @@ func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) error {
 	return nil
 }
 
-func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {
 	mp.sentMsg = msg
-	return nil
+	return nil, nil
 }
 
 func (mp *mockP2P) Reputation(_ peer.ID, val int) {
