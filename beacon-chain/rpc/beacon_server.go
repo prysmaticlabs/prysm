@@ -8,6 +8,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -71,11 +72,20 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
-	block, err := bs.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get canonical head block")
+	var headBlock *ethpb.BeaconBlock
+	var err error
+	if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		headBlock, err = d.ChainHead()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
+	} else {
+		headBlock, err = bs.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
 	}
-	return block, nil
+	return headBlock, nil
 }
 
 // BlockTree returns the current tree of saved blocks and their votes starting from the justified state.

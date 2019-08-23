@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -36,11 +37,19 @@ type ProposerServer struct {
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
-
 	// Retrieve the parent block as the current head of the canonical chain
-	parent, err := ps.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get canonical head block")
+	var parent *ethpb.BeaconBlock
+	var err error
+	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		parent, err = d.ChainHead()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
+	} else {
+		parent, err = ps.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
 	}
 
 	parentRoot, err := ssz.SigningRoot(parent)
@@ -116,10 +125,16 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
-	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
-	if isLegacyDB {
-		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		if err := d.UpdateChainHead(ctx, blk, beaconState); err != nil {
 			return nil, errors.Wrap(err, "failed to update chain")
+		}
+	} else {
+		if err := ps.beaconDB.(*kv.Store).SaveHeadBlockRoot(ctx, root); err != nil {
+			return nil, err
+		}
+		if err := ps.beaconDB.(*kv.Store).SaveState(ctx, beaconState, root); err != nil {
+			return nil, err
 		}
 	}
 
@@ -184,9 +199,17 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 
-			hash, err := ssz.HashTreeRoot(att)
-			if err != nil {
-				return nil, err
+			var hash [32]byte
+			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+				hash, err = ssz.HashTreeRoot(att)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				hash, err = ssz.HashTreeRoot(att.Data)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
@@ -196,9 +219,17 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
 		if err != nil {
 			// Delete attestation that failed to verify as canonical.
-			hash, err := ssz.HashTreeRoot(att)
-			if err != nil {
-				return nil, err
+			var hash [32]byte
+			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+				hash, err = ssz.HashTreeRoot(att)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				hash, err = ssz.HashTreeRoot(att.Data)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
