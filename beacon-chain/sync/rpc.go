@@ -36,8 +36,8 @@ func (r *RegularSync) registerRPCHandlers() {
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/goodbye/1",
-		nil,
-		notImplementedRPCHandler, // TODO(3147): Implement.
+		&pb.Goodbye{},
+		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/beacon_blocks/1",
