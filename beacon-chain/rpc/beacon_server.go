@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -24,7 +25,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	powChainService     powChainService
-	chainService        chainService
+	chainService        interface{}
 	targetsFetcher      blockchain.TargetsFetcher
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
@@ -49,7 +50,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return stream.Send(res)
 	}
 
-	sub := bs.chainService.StateInitializedFeed().Subscribe(bs.chainStartChan)
+	sub := bs.chainService.(*newBlockchain.ChainService).StateInitializedFeed().Subscribe(bs.chainStartChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
