@@ -33,7 +33,6 @@ func TestProposeBlock_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := internal.SetupDBDeprecated(t)
 	defer internal.TeardownDBDeprecated(t, db)
-	mockChain := &mockChainService{}
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
@@ -53,7 +52,6 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
@@ -74,8 +72,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	defer internal.TeardownDBDeprecated(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
-
-	mockChain := &mockChainService{}
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
@@ -103,7 +99,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService:    mockChain,
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
@@ -233,8 +228,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		operationService: &mockOperationService{
 			pendingAttestations: []*ethpb.Attestation{att},
 		},
-		chainService: &mockChainService{},
-		beaconDB:     db,
+		beaconDB: db,
 	}
 	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		t.Fatal(err)
