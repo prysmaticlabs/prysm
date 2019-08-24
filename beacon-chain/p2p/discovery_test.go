@@ -22,7 +22,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 		t.Fatalf("Could not get ip: %v", err)
 	}
 	ipAddr := net.ParseIP(ip)
-	pkey, err := privKey(&Config{})
+	pkey, err := privKey(&Config{Encoding: "ssz"})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}
@@ -64,6 +64,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
+		Encoding: "ssz",
 	}
 
 	var listeners []*discv5.Network
@@ -121,7 +122,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	cfg := &Config{}
+	cfg := &Config{Encoding: "ssz"}
 	port := 3000
 	var staticPeers []string
 	var hosts []host.Host
