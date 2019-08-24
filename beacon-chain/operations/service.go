@@ -326,15 +326,25 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
-		hash, err := hashutil.HashProto(attestation.Data)
-		if err != nil {
-			return err
-		}
-		if s.beaconDB.HasAttestation(ctx, hash) {
-			if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
+		var root [32]byte
+		var err error
+		if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
+			root, err = hashutil.HashProto(attestation.Data)
+			if err != nil {
 				return err
 			}
-			log.WithField("root", fmt.Sprintf("%#x", hash)).Debug("AttestationDeprecated removed")
+		} else {
+			root, err = ssz.HashTreeRoot(attestation.Data)
+			if err != nil {
+				return err
+			}
+		}
+
+		if s.beaconDB.HasAttestation(ctx, root) {
+			if err := s.beaconDB.DeleteAttestation(ctx, root); err != nil {
+				return err
+			}
+			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
 		}
 	}
 	return nil
