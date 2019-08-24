@@ -302,12 +302,23 @@ func (s *Service) IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (b
 	if votedBlk == nil {
 		return false, nil
 	}
-	// TODO(3219): Replace with new fork choice service.
-	canonicalBlk, err := s.beaconDB.(*db.BeaconDB).CanonicalBlockBySlot(ctx, votedBlk.Slot)
+	// Find Ancestor with that slot
+	canonicalBlk, err := s.beaconDB.HeadBlock(ctx)
 	if err != nil {
-		return false, errors.Wrap(err, "could not hash block")
+		return false, errors.Wrapf(err, "Could not fetch head block")
 	}
-	if canonicalBlk == nil {
+	for {
+		if canonicalBlk.Slot > votedBlk.Slot {
+			canonicalBlk, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(canonicalBlk.ParentRoot))
+			if err != nil {
+				return false, errors.Wrapf(err, "Could not fetch block")
+			}
+			continue
+		}
+		if canonicalBlk.Slot == votedBlk.Slot {
+			break
+		}
+
 		return false, nil
 	}
 	canonicalRoot, err := ssz.SigningRoot(canonicalBlk)
