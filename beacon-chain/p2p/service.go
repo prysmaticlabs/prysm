@@ -70,7 +70,6 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
-	registerMetrics(h)
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
@@ -102,6 +101,8 @@ func (s *Service) Start() {
 	s.pubsub = gs
 
 	s.started = true
+
+	registerMetrics(s)
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	log.Infof("Node currently listening at %s", multiAddrs[1].String())
