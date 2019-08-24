@@ -32,8 +32,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "blockchain")
-
 // ChainFeeds interface defines the methods of the ChainService which provide
 // information feeds.
 type ChainFeeds interface {
