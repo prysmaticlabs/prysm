@@ -89,18 +89,8 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 	if err := s.db.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
 	if err := s.db.SaveState(ctx, genesisState, blkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
-	}
-
-	// For every single validator, we store their indices in the DB.
-	for i, v := range genesisState.Validators {
-		if err := s.db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
 	}
 
 	s.lock.Lock()
