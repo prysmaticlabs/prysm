@@ -111,7 +111,7 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			c.processChainStartTime(genesisTime, subChainStart)
+			c.processChainStartTime(c.ctx, genesisTime, subChainStart)
 			return
 		}()
 	}
@@ -119,9 +119,9 @@ func (c *ChainService) Start() {
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
+func (c *ChainService) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
 	initialDeposits := c.web3Service.ChainStartDeposits()
-	if err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
+	if err := c.initializeBeaconChain(ctx, genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	c.stateInitializedFeed.Send(genesisTime)
@@ -131,23 +131,31 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*ethpb.Deposit, eth1data *ethpb.Eth1Data) error {
+func (c *ChainService) initializeBeaconChain(
+	ctx context.Context,
+	genesisTime time.Time,
+	deposits []*ethpb.Deposit,
+	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	beaconState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
+	genesisState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
 
-	if err := c.forkChoiceStore.GenesisStore(c.ctx, beaconState); err != nil {
-		return errors.Wrap(err, "could not start gensis store for fork choice")
+	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis validators")
 	}
 
-	c.canonicalRoots[beaconState.Slot] = c.FinalizedCheckpt().Root
+	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not start genesis store for fork choice")
+	}
+
+	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil
 }
@@ -244,6 +252,16 @@ func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32
 	return nil
 }
 
+// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
+func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconState) error {
+	for i, v := range s.Validators {
+		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
+	}
+	return nil
+}
+
 // This checks if the block is from a competing chain, emits warning and updates metrics.
 func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
 	if !bytes.Equal(root[:], headRoot) {
@@ -261,8 +279,8 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 func isCompetingAtts(root []byte, headRoot []byte) {
 	if !bytes.Equal(root[:], headRoot) {
 		log.WithFields(logrus.Fields{
-			"attDataRoot":  hex.EncodeToString(root[:]),
-			"headRoot": hex.EncodeToString(headRoot),
+			"attDataRoot": hex.EncodeToString(root[:]),
+			"headRoot":    hex.EncodeToString(headRoot),
 		}).Warn("Calculated head diffs from new attestation")
 		competingAtts.Inc()
 	}
