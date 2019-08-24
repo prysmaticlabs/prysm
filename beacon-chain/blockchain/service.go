@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -146,6 +148,11 @@ func (c *ChainService) initializeBeaconChain(
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash genesis state")
+	}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 
 	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")
@@ -155,6 +162,9 @@ func (c *ChainService) initializeBeaconChain(
 		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
+	c.headBlock = genesisBlk
+	c.headState = genesisState
+	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil

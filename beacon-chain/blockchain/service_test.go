@@ -314,4 +314,14 @@ func TestChainService_initializeBeaconChain(t *testing.T) {
 			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
 		}
 	}
+
+	if bc.HeadState() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.HeadBlock() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.CanonicalRoot(0) == nil {
+		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
+	}
 }
