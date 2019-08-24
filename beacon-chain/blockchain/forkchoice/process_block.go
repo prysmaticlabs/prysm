@@ -109,7 +109,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot":         b.Slot,
 		"attestations": len(b.Body.Attestations),
 		"deposits":     len(b.Body.Deposits),
-	}).Info("Completed state transition with block")
+	}).Info("Completed state transition on block")
 
 	// Log epoch summary before the next epoch.
 	if helpers.IsEpochStart(postState.Slot) {
