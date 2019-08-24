@@ -117,12 +117,16 @@ func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash justified checkpoint")
 	}
+	s.lock.RLock()
 	_, exists := s.checkptBlkRoot[h]
+	s.lock.RUnlock()
 	if !exists {
 		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
+		s.lock.Lock()
+		defer s.lock.Unlock()
 		s.checkptBlkRoot[h] = bytesutil.ToBytes32(c.Root)
 	}
 	return baseState, nil

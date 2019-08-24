@@ -102,6 +102,8 @@ func (s *Service) Start() {
 
 	s.started = true
 
+	registerMetrics(s)
+
 	multiAddrs := s.host.Network().ListenAddresses()
 	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }

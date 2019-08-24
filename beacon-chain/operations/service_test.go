@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -667,79 +666,5 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	atts, _ = s.AttestationPool(context.Background(), 15)
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
-	}
-}
-
-func TestIsCanonical_CanGetCanonical(t *testing.T) {
-	t.Skip()
-	// TODO(#2307): This will be irrelevant after the revamp of our DB package post v0.6.
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	if err := s.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(cb1); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.(*db2.BeaconDB).UpdateChainHead(context.Background(), cb1, &pb.BeaconState{}); err != nil {
-		t.Fatal(err)
-	}
-	r1, err := ssz.SigningRoot(cb1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
-	canonical, err := s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !canonical {
-		t.Error("Attestation should be canonical")
-	}
-
-	cb2 := &ethpb.BeaconBlock{Slot: 1000, ParentRoot: []byte{'B'}}
-	if err := s.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(cb2); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.(*db2.BeaconDB).UpdateChainHead(context.Background(), cb2, &pb.BeaconState{}); err != nil {
-		t.Fatal(err)
-	}
-	canonical, err = s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation should not be canonical")
-	}
-}
-
-func TestIsCanonical_NilBlocks(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-
-	canonical, err := s.IsAttCanonical(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation shouldn't be canonical")
-	}
-
-	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	if err := s.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(cb1); err != nil {
-		t.Fatal(err)
-	}
-	r1, err := ssz.SigningRoot(cb1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
-	canonical, err = s.IsAttCanonical(context.Background(), att1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical {
-		t.Error("Attestation shouldn't be canonical")
 	}
 }

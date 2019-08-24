@@ -40,7 +40,6 @@ func init() {
 
 type operationService interface {
 	operations.Pool
-	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
 	HandleAttestation(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
