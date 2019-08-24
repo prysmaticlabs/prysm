@@ -17,13 +17,17 @@ var (
 )
 
 func registerMetrics(s *Service) {
+
 	// Metrics with a single value can use GaugeFunc, CounterFunc, etc.
-	promauto.NewGaugeFunc(prometheus.GaugeOpts{
+	if err := prometheus.DefaultRegisterer.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 		Name: "p2p_peer_count",
 		Help: "The number of currently connected peers",
 	}, func() float64 {
 		return float64(peerCount(s.host))
-	})
+	})); err != nil {
+		// This should only happen in tests.
+		log.WithError(err).Error("Failed to register metric")
+	}
 
 
 	// Metrics with labels, polled every 10s.
