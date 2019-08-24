@@ -78,7 +78,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		return err
 	}
 
-	log.WithField("slot", b.Slot).Info("Executing state transition")
+	log.WithField("slot", b.Slot).Info("Executing state transition on block")
 
 	// Apply new state transition for the block to the store.
 	// Make block root as bad to reject in sync.
@@ -86,11 +86,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
-
-	log.WithFields(logrus.Fields{
-		"slot":  b.Slot,
-		"epoch": helpers.SlotToEpoch(b.Slot),
-	}).Info("State transition completed")
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
@@ -114,7 +109,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot":         b.Slot,
 		"attestations": len(b.Body.Attestations),
 		"deposits":     len(b.Body.Deposits),
-	}).Info("Finished processing beacon block")
+	}).Info("Completed state transition with block")
 
 	// Log epoch summary before the next epoch.
 	if helpers.IsEpochStart(postState.Slot) {
