@@ -17,7 +17,6 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-
 	rs := &RegularSync{
 		db: db,
 	}
@@ -64,11 +63,9 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-
 	rs := &RegularSync{
 		db: db,
 	}
-
 
 	msg := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -83,4 +80,3 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 		t.Error("Invalid beacon attestation was broadcast")
 	}
 }
-

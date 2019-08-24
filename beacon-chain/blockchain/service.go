@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -142,11 +144,18 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash genesis state")
+	}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 
 	if err := c.forkChoiceStore.GenesisStore(c.ctx, beaconState); err != nil {
-		return errors.Wrap(err, "could not start gensis store for fork choice")
+		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
+	c.headBlock = genesisBlk
+	c.headState = beaconState
 	c.canonicalRoots[beaconState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil
@@ -261,8 +270,8 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 func isCompetingAtts(root []byte, headRoot []byte) {
 	if !bytes.Equal(root[:], headRoot) {
 		log.WithFields(logrus.Fields{
-			"attDataRoot":  hex.EncodeToString(root[:]),
-			"headRoot": hex.EncodeToString(headRoot),
+			"attDataRoot": hex.EncodeToString(root[:]),
+			"headRoot":    hex.EncodeToString(headRoot),
 		}).Warn("Calculated head diffs from new attestation")
 		competingAtts.Inc()
 	}

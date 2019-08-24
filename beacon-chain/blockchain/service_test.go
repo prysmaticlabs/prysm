@@ -17,6 +17,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -285,4 +286,26 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+}
+
+func TestChainService_initializeBeaconChain(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	bc := setupBeaconChain(t, db)
+
+	deposits, _ := testutil.SetupInitialDeposits(t, 1)
+	if err := bc.initializeBeaconChain(time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if bc.HeadState() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.HeadBlock() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.CanonicalRoot(0) == nil {
+		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
+	}
 }

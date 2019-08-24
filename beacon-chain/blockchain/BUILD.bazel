@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain/forkchoice:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",

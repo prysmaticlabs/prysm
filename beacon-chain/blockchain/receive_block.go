@@ -39,7 +39,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 		return errors.Wrap(err, "could not broadcast block")
 	}
 	log.WithFields(logrus.Fields{
-		"attDataRoot": hex.EncodeToString(root[:]),
+		"blockRoot": hex.EncodeToString(root[:]),
 	}).Info("Broadcasting block")
 
 	if err := c.ReceiveBlockNoPubsub(ctx, block); err != nil {
