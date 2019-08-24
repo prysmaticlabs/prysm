@@ -17,12 +17,11 @@ import (
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/network"
-	peer2 "github.com/libp2p/go-libp2p-core/peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
-	peer "github.com/libp2p/go-libp2p-peer"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -427,7 +426,7 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 }
 
 // PeerID returns the local peer.
-func (s *Server) PeerID() peer2.ID {
+func (s *Server) PeerID() peer.ID {
 	return s.host.ID()
 }
 
