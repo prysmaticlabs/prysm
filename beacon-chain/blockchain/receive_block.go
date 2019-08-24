@@ -67,10 +67,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	log.WithFields(logrus.Fields{
-		"slot": block.Slot,
-		"root": hex.EncodeToString(root[:]),
-	}).Info("Finished state transition and updated fork choice store for block")
+	logStateTransitionData(block, root[:])
 
 	// Run fork choice after applying state transition on the new block.
 	headRoot, err := c.forkChoiceStore.Head(ctx)
@@ -118,10 +115,7 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	log.WithFields(logrus.Fields{
-		"slots": block.Slot,
-		"root":  hex.EncodeToString(root[:]),
-	}).Info("Finished state transition and updated fork choice store for block")
+	logStateTransitionData(block, root[:])
 
 	// Save new block as head.
 	if err := c.saveHead(ctx, block, root); err != nil {
