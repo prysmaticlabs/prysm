@@ -45,7 +45,7 @@ func peerCount(h host.Host) int {
 }
 
 func updateP2PTopicPeerCount(s *Service) {
-	for topic, _ := range GossipTopicMappings {
+	for topic := range GossipTopicMappings {
 		topic += s.Encoding().ProtocolSuffix()
 		p2pTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.pubsub.ListPeers(topic))))
 	}
