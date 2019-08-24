@@ -38,3 +38,26 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 }
+
+func TestSubscribe_HandlesPanic(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	r := RegularSync{
+		ctx: context.Background(),
+		p2p: p2p,
+	}
+
+	topic := "/eth2/voluntary_exit"
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
+		defer wg.Done()
+		panic("bad")
+	})
+
+	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
+
+	if testutil.WaitTimeout(&wg, time.Second) {
+		t.Fatal("Did not receive PubSub in 1 second")
+	}
+}

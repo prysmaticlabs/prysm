@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"math/big"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -291,12 +293,26 @@ func TestChainStartStop_Initialized(t *testing.T) {
 func TestChainService_initializeBeaconChain(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
 
 	bc := setupBeaconChain(t, db)
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 1)
-	if err := bc.initializeBeaconChain(time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
+	// Set up 10 deposits pre chain start for validators to register
+	count := uint64(10)
+	deposits, _ := testutil.SetupInitialDeposits(t, count)
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
+	}
+
+	s, err := bc.beaconDB.State(ctx, bytesutil.ToBytes32(bc.canonicalRoots[0]))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range s.Validators {
+		if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey)) {
+			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
+		}
 	}
 
 	if bc.HeadState() == nil {
