@@ -112,7 +112,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Errorf("Block failed processing: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
-	testutil.AssertLogsContain(t, hook, "Finished fork choice")
+	testutil.AssertLogsContain(t, hook, "Finished applying fork choice for block")
 }
 
 func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {

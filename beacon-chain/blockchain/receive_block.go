@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 
@@ -81,7 +82,7 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	log.WithFields(logrus.Fields{
 		"headSlot": headBlk.Slot,
 		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Finished fork choice")
+	}).Info("Finished applying fork choice for block")
 
 	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
 
@@ -146,4 +147,17 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 		c.depositCache.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
+}
+
+// This checks if the block is from a competing chain, emits warning and updates metrics.
+func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
+	if !bytes.Equal(root[:], headRoot) {
+		log.WithFields(logrus.Fields{
+			"blkSlot":  slot,
+			"blkRoot":  hex.EncodeToString(root[:]),
+			"headSlot": headSlot,
+			"headRoot": hex.EncodeToString(headRoot),
+		}).Warn("Calculated head diffs from new block")
+		competingBlks.Inc()
+	}
 }
