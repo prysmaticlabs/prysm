@@ -148,7 +148,6 @@ func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uin
 		return errors.Wrap(err, "could not get finalized block root")
 	}
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
-		log.Errorf("finalized root %#x , checkpoint root %#x", bFinalizedRoot, s.finalizedCheckpt.Root)
 		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", slot)
 	}
 	return nil
