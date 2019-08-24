@@ -69,7 +69,6 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	}
 	logStateTransitionData(block, root[:])
 
-
 	// Run fork choice after applying state transition on the new block.
 	headRoot, err := c.forkChoiceStore.Head(ctx)
 	if err != nil {
