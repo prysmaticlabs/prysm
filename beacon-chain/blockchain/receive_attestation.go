@@ -85,7 +85,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 		"headRoot": hex.EncodeToString(headRoot),
 	}).Debug("Finished applying fork choice for attestation")
 
-	// Skip checking for competing attestation at epoch boundary
+	// Skip checking for competing attestation's target roots at epoch boundary.
 	if helpers.IsEpochEnd(slot) {
 		targetRoot, err := helpers.BlockRoot(c.headState, att.Data.Target.Epoch)
 		if err != nil {
