@@ -92,7 +92,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				debug.PrintStack()
 			}
 		}()
-		
+
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
 			return

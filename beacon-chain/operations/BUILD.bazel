@@ -14,7 +14,6 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/messagehandler:go_default_library",
@@ -35,7 +34,6 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/db:go_default_library",
         "//beacon-chain/internal:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
