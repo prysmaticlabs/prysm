@@ -215,31 +215,6 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 			}
 			continue
 		}
-		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
-		if err != nil {
-			// Delete attestation that failed to verify as canonical.
-			var hash [32]byte
-			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-				hash, err = ssz.HashTreeRoot(att)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				hash, err = ssz.HashTreeRoot(att.Data)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
-				return nil, errors.Wrap(err, "could not delete failed attestation")
-			}
-			return nil, errors.Wrap(err, "could not verify canonical attestation")
-		}
-		// Skip the attestation if it's not canonical.
-		if !canonical {
-			continue
-		}
-
 		validAtts = append(validAtts, att)
 	}
 
