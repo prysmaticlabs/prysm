@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -714,8 +715,8 @@ func TestIsCanonical_CanGetCanonical(t *testing.T) {
 }
 
 func TestIsCanonical_NilBlocks(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testing2.SetupDB(t)
+	defer testing2.TeardownDB(t, db)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	canonical, err := s.IsAttCanonical(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{}})
@@ -727,11 +728,22 @@ func TestIsCanonical_NilBlocks(t *testing.T) {
 	}
 
 	cb1 := &ethpb.BeaconBlock{Slot: 999, ParentRoot: []byte{'A'}}
-	if err := s.beaconDB.(*db2.BeaconDB).SaveBlockDeprecated(cb1); err != nil {
+	if err := s.beaconDB.SaveBlock(context.Background(), cb1); err != nil {
 		t.Fatal(err)
 	}
 	r1, err := ssz.SigningRoot(cb1)
 	if err != nil {
+		t.Fatal(err)
+	}
+	headBlock := &ethpb.BeaconBlock{Slot: 999}
+	if err := s.beaconDB.SaveBlock(context.Background(), headBlock); err != nil {
+		t.Fatal(err)
+	}
+	headRoot, err := ssz.SigningRoot(headBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveHeadBlockRoot(context.Background(), headRoot); err != nil {
 		t.Fatal(err)
 	}
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: r1[:]}}
