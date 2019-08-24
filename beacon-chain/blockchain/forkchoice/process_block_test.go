@@ -24,8 +24,12 @@ func TestStore_OnBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	randaomParentRoot := []byte{'a'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randaomParentRoot)); err != nil {
+	randomParentRoot := []byte{'a'}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot)); err != nil {
+		t.Fatal(err)
+	}
+	randomParentRoot2 := roots[1]
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
 	validGenesisRoot := []byte{'g'}
@@ -48,19 +52,19 @@ func TestStore_OnBlock(t *testing.T) {
 		},
 		{
 			name:          "block is from the feature",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot, Slot: params.BeaconConfig().FarFutureEpoch},
+			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot, Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             &pb.BeaconState{},
 			wantErrString: "could not process block from the future",
 		},
 		{
 			name:          "could not get finalized block",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randaomParentRoot},
+			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot},
 			s:             &pb.BeaconState{},
 			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
 		},
 		{
 			name:          "same slot as finalized block",
-			blk:           &ethpb.BeaconBlock{Slot: 0, ParentRoot: validGenesisRoot},
+			blk:           &ethpb.BeaconBlock{Slot: 0, ParentRoot: randomParentRoot2},
 			s:             &pb.BeaconState{},
 			wantErrString: "block is equal or earlier than finalized block, slot 0 < slot 0",
 		},

@@ -257,7 +257,7 @@ func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32
 	log.WithFields(logrus.Fields{
 		"slots": b.Slot,
 		"root":  hex.EncodeToString(r[:]),
-	}).Info("Saved head info")
+	}).Debug("Saved head info")
 
 	return nil
 }
