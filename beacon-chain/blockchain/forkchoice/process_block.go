@@ -90,7 +90,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	log.WithFields(logrus.Fields{
 		"slot":  b.Slot,
 		"epoch": helpers.SlotToEpoch(b.Slot),
-	}).Info("State transition complete")
+	}).Info("State transition completed")
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
