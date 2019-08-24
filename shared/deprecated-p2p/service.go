@@ -17,6 +17,7 @@ import (
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/network"
+	peer2 "github.com/libp2p/go-libp2p-core/peer"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
@@ -423,6 +424,11 @@ func (s *Server) emit(msg Message, feed Feed) {
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
 func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscription {
 	return s.Feed(msg).Subscribe(channel)
+}
+
+// PeerID returns the local peer.
+func (s *Server) PeerID() peer2.ID {
+	return s.host.ID()
 }
 
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
