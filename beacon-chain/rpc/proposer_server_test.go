@@ -31,7 +31,7 @@ func init() {
 
 func TestProposeBlock_OK(t *testing.T) {
 	// TODO(3225): Unskip after we have fully deprecated the old chain service.
-	t.Skip()
+	t.Skip("Skip until we have fully deprecated the old chain service.")
 	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
