@@ -138,11 +138,6 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 		}
 	}
 
-	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"headSlot": blk.Slot,
-	}).Info("Chain head block and state updated")
-
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 

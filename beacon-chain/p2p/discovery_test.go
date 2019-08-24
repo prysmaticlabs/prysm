@@ -64,7 +64,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
-		Encoding: "ssz",
+		Encoding:          "ssz",
 	}
 
 	var listeners []*discv5.Network
