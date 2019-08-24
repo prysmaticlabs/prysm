@@ -111,7 +111,7 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			c.processChainStartTime(c.ctx, genesisTime, subChainStart)
+			c.processChainStartTime(genesisTime, subChainStart)
 			return
 		}()
 	}
@@ -119,9 +119,9 @@ func (c *ChainService) Start() {
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-func (c *ChainService) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
+func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
 	initialDeposits := c.web3Service.ChainStartDeposits()
-	if err := c.initializeBeaconChain(ctx, genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
+	if err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	c.stateInitializedFeed.Send(genesisTime)
@@ -132,7 +132,6 @@ func (c *ChainService) processChainStartTime(ctx context.Context, genesisTime ti
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(
-	ctx context.Context,
 	genesisTime time.Time,
 	deposits []*ethpb.Deposit,
 	eth1data *ethpb.Eth1Data) error {
@@ -147,11 +146,11 @@ func (c *ChainService) initializeBeaconChain(
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
 
-	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
+	if err := c.saveGenesisValidators(c.ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")
 	}
 
-	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
+	if err := c.forkChoiceStore.GenesisStore(c.ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
