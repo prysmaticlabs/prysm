@@ -13,7 +13,7 @@ var (
 		Name: "p2p_topic_peer_count",
 		Help: "The number of peers subscribed to a topic",
 	},
-	[]string{"topic"})
+		[]string{"topic"})
 )
 
 func registerMetrics(s *Service) {
@@ -28,7 +28,6 @@ func registerMetrics(s *Service) {
 		// This should only happen in tests.
 		log.WithError(err).Error("Failed to register metric")
 	}
-
 
 	// Metrics with labels, polled every 10s.
 	go func() {
