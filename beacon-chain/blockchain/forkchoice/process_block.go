@@ -14,7 +14,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -104,12 +103,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		helpers.ClearAllCaches()
 		s.finalizedCheckpt.Epoch = postState.FinalizedCheckpoint.Epoch
 	}
-
-	log.WithFields(logrus.Fields{
-		"slot":         b.Slot,
-		"attestations": len(b.Body.Attestations),
-		"deposits":     len(b.Body.Deposits),
-	}).Info("Completed state transition on block")
 
 	// Log epoch summary before the next epoch.
 	if helpers.IsEpochStart(postState.Slot) {
