@@ -153,6 +153,11 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
 }
 
+// PeerID returns the Peer ID of the local peer.
+func (s *Service) PeerID() peer.ID {
+	return s.host.ID()
+}
+
 // Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)

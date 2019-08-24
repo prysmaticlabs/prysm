@@ -128,6 +128,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				return
 			}
 
+			if msg.GetFrom() == r.p2p.PeerID() {
+				continue
+			}
+
 			go pipeline(msg.Data)
 		}
 	}
