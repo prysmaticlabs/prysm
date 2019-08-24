@@ -24,7 +24,6 @@ var (
 // starPeerWatcher updates the peer count metric and calls to reconnect any VIP
 // peers such as the bootnode peer, the relay node peer or the static peers.
 func startPeerWatcher(ctx context.Context, h host.Host, reconnectPeers ...string) {
-
 	go (func() {
 		for {
 			select {

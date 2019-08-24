@@ -70,6 +70,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
+	registerMetrics(h)
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
