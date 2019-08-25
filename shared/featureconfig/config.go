@@ -121,7 +121,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.EnableTotalBalanceCache = true
 	}
 	if ctx.GlobalBool(HashSlingingSlasherFlag.Name) {
-		log.Warn("Data storage requirements can be very high!")
+		log.Warn("Enabled double propose detection, data storage requirements can be very high!")
 		cfg.HashSlingingSlasher = true
 	}
 	InitFeatureConfig(cfg)
