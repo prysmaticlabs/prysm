@@ -96,14 +96,14 @@ func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader
 }
 
 func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
+	pruneTill := int64(currentEpoch) - int64(historySize)
+	if pruneTill <= 0 {
+		return nil
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		if currentEpoch-historySize <= 0 {
-			return nil
-		}
-		max := bytesutil.Bytes8(currentEpoch - historySize)
-
+		max := bytesutil.Bytes8(uint64(pruneTill))
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")

@@ -7,7 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
-func TestNilDBHistoryBlkHdr_OK(t *testing.T) {
+func TestNilDBHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -28,7 +28,7 @@ func TestNilDBHistoryBlkHdr_OK(t *testing.T) {
 	}
 }
 
-func TestSaveHistoryBlkHdr_OK(t *testing.T) {
+func TestSaveHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
@@ -71,7 +71,7 @@ func TestSaveHistoryBlkHdr_OK(t *testing.T) {
 
 }
 
-func TestDeleteHistoryBlkHdr_OK(t *testing.T) {
+func TestDeleteHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
@@ -129,7 +129,7 @@ func TestDeleteHistoryBlkHdr_OK(t *testing.T) {
 
 }
 
-func TestHasHistoryBlkHdr_OK(t *testing.T) {
+func TestHasHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
@@ -178,7 +178,7 @@ func TestHasHistoryBlkHdr_OK(t *testing.T) {
 	}
 }
 
-func TestPruneHistoryBlkHdr_OK(t *testing.T) {
+func TestPruneHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
