@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"time"
@@ -36,7 +37,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	}
 	log.WithFields(logrus.Fields{
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Info("Broadcasting attestation")
+	}).Debug("Broadcasting attestation")
 
 	if err := c.ReceiveAttestationNoPubsub(ctx, att); err != nil {
 		return err
@@ -68,7 +69,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	log.WithFields(logrus.Fields{
 		"attSlot":     slot,
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Info("Finished updating fork choice store for attestation")
+	}).Debug("Finished updating fork choice store for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := c.forkChoiceStore.Head(ctx)
@@ -82,9 +83,16 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	log.WithFields(logrus.Fields{
 		"headSlot": headBlk.Slot,
 		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Finished applying fork choice")
+	}).Debug("Finished applying fork choice for attestation")
 
-	isCompetingAtts(att.Data.BeaconBlockRoot[:], headRoot)
+	// Skip checking for competing attestation's target roots at epoch boundary.
+	if helpers.IsEpochEnd(slot) {
+		targetRoot, err := helpers.BlockRoot(c.headState, att.Data.Target.Epoch)
+		if err != nil {
+			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
+		}
+		isCompetingAtts(targetRoot, att.Data.Target.Root[:])
+	}
 
 	// Save head info after running fork choice.
 	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
@@ -117,4 +125,15 @@ func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attesta
 
 	time.Sleep(time.Until(timeToInclude))
 	return slot, nil
+}
+
+// This checks if the attestation is from a competing chain, emits warning and updates metrics.
+func isCompetingAtts(headTargetRoot []byte, attTargetRoot []byte) {
+	if !bytes.Equal(attTargetRoot, headTargetRoot) {
+		log.WithFields(logrus.Fields{
+			"attTargetRoot":  hex.EncodeToString(attTargetRoot),
+			"headTargetRoot": hex.EncodeToString(headTargetRoot),
+		}).Warn("target heads different from new attestation")
+		competingAtts.Inc()
+	}
 }

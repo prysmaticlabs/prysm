@@ -102,6 +102,8 @@ func (s *Service) Start() {
 
 	s.started = true
 
+	registerMetrics(s)
+
 	multiAddrs := s.host.Network().ListenAddresses()
 	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }
@@ -149,6 +151,11 @@ func (s *Service) PubSub() *pubsub.PubSub {
 // This method is a pass through to libp2pcore.Host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// PeerID returns the Peer ID of the local peer.
+func (s *Service) PeerID() peer.ID {
+	return s.host.ID()
 }
 
 // Disconnect from a peer.

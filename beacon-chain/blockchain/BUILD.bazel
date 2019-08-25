@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "log.go",
         "metrics.go",
         "receive_attestation.go",
         "receive_block.go",

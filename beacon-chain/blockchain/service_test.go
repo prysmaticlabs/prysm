@@ -39,7 +39,9 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type store struct{}
+type store struct {
+	headRoot []byte
+}
 
 func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
@@ -58,8 +60,7 @@ func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
 }
 
 func (s *store) Head(ctx context.Context) ([]byte, error) {
-	r, _ := ssz.SigningRoot(&ethpb.BeaconBlock{})
-	return r[:], nil
+	return s.headRoot, nil
 }
 
 type mockOperationService struct{}

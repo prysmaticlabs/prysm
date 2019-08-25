@@ -92,7 +92,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				debug.PrintStack()
 			}
 		}()
-		
+
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
 			return
@@ -126,6 +126,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				log.WithError(err).Error("Subscription next failed")
 				// TODO(3147): Mark status unhealthy.
 				return
+			}
+
+			if msg.GetFrom() == r.p2p.PeerID() {
+				continue
 			}
 
 			go pipeline(msg.Data)
