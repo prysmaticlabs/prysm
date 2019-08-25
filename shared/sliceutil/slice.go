@@ -1,5 +1,9 @@
 package sliceutil
 
+import (
+	"sort"
+)
+
 // SubsetUint64 returns true if the first array is
 // completely contained in the second array with time
 // complexity of approximately o(n).
@@ -258,4 +262,24 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 		inter = tmp
 	}
 	return inter
+}
+
+// InsertSort inserts an element into a sorted slice at its index.
+func InsertSort(data []uint64, element uint64) []uint64 {
+	index := sort.Search(len(data), func(i int) bool { return data[i] > element })
+	data = append(data, uint64(0))
+	copy(data[index+1:], data[index:])
+	data[index] = element
+	return data
+}
+
+// TruncateItems truncate a sorted list at a minimum item value.
+func TruncateItems(data []uint64, minItemVal uint64) (truncate bool, truncatedList []uint64, itemsToTruncate []uint64) {
+	index := sort.Search(len(data), func(i int) bool { return data[i] > minItemVal })
+	if index == 0 {
+		return false, data, []uint64{}
+	}
+	itemsToTruncate = data[:index]
+	truncatedList = data[index:]
+	return true, truncatedList, itemsToTruncate
 }
