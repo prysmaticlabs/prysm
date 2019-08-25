@@ -4,7 +4,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -268,28 +267,4 @@ func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconSt
 		}
 	}
 	return nil
-}
-
-// This checks if the block is from a competing chain, emits warning and updates metrics.
-func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
-	if !bytes.Equal(root[:], headRoot) {
-		log.WithFields(logrus.Fields{
-			"blkSlot":  slot,
-			"blkRoot":  hex.EncodeToString(root[:]),
-			"headSlot": headSlot,
-			"headRoot": hex.EncodeToString(headRoot),
-		}).Warn("Calculated head diffs from new block")
-		competingBlks.Inc()
-	}
-}
-
-// This checks if the attestation is from a competing chain, emits warning and updates metrics.
-func isCompetingAtts(root []byte, headRoot []byte) {
-	if !bytes.Equal(root[:], headRoot) {
-		log.WithFields(logrus.Fields{
-			"attDataRoot": hex.EncodeToString(root[:]),
-			"headRoot":    hex.EncodeToString(headRoot),
-		}).Warn("Calculated head diffs from new attestation")
-		competingAtts.Inc()
-	}
 }
