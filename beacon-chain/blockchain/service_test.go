@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -225,10 +224,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *ChainService {
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	helpers.ClearAllCaches()
-
 	hook := logTest.NewGlobal()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db)
 
 	// Test the start function.
@@ -266,17 +264,27 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 
 	chainService := setupBeaconChain(t, db)
 
-	unixTime := uint64(time.Now().Unix())
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), unixTime, deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	genesisBlk := b.NewGenesisBlock([]byte{})
+	blkRoot, err := ssz.SigningRoot(genesisBlk)
+	if err != nil {
+		t.Fatal(err)
 	}
-	setupGenesisBlock(t, chainService)
+	if err := db.SaveBlock(ctx, genesisBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test the start function.
 	chainService.Start()
 
@@ -291,7 +299,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
 }
 
-func TestChainService_initializeBeaconChain(t *testing.T) {
+func TestChainService_InitializeBeaconChain(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
