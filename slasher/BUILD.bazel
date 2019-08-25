@@ -13,4 +13,5 @@ go_test(
     srcs = ["proposer_slash_test.go"],
     embed = [":go_default_library"],
     deps = ["@com_github_prysmaticlabs_go_bitfield//:go_default_library"],
+    timeout="short",
 )
