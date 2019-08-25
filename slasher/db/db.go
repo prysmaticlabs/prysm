@@ -29,40 +29,52 @@ type Store struct {
 	databasePath string
 }
 
-// SlasherDB manages the data layer of the beacon chain implementation.
-// The exposed methods do not have an opinion of the underlying data engine,
-// but instead reflect the beacon chain logic.
-// For example, instead of defining get, put, remove
-// This defines methods such as getBlock, saveBlocksAndAttestations, etc.
-type SlasherDB struct {
-	db           *Store
-	DatabasePath string
-}
-
 // Close closes the underlying boltdb database.
-func (db *SlasherDB) Close() error {
+func (db *Store) Close() error {
 	return db.db.Close()
 }
 
-func (db *SlasherDB) update(fn func(*bolt.Tx) error) error {
-	return db.db.db.Update(fn)
+func (db *Store) update(fn func(*bolt.Tx) error) error {
+	return db.db.Update(fn)
 }
-func (db *SlasherDB) batch(fn func(*bolt.Tx) error) error {
-	return db.db.db.Batch(fn)
+func (db *Store) batch(fn func(*bolt.Tx) error) error {
+	return db.db.Batch(fn)
 }
-func (db *SlasherDB) view(fn func(*bolt.Tx) error) error {
-	return db.db.db.View(fn)
+func (db *Store) view(fn func(*bolt.Tx) error) error {
+	return db.db.View(fn)
 }
 
 // NewDB initializes a new DB.
-func NewDB(dirPath string) (*SlasherDB, error) {
+func NewDB(dirPath string) (*Store, error) {
 	return NewKVStore(dirPath)
+}
+
+// ClearDB removes the previously stored directory at the data directory.
+func (db *Store) ClearDB() error {
+	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
+		return nil
+	}
+	return os.RemoveAll(db.databasePath)
+}
+
+// DatabasePath at which this database writes files.
+func (db *Store) DatabasePath() string {
+	return db.databasePath
+}
+
+func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
+	for _, bucket := range buckets {
+		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*SlasherDB, error) {
+func NewKVStore(dirPath string) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -88,31 +100,4 @@ func NewKVStore(dirPath string) (*SlasherDB, error) {
 	}
 
 	return kv, err
-}
-
-// ClearDB removes the previously stored directory at the data directory.
-func (k *Store) ClearDB() error {
-	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
-		return nil
-	}
-	return os.RemoveAll(k.databasePath)
-}
-
-// Close closes the underlying BoltDB database.
-func (k *Store) Close() error {
-	return k.db.Close()
-}
-
-// DatabasePath at which this database writes files.
-func (k *Store) DatabasePath() string {
-	return k.databasePath
-}
-
-func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
-	for _, bucket := range buckets {
-		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
-			return err
-		}
-	}
-	return nil
 }

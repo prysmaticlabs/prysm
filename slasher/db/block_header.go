@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
@@ -22,7 +21,7 @@ func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
 
 // BlockHeader accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *SlasherDB) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
+func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
 	var bha []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
@@ -40,7 +39,7 @@ func (db *SlasherDB) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.Bea
 }
 
 // HasBlockHeader accepts an epoch and validator id and returns true if the block header exists.
-func (db *SlasherDB) HasBlockHeader(epoch uint64, validatorID uint64) bool {
+func (db *Store) HasBlockHeader(epoch uint64, validatorID uint64) bool {
 	prefix := encodeEpochValidatorID(epoch, validatorID)
 	var hasBlockHeader bool
 	// #nosec G104
@@ -58,7 +57,7 @@ func (db *SlasherDB) HasBlockHeader(epoch uint64, validatorID uint64) bool {
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *SlasherDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
+func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
@@ -76,19 +75,14 @@ func (db *SlasherDB) SaveBlockHeader(epoch uint64, validatorID uint64, blockHead
 
 	// prune history to max size every 10th epoch
 	if epoch%10 == 0 {
-		if featureconfig.FeatureConfig().HashSlingingSlasher {
-			weakSubjectivityPeriod := uint64(54000)
-			err = db.pruneHistory(epoch, weakSubjectivityPeriod)
-		} else {
-			defaultHistoryStorage := uint64(20)
-			err = db.pruneHistory(epoch, defaultHistoryStorage)
-		}
+		weakSubjectivityPeriod := uint64(54000)
+		err = db.pruneHistory(epoch, weakSubjectivityPeriod)
 	}
 	return err
 }
 
 // DeleteBlockHeader deletes a block header using the slot and its root as keys in their respective buckets.
-func (db *SlasherDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
+func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 
@@ -101,7 +95,7 @@ func (db *SlasherDB) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHe
 	})
 }
 
-func (db *SlasherDB) pruneHistory(currentEpoch uint64, historySize uint64) error {
+func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()

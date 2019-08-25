@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -34,23 +33,22 @@ func setupDB(t testing.TB) *Store {
 }
 
 // teardownDB cleans up a test BeaconDB instance.
-func teardownDB(t testing.TB, db *SlasherDB) {
+func teardownDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
-	if err := os.RemoveAll(db.DatabasePath); err != nil {
+	if err := os.RemoveAll(db.DatabasePath()); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 }
 
 func TestClearDB(t *testing.T) {
 	slasherDB := setupDB(t)
-	path := strings.TrimSuffix(slasherDB.DatabasePath, "beaconchain.db")
-	if err := slasherDB.ClearDB(path); err != nil {
+	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(beaconDB.DatabasePath); !os.IsNotExist(err) {
+	if _, err := os.Stat(slasherDB.DatabasePath()); !os.IsNotExist(err) {
 		t.Fatalf("db wasnt cleared %v", err)
 	}
 }
