@@ -16,7 +16,6 @@ var epochs []uint64
 func init() {
 	epochProposalBitlist = make(map[uint64]bitfield.Bitlist)
 	weakSubjectivityPeriod = uint64(54000)
-
 }
 
 // CheckNewProposal checks weather a new proposal is allowed or
@@ -27,9 +26,8 @@ func CheckNewProposal(currentEpoch uint64, epoch uint64, validatorID uint64) (bo
 	if currentEpoch > weakSubjectivityPeriod && epoch < currentEpoch-weakSubjectivityPeriod {
 		return false, errors.New("epoch is obsolete = before weak subjectivity period")
 	}
-	_, ok := epochProposalBitlist[epoch]
-	if !ok {
 
+	if _, ok := epochProposalBitlist[epoch]; !ok {
 		epochProposalBitlist[epoch] = bitfield.NewBitlist(300000)
 		epochs = insertSort(epochs, epoch)
 		var truncate bool

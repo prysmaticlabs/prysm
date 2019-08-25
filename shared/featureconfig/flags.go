@@ -94,7 +94,7 @@ var (
 	// HashSlingingSlasherFlag run a slashing proof server instance.
 	HashSlingingSlasherFlag = cli.BoolFlag{
 		Name:  "hash-slinging-slasher",
-		Usage: "Enable 54000 epochs of attestation and blockheaders storage for generating slashing proofs in the weak subjectivity period.",
+		Usage: "Store 54,000 epochs of attestations and block headers to serve as a slashing watchtower and generate slashing proofs during the weak subjectivity period.",
 	}
 )
 
