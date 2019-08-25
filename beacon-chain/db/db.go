@@ -146,8 +146,7 @@ func NewDBDeprecated(dirPath string) (*BeaconDB, error) {
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, attestationTargetBucket, mainChainBucket,
-			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket,
-			historicAttestationsBucket, historicBlockHeadersBucket)
+			histStateBucket, chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 	}); err != nil {
 		return nil, err
 	}
