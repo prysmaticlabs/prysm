@@ -10,12 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -23,7 +24,7 @@ import (
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
 	p2p              p2p.Broadcaster
-	beaconDB         *db.BeaconDB
+	beaconDB         db.Database
 	operationService operationService
 	cache            *cache.AttestationCache
 }
@@ -37,7 +38,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 	// Update attestation target for RPC server to run necessary fork choice.
 	// We need to retrieve the head block to get its parent root.
-	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	head, err := as.beaconDB.Block(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +53,16 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		BeaconBlockRoot: att.Data.BeaconBlockRoot,
 		ParentRoot:      head.ParentRoot,
 	}
-	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
-		return nil, fmt.Errorf("could not save attestation target")
+	db, isLegacyDB := as.beaconDB.(*db.BeaconDB)
+	if isLegacyDB {
+		if err := db.SaveAttestationTarget(ctx, attTarget); err != nil {
+			return nil, fmt.Errorf("could not save attestation target")
+		}
 	}
 
-	as.p2p.Broadcast(ctx, att)
+	if err := as.p2p.Broadcast(ctx, att); err != nil {
+		return nil, err
+	}
 
 	hash, err := hashutil.HashProto(att)
 	if err != nil {
@@ -100,9 +106,17 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
-	headBlock, err := as.beaconDB.ChainHead()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve chain head")
+	var headBlock *ethpb.BeaconBlock
+	if d, isLegacyDB := as.beaconDB.(*db.BeaconDB); isLegacyDB {
+		headBlock, err = d.ChainHead()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve chain head")
+		}
+	} else {
+		headBlock, err = as.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve chain head")
+		}
 	}
 	headRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {

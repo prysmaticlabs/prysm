@@ -7,10 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -24,21 +28,30 @@ import (
 // providing RPC endpoints for computing state transitions and state roots, proposing
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
-	beaconDB           *db.BeaconDB
-	chainService       chainService
+	beaconDB           db.Database
+	chainService       interface{}
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
+	depositCache       *depositcache.DepositCache
 }
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
-
 	// Retrieve the parent block as the current head of the canonical chain
-	parent, err := ps.beaconDB.ChainHead()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get canonical head block")
+	var parent *ethpb.BeaconBlock
+	var err error
+	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		parent, err = d.ChainHead()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
+	} else {
+		parent, err = ps.beaconDB.(*kv.Store).HeadBlock(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get canonical head block")
+		}
 	}
 
 	parentRoot, err := ssz.SigningRoot(parent)
@@ -109,20 +122,21 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process beacon block")
+	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
+	if srv, isLegacyService := ps.chainService.(*blockchain.ChainService); isLegacyService && isLegacyDB {
+		beaconState, err := srv.ReceiveBlockDeprecated(ctx, blk)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
+		}
+		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
+			return nil, errors.Wrap(err, "failed to update chain")
+		}
+		ps.chainService.(*blockchain.ChainService).UpdateCanonicalRoots(blk, root)
+	} else {
+		if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
+			return nil, errors.Wrap(err, "could not process beacon block")
+		}
 	}
-
-	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
-		return nil, errors.Wrap(err, "failed to update chain")
-	}
-
-	ps.chainService.UpdateCanonicalRoots(blk, root)
-	log.WithFields(logrus.Fields{
-		"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-		"headSlot": blk.Slot,
-	}).Info("Chain head block and state updated")
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
@@ -178,24 +192,24 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 				"slot":     slot,
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
-			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
-				return nil, errors.Wrap(err, "could not delete failed attestation")
-			}
-			continue
-		}
-		canonical, err := ps.operationService.IsAttCanonical(ctx, att)
-		if err != nil {
-			// Delete attestation that failed to verify as canonical.
-			if err := ps.beaconDB.DeleteAttestation(att); err != nil {
-				return nil, errors.Wrap(err, "could not delete failed attestation")
-			}
-			return nil, errors.Wrap(err, "could not verify canonical attestation")
-		}
-		// Skip the attestation if it's not canonical.
-		if !canonical {
-			continue
-		}
 
+			var hash [32]byte
+			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+				hash, err = ssz.HashTreeRoot(att)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				hash, err = ssz.HashTreeRoot(att.Data)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
+				return nil, errors.Wrap(err, "could not delete failed attestation")
+			}
+			continue
+		}
 		validAtts = append(validAtts, att)
 	}
 
@@ -257,7 +271,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch beacon state")
 	}
-	latestEth1DataHeight, err := ps.latestEth1Height(ctx, beaconState, currentVote)
+	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +281,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := ps.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	upToEth1DataDeposits := ps.depositCache.AllDeposits(ctx, latestEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
@@ -282,13 +296,13 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}
 
-	allPendingContainers := ps.beaconDB.PendingContainers(ctx, latestEth1DataHeight)
+	allPendingContainers := ps.depositCache.PendingContainers(ctx, latestEth1DataHeight)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*db.DepositContainer
+	var pendingDeps []*depositcache.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex {
+		if uint64(dep.Index) >= beaconState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -311,28 +325,29 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	return pendingDeposits, nil
 }
 
-// latestEth1Height determines what the latest eth1Blockhash is by tallying the votes in the
-// beacon state
-func (ps *ProposerServer) latestEth1Height(ctx context.Context, beaconState *pbp2p.BeaconState,
-	currentVote *ethpb.Eth1Data) (*big.Int, error) {
+// canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
+func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
 	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")
+		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")
 	}
+	var canonicalEth1Data *ethpb.Eth1Data
 	if hasSupport {
+		canonicalEth1Data = currentVote
 		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
 	} else {
+		canonicalEth1Data = beaconState.Eth1Data
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	}
 	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch eth1data height")
+		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
-	return latestEth1DataHeight, nil
+	return canonicalEth1Data, latestEth1DataHeight, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we
@@ -347,7 +362,7 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.beaconDB.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	depositsTillHeight, depositRoot := ps.depositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
 		return ps.powChainService.ChainStartETH1Data(), nil
 	}

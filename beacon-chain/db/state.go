@@ -52,7 +52,7 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 	db.serializedState = stateEnc
 	db.stateHash = stateHash
 
-	if err := db.SaveState(ctx, beaconState); err != nil {
+	if err := db.SaveStateDeprecated(ctx, beaconState); err != nil {
 		return err
 	}
 
@@ -94,6 +94,11 @@ func (db *BeaconDB) InitializeState(ctx context.Context, genesisTime uint64, dep
 
 		return chainInfo.Put(stateLookupKey, stateEnc)
 	})
+}
+
+// State is not implemented.
+func (db *BeaconDB) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error) {
+	return nil, errors.New("not implemented")
 }
 
 // HeadState fetches the canonical beacon chain's head state from the DB.
@@ -150,9 +155,14 @@ func (db *BeaconDB) HeadStateRoot() [32]byte {
 	return db.stateHash
 }
 
-// SaveState updates the beacon chain state.
-func (db *BeaconDB) SaveState(ctx context.Context, beaconState *pb.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
+// SaveState in db.
+func (db *BeaconDB) SaveState(ctx context.Context, state *pb.BeaconState, _ [32]byte) error {
+	return db.SaveStateDeprecated(ctx, state)
+}
+
+// SaveStateDeprecated updates the beacon chain state.
+func (db *BeaconDB) SaveStateDeprecated(ctx context.Context, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateDeprecated")
 	defer span.End()
 
 	ctx, lockSpan := trace.StartSpan(ctx, "BeaconDB.stateLock.Lock")
@@ -381,6 +391,11 @@ func (db *BeaconDB) Validators(ctx context.Context) ([]*ethpb.Validator, error) 
 	})
 
 	return beaconState.Validators, err
+}
+
+// ValidatorLatestVote is not implemented.
+func (db *BeaconDB) ValidatorLatestVote(_ context.Context, _ uint64) (*pb.ValidatorLatestVote, error) {
+	return nil, errors.New("not implemented")
 }
 
 // ValidatorFromState fetches the validator with the desired index from the cached registry.

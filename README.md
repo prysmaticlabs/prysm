@@ -113,7 +113,7 @@ Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Go
 
 ### Activating Your Validator: Depositing 3.2 Goerli ETH 
 
-Using your validator deposit data from the previous step, follow the instructions found on https://alpha.prylabs.net/participate to make a deposit.
+Using your validator deposit data from the previous step, follow the instructions found on https://prylabs.net/participate to make a deposit.
 
 It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system. 
 

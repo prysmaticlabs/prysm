@@ -26,7 +26,7 @@ func setupDB(t testing.TB) *BeaconDB {
 	if err := os.RemoveAll(path); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewDB(path)
+	db, err := NewDBDeprecated(path)
 	db.blocks = make(map[[32]byte]*ethpb.BeaconBlock)
 
 	if err != nil {
@@ -40,19 +40,19 @@ func teardownDB(t testing.TB, db *BeaconDB) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
-	if err := os.RemoveAll(db.DatabasePath); err != nil {
+	if err := os.RemoveAll(db.DatabasePath()); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 }
 
 func TestClearDB(t *testing.T) {
 	beaconDB := setupDB(t)
-	path := strings.TrimSuffix(beaconDB.DatabasePath, "beaconchain.db")
+	path := strings.TrimSuffix(beaconDB.DatabasePath(), "beaconchain.db")
 	if err := ClearDB(path); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(beaconDB.DatabasePath); !os.IsNotExist(err) {
+	if _, err := os.Stat(beaconDB.DatabasePath()); !os.IsNotExist(err) {
 		t.Fatalf("db wasnt cleared %v", err)
 	}
 }
