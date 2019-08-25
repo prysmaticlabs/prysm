@@ -7,8 +7,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -83,10 +83,7 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 			return nil, errors.Wrap(err, "could not get canonical head block")
 		}
 	} else {
-		headBlock, err = bs.beaconDB.(*kv.Store).HeadBlock(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get canonical head block")
-		}
+		headBlock = bs.chainService.(blockchain.HeadRetriever).HeadBlock()
 	}
 	return headBlock, nil
 }
