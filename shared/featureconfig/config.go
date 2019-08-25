@@ -29,7 +29,7 @@ type FeatureFlagConfig struct {
 	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
 	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
 	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
-	HashSlingingSlasher           bool // HashSlingingSlasher run a history storage instance for generating slashing proofs (storage requirements are high!).
+	HashSlingingSlasher           bool // HashSlingingSlasher run a historical storage instance for generating slashing proofs (storage requirements are high!).
 	UseNewP2P                     bool // UseNewP2P service.
 	UseNewSync                    bool // UseNewSync services.
 	UseNewDatabase                bool // UseNewDatabase service.
@@ -121,7 +121,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.EnableTotalBalanceCache = true
 	}
 	if ctx.GlobalBool(HashSlingingSlasherFlag.Name) {
-		log.Warn("Data storage requirements can be vary high")
+		log.Warn("Enabled double propose detection, data storage requirements can be very high!")
 		cfg.HashSlingingSlasher = true
 	}
 	InitFeatureConfig(cfg)
