@@ -14,9 +14,11 @@ import (
 
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -49,12 +51,28 @@ func startNode(ctx *cli.Context) error {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		validatorKeys, withdrawalKeys, err := parseUnencryptedKeysFile(r)
+		validatorKeysUnecrypted, _, err := parseUnencryptedKeysFile(r)
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		fmt.Println(validatorKeys)
-		fmt.Println(withdrawalKeys)
+		validatorKeys := make(map[string]*keystore.Key)
+		for _, item := range validatorKeysUnecrypted {
+			priv, err := bls.SecretKeyFromBytes(item)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			k, err := keystore.NewKeyFromBLS(priv)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			validatorKeys[string(priv.PublicKey().Marshal())] = k
+		}
+		validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
+		if err != nil {
+			return err
+		}
+
+		validatorClient.Start()
 		return nil
 	}
 
@@ -94,7 +112,12 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	validatorClient, err := node.NewValidatorClient(ctx, keystorePassword)
+	validatorKeys, err := accounts.DecryptKeysFromKeystore(keystoreDirectory, keystorePassword)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
 	if err != nil {
 		return err
 	}

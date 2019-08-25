@@ -91,8 +91,8 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
-		Port:    2000,
-		UDPPort: 2000,
+		Port:     2000,
+		UDPPort:  2000,
 		Encoding: "ssz",
 	}
 	s, _ := NewService(cfg)
@@ -126,7 +126,7 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg := &Config{
 		BootstrapNodeAddr: bootNode.String(),
-		Encoding: "ssz",
+		Encoding:          "ssz",
 	}
 	var listeners []*discv5.Network
 	var hosts []host.Host
