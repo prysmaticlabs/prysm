@@ -19,7 +19,8 @@ func TestReceiveAttestation_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	chainService.forkChoiceStore = &store{}
+	r, _ := ssz.SigningRoot(&ethpb.BeaconBlock{})
+	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
 	b := &ethpb.BeaconBlock{}
 	if err := chainService.beaconDB.SaveBlock(ctx, b); err != nil {
@@ -54,7 +55,8 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	chainService.forkChoiceStore = &store{}
+	r, _ := ssz.SigningRoot(&ethpb.BeaconBlock{})
+	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
 	b := &ethpb.BeaconBlock{}
 	if err := chainService.beaconDB.SaveBlock(ctx, b); err != nil {

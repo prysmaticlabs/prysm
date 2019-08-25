@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -44,7 +45,7 @@ func (r *RegularSync) registerSubscribers() {
 	r.subscribe(
 		"/eth2/beacon_attestation",
 		r.validateBeaconAttestation,
-		r.beaconBlockSubscriber,
+		r.beaconAttestationSubscriber,
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
@@ -85,6 +86,13 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(data []byte) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				debug.PrintStack()
+			}
+		}()
+
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
 			return
@@ -118,6 +126,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				log.WithError(err).Error("Subscription next failed")
 				// TODO(3147): Mark status unhealthy.
 				return
+			}
+
+			if msg.GetFrom() == r.p2p.PeerID() {
+				continue
 			}
 
 			go pipeline(msg.Data)

@@ -48,6 +48,7 @@ type PubSubProvider interface {
 // PeerManager abstracts some peer management methods from libp2p.
 type PeerManager interface {
 	Disconnect(peer.ID) error
+	PeerID() peer.ID
 }
 
 // HandshakeManager abstracts certain methods regarding handshake records.

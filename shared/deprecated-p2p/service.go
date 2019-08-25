@@ -425,6 +425,11 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 	return s.Feed(msg).Subscribe(channel)
 }
 
+// PeerID returns the local peer.
+func (s *Server) PeerID() peer.ID {
+	return s.host.ID()
+}
+
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {

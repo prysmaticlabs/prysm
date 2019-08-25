@@ -57,6 +57,7 @@ func (s *Service) Start() {
 	privKey, err := privKey(s.cfg)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to generate p2p private key")
 		return
 	}
 
@@ -65,10 +66,11 @@ func (s *Service) Start() {
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to create p2p host")
 		return
 	}
 	s.host = h
-	if s.cfg.BootstrapNodeAddr != "" {
+	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
@@ -99,6 +101,8 @@ func (s *Service) Start() {
 	s.pubsub = gs
 
 	s.started = true
+
+	registerMetrics(s)
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	log.Infof("Node currently listening at %s", multiAddrs[1].String())
@@ -147,6 +151,11 @@ func (s *Service) PubSub() *pubsub.PubSub {
 // This method is a pass through to libp2pcore.Host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// PeerID returns the Peer ID of the local peer.
+func (s *Service) PeerID() peer.ID {
+	return s.host.ID()
 }
 
 // Disconnect from a peer.

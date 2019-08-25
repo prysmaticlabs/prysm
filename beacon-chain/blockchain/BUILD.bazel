@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "log.go",
         "metrics.go",
         "receive_attestation.go",
         "receive_block.go",
@@ -14,6 +15,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain/forkchoice:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
