@@ -393,3 +393,64 @@ func TestInsertSort(t *testing.T) {
 		}
 	}
 }
+
+func TestTruncateSlice(t *testing.T) {
+	testCases := []struct {
+		slice        []uint64
+		minItemVal   uint64
+		result       []uint64
+		truncate     bool
+		itemsToTrunc []uint64
+	}{
+		{
+			slice:        []uint64{2, 3, 5, 6, 7},
+			minItemVal:   4,
+			result:       []uint64{5, 6, 7},
+			truncate:     true,
+			itemsToTrunc: []uint64{2, 3},
+		},
+		{
+			slice:        []uint64{2, 3, 5, 6, 7},
+			minItemVal:   1,
+			result:       []uint64{2, 3, 5, 6, 7},
+			truncate:     false,
+			itemsToTrunc: []uint64{},
+		},
+		{
+			slice:        []uint64{2, 3, 5, 6, 7},
+			minItemVal:   8,
+			result:       []uint64{},
+			truncate:     true,
+			itemsToTrunc: []uint64{2, 3, 5, 6, 7},
+		},
+		{
+			slice:        []uint64{2, 3, 5, 6, 7},
+			minItemVal:   0,
+			result:       []uint64{2, 3, 5, 6, 7},
+			truncate:     false,
+			itemsToTrunc: []uint64{},
+		},
+		{
+			slice:        []uint64{2, 3, 5, 6, 7},
+			minItemVal:   11,
+			result:       []uint64{},
+			truncate:     true,
+			itemsToTrunc: []uint64{2, 3, 5, 6, 7},
+		},
+	}
+	for _, tt := range testCases {
+		truncate, result, itemsToTrunc := TruncateItems(tt.slice, tt.minItemVal)
+		if truncate != tt.truncate {
+			t.Fatalf("InsertSort(%v,%v) truncate=%v wanted truncate=%v",
+				tt.slice, tt.minItemVal, truncate, tt.truncate)
+		}
+		if !reflect.DeepEqual(result, tt.result) {
+			t.Errorf("InsertSort(%v,%v)=%v, wanted: %v",
+				tt.slice, tt.minItemVal, result, tt.result)
+		}
+		if !reflect.DeepEqual(result, tt.result) {
+			t.Errorf("InsertSort(%v,%v) itemsToTrunc=%v, wanted: %v",
+				tt.slice, tt.minItemVal, itemsToTrunc, tt.itemsToTrunc)
+		}
+	}
+}
