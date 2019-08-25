@@ -365,11 +365,6 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
-	var chainService *dblockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -399,6 +394,11 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		})
 
 		return b.services.RegisterService(rs)
+	}
+
+	var chainService *dblockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
 	}
 
 	cfg := &rbcsync.Config{
