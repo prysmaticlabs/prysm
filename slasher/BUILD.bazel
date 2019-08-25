@@ -5,7 +5,10 @@ go_library(
     srcs = ["proposer_slash.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher",
     visibility = ["//slasher:__subpackages__"],
-    deps = ["@com_github_prysmaticlabs_go_bitfield//:go_default_library"],
+    deps = [
+        "//shared/sliceutil:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
 )
 
 go_test(
