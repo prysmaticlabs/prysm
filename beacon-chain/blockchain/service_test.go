@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"math/big"
@@ -17,10 +18,13 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -33,6 +37,30 @@ var _ = ChainFeeds(&ChainService{})
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+}
+
+type store struct {
+	headRoot []byte
+}
+
+func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+	return nil
+}
+
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+	return nil
+}
+
+func (s *store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
+	return nil
+}
+
+func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (s *store) Head(ctx context.Context) ([]byte, error) {
+	return s.headRoot, nil
 }
 
 type mockOperationService struct{}
@@ -261,4 +289,40 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+}
+
+func TestChainService_initializeBeaconChain(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	bc := setupBeaconChain(t, db)
+
+	// Set up 10 deposits pre chain start for validators to register
+	count := uint64(10)
+	deposits, _ := testutil.SetupInitialDeposits(t, count)
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := bc.beaconDB.State(ctx, bytesutil.ToBytes32(bc.canonicalRoots[0]))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range s.Validators {
+		if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey)) {
+			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
+		}
+	}
+
+	if bc.HeadState() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.HeadBlock() == nil {
+		t.Error("Head state can't be nil after initialize beacon chain")
+	}
+	if bc.CanonicalRoot(0) == nil {
+		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
+	}
 }

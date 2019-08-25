@@ -16,6 +16,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/network"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
@@ -44,7 +45,7 @@ const maxMessageSize = 1 << 24
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
-	Send(ctx context.Context, msg proto.Message, peer peer.ID) error
+	Send(ctx context.Context, msg proto.Message, peer peer.ID) (network.Stream, error)
 }
 
 // Server is a placeholder for a p2p service. To be designed.
@@ -424,9 +425,14 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 	return s.Feed(msg).Subscribe(channel)
 }
 
+// PeerID returns the local peer.
+func (s *Server) PeerID() peer.ID {
+	return s.host.ID()
+}
+
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
-func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {
 	isPeer := false
 	for _, p := range s.host.Network().Peers() {
 		if p == peerID {
@@ -437,7 +443,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 
 	if peerID == AnyPeer || s.host.Network().Connectedness(peerID) == libp2pnet.CannotConnect || !isPeer {
 		s.Broadcast(ctx, msg)
-		return nil
+		return nil, nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
@@ -449,7 +455,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)
 	stream, err := s.host.NewStream(ctx, peerID, pid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer stream.Close()
 
@@ -458,7 +464,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 
 	b, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	envelope := &pb.Envelope{
@@ -467,7 +473,7 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 		Timestamp:   types.TimestampNow(),
 	}
 
-	return w.WriteMsg(envelope)
+	return nil, w.WriteMsg(envelope)
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.

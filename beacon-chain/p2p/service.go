@@ -57,6 +57,7 @@ func (s *Service) Start() {
 	privKey, err := privKey(s.cfg)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to generate p2p private key")
 		return
 	}
 
@@ -65,10 +66,11 @@ func (s *Service) Start() {
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		s.startupErr = err
+		log.WithError(err).Error("Failed to create p2p host")
 		return
 	}
 	s.host = h
-	if s.cfg.BootstrapNodeAddr != "" {
+	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
@@ -78,6 +80,14 @@ func (s *Service) Start() {
 		s.dv5Listener = listener
 
 		go s.listenForNewNodes()
+	}
+
+	if len(s.cfg.StaticPeers) > 0 {
+		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
+		if err != nil {
+			log.Errorf("Could not connect to static peer: %v", err)
+		}
+		s.connectWithAllPeers(addrs)
 	}
 
 	// TODO(3147): Add gossip sub options
@@ -91,6 +101,11 @@ func (s *Service) Start() {
 	s.pubsub = gs
 
 	s.started = true
+
+	registerMetrics(s)
+
+	multiAddrs := s.host.Network().ListenAddresses()
+	log.Infof("Node currently listening at %s", multiAddrs[1].String())
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -138,10 +153,14 @@ func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) 
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
 }
 
+// PeerID returns the Peer ID of the local peer.
+func (s *Service) PeerID() peer.ID {
+	return s.host.ID()
+}
+
 // Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
-	// TODO(3147): Implement disconnect
-	return nil
+	return s.host.Network().ClosePeer(pid)
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.

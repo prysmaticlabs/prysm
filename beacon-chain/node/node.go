@@ -386,10 +386,16 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	if featureconfig.FeatureConfig().UseNewSync {
+		var chainService *blockchain.ChainService
+		if err := b.services.FetchService(&chainService); err != nil {
+			return err
+		}
+
 		rs := prysmsync.NewRegularSync(&prysmsync.Config{
 			DB:         b.db,
 			P2P:        b.fetchP2P(ctx),
 			Operations: operationService,
+			Chain:      chainService,
 		})
 
 		return b.services.RegisterService(rs)
@@ -410,9 +416,19 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *dblockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
+	var chainService interface{}
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		var newChain *blockchain.ChainService
+		if err := b.services.FetchService(&newChain); err != nil {
+			return err
+		}
+		chainService = newChain
+	} else {
+		var deprecatedChain *dblockchain.ChainService
+		if err := b.services.FetchService(&deprecatedChain); err != nil {
+			return err
+		}
+		chainService = deprecatedChain
 	}
 
 	var operationService *operations.Service
@@ -453,6 +469,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		OperationService: operationService,
 		POWChainService:  web3Service,
 		SyncService:      syncChecker,
+		DepositCache:     b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)

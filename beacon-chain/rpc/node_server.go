@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"sort"
-	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -33,25 +32,8 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	// TODO(3045): Use the db.Database interface only.
-	beaconState, err := ns.beaconDB.(*db.BeaconDB).FinalizedState()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve beacon state: %v", err)
-	}
-	// TODO(3045): Use the db.Database interface only.
-	address, err := ns.beaconDB.(*db.BeaconDB).DepositContractAddress(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve deposit contract address: %v", err)
-	}
-	genesisTimestamp := time.Unix(int64(beaconState.GenesisTime), 0)
-	genesisProtoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto timestamp: %v", err)
-	}
-	return &ethpb.Genesis{
-		DepositContractAddress: address,
-		GenesisTime:            genesisProtoTimestamp,
-	}, nil
+	// TODO(3045): Use the getter from the blockchain service.
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // GetVersion checks the version information of the beacon node.

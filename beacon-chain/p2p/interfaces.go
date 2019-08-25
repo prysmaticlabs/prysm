@@ -48,6 +48,7 @@ type PubSubProvider interface {
 // PeerManager abstracts some peer management methods from libp2p.
 type PeerManager interface {
 	Disconnect(peer.ID) error
+	PeerID() peer.ID
 }
 
 // HandshakeManager abstracts certain methods regarding handshake records.
@@ -57,5 +58,5 @@ type HandshakeManager interface {
 
 // Sender abstracts the sending functionality from libp2p.
 type Sender interface {
-	Send(context.Context, proto.Message, peer.ID) error
+	Send(context.Context, proto.Message, peer.ID) (network.Stream, error)
 }

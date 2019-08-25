@@ -10,10 +10,6 @@ import (
 )
 
 var (
-	peerCountMetric = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "p2p_peer_count",
-		Help: "The number of currently connected peers",
-	})
 	propagationTimeMetric = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "p2p_propagation_time_sec",
 		Help:    "The time between message sent/received from peer",
@@ -24,6 +20,10 @@ var (
 // starPeerWatcher updates the peer count metric and calls to reconnect any VIP
 // peers such as the bootnode peer, the relay node peer or the static peers.
 func startPeerWatcher(ctx context.Context, h host.Host, reconnectPeers ...string) {
+	peerCountMetric := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "p2p_peer_count",
+		Help: "The number of currently connected peers",
+	})
 
 	go (func() {
 		for {

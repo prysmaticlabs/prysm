@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,8 +38,8 @@ func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]
 }
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(10)
@@ -73,8 +73,8 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -171,8 +171,8 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(1)
@@ -215,8 +215,8 @@ func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -254,16 +254,26 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	bs := &BeaconChainServer{
 		pool:     &mockPool{},
 		beaconDB: db,
 	}
-	if err := bs.beaconDB.SaveBlock(ctx, &ethpb.BeaconBlock{Slot: 10}); err != nil {
+	block := &ethpb.BeaconBlock{
+		Slot: 10,
+	}
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.(*db2.BeaconDB).UpdateChainHead(ctx, &ethpb.BeaconBlock{Slot: 10}, &pbp2p.BeaconState{Slot: 10}); err != nil {
+	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.SaveState(ctx, &pbp2p.BeaconState{Slot: 10}, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
@@ -277,25 +287,10 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
-	count := 100
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances}); err != nil {
-		t.Fatal(err)
-	}
+	setupValidators(t, db, 100)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
@@ -346,56 +341,26 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-
-	count := 1
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances}); err != nil {
-		t.Fatal(err)
-	}
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
+	_, balances := setupValidators(t, db, 1)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(count)}}
-	wanted := fmt.Sprintf("validator index %d >= balance list %d", count, len(balances))
+	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
+	wanted := fmt.Sprintf("validator index %d >= balance list %d", 1, len(balances))
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
 func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
-	count := 100
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
+	validators, _ := setupValidators(t, db, 100)
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
@@ -411,25 +376,11 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
 	count := 100
-	balances := make([]uint64, count)
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		balances[i] = uint64(i)
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances}); err != nil {
-		t.Fatal(err)
-	}
+	setupValidators(t, db, count)
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
@@ -483,24 +434,11 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
 	count := 1
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
+	validators, _ := setupValidators(t, db, count)
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
@@ -524,24 +462,10 @@ func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
-	count := 1000
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
+	validators, _ := setupValidators(t, db, 1000)
 	bs := &BeaconChainServer{
 		beaconDB: db,
 	}
@@ -560,24 +484,10 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
-	count := 1
-	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
-			t.Fatal(err)
-		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
-	}
-
-	if err := db.SaveStateDeprecated(
-		context.Background(),
-		&pbp2p.BeaconState{Validators: validators}); err != nil {
-		t.Fatal(err)
-	}
-
+	setupValidators(t, db, 1)
 	bs := &BeaconChainServer{beaconDB: db}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
@@ -598,13 +508,14 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
@@ -615,11 +526,22 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		}
 	}
 
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveStateDeprecated(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -660,23 +582,35 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
 	}
 
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveStateDeprecated(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -718,23 +652,35 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
+	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndexDeprecated([]byte{byte(i)}, i); err != nil {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
 	}
 
 	s := &pbp2p.BeaconState{
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	if err := db.SaveStateDeprecated(context.Background(), s); err != nil {
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -814,10 +760,10 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	helpers.ClearAllCaches()
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-
+	ctx := context.Background()
 	epoch := uint64(1)
 	attestedBalance := uint64(1)
 	validatorCount := uint64(100)
@@ -861,14 +807,21 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 		beaconDB: db,
 	}
 
-	if err := bs.beaconDB.(*db2.BeaconDB).SaveStateDeprecated(context.Background(), s); err != nil {
+	block := &ethpb.BeaconBlock{
+		Slot: 1,
+	}
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.beaconDB.(*db2.BeaconDB).SaveFinalizedBlock(&ethpb.BeaconBlock{Slot: 1}); err != nil {
+	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.beaconDB.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := bs.GetValidatorParticipation(context.Background(), &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -886,8 +839,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -896,10 +849,10 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
-		if err := db.SaveBlockDeprecated(b); err != nil {
-			t.Fatal(err)
-		}
 		blks[i] = b
+	}
+	if err := db.SaveBlocks(ctx, blks); err != nil {
+		t.Fatal(err)
 	}
 
 	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
@@ -974,15 +927,15 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Error("Incorrect blocks response")
+			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.Blocks), len(res.Blocks))
 		}
 	}
 }
 
 func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
 	ctx := context.Background()
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
 
 	bs := &BeaconChainServer{beaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
@@ -1009,7 +962,6 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-
 	}
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
@@ -1050,4 +1002,35 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
 
 	}
+}
+
+func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
+	ctx := context.Background()
+	balances := make([]uint64, count)
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		balances[i] = uint64(i)
+		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}})
+	}
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(
+		context.Background(),
+		&pbp2p.BeaconState{Validators: validators, Balances: balances},
+		blockRoot,
+	); err != nil {
+		t.Fatal(err)
+	}
+	return validators, balances
 }

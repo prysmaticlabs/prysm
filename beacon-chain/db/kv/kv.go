@@ -3,26 +3,26 @@ package kv
 import (
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
+
+// BlockCacheSize specifies 4 epochs worth of blocks cached.
+const BlockCacheSize = 256
+
+// VotesCacheSize with 1M validators will only be around 50Mb.
+const VotesCacheSize = 1000000
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db           *bolt.DB
 	databasePath string
-
-	// Caching layer properties.
-	blocksLock  sync.RWMutex
-	votesLock   sync.RWMutex
-	blocks      map[[32]byte]*ethpb.BeaconBlock
-	latestVotes map[uint64]*pb.ValidatorLatestVote
+	blockCache   *ccache.Cache
+	votesCache   *ccache.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -44,8 +44,8 @@ func NewKVStore(dirPath string) (*Store, error) {
 	kv := &Store{
 		db:           boltDB,
 		databasePath: dirPath,
-		blocks:       make(map[[32]byte]*ethpb.BeaconBlock),
-		latestVotes:  make(map[uint64]*pb.ValidatorLatestVote),
+		blockCache:   ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
+		votesCache:   ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
