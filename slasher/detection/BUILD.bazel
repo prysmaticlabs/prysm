@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["proposer_slash.go"],
-    importpath = "github.com/prysmaticlabs/prysm/slasher",
-    visibility = ["//slasher:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/slasher/detection",
+    visibility = ["//visibility:public"],
     deps = [
         "//shared/sliceutil:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
@@ -13,7 +13,6 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    timeout = "short",
     srcs = ["proposer_slash_test.go"],
     embed = [":go_default_library"],
     deps = ["@com_github_prysmaticlabs_go_bitfield//:go_default_library"],
