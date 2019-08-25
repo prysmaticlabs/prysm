@@ -352,3 +352,44 @@ func TestIntersectionByteSlices(t *testing.T) {
 		}
 	}
 }
+
+func TestInsertSort(t *testing.T) {
+	testCases := []struct {
+		slice     []uint64
+		itemToAdd uint64
+		result    []uint64
+	}{
+		{
+			slice:     []uint64{2, 3, 5, 6, 7},
+			itemToAdd: 4,
+			result:    []uint64{2, 3, 4, 5, 6, 7},
+		},
+		{
+			slice:     []uint64{2, 3, 5, 6, 7},
+			itemToAdd: 1,
+			result:    []uint64{1, 2, 3, 5, 6, 7},
+		},
+		{
+			slice:     []uint64{2, 3, 5, 6, 7},
+			itemToAdd: 8,
+			result:    []uint64{2, 3, 5, 6, 7, 8},
+		},
+		{
+			slice:     []uint64{2, 3, 5, 6, 7},
+			itemToAdd: 0,
+			result:    []uint64{0, 2, 3, 5, 6, 7},
+		},
+		{
+			slice:     []uint64{2, 3, 5, 6, 7},
+			itemToAdd: 11,
+			result:    []uint64{2, 3, 5, 6, 7, 11},
+		},
+	}
+	for _, tt := range testCases {
+		result := InsertSort(tt.slice, tt.itemToAdd)
+		if !reflect.DeepEqual(result, tt.result) {
+			t.Errorf("InsertSort(%v,%v)=%v, wanted: %v",
+				tt.slice, tt.itemToAdd, result, tt.result)
+		}
+	}
+}
