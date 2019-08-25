@@ -80,6 +80,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
+	fmt.Println(v.pubkeys)
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: v.pubkeys,
 	}
@@ -127,7 +128,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			log.WithFields(logrus.Fields{
 				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 				"status":    status.Status.Status.String(),
-			}).Info("Validator has been Activated")
+			}).Info("Validator has been activated")
 			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {

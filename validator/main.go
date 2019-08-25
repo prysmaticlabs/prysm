@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -65,7 +66,7 @@ func startNode(ctx *cli.Context) error {
 			if err != nil {
 				logrus.Fatal(err)
 			}
-			validatorKeys[string(priv.PublicKey().Marshal())] = k
+			validatorKeys[hex.EncodeToString(priv.PublicKey().Marshal())] = k
 		}
 		validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
 		if err != nil {

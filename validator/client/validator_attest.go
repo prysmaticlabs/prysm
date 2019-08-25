@@ -29,6 +29,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
+	fmt.Println(v.keys[pk])
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
 
 	span.AddAttributes(

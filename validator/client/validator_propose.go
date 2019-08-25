@@ -28,6 +28,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	defer span.End()
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	fmt.Println(v.keys[pk])
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
 
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
