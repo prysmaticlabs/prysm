@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"reflect"
@@ -113,6 +114,36 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
 	testutil.AssertLogsContain(t, hook, "Finished applying fork choice for block")
+}
+
+func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db)
+
+	headBlk := &ethpb.BeaconBlock{Slot: 100}
+	if err := db.SaveBlock(ctx, headBlk); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.SigningRoot(headBlk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chainService.forkChoiceStore = &store{headRoot: r[:]}
+
+	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(r[:], chainService.HeadRoot()) {
+		t.Error("Incorrect head root saved")
+	}
+
+	if !reflect.DeepEqual(headBlk, chainService.HeadBlock()) {
+		t.Error("Incorrect head block saved")
+	}
 }
 
 func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {

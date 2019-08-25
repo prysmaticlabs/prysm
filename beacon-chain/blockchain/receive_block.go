@@ -87,12 +87,12 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
 
 	// Save head info after running fork choice.
-	if err := c.saveHead(ctx, block, root); err != nil {
+	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+	if err := c.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
@@ -124,7 +124,7 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+	if err := c.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
@@ -132,11 +132,11 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	return nil
 }
 
-// CleanupBlockOperations processes and cleans up any block operations relevant to the beacon node
+// cleanupBlockOperations processes and cleans up any block operations relevant to the beacon node
 // such as attestations, exits, and deposits. We update the latest seen attestation by validator
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
-func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (c *ChainService) cleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
