@@ -1,8 +1,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -84,21 +86,21 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	log.WithFields(logrus.Fields{
 		"headSlot": headBlk.Slot,
 		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Finished fork choice")
+	}).Info("Finished applying fork choice for block")
 
 	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
 
 	// Save head info after running fork choice.
-	if err := c.saveHead(ctx, block, root); err != nil {
+	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+	if err := c.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
-	// Save newly active and deleted validator indices in DB.
+	// Update validator's public key to indices mapping in DB.
 	if helpers.IsEpochStart(block.Slot) {
 		if err := c.updateValidatorsDB(ctx, root); err != nil {
 			return errors.Wrap(err, "could not update validators db")
@@ -133,11 +135,11 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.CleanupBlockOperations(ctx, block); err != nil {
+	if err := c.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
-	// Save newly active and deleted validator indices in DB.
+	// Update validator's public key to indices mapping in DB.
 	if helpers.IsEpochStart(block.Slot) {
 		if err := c.updateValidatorsDB(ctx, root); err != nil {
 			return errors.Wrap(err, "could not update validators db")
@@ -148,11 +150,11 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	return nil
 }
 
-// CleanupBlockOperations processes and cleans up any block operations relevant to the beacon node
+// cleanupBlockOperations processes and cleans up any block operations relevant to the beacon node
 // such as attestations, exits, and deposits. We update the latest seen attestation by validator
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
-func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (c *ChainService) cleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
@@ -165,14 +167,14 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *ethpb.
 	return nil
 }
 
-// this updates validator's pubkey to indices mapping stored in DB, due to validator activation
-// and exit, we should check on every epoch.
+// this updates validator's public key to indices mapping stored in DB, due to the frequent
+// validator activation and exit, we should check this every epoch.
 func (c *ChainService) updateValidatorsDB(ctx context.Context, r [32]byte) error {
 	s, err := c.beaconDB.State(ctx, r)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve latest processed state in DB")
 	}
-	if err := c.saveGenesisValidators(ctx, s); err != nil {
+	if err := c.saveValidatorIdx(ctx, s); err != nil {
 		return errors.Wrap(err, "could not save validator index")
 	}
 	if err := c.deleteValidatorIdx(ctx, s); err != nil {
@@ -188,6 +190,7 @@ func (c *ChainService) saveValidatorIdx(ctx context.Context, state *pb.BeaconSta
 	nextEpoch := helpers.CurrentEpoch(state) + 1
 	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
 	var idxNotInState []uint64
+	fmt.Println(activatedValidators)
 	for _, idx := range activatedValidators {
 		// If for some reason the activated validator indices is not in state,
 		// we skip them and save them to process for next epoch.
@@ -220,4 +223,17 @@ func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconS
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
+}
+
+// This checks if the block is from a competing chain, emits warning and updates metrics.
+func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
+	if !bytes.Equal(root[:], headRoot) {
+		log.WithFields(logrus.Fields{
+			"blkSlot":  slot,
+			"blkRoot":  hex.EncodeToString(root[:]),
+			"headSlot": headSlot,
+			"headRoot": hex.EncodeToString(headRoot),
+		}).Warn("Calculated head diffs from new block")
+		competingBlks.Inc()
+	}
 }
