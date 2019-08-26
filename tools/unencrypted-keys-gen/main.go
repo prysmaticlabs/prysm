@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
+	"os"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
@@ -50,8 +51,6 @@ func main() {
 		}
 	}
 
-	log.Print(len(ctnr.Keys))
-
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
 		log.Fatal(err)
@@ -62,18 +61,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Print(len(newCont.Keys))
-	//file, err := os.Create(*outputJSON)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//defer file.Close()
-	//
-	//n, err := file.Write(enc)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//if n != len(enc) {
-	//	log.Fatalf("Failed to write %d bytes to file, wrote %d", len(enc), n)
-	//}
+	file, err := os.Create(*outputJSON)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	n, err := file.Write(enc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if n != len(enc) {
+		log.Fatalf("Failed to write %d bytes to file, wrote %d", len(enc), n)
+	}
 }
