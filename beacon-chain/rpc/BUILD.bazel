@@ -88,6 +88,7 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/mock:go_default_library",
         "//shared/trieutil:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
