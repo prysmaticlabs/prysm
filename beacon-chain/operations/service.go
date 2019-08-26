@@ -248,9 +248,17 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	hash, err := hashutil.HashProto(attestation.Data)
-	if err != nil {
-		return err
+	var hash [32]byte
+	if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
+		hash, err = hashutil.HashProto(attestation.Data)
+		if err != nil {
+			return err
+		}
+	} else {
+		hash, err = ssz.HashTreeRoot(attestation.Data)
+		if err != nil {
+			return err
+		}
 	}
 
 	incomingAttBits := attestation.AggregationBits
