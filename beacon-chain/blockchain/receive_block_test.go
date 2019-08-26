@@ -116,7 +116,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Finished applying fork choice for block")
 }
 
-func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
+func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -133,7 +133,9 @@ func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
 	}
 	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
-	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}); err != nil {
+	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{
+		Slot: 1,
+		Body: &ethpb.BeaconBlockBody{}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,6 +145,62 @@ func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
 
 	if !reflect.DeepEqual(headBlk, chainService.HeadBlock()) {
 		t.Error("Incorrect head block saved")
+	}
+}
+
+func TestReceiveBlockNoPubsub_CanUpdateValidatorDB(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db)
+
+	b := &ethpb.BeaconBlock{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Body: &ethpb.BeaconBlockBody{}}
+	bRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pb.BeaconState{
+		Validators: []*ethpb.Validator{
+			{PublicKey: []byte{'A'}},
+			{PublicKey: []byte{'B'}},
+			{PublicKey: []byte{'C'}},
+			{PublicKey: []byte{'D'}},
+		},
+	}, bRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	headBlk := &ethpb.BeaconBlock{Slot: 100}
+	if err := db.SaveBlock(ctx, headBlk); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.SigningRoot(headBlk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.forkChoiceStore = &store{headRoot: r[:]}
+
+	v.InsertActivatedIndices(1, []uint64{1, 2})
+
+	if err := chainService.ReceiveBlockNoPubsub(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+
+	index, _, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'B'}))
+	if index != 1 {
+		t.Errorf("Wanted: %d, got: %d", 1, index)
+	}
+	index, _, _ = db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'C'}))
+	if index != 2 {
+		t.Errorf("Wanted: %d, got: %d", 2, index)
+	}
+	_, e, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'D'}))
+	if e == true {
+		t.Error("Index should not exist in DB")
 	}
 }
 
@@ -238,6 +296,62 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
 	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
+}
+
+func TestReceiveBlockNoPubsubForkchoice_CanUpdateValidatorDB(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db)
+
+	b := &ethpb.BeaconBlock{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Body: &ethpb.BeaconBlockBody{}}
+	bRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pb.BeaconState{
+		Validators: []*ethpb.Validator{
+			{PublicKey: []byte{'X'}},
+			{PublicKey: []byte{'Y'}},
+			{PublicKey: []byte{'Z'}},
+		},
+	}, bRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	headBlk := &ethpb.BeaconBlock{Slot: 100}
+	if err := db.SaveBlock(ctx, headBlk); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.SigningRoot(headBlk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.forkChoiceStore = &store{headRoot: r[:]}
+
+	v.DeleteActivatedVal(1)
+	v.InsertActivatedIndices(1, []uint64{0})
+
+	if err := chainService.ReceiveBlockNoPubsub(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+
+	index, _, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'X'}))
+	if index != 0 {
+		t.Errorf("Wanted: %d, got: %d", 1, index)
+	}
+	_, e, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'Y'}))
+	if e == true {
+		t.Error("Index should not exist in DB")
+	}
+	_, e, _ = db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'Z'}))
+	if e == true {
+		t.Error("Index should not exist in DB")
+	}
 }
 
 func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
