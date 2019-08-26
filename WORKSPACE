@@ -39,8 +39,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "9abd649b74317c9c135f4810636aaa838d5bea4913bfa93a85c2f52a919fdaf3",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.0/rules_nodejs-0.36.0.tar.gz"],
+    sha256 = "3356c6b767403392bab018ce91625f6d15ff8f11c6d772dc84bc9cada01c669a",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.1/rules_nodejs-0.36.1.tar.gz"],
 )
 
 http_archive(
@@ -52,7 +52,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "8dc6490f819d330361f46201e3390ce5457564a2",
+    commit = "bd93910450a0f041f5d34a4b97faffcabba21419",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -173,7 +173,7 @@ buildifier_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
+    commit = "d74b93584564161b2de771089ee697f07d8bd5b5",  # v1.3.1
     importpath = "github.com/golang/mock",
 )
 
@@ -278,7 +278,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "221d8d5e05a0252049203c8f74d4f38b64da9963",  # v0.2.0
+    commit = "bfc3909f54afa1cf5ac4fb4822108705f068f304",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -585,7 +585,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d",  # v1.4.0
+    commit = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b",  # v1.4.1
     importpath = "github.com/gorilla/websocket",
 )
 
@@ -597,7 +597,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "a50d1c7d55c7bbc52879616e7e0c8cdf38747c1a",  # v0.1.3
+    commit = "da3b45205dfce3ef3926054ffd5dee76f5903382",  # v0.1.4
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -714,7 +714,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "49274b0e8aecdf6cad59d768e5702ff00aa48488",  # v0.1.0
+    commit = "9f04364996b415168f0e0d7e9fc82272fbed4005",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
@@ -739,7 +739,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "aa9190c18f1576be98e974359fd08c64ca0b5a94",  # v0.0.5
+    commit = "507733cb3c352085b791341655a0b7ef52a17533",  # v0.1.0
     importpath = "github.com/ipfs/go-datastore",
 )
 

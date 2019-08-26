@@ -180,6 +180,7 @@ func (s *Service) Start() {
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
+		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 		depositCache:       s.depositCache,

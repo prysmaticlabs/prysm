@@ -16,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 )
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
@@ -94,10 +95,10 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 
 	r := &RegularSync{
 		p2p: p1,
-		chain: &mockChainService{
-			headState:        genesisState,
-			finalizedCheckpt: finalizedCheckpt,
-			headRoot:         headRoot[:],
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
 		},
 	}
 

@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 )
 
 func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.BeaconState) {
@@ -99,7 +100,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	r := &RegularSync{
 		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		chain: &mock.ChainService{State: s},
 	}
 
 	if !r.validateProposerSlashing(ctx, slashing, p2p) {
