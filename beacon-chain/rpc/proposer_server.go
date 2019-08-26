@@ -246,19 +246,11 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
-	var beaconState *pbp2p.BeaconState
-	var err error
-	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-		beaconState, err = ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
-	} else {
-		beaconState, err = ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
+	beaconState, err := ps.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
+
 	s, err := state.ExecuteStateTransitionNoVerify(
 		ctx,
 		beaconState,
