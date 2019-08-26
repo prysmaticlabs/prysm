@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -54,6 +55,70 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to have been deleted from the db")
 	}
+}
+
+func TestStore_BoltDontPanic(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	var wg sync.WaitGroup
+
+	for i := 0; i <= 100; i++ {
+		att := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard:      5,
+					ParentRoot: []byte("parent"),
+					StartEpoch: uint64(i + 1),
+					EndEpoch:   2,
+				},
+			},
+		}
+		ctx := context.Background()
+		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		retrievedAtt, err := db.Attestation(ctx, attDataRoot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if retrievedAtt != nil {
+			t.Errorf("Expected nil attestation, received %v", retrievedAtt)
+		}
+		if err := db.SaveAttestation(ctx, att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// if indices are improperly deleted this test will then panic.
+	for i := 0; i <= 100; i++ {
+		startEpoch := i + 1
+		wg.Add(1)
+		go func() {
+			att := &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard:      5,
+						ParentRoot: []byte("parent"),
+						StartEpoch: uint64(startEpoch),
+						EndEpoch:   2,
+					},
+				},
+			}
+			ctx := context.Background()
+			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := db.DeleteAttestation(ctx, attDataRoot); err != nil {
+				t.Fatal(err)
+			}
+			if db.HasAttestation(ctx, attDataRoot) {
+				t.Error("Expected attestation to have been deleted from the db")
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
