@@ -6,7 +6,7 @@ proto_library(
     srcs = ["types.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "//github.com/gogo/protobuf/gogoproto:gogoproto_proto",
+        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
         "//proto/eth/v1alpha1:v1alpha1_proto",
     ],
 )
