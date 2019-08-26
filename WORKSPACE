@@ -278,7 +278,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "221d8d5e05a0252049203c8f74d4f38b64da9963",  # v0.2.0
+    commit = "bfc3909f54afa1cf5ac4fb4822108705f068f304",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -597,7 +597,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "a50d1c7d55c7bbc52879616e7e0c8cdf38747c1a",  # v0.1.3
+    commit = "da3b45205dfce3ef3926054ffd5dee76f5903382",  # v0.1.4
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -714,7 +714,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "49274b0e8aecdf6cad59d768e5702ff00aa48488",  # v0.1.0
+    commit = "9f04364996b415168f0e0d7e9fc82272fbed4005",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
@@ -739,7 +739,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "aa9190c18f1576be98e974359fd08c64ca0b5a94",  # v0.0.5
+    commit = "507733cb3c352085b791341655a0b7ef52a17533",  # v0.1.0
     importpath = "github.com/ipfs/go-datastore",
 )
 
