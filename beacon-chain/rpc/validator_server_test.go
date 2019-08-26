@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -75,15 +76,9 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
 	validatorServer := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
@@ -110,15 +105,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
 	vs := &ValidatorServer{
-		beaconDB: db,
+		chainService: &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 
 	pubKey := make([]byte, 96)
@@ -151,14 +139,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
@@ -178,7 +158,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	// Test the first validator in registry.
@@ -240,14 +221,6 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
@@ -267,7 +240,8 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	// Test the first validator in registry.
@@ -301,14 +275,6 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
 	var wg sync.WaitGroup
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
@@ -328,7 +294,8 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -370,19 +337,16 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 	// Pending active because activation epoch is still defaulted at far future slot.
-	if err := db.SaveState(
-		ctx,
-		&pbp2p.BeaconState{
-			Validators: []*ethpb.Validator{
-				{
-					ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-					PublicKey:       pubKey,
-				},
+	state := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+				PublicKey:       pubKey,
 			},
-			Slot: 5000,
 		},
-		genesisRoot,
-	); err != nil {
+		Slot: 5000,
+	}
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
@@ -410,6 +374,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -463,19 +428,15 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+
+	state := &pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: activeEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	vs := &ValidatorServer{
@@ -486,6 +447,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -528,19 +490,16 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			ActivationEpoch:   0,
 			ExitEpoch:         exitEpoch,
 			WithdrawableEpoch: withdrawableEpoch},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
+
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -565,6 +524,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -599,18 +559,14 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+
+	state := &pbp2p.BeaconState{
 		Slot: 10000,
 		Validators: []*ethpb.Validator{{
 			WithdrawableEpoch: epoch - 1,
 			ExitEpoch:         epoch - 2,
 			PublicKey:         pubKey},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -635,6 +591,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -669,18 +626,14 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -705,6 +658,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -742,14 +696,12 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -774,6 +726,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -805,18 +758,13 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{
+	state := &pbp2p.BeaconState{
 		Slot: 0,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			PublicKey:       pubKey},
-		}}, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
+		}}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -841,6 +789,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 			},
 		},
 		depositCache: depositCache,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -871,12 +820,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	vs := &ValidatorServer{
@@ -885,6 +828,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		powChainService:    &mockPOWChainService{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		depositCache:       depositcache.NewDepositCache(),
+		chainService:       &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{[]byte("A")},
@@ -950,18 +894,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	genesisRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
@@ -995,6 +930,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 		depositCache:       depositCache,
+		chainService:       &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -1059,18 +995,9 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
 	genesisRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             []byte{'A'},
@@ -1116,6 +1043,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		powChainService:    &mockPOWChainService{},
 		depositCache:       depositCache,
+		chainService:       &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	activeExists, response, err := vs.MultipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
@@ -1159,12 +1087,6 @@ func BenchmarkAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		b.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		b.Fatalf("could not save state: %v", err)
-	}
 	var wg sync.WaitGroup
 	errs := make(chan error, validatorCount)
 	for i := 0; i < int(validatorCount); i++ {
@@ -1185,7 +1107,8 @@ func BenchmarkAssignment(b *testing.B) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB: db,
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	// Set up request for 100 public keys at a time

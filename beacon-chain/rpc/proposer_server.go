@@ -52,6 +52,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get canonical head block")
 		}
+		parent = ps.chainService.(newBlockchain.HeadRetriever).HeadBlock()
 	}
 
 	parentRoot, err := ssz.SigningRoot(parent)
@@ -147,10 +148,17 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	beaconState, err := ps.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
+	var beaconState *pbp2p.BeaconState
+	var err error
+	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		beaconState, err = ps.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve beacon state")
+		}
+	} else {
+		beaconState = ps.chainService.(newBlockchain.HeadRetriever).HeadState()
 	}
+
 	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
@@ -240,8 +248,9 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
 	beaconState, err := ps.beaconDB.HeadState(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get beacon state")
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
+
 	s, err := state.ExecuteStateTransitionNoVerify(
 		ctx,
 		beaconState,
@@ -267,10 +276,17 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState, err := ps.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch beacon state")
+	var beaconState *pbp2p.BeaconState
+	var err error
+	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		beaconState, err = ps.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve beacon state")
+		}
+	} else {
+		beaconState = ps.chainService.(newBlockchain.HeadRetriever).HeadState()
 	}
+
 	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
