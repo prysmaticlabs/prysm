@@ -1,0 +1,35 @@
+syntax = "proto3";
+package ethereum.light.v1alpha1;
+
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+
+message CompactCommittee {
+    repeated bytes public_keys = 1 [(gogoproto.moretags) = "ssz-size:\"48,4096\""];
+    repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-size:\"4096\""];
+}
+
+message LightClientUpdate {
+    // Shard block root for authenticating signature data
+        bytes shard_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes fork_version = 2 [(gogoproto.moretags) = "ssz-size:\"4\""];
+    bytes aggregation_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+    // Updated beacon header for authenticating branch
+    ethereum.eth.v1alpha1.BeaconBlockHeader header = 5;
+    repeated bytes header_branch = 6 [(gogoproto.moretags) = "ssz-size:\"4\""];
+    // Updated persistent committee for authenticating branch
+    CompactCommittee committee = 7;
+    repeated bytes committee_branch = 8 [(gogoproto.moretags) = "ssz-size:\"16\""];
+
+}
+
+message LightClientStore {
+    uint64 shard = 1;
+    ethereum.eth.v1alpha1.BeaconBlockHeader header = 2;
+    // Persistent committees corresponding to the last processed beacon block header
+    CompactCommittee previous_committee = 3;
+    CompactCommittee current_committee = 4;
+    CompactCommittee next_committee = 5;
+}
