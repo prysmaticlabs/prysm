@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 )
 
 func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
@@ -62,8 +63,10 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
 	}
 
 	if !r.validateVoluntaryExit(ctx, exit, p2p) {

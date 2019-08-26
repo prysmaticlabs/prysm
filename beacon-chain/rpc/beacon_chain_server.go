@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -24,6 +25,7 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB db.Database
+	head     blockchain.HeadRetriever
 	pool     operations.Pool
 }
 
@@ -220,10 +222,21 @@ func (bs *BeaconChainServer) ListBlocks(
 //
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
-func (bs *BeaconChainServer) GetChainHead(
-	ctx context.Context, _ *ptypes.Empty,
-) (*ethpb.ChainHead, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+	finalizedCheckpoint := bs.head.HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.head.HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.head.HeadState().PreviousJustifiedCheckpoint
+
+	return &ethpb.ChainHead{
+		BlockRoot:                  bs.head.HeadRoot(),
+		BlockSlot:                  bs.head.HeadSlot(),
+		FinalizedBlockRoot:         finalizedCheckpoint.Root,
+		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		JustifiedBlockRoot:         justifiedCheckpoint.Root,
+		JustifiedSlot:              justifiedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
+		PreviousJustifiedSlot:      prevJustifiedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+	}, nil
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public key at

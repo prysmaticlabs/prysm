@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -154,12 +155,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	ctx := context.Background()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -236,12 +234,6 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	proposerServer := &ProposerServer{
-		operationService: &mockOperationService{
-			pendingAttestations: []*ethpb.Attestation{att},
-		},
-		beaconDB: db,
-	}
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
@@ -250,14 +242,11 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{
+			pendingAttestations: []*ethpb.Attestation{att},
+		},
+		chainService: &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	atts, err := proposerServer.attestations(context.Background(), stateSlot)
@@ -272,10 +261,10 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
+
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	ctx := context.Background()
 
 	// Edge case: current slot is at the end of an epoch. The pending attestation
 	// for the next slot should come from currentSlot + 1.
@@ -398,12 +387,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			att3,
 		},
 	}
-	expectedNumberOfAttestations := 3
-	proposerServer := &ProposerServer{
-		operationService: opService,
-		beaconDB:         db,
-	}
-
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
@@ -412,14 +395,11 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
+	expectedNumberOfAttestations := 3
+	proposerServer := &ProposerServer{
+		beaconDB:         db,
+		operationService: opService,
+		chainService:     &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay+1)
@@ -470,8 +450,6 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 
 func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
@@ -502,11 +480,6 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Eth1DataVotes:    votes,
 	}
 
-	bs := &ProposerServer{
-		beaconDB:        db,
-		powChainService: p,
-	}
-
 	blk := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
 	}
@@ -516,14 +489,9 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
+	bs := &ProposerServer{
+		powChainService: p,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -572,8 +540,6 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
@@ -669,20 +635,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-
 	bs := &ProposerServer{
-		beaconDB:        db,
 		powChainService: p,
 		depositCache:    depositCache,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -711,8 +667,6 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
@@ -748,16 +702,6 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 	blkRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -832,9 +776,9 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	}
 
 	bs := &ProposerServer{
-		beaconDB:        db,
 		powChainService: p,
 		depositCache:    depositCache,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
@@ -864,8 +808,6 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
 		latestBlockNumber: height,
@@ -886,15 +828,6 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	}
 	blkRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -956,9 +889,9 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	}
 
 	bs := &ProposerServer{
-		beaconDB:        db,
 		powChainService: p,
 		depositCache:    depositCache,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -980,8 +913,6 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
@@ -1005,15 +936,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
@@ -1072,9 +994,9 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	}
 
 	bs := &ProposerServer{
-		beaconDB:        db,
 		powChainService: p,
 		depositCache:    depositCache,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -1094,8 +1016,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
@@ -1119,15 +1039,6 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
@@ -1186,7 +1097,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	}
 
 	bs := &ProposerServer{
-		beaconDB:        db,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		powChainService: p,
 		depositCache:    depositCache,
 	}
@@ -1207,24 +1118,17 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 }
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
-	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-
-	proposerServer := &ProposerServer{
-		beaconDB: db,
-		powChainService: &faultyPOWChainService{
-			hashesByHeight: make(map[int][]byte),
-		},
-	}
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
-	if err := proposerServer.beaconDB.SaveState(ctx, beaconState, [32]byte{}); err != nil {
-		t.Fatal(err)
+	proposerServer := &ProposerServer{
+		powChainService: &faultyPOWChainService{
+			hashesByHeight: make(map[int][]byte),
+		},
+		chainService: &mock.ChainService{State: beaconState},
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
 	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
@@ -1234,8 +1138,6 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 
 func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	deps := []*depositcache.DepositContainer{
@@ -1277,7 +1179,6 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		},
 	}
 	proposerServer := &ProposerServer{
-		beaconDB:        db,
 		powChainService: powChainService,
 		depositCache:    depositCache,
 	}
@@ -1302,8 +1203,6 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 
 // TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	slot := uint64(10000)
 
@@ -1319,7 +1218,6 @@ func TestEth1Data(t *testing.T) {
 				DepositCount: 55,
 			},
 		},
-		beaconDB:     db,
 		depositCache: depositcache.NewDepositCache(),
 	}
 
@@ -1336,8 +1234,6 @@ func TestEth1Data(t *testing.T) {
 
 func Benchmark_Eth1Data(b *testing.B) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(b)
-	defer dbutil.TeardownDB(b, db)
 
 	hashesByHeight := make(map[int][]byte)
 
@@ -1395,18 +1291,10 @@ func Benchmark_Eth1Data(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		b.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		b.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		b.Fatal(err)
-	}
+
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
 	proposerServer := &ProposerServer{
-		beaconDB: db,
+		chainService: &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		powChainService: &mockPOWChainService{
 			latestBlockNumber: big.NewInt(int64(currentHeight)),
 			hashesByHeight:    hashesByHeight,
@@ -1424,8 +1312,6 @@ func Benchmark_Eth1Data(b *testing.B) {
 
 func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
@@ -1449,15 +1335,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatalf("failed to save block %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
+
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
@@ -1516,7 +1394,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	}
 
 	bs := &ProposerServer{
-		beaconDB:        db,
+		chainService:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		powChainService: p,
 		depositCache:    depositCache,
 	}

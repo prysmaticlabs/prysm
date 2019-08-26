@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -12,6 +13,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -1001,6 +1003,45 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
 
+	}
+}
+
+func TestBeaconChainServer_GetChainHead(t *testing.T) {
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
+	}
+
+	bs := &BeaconChainServer{head: &mock.ChainService{State: s}}
+
+	head, err := bs.GetChainHead(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head.PreviousJustifiedSlot != 3*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
+			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedSlot)
+	}
+	if head.JustifiedSlot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
+			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedSlot)
+	}
+	if head.FinalizedSlot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
+			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedSlot)
+	}
+	if !bytes.Equal([]byte{'A'}, head.PreviousJustifiedBlockRoot) {
+		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
+			[]byte{'A'}, head.PreviousJustifiedBlockRoot)
+	}
+	if !bytes.Equal([]byte{'B'}, head.JustifiedBlockRoot) {
+		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
+			[]byte{'B'}, head.JustifiedBlockRoot)
+	}
+	if !bytes.Equal([]byte{'C'}, head.FinalizedBlockRoot) {
+		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
+			[]byte{'C'}, head.FinalizedBlockRoot)
 	}
 }
 

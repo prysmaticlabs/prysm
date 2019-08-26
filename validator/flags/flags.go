@@ -30,13 +30,20 @@ var (
 	// KeystorePathFlag defines the location of the keystore directory for a validator's account.
 	KeystorePathFlag = cmd.DirectoryFlag{
 		Name:  "keystore-path",
-		Usage: "path to the desired keystore directory",
+		Usage: "Path to the desired keystore directory",
 		Value: cmd.DirectoryString{Value: defaultValidatorDir()},
+	}
+	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
+	// alternative from launching the validator client from decrypting a keystore directory.
+	UnencryptedKeysFlag = cli.StringFlag{
+		Name:  "unencrypted-keys",
+		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
+		Value: "",
 	}
 	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = cli.StringFlag{
 		Name:  "password",
-		Usage: "string value of the password for your validator private keys",
+		Usage: "String value of the password for your validator private keys",
 	}
 	// DisablePenaltyRewardLogFlag defines the ability to not log reward/penalty information during deployment
 	DisablePenaltyRewardLogFlag = cli.BoolFlag{
