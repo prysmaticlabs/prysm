@@ -139,6 +139,7 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	return nil
 }
 
+// NewKeyFromBLS creates a new keystore Key type using a BLS private key.
 func NewKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 	id := uuid.NewRandom()
 	pubkey := blsKey.PublicKey()
