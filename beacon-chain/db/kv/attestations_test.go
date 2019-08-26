@@ -91,6 +91,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 	}
 	// if indices are improperly deleted this test will then panic.
 	for i := 0; i <= 100; i++ {
+		index := i
 		wg.Add(1)
 		go func() {
 			att := &ethpb.Attestation{
@@ -98,7 +99,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 					Crosslink: &ethpb.Crosslink{
 						Shard:      5,
 						ParentRoot: []byte("parent"),
-						StartEpoch: uint64(i + 1),
+						StartEpoch: uint64(index + 1),
 						EndEpoch:   2,
 					},
 				},
