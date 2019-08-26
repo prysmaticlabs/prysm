@@ -80,7 +80,6 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	fmt.Println(v.pubkeys)
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: v.pubkeys,
 	}
