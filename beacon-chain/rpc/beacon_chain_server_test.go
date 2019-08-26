@@ -1004,6 +1004,16 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_GetChainHead(t *testing.T) {
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch:1, Root:[]byte{'A'}},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch:2, Root:[]byte{'B'}},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch:3, Root:[]byte{'C'}},
+	}
+
+	bs := &BeaconChainServer{head: mock}
+}
+
 func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
 	ctx := context.Background()
 	balances := make([]uint64, count)
@@ -1034,3 +1044,4 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	}
 	return validators, balances
 }
+
