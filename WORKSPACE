@@ -173,7 +173,7 @@ buildifier_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
+    commit = "d74b93584564161b2de771089ee697f07d8bd5b5",  # v1.3.1
     importpath = "github.com/golang/mock",
 )
 
