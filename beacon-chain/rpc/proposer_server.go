@@ -284,10 +284,17 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState, err := ps.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch beacon state")
+	var beaconState *pbp2p.BeaconState
+	var err error
+	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
+		beaconState, err = ps.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve beacon state")
+		}
+	} else {
+		beaconState = ps.chainService.(newBlockchain.HeadRetriever).HeadState()
 	}
+
 	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
