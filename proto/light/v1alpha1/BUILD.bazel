@@ -1,24 +1,17 @@
+# gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
-
-proto_library(
-    name = "ethereum_light_v1alpha1_proto",
-    srcs = ["types.proto"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
-        "//proto/eth/v1alpha1:v1alpha1_proto",
-    ],
-)
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 
 go_proto_library(
     name = "ethereum_light_v1alpha1_go_proto",
+    compiler = "//:proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/light/v1alpha1",
     proto = ":ethereum_light_v1alpha1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//github.com/gogo/protobuf/gogoproto:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
 
@@ -27,4 +20,15 @@ go_library(
     embed = [":ethereum_light_v1alpha1_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/light/v1alpha1",
     visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "ethereum_light_v1alpha1_proto",
+    srcs = ["types.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/v1alpha1:v1alpha1_proto",
+        "@com_google_protobuf//:timestamp_proto",
+        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+    ],
 )
