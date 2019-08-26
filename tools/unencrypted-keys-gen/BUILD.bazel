@@ -9,14 +9,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen",
     visibility = ["//visibility:private"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
+        "//shared/bls:go_default_library",
     ],
 )
 
 go_binary(
-    name = "ssz-server",
+    name = "unencrypted-keys-gen",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
@@ -26,24 +24,22 @@ go_image(
     srcs = ["main.go"],
     goarch = "amd64",
     goos = "linux",
-    importpath = "github.com/prysmaticlabs/prysm/tools/ssz-server",
+    importpath = "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen",
     pure = "on",
     race = "off",
     static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
+        "//shared/bls:go_default_library",
     ],
 )
 
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/ssz-server:latest": ":image",
-        "gcr.io/prysmaticlabs/prysm/ssz-server:{DOCKER_TAG}": ":image",
+        "gcr.io/prysmaticlabs/prysm/unencrypted-keys-gen:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/unencrypted-keys-gen:{DOCKER_TAG}": ":image",
     },
     tags = ["manual"],
 )
