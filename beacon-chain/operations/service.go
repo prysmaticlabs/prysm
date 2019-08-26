@@ -252,7 +252,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
 		root, err = hashutil.HashProto(attestation.Data)
 		if err != nil {
-			return errg
+			return err
 		}
 	} else {
 		root, err = ssz.HashTreeRoot(attestation.Data)
