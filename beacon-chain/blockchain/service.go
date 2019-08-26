@@ -16,9 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -188,47 +186,6 @@ func (c *ChainService) Status() error {
 // when the beacon state is first initialized.
 func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
-}
-
-// saveValidatorIdx saves the validators public key to index mapping in DB, these
-// validators were activated from current epoch. After it saves, current epoch key
-// is deleted from ActivatedValidators mapping.
-func (c *ChainService) saveValidatorIdx(ctx context.Context, state *pb.BeaconState) error {
-	nextEpoch := helpers.CurrentEpoch(state) + 1
-	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
-	var idxNotInState []uint64
-	for _, idx := range activatedValidators {
-		// If for some reason the activated validator indices is not in state,
-		// we skip them and save them to process for next epoch.
-		if int(idx) >= len(state.Validators) {
-			idxNotInState = append(idxNotInState, idx)
-			continue
-		}
-		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), idx); err != nil {
-			return errors.Wrap(err, "could not save validator index")
-		}
-	}
-	// Since we are processing next epoch, save the can't processed validator indices
-	// to the epoch after that.
-	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
-	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
-	return nil
-}
-
-// deleteValidatorIdx deletes the validators public key to index mapping in DB, the
-// validators were exited from current epoch. After it deletes, current epoch key
-// is deleted from ExitedValidators mapping.
-func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
-	for _, idx := range exitedValidators {
-		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.DeleteValidatorIndex(ctx, bytesutil.ToBytes48(pubKey)); err != nil {
-			return errors.Wrap(err, "could not delete validator index")
-		}
-	}
-	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
-	return nil
 }
 
 // This gets called to update canonical root mapping.
