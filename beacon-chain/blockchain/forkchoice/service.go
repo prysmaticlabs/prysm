@@ -89,6 +89,9 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 	if err := s.db.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
+	if err := s.db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
+		return errors.Wrap(err, "could not save head block root")
+	}
 	if err := s.db.SaveState(ctx, genesisState, blkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}

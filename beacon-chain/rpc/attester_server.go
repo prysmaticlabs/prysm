@@ -20,18 +20,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type attestationReceiver interface {
+	ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error
+}
+
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         db.Database
 	operationService operationService
+	chainService     interface{}
 	cache            *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
+	if srv, ok := as.chainService.(attestationReceiver); ok {
+		root, err := ssz.SigningRoot(att)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to sign root attestation")
+		}
+
+		if err := as.operationService.HandleAttestation(ctx, att); err != nil {
+			return nil, err
+		}
+
+		go func() {
+			if err := srv.ReceiveAttestation(ctx, att); err != nil {
+				log.WithError(err).Error("could not receive attestation in chain service")
+			}
+		}()
+
+		return &pb.AttestResponse{Root: root[:]}, nil
+	}
+
 	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
