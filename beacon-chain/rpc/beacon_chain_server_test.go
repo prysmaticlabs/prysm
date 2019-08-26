@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -18,6 +19,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/mock"
 )
 
 type mockPool struct{}
@@ -1006,12 +1008,41 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 
 func TestBeaconChainServer_GetChainHead(t *testing.T) {
 	s := &pbp2p.BeaconState{
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch:1, Root:[]byte{'A'}},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch:2, Root:[]byte{'B'}},
-		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch:3, Root:[]byte{'C'}},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	}
 
-	bs := &BeaconChainServer{head: mock}
+	bs := &BeaconChainServer{head: &mock.ChainService{State: s}}
+
+	head, err := bs.GetChainHead(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head.PreviousJustifiedSlot != 3*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
+			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedSlot)
+	}
+	if head.JustifiedSlot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
+			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedSlot)
+	}
+	if head.FinalizedSlot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
+			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedSlot)
+	}
+	if !bytes.Equal([]byte{'A'}, head.PreviousJustifiedBlockRoot) {
+		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
+			[]byte{'A'}, head.PreviousJustifiedBlockRoot)
+	}
+	if !bytes.Equal([]byte{'B'}, head.JustifiedBlockRoot) {
+		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
+			[]byte{'B'}, head.JustifiedBlockRoot)
+	}
+	if !bytes.Equal([]byte{'C'}, head.FinalizedBlockRoot) {
+		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
+			[]byte{'C'}, head.FinalizedBlockRoot)
+	}
 }
 
 func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
@@ -1044,4 +1075,3 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	}
 	return validators, balances
 }
-
