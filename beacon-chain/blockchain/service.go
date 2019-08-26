@@ -4,8 +4,8 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"runtime"
 	"sync"
@@ -13,20 +13,21 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-var log = logrus.WithField("prefix", "blockchain")
 
 // ChainFeeds interface defines the methods of the ChainService which provide
 // information feeds.
@@ -39,30 +40,30 @@ type ChainFeeds interface {
 type ChainService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	beaconDB             *db.BeaconDB
+	beaconDB             db.Database
+	depositCache         *depositcache.DepositCache
 	web3Service          *powchain.Web3Service
-	attsService          attestation.TargetHandler
 	opsPoolService       operations.OperationFeeds
+	forkChoiceStore      forkchoice.ForkChoicer
 	chainStartChan       chan time.Time
-	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
-	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
-	canonicalBlocks      map[uint64][]byte
-	canonicalBlocksLock  sync.RWMutex
-	receiveBlockLock     sync.Mutex
 	maxRoutines          int64
+	headSlot             uint64
+	headBlock            *ethpb.BeaconBlock
+	headState            *pb.BeaconState
+	canonicalRoots       map[uint64][]byte
+	canonicalRootsLock   sync.RWMutex
 }
 
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf int
 	Web3Service    *powchain.Web3Service
-	AttsService    attestation.TargetHandler
-	BeaconDB       *db.BeaconDB
+	BeaconDB       db.Database
+	DepositCache   *depositcache.DepositCache
 	OpsPoolService operations.OperationFeeds
-	DevMode        bool
 	P2p            p2p.Broadcaster
 	MaxRoutines    int64
 }
@@ -71,18 +72,19 @@ type Config struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &ChainService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
-		attsService:          cfg.AttsService,
-		canonicalBlockFeed:   new(event.Feed),
+		forkChoiceStore:      store,
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		p2p:                  cfg.P2p,
-		canonicalBlocks:      make(map[uint64][]byte),
+		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
 	}, nil
 }
@@ -97,7 +99,6 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
-		c.finalizedEpoch = beaconState.FinalizedCheckpoint.Epoch
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
@@ -107,7 +108,7 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			c.processChainStartTime(genesisTime, subChainStart)
+			c.processChainStartTime(c.ctx, genesisTime, subChainStart)
 			return
 		}()
 	}
@@ -115,13 +116,11 @@ func (c *ChainService) Start() {
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSub event.Subscription) {
+func (c *ChainService) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
 	initialDeposits := c.web3Service.ChainStartDeposits()
-	beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data())
-	if err != nil {
+	if err := c.initializeBeaconChain(ctx, genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
-	c.finalizedEpoch = beaconState.FinalizedCheckpoint.Epoch
 	c.stateInitializedFeed.Send(genesisTime)
 	chainStartSub.Unsubscribe()
 }
@@ -129,56 +128,41 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*ethpb.Deposit, eth1data *ethpb.Eth1Data) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
+func (c *ChainService) initializeBeaconChain(
+	ctx context.Context,
+	genesisTime time.Time,
+	deposits []*ethpb.Deposit,
+	eth1data *ethpb.Eth1Data) error {
+	_, span := trace.StartSpan(context.Background(), "beacon-chain.ChainService.initializeBeaconChain")
 	defer span.End()
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(c.ctx, unixTime, deposits, eth1data); err != nil {
-		return nil, errors.Wrap(err, "could not initialize beacon state to disk")
-	}
-	beaconState, err := c.beaconDB.HeadState(c.ctx)
+
+	genesisState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not attempt fetch beacon state")
+		return errors.Wrap(err, "could not initialize genesis state")
+	}
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash genesis state")
+	}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+
+	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis validators")
 	}
 
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash beacon state")
-	}
-	genBlock := b.NewGenesisBlock(stateRoot[:])
-	genBlockRoot, err := ssz.SigningRoot(genBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash beacon block")
+	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
-	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis block to disk")
-	}
-	if err := c.beaconDB.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            genBlock.Slot,
-		BeaconBlockRoot: genBlockRoot[:],
-		ParentRoot:      genBlock.ParentRoot,
-	}); err != nil {
-		return nil, errors.Wrap(err, "failed to save attestation target")
-	}
-	if err := c.beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
-		return nil, errors.Wrap(err, "could not set chain head")
-	}
-	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis block as justified block")
-	}
-	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis block as finalized block")
-	}
-	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis state as justified state")
-	}
-	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis state as finalized state")
-	}
-	return beaconState, nil
+	c.headBlock = genesisBlk
+	c.headState = genesisState
+	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
+	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
+
+	return nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -198,47 +182,46 @@ func (c *ChainService) Status() error {
 	return nil
 }
 
-// CanonicalBlockFeed returns a channel that is written to
-// whenever a new block is determined to be canonical in the chain.
-func (c *ChainService) CanonicalBlockFeed() *event.Feed {
-	return c.canonicalBlockFeed
-}
-
 // StateInitializedFeed returns a feed that is written to
 // when the beacon state is first initialized.
 func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
 }
 
-// ChainHeadRoot returns the hash root of the last beacon block processed by the
-// block chain service.
-func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
-	head, err := c.beaconDB.ChainHead()
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not retrieve chain head")
-	}
+// This gets called to update canonical root mapping.
+func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
 
-	root, err := ssz.SigningRoot(head)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not tree hash parent block")
+	c.headSlot = b.Slot
+
+	c.canonicalRootsLock.Lock()
+	c.canonicalRoots[b.Slot] = r[:]
+	defer c.canonicalRootsLock.Unlock()
+
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
 	}
-	return root, nil
+	c.headBlock = b
+
+	s, err := c.beaconDB.State(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	c.headState = s
+
+	log.WithFields(logrus.Fields{
+		"slots": b.Slot,
+		"root":  hex.EncodeToString(r[:]),
+	}).Debug("Saved head info")
+
+	return nil
 }
 
-// UpdateCanonicalRoots sets a new head into the canonical block roots map.
-func (c *ChainService) UpdateCanonicalRoots(newHead *ethpb.BeaconBlock, newHeadRoot [32]byte) {
-	c.canonicalBlocksLock.Lock()
-	defer c.canonicalBlocksLock.Unlock()
-	c.canonicalBlocks[newHead.Slot] = newHeadRoot[:]
-}
-
-// IsCanonical returns true if the input block hash of the corresponding slot
-// is part of the canonical chain. False otherwise.
-func (c *ChainService) IsCanonical(slot uint64, hash []byte) bool {
-	c.canonicalBlocksLock.RLock()
-	defer c.canonicalBlocksLock.RUnlock()
-	if canonicalHash, ok := c.canonicalBlocks[slot]; ok {
-		return bytes.Equal(canonicalHash, hash)
+// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
+func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconState) error {
+	for i, v := range s.Validators {
+		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
 	}
-	return false
+	return nil
 }

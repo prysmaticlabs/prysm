@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
@@ -19,14 +20,14 @@ func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
-	HasBlock func(hash [32]byte) bool,
+	HasBlock func(ctx context.Context, hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
 	genesisTime time.Time) error {
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parentBlock := HasBlock(parentRoot)
+	parentBlock := HasBlock(ctx, parentRoot)
 	if !parentBlock {
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
@@ -56,9 +57,9 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	secondsPerSlot := time.Duration((slot)*params.BeaconConfig().SecondsPerSlot) * time.Second
-	validTimeThreshold := genesisTime.Add(secondsPerSlot)
-	now := time.Now()
+	secondsSinceGenesis := time.Duration(slot*params.BeaconConfig().SecondsPerSlot) * time.Second
+	validTimeThreshold := genesisTime.Add(secondsSinceGenesis)
+	now := roughtime.Now()
 	isValid := now.After(validTimeThreshold)
 
 	return isValid

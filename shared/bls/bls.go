@@ -43,7 +43,11 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 		return nil, fmt.Errorf("expected byte slice of length 32, received: %d", len(priv))
 	}
 	k := bytesutil.ToBytes32(priv)
-	return &SecretKey{val: g1.DeserializeSecretKey(k)}, nil
+	val := g1.DeserializeSecretKey(k)
+	if val.GetFRElement() == nil {
+		return nil, errors.New("invalid private key")
+	}
+	return &SecretKey{val}, nil
 }
 
 // PublicKeyFromBytes creates a BLS public key from a byte slice.
@@ -105,10 +109,26 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
-// VerifyAggregate verifies each public key against a message.
+// VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+	if len(pubKeys) == 0 {
+		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+	}
+	var keys []*g1.PublicKey
+	for _, v := range pubKeys {
+		keys = append(keys, v.val)
+	}
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, domain)
+	return s.val.VerifyAggregateWithDomain(keys, msg, bytesutil.ToBytes8(b))
+}
+
+// VerifyAggregateCommon verifies each public key against its respective message.
+// This is vulnerable to rogue public-key attack. Each user must
+// provide a proof-of-knowledge of the public key.
+func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
 	if len(pubKeys) == 0 {
 		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
 	}

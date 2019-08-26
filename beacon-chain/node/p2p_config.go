@@ -8,12 +8,13 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
+	"github.com/prysmaticlabs/prysm/shared/deprecated-p2p/adapter/metric"
 	"github.com/urfave/cli"
 )
 
-var topicMappings = map[pb.Topic]proto.Message{
+// Deprecated: Do not use. See #3147.
+var deprecatedTopicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
@@ -28,7 +29,8 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_ATTESTATION:                  &ethpb.Attestation{},
 }
 
-func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
+// Deprecated: Do not use. See #3147.
+func deprecatedConfigureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	contractAddress := ctx.GlobalString(flags.DepositContractFlag.Name)
 	if contractAddress == "" {
 		var err error
@@ -65,7 +67,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		adapters = append(adapters, metric.New())
 	}
 
-	for k, v := range topicMappings {
+	for k, v := range deprecatedTopicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}
 

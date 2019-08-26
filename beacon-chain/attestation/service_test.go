@@ -26,8 +26,8 @@ func init() {
 var _ = TargetHandler(&Service{})
 
 func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -47,7 +47,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
@@ -98,8 +98,8 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 }
 
 func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -117,7 +117,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
@@ -140,11 +140,11 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 }
 
 func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
-	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+	if err := beaconDB.SaveStateDeprecated(ctx, &pb.BeaconState{
 		Validators: []*ethpb.Validator{{}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -163,19 +163,19 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 }
 
 func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := beaconDB.SaveState(ctx, &pb.BeaconState{
+	if err := beaconDB.SaveStateDeprecated(ctx, &pb.BeaconState{
 		Validators: []*ethpb.Validator{{PublicKey: pubKey}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
 	block := &ethpb.BeaconBlock{Slot: 999}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
 	blockRoot, err := ssz.SigningRoot(block)
@@ -215,9 +215,9 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
+	beaconDB := internal.SetupDBDeprecated(t)
 	hook := logTest.NewGlobal()
-	defer internal.TeardownDB(t, beaconDB)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -238,7 +238,7 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
@@ -266,8 +266,8 @@ func TestUpdateLatestAttestation_InvalidIndex(t *testing.T) {
 }
 
 func TestBatchUpdate_FromSync(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -292,7 +292,7 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
@@ -321,8 +321,8 @@ func TestBatchUpdate_FromSync(t *testing.T) {
 }
 
 func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDBDeprecated(t)
+	defer internal.TeardownDBDeprecated(t, beaconDB)
 	ctx := context.Background()
 
 	var validators []*ethpb.Validator
@@ -343,7 +343,7 @@ func TestUpdateLatestAttestation_BatchUpdate(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 	}
-	if err := beaconDB.SaveBlock(block); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
