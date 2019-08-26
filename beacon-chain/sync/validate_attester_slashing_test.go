@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
@@ -94,7 +95,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	r := &RegularSync{
 		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		chain: &mock.ChainService{State: s},
 	}
 
 	if !r.validateAttesterSlashing(ctx, slashing, p2p) {
