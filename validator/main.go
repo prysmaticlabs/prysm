@@ -2,17 +2,24 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -25,7 +32,51 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+type unencryptedKeysContainer struct {
+	Keys []*unencryptedKeys `json:"keys"`
+}
+
+type unencryptedKeys struct {
+	ValidatorKey  []byte `json:"validator_key"`
+	WithdrawalKey []byte `json:"withdrawal_key"`
+}
+
 func startNode(ctx *cli.Context) error {
+	unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name)
+	if unencryptedKeys != "" {
+		pth, err := filepath.Abs(unencryptedKeys)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		r, err := os.Open(pth)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		validatorKeysUnecrypted, _, err := parseUnencryptedKeysFile(r)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		validatorKeys := make(map[string]*keystore.Key)
+		for _, item := range validatorKeysUnecrypted {
+			priv, err := bls.SecretKeyFromBytes(item)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			k, err := keystore.NewKeyFromBLS(priv)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			validatorKeys[hex.EncodeToString(priv.PublicKey().Marshal())] = k
+		}
+		validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
+		if err != nil {
+			return err
+		}
+
+		validatorClient.Start()
+		return nil
+	}
+
 	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(flags.PasswordFlag.Name)
 
@@ -62,7 +113,12 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	validatorClient, err := node.NewValidatorClient(ctx, keystorePassword)
+	validatorKeys, err := accounts.DecryptKeysFromKeystore(keystoreDirectory, keystorePassword)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
 	if err != nil {
 		return err
 	}
@@ -99,6 +155,24 @@ func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
 	return keystoreDirectory, keystorePassword, nil
+}
+
+func parseUnencryptedKeysFile(r io.Reader) ([][]byte, [][]byte, error) {
+	encoded, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, nil, err
+	}
+	var ctnr *unencryptedKeysContainer
+	if err := json.Unmarshal(encoded, &ctnr); err != nil {
+		return nil, nil, err
+	}
+	validatorKeys := make([][]byte, 0)
+	withdrawalKeys := make([][]byte, 0)
+	for _, item := range ctnr.Keys {
+		validatorKeys = append(validatorKeys, item.ValidatorKey)
+		withdrawalKeys = append(withdrawalKeys, item.WithdrawalKey)
+	}
+	return validatorKeys, withdrawalKeys, nil
 }
 
 func main() {
@@ -140,6 +214,7 @@ contract in order to activate the validator client`,
 		flags.KeystorePathFlag,
 		flags.PasswordFlag,
 		flags.DisablePenaltyRewardLogFlag,
+		flags.UnencryptedKeysFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
