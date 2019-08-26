@@ -14,8 +14,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -315,7 +315,7 @@ func (rs *RegularSync) handleStateRequest(msg deprecatedp2p.Message) error {
 		FinalizedState: fState,
 		FinalizedBlock: finalizedBlk,
 	}
-	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
+	if _, err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -372,7 +372,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg deprecatedp2p.Message) error {
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()
 	defer sentChainHead.Inc()
-	if err := rs.p2p.Send(ctx, req, msg.Peer); err != nil {
+	if _, err := rs.p2p.Send(ctx, req, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -399,10 +399,10 @@ func (rs *RegularSync) receiveAttestation(msg deprecatedp2p.Message) error {
 	}).Debug("Received an attestation")
 
 	// Skip if attestation has been seen before.
-	hasAttestation := rs.db.HasAttestation(attestationDataHash)
+	hasAttestation := rs.db.HasAttestationDeprecated(attestationDataHash)
 	span.AddAttributes(trace.BoolAttribute("hasAttestation", hasAttestation))
 	if hasAttestation {
-		dbAttestation, err := rs.db.Attestation(attestationDataHash)
+		dbAttestation, err := rs.db.AttestationDeprecated(attestationDataHash)
 		if err != nil {
 			return err
 		}
@@ -478,7 +478,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg deprecatedp2p.Message) error
 
 	data := msg.Data.(*pb.BeaconBlockRequest)
 	root := bytesutil.ToBytes32(data.Hash)
-	block, err := rs.db.Block(root)
+	block, err := rs.db.BlockDeprecated(root)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -488,7 +488,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg deprecatedp2p.Message) error
 	}
 
 	defer sentBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
+	if _, err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -515,7 +515,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg deprecatedp2p.Message) erro
 	log.WithField("peer", msg.Peer).Debug("Sending response for batch blocks")
 
 	defer sentBatchedBlocks.Inc()
-	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
+	if _, err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer); err != nil {
 		log.Error(err)
@@ -541,7 +541,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		return nil, nil
 	}
 
-	b, err := rs.db.Block(bytesutil.ToBytes32(headRoot))
+	b, err := rs.db.BlockDeprecated(bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return nil, err
 	}
@@ -555,7 +555,7 @@ func (rs *RegularSync) respondBatchedBlocks(ctx context.Context, finalizedRoot [
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		b, err = rs.db.Block(bytesutil.ToBytes32(parentRoot))
+		b, err = rs.db.BlockDeprecated(bytesutil.ToBytes32(parentRoot))
 		if err != nil {
 			return nil, err
 		}

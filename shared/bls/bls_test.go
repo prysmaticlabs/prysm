@@ -38,6 +38,25 @@ func TestSignVerify(t *testing.T) {
 func TestVerifyAggregate(t *testing.T) {
 	pubkeys := make([]*bls.PublicKey, 0, 100)
 	sigs := make([]*bls.Signature, 0, 100)
+	var msgs [][32]byte
+	for i := 0; i < 100; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
+		priv, _ := bls.RandKey(rand.Reader)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:], 0)
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		msgs = append(msgs, msg)
+	}
+	aggSig := bls.AggregateSignatures(sigs)
+	if !aggSig.VerifyAggregate(pubkeys, msgs, 0) {
+		t.Error("Signature did not verify")
+	}
+}
+
+func TestVerifyAggregateCommon(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	sigs := make([]*bls.Signature, 0, 100)
 	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
 		priv, _ := bls.RandKey(rand.Reader)
@@ -47,7 +66,7 @@ func TestVerifyAggregate(t *testing.T) {
 		sigs = append(sigs, sig)
 	}
 	aggSig := bls.AggregateSignatures(sigs)
-	if !aggSig.VerifyAggregate(pubkeys, msg, 0) {
+	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -58,7 +77,7 @@ func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	msg := []byte("hello")
 
 	aggSig := bls.AggregateSignatures(sigs)
-	if aggSig.VerifyAggregate(pubkeys, msg, 0 /*domain*/) != false {
+	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0 /*domain*/) != false {
 		t.Error("Expected VerifyAggregate to return false with empty input " +
 			"of public keys.")
 	}

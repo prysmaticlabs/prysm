@@ -2,6 +2,7 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -16,7 +17,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dblockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
@@ -24,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -46,11 +50,12 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx      *cli.Context
-	services *shared.ServiceRegistry
-	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications.
-	db       *db.BeaconDB
+	ctx          *cli.Context
+	services     *shared.ServiceRegistry
+	lock         sync.RWMutex
+	stop         chan struct{} // Channel to wait for termination notifications.
+	db           db.Database
+	depositCache *depositcache.DepositCache
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -182,13 +187,20 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		}
 	}
 
-	db, err := db.NewDBDeprecated(dbPath)
+	var d db.Database
+	var err error
+	if featureconfig.FeatureConfig().UseNewDatabase {
+		d, err = db.NewDB(dbPath)
+	} else {
+		d, err = db.NewDBDeprecated(dbPath)
+	}
 	if err != nil {
 		return err
 	}
 
 	log.WithField("path", dbPath).Info("Checking db")
-	b.db = db
+	b.db = d
+	b.depositCache = depositcache.NewDepositCache()
 	return nil
 }
 
@@ -205,6 +217,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 			MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
 			WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
 			EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
+			Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
 		})
 		if err != nil {
 			return err
@@ -245,14 +258,32 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
+
+	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
+
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
+			BeaconDB:       b.db,
+			DepositCache:   b.depositCache,
+			Web3Service:    web3Service,
+			OpsPoolService: opsService,
+			P2p:            b.fetchP2P(ctx),
+			MaxRoutines:    maxRoutines,
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not register blockchain service")
+		}
+		return b.services.RegisterService(blockchainService)
+	}
+
 	var attsService *attestation.Service
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
-	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
-	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
+	deprecatedBlockchainService, err := dblockchain.NewChainService(context.Background(), &dblockchain.Config{
 		BeaconDB:       b.db,
+		DepositCache:   b.depositCache,
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
 		AttsService:    attsService,
@@ -260,9 +291,9 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		MaxRoutines:    maxRoutines,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not register blockchain service")
+		return errors.Wrap(err, "could not register deprecated blockchain service")
 	}
-	return b.services.RegisterService(blockchainService)
+	return b.services.RegisterService(deprecatedBlockchainService)
 }
 
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
@@ -316,25 +347,24 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BlockFetcher:    httpClient,
 		ContractBackend: httpClient,
 		BeaconDB:        b.db,
+		DepositCache:    b.depositCache,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
-
-	if err := b.db.VerifyContractAddress(ctx, cfg.DepositContract); err != nil {
+	knownContract, err := b.db.DepositContractAddress(ctx)
+	if err != nil {
 		return err
+	}
+	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
 
 	return b.services.RegisterService(web3Service)
 }
 
 func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
 	var operationService *operations.Service
 	if err := b.services.FetchService(&operationService); err != nil {
 		return err
@@ -350,10 +380,32 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
+	if featureconfig.FeatureConfig().UseNewSync {
+		var chainService *blockchain.ChainService
+		if err := b.services.FetchService(&chainService); err != nil {
+			return err
+		}
+
+		rs := prysmsync.NewRegularSync(&prysmsync.Config{
+			DB:         b.db,
+			P2P:        b.fetchP2P(ctx),
+			Operations: operationService,
+			Chain:      chainService,
+		})
+
+		return b.services.RegisterService(rs)
+	}
+
+	var chainService *dblockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	cfg := &rbcsync.Config{
 		ChainService:     chainService,
 		P2P:              b.fetchP2P(ctx),
 		BeaconDB:         b.db,
+		DepositCache:     b.depositCache,
 		OperationService: operationService,
 		PowChainService:  web3Service,
 		AttsService:      attsService,
@@ -364,9 +416,19 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
+	var chainService interface{}
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		var newChain *blockchain.ChainService
+		if err := b.services.FetchService(&newChain); err != nil {
+			return err
+		}
+		chainService = newChain
+	} else {
+		var deprecatedChain *dblockchain.ChainService
+		if err := b.services.FetchService(&deprecatedChain); err != nil {
+			return err
+		}
+		chainService = deprecatedChain
 	}
 
 	var operationService *operations.Service
@@ -379,9 +441,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *rbcsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
+	var syncChecker prysmsync.Checker
+	if featureconfig.FeatureConfig().UseNewSync {
+		var syncService *prysmsync.RegularSync
+		if err := b.services.FetchService(&syncService); err != nil {
+			return err
+		}
+		syncChecker = syncService
+	} else {
+		var syncService *rbcsync.Service
+		if err := b.services.FetchService(&syncService); err != nil {
+			return err
+		}
+		syncChecker = syncService
 	}
 
 	port := ctx.GlobalString(flags.RPCPort.Name)
@@ -396,7 +468,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
-		SyncService:      syncService,
+		SyncService:      syncChecker,
+		DepositCache:     b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)

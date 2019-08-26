@@ -6,11 +6,22 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
+
+// SaveAttestations in the db.
+func (db *BeaconDB) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+	for _, a := range atts {
+		if err := db.SaveAttestation(ctx, a); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // SaveAttestation puts the attestation record into the beacon chain db.
 func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *ethpb.Attestation) error {
@@ -52,20 +63,32 @@ func (db *BeaconDB) SaveAttestationTarget(ctx context.Context, attTarget *pb.Att
 }
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
-func (db *BeaconDB) DeleteAttestation(attestation *ethpb.Attestation) error {
-	hash, err := hashutil.HashProto(attestation.Data)
-	if err != nil {
-		return err
-	}
-
+func (db *BeaconDB) DeleteAttestation(_ context.Context, hash [32]byte) error {
 	return db.batch(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 		return a.Delete(hash[:])
 	})
 }
 
+// DeleteAttestationDeprecated deletes the attestation record into the beacon chain db.
+// DEPRECATED: Use DeleteAttestation.
+func (db *BeaconDB) DeleteAttestationDeprecated(attestation *ethpb.Attestation) error {
+	hash, err := hashutil.HashProto(attestation.Data)
+	if err != nil {
+		return err
+	}
+
+	return db.DeleteAttestation(context.Background(), hash)
+}
+
 // Attestation retrieves an attestation record from the db using the hash of attestation.data.
-func (db *BeaconDB) Attestation(hash [32]byte) (*ethpb.Attestation, error) {
+func (db *BeaconDB) Attestation(_ context.Context, hash [32]byte) (*ethpb.Attestation, error) {
+	return db.AttestationDeprecated(hash)
+}
+
+// AttestationDeprecated retrieves an attestation record from the db using the hash of attestation.data.
+// DEPRECATED: Use Attestation.
+func (db *BeaconDB) AttestationDeprecated(hash [32]byte) (*ethpb.Attestation, error) {
 	var attestation *ethpb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
@@ -85,7 +108,14 @@ func (db *BeaconDB) Attestation(hash [32]byte) (*ethpb.Attestation, error) {
 
 // Attestations retrieves all the attestation records from the db.
 // These are the attestations that have not been seen on the beacon chain.
-func (db *BeaconDB) Attestations() ([]*ethpb.Attestation, error) {
+func (db *BeaconDB) Attestations(_ context.Context, _ *filters.QueryFilter) ([]*ethpb.Attestation, error) {
+	return db.AttestationsDeprecated()
+}
+
+// AttestationsDeprecated retrieves all the attestation records from the db.
+// These are the attestations that have not been seen on the beacon chain.
+// DEPRECATED: Use Attestations.
+func (db *BeaconDB) AttestationsDeprecated() ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
@@ -125,8 +155,8 @@ func (db *BeaconDB) AttestationTarget(hash [32]byte) (*pb.AttestationTarget, err
 	return attTgt, err
 }
 
-// HasAttestation checks if the attestation exists.
-func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
+// HasAttestation checks if the attestaiton exists.
+func (db *BeaconDB) HasAttestation(_ context.Context, hash [32]byte) bool {
 	exists := false
 	// #nosec G104
 	db.view(func(tx *bolt.Tx) error {
@@ -136,6 +166,12 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 		return nil
 	})
 	return exists
+}
+
+// HasAttestationDeprecated checks if the attestation exists.
+// DEPRECATED: Use HasAttestation.
+func (db *BeaconDB) HasAttestationDeprecated(hash [32]byte) bool {
+	return db.HasAttestation(context.Background(), hash)
 }
 
 func createAttestation(enc []byte) (*ethpb.Attestation, error) {

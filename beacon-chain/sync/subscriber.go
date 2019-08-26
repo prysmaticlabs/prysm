@@ -5,10 +5,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
+
+var oneYear = 365 * 24 * time.Hour
+
+// prefix to add to keys, so that we can represent invalid objects
+var invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -32,13 +39,13 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster) bool {
 func (r *RegularSync) registerSubscribers() {
 	r.subscribe(
 		"/eth2/beacon_block",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateBeaconBlockPubSub,
+		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
 		"/eth2/beacon_attestation",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateBeaconAttestation,
+		r.beaconAttestationSubscriber,
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",
@@ -47,13 +54,13 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribe(
 		"/eth2/proposer_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateProposerSlashing,
+		r.proposerSlashingSubscriber,
 	)
 	r.subscribe(
 		"/eth2/attester_slashing",
-		noopValidator,
-		notImplementedSubHandler, // TODO(3147): Implement.
+		r.validateAttesterSlashing,
+		r.attesterSlashingSubscriber,
 	)
 }
 
@@ -79,6 +86,13 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(data []byte) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				debug.PrintStack()
+			}
+		}()
+
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
 			return
@@ -112,6 +126,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				log.WithError(err).Error("Subscription next failed")
 				// TODO(3147): Mark status unhealthy.
 				return
+			}
+
+			if msg.GetFrom() == r.p2p.PeerID() {
+				continue
 			}
 
 			go pipeline(msg.Data)

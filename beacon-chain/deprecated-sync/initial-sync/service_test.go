@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -29,8 +30,8 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 
 func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
-func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
-	return nil
+func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {
+	return nil, nil
 }
 
 func (mp *mockP2P) Reputation(_ peer.ID, _ int) {
@@ -105,7 +106,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
-	if err := beaconDB.SaveBlock(genBlock); err != nil {
+	if err := beaconDB.SaveBlockDeprecated(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
 	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
@@ -206,8 +207,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 
 		// Save the block and set the parent hash of the next block
 		// as the hash of the current block.
-		if err := ss.db.SaveBlock(block); err != nil {
-			t.Fatalf("Block unable to be saved %v", err)
+		if err := ss.db.SaveBlockDeprecated(block); err != nil {
+			t.Fatalf("BlockDeprecated unable to be saved %v", err)
 		}
 
 		hash, err := ssz.SigningRoot(block)

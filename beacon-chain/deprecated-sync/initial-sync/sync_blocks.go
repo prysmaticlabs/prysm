@@ -79,7 +79,7 @@ func (s *InitialSync) requestBatchedBlocks(ctx context.Context, FinalizedRoot []
 		"finalizedBlkRoot": fmt.Sprintf("%#x", bytesutil.Trunc(FinalizedRoot[:])),
 		"headBlkRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(canonicalRoot[:]))},
 	).Debug("Requesting batched blocks")
-	if err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
+	if _, err := s.p2p.Send(ctx, &pb.BatchedBeaconBlockRequest{
 		FinalizedRoot: FinalizedRoot,
 		CanonicalRoot: canonicalRoot,
 	}, peer); err != nil {
@@ -99,7 +99,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err != nil {
 		return err
 	}
-	if s.db.HasBlock(root) {
+	if s.db.HasBlockDeprecated(root) {
 		log.WithField("block", fmt.Sprintf("%#x", root)).
 			Warn("Skipping block in db already")
 		return nil
@@ -116,7 +116,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parentBlock, err := s.db.Block(parentRoot)
+	parentBlock, err := s.db.BlockDeprecated(parentRoot)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *ethpb
 	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
 		return err
 	}
-	if err := s.db.SaveBlock(block); err != nil {
+	if err := s.db.SaveBlockDeprecated(block); err != nil {
 		return err
 	}
 	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{

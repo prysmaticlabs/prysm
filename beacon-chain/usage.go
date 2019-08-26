@@ -94,6 +94,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
+			cmd.P2PEncoding,
 		},
 	},
 	{

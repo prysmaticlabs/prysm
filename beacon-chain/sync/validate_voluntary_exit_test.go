@@ -7,18 +7,14 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupValidExit(t *testing.T, db db.Database) *ethpb.VoluntaryExit {
-	ctx := context.Background()
+func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 	exit := &ethpb.VoluntaryExit{
 		ValidatorIndex: 0,
 		Epoch:          0,
@@ -55,27 +51,19 @@ func setupValidExit(t *testing.T, db db.Database) *ethpb.VoluntaryExit {
 	if _, err := rand.Read(b); err != nil {
 		t.Fatal(err)
 	}
-	headBlockRoot := bytesutil.ToBytes32(b)
-	if err := db.SaveState(ctx, state, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	return exit
+
+	return exit, state
 }
 
 func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	exit := setupValidExit(t, db)
+	exit, s := setupValidExit(t)
 
 	r := &RegularSync{
-		p2p: p2p,
-		db:  db,
+		p2p:   p2p,
+		chain: &mockChainService{headState: s},
 	}
 
 	if !r.validateVoluntaryExit(ctx, exit, p2p) {

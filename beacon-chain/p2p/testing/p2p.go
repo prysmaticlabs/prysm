@@ -22,10 +22,9 @@ import (
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
-	t      *testing.T
-	Host   host.Host
-	pubsub *pubsub.PubSub
-
+	t               *testing.T
+	Host            host.Host
+	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 }
 
@@ -56,8 +55,8 @@ func (p *TestP2P) Connect(b *TestP2P) {
 }
 
 func connect(a, b host.Host) error {
-	pinfo := a.Peerstore().PeerInfo(a.ID())
-	return b.Connect(context.Background(), pinfo)
+	pinfo := b.Peerstore().PeerInfo(b.ID())
+	return a.Connect(context.Background(), pinfo)
 }
 
 // ReceiveRPC simulates an incoming RPC.
@@ -140,14 +139,23 @@ func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
 	// TODO(3147): add this.
 }
 
+// PeerID returns the Peer ID of the local peer.
+func (p *TestP2P) PeerID() peer.ID {
+	return p.Host.ID()
+}
+
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) error {
-	// TODO(3147): add this.
-	return nil
+func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (network.Stream, error) {
+	return nil, nil
 }
 
 // Subscribe to some topic. Not implemented.
 func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) event.Subscription {
 	// TODO(3147): remove this.
 	return nil
+}
+
+// Started always returns true.
+func (p *TestP2P) Started() bool {
+	return true
 }

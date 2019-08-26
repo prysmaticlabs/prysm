@@ -30,7 +30,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	if err := s.db.SaveBlock(finalizedBlock); err != nil {
+	if err := s.db.SaveBlockDeprecated(finalizedBlock); err != nil {
 		log.Errorf("Could not save block %v", err)
 		return nil
 	}
@@ -76,7 +76,7 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 		return nil
 	}
 
-	s.db.DepositCache.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
+	s.depositCache.PrunePendingDeposits(ctx, int(finalizedState.Eth1DepositIndex))
 
 	if err := s.db.UpdateChainHead(ctx, finalizedBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head: %v", err)
@@ -97,11 +97,14 @@ func (s *InitialSync) processState(msg p2p.Message, chainHead *pb.ChainHeadRespo
 }
 
 // requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.
+// DEPRECATED: Use github.com/prysmaticlabs/prysm/sync/initial-sync
 func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte, peer peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
-	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
+	_, err := s.p2p.Send(ctx, &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: lastFinalizedRoot[:],
 	}, peer)
+
+	return err
 }

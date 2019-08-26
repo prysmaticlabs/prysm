@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -93,7 +94,8 @@ type Web3Service struct {
 	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
 	chainStartBlockNumber   *big.Int
-	beaconDB                *db.BeaconDB
+	beaconDB                db.Database
+	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
@@ -115,7 +117,8 @@ type Web3ServiceConfig struct {
 	HTTPLogger      bind.ContractFilterer
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
-	BeaconDB        *db.BeaconDB
+	BeaconDB        db.Database
+	DepositCache    *depositcache.DepositCache
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -158,6 +161,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
+		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
@@ -266,7 +270,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.beaconDB.DepositCache.AllDeposits(w.ctx, nil)
+	deposits := w.depositCache.AllDeposits(w.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
