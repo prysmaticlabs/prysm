@@ -120,3 +120,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestStore_SaveCheckpointState(t *testing.T) {
+
+}

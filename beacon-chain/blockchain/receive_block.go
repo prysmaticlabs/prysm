@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -190,7 +189,6 @@ func (c *ChainService) saveValidatorIdx(ctx context.Context, state *pb.BeaconSta
 	nextEpoch := helpers.CurrentEpoch(state) + 1
 	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
 	var idxNotInState []uint64
-	fmt.Println(activatedValidators)
 	for _, idx := range activatedValidators {
 		// If for some reason the activated validator indices is not in state,
 		// we skip them and save them to process for next epoch.
