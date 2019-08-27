@@ -30,9 +30,6 @@ func TestCheckpointStateCacheKeyFn_OK(t *testing.T) {
 
 func TestCheckpointStateCacheKeyFn_InvalidObj(t *testing.T) {
 	_, err := checkpointState("bad")
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err != ErrNotCheckpointState {
 		t.Errorf("Expected error %v, got %v", ErrNotCheckpointState, err)
 	}
