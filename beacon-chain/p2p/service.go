@@ -71,6 +71,21 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
+
+	// TODO(3147): Add gossip sub options
+	// Gossipsub registration is done before we add in any new peers
+	// due to libp2p's gossipsub implementation not taking into 
+	// account previously added peers when creating the gossipsub
+	// object. 
+	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
+	if err != nil {
+		s.startupErr = err
+
+		log.WithError(err).Error("Failed to start pubsub")
+		return
+	}
+	s.pubsub = gs
+
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
@@ -83,6 +98,8 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
+	s.started = true
+
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
 		if err != nil {
@@ -91,20 +108,7 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
-	// TODO(3147): Add gossip sub options
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
-	if err != nil {
-		s.startupErr = err
-
-		log.WithError(err).Error("Failed to start pubsub")
-		return
-	}
-	s.pubsub = gs
-
-	s.started = true
-
 	registerMetrics(s)
-
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
 }
