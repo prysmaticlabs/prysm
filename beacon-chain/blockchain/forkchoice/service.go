@@ -3,10 +3,10 @@ package forkchoice
 import (
 	"bytes"
 	"context"
-	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -14,7 +14,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -37,8 +36,7 @@ type Store struct {
 	db               db.Database
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
-	lock             sync.RWMutex
-	checkptBlkRoot   map[[32]byte][32]byte
+	checkpointState  *cache.CheckpointStateCache
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -46,10 +44,10 @@ type Store struct {
 func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Store{
-		ctx:            ctx,
-		cancel:         cancel,
-		db:             db,
-		checkptBlkRoot: make(map[[32]byte][32]byte),
+		ctx:             ctx,
+		cancel:          cancel,
+		db:              db,
+		checkpointState: cache.NewCheckpointStateCache(),
 	}
 }
 
@@ -96,13 +94,12 @@ func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) 
 		return errors.Wrap(err, "could not save genesis state")
 	}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	h, err := hashutil.HashProto(s.justifiedCheckpt)
-	if err != nil {
-		return errors.Wrap(err, "could not hash proto justified checkpoint")
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: s.justifiedCheckpt,
+		State:      genesisState,
+	}); err != nil {
+		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
-	s.checkptBlkRoot[h] = blkRoot
 
 	return nil
 }
@@ -151,17 +148,9 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	h, err := hashutil.HashProto(s.justifiedCheckpt)
+	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.justifiedCheckpt)
 	if err != nil {
-		return 0, errors.Wrap(err, "could not hash proto justified checkpoint")
-	}
-	lastJustifiedBlkRoot := s.checkptBlkRoot[h]
-
-	lastJustifiedState, err := s.db.State(ctx, lastJustifiedBlkRoot)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get checkpoint state")
+		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}
 	if lastJustifiedState == nil {
 		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.justifiedCheckpt.Epoch)

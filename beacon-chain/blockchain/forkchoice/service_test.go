@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -54,15 +54,15 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(b, genesisBlk) {
-		t.Error("Incorrect genesis block saved from store")
+		t.Error("Incorrect genesis block saved in store")
 	}
 
-	h, err := hashutil.HashProto(genesisCheckpt)
+	cachedState, err := store.checkpointState.StateByCheckpoint(genesisCheckpt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.checkptBlkRoot[h] != genesisBlkRoot {
-		t.Error("Incorrect genesis check point to block root saved from store")
+	if !reflect.DeepEqual(cachedState, genesisState) {
+		t.Error("Incorrect genesis state cached")
 	}
 }
 
@@ -258,11 +258,12 @@ func TestStore_GetHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	store.justifiedCheckpt.Root = roots[0]
-	h, err := hashutil.HashProto(store.justifiedCheckpt)
-	if err != nil {
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
 		t.Fatal(err)
 	}
-	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	//    /- B1 (33 votes)
 	// B0           /- B5 - B7 (33 votes)
