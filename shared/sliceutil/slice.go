@@ -264,7 +264,7 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 	return inter
 }
 
-// InsertSort inserts an element into a sorted slice at its index.
+// InsertSort inserts a uint64 value into a sorted slice at its index.
 func InsertSort(data []uint64, element uint64) []uint64 {
 	index := sort.Search(len(data), func(i int) bool { return data[i] > element })
 	data = append(data, uint64(0))
