@@ -40,7 +40,7 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 
 	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: store.justifiedCheckpt,
-		State: s,
+		State:      s,
 	}); err != nil {
 		b.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 
 	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: store.justifiedCheckpt,
-		State: s,
+		State:      s,
 	}); err != nil {
 		b.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 
 	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: store.justifiedCheckpt,
-		State: s,
+		State:      s,
 	}); err != nil {
 		b.Fatal(err)
 	}

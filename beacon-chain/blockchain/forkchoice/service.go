@@ -148,7 +148,7 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	lastJustifiedState, err := s.checkpointState.CheckpointStateInEpoch(s.justifiedCheckpt)
+	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.justifiedCheckpt)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}

@@ -260,7 +260,7 @@ func TestStore_GetHead(t *testing.T) {
 	store.justifiedCheckpt.Root = roots[0]
 	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: store.justifiedCheckpt,
-		State: s,
+		State:      s,
 	}); err != nil {
 		t.Fatal(err)
 	}

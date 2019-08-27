@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -76,7 +77,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	}
 
 	// Store target checkpoint state if not yet seen.
-	baseState, err = s.saveChkptState(ctx, baseState, tgt)
+	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
 		return err
 	}
@@ -111,9 +112,9 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	return baseState, nil
 }
 
-// saveChkptState saves the block root with check point to avoid excessive slot processing down the line.
-func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	targetState, err := s.checkpointState.CheckpointStateInEpoch(c)
+// saveCheckpointState saves and returns the processed state with the associated check point.
+func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	targetState, err := s.checkpointState.StateByCheckpoint(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
@@ -121,19 +122,20 @@ func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c
 		return targetState, nil
 	}
 
-	baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+	stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+	targetState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: c,
-		State:      baseState,
+		State:      targetState,
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
 
-	return baseState, nil
+	return targetState, nil
 }
 
 // verifyAttSlotTime validates input attestation is not from the future.

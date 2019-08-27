@@ -64,9 +64,9 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 	}
 }
 
-// CheckpointStateInEpoch fetches state by checkpoint. Returns true with a
+// StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) CheckpointStateInEpoch(cp *ethpb.Checkpoint) (*pb.BeaconState, error) {
+func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	h, err := hashutil.HashProto(cp)
