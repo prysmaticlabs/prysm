@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
@@ -105,7 +106,7 @@ func (s *Service) Start() {
 	registerMetrics(s)
 
 	multiAddrs := s.host.Network().ListenAddresses()
-	log.Infof("Node currently listening at %s", multiAddrs[1].String())
+	logIP4Addr(s.host.ID(), multiAddrs...)
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -201,6 +202,17 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			log.Errorf("Could not connect with peer: %v", err)
 		}
 	}
+}
+
+func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
+	var correctAddr ma.Multiaddr
+	for _, addr := range addrs {
+		if strings.Contains(addr.String(), "/ip4/") {
+			correctAddr = addr
+			break
+		}
+	}
+	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
 }
 
 // Subscribe to some topic.

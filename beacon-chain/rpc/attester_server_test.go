@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -15,7 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 )
 
 type mockBroadcaster struct{}
