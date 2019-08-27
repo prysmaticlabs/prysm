@@ -54,16 +54,16 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(b, genesisBlk) {
-		t.Error("Incorrect genesis block saved from store")
+		t.Error("Incorrect genesis block saved in store")
 	}
 
-	//h, err := hashutil.HashProto(genesisCheckpt)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if store.checkptBlkRoot[h] != genesisBlkRoot {
-	//	t.Error("Incorrect genesis check point to block root saved from store")
-	//}
+	cachedState, err := store.checkpointState.StateByCheckpoint(genesisCheckpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(cachedState, genesisState) {
+		t.Error("Incorrect genesis state cached")
+	}
 }
 
 func TestStore_AncestorOk(t *testing.T) {
