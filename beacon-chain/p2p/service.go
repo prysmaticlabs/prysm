@@ -73,6 +73,10 @@ func (s *Service) Start() {
 	s.host = h
 
 	// TODO(3147): Add gossip sub options
+	// Gossipsub registration is done before we add in any new peers
+	// due to libp2p's gossipsub implementation not taking into 
+	// account previously added peers when creating the gossipsub
+	// object. 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
 		s.startupErr = err
