@@ -109,7 +109,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := store.OnAttestation(ctx, tt.a)
+			_, err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
