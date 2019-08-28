@@ -119,28 +119,31 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 
 // saveCheckpointState saves and returns the processed state with the associated check point.
 func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	targetState, err := s.checkpointState.StateByCheckpoint(c)
+	cachedState, err := s.checkpointState.StateByCheckpoint(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	if targetState != nil {
-		return targetState, nil
+	if cachedState != nil {
+		return cachedState, nil
 	}
 
-	stateCopy := proto.Clone(baseState).(*pb.BeaconState)
-	targetState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+	// Advance slots only when it's higher than current state slot.
+	if helpers.StartSlot(c.Epoch) > baseState.Slot {
+		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+		baseState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+		}
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: c,
-		State:      targetState,
+		State:      baseState,
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
 
-	return targetState, nil
+	return baseState, nil
 }
 
 // waitForAttInclDelay waits until the next slot because attestation can only affect
