@@ -4,13 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	core "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	syncHandler "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,8 +27,8 @@ func (p *Service) Handshakes() map[peer.ID]*pb.Hello {
 	return nil
 }
 
-func connectionHandler(h host.Host, handler syncHandler.RpcHandler, topic string) {
-	h.Network().Notify(&network.NotifyBundle{
+func (p *Service) AddConnectionHandler(request p2p.Request, topic string) {
+	p.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
@@ -39,7 +37,7 @@ func connectionHandler(h host.Host, handler syncHandler.RpcHandler, topic string
 					"Performing handshake with to peer",
 				)
 
-				s, err := h.NewStream(
+				s, err := p.host.NewStream(
 					ctx,
 					conn.RemotePeer(),
 					core.ProtocolID(topic),
@@ -50,14 +48,18 @@ func connectionHandler(h host.Host, handler syncHandler.RpcHandler, topic string
 						"address": conn.RemoteMultiaddr(),
 					}).Debug("Failed to open stream with newly connected peer")
 
-					if err := h.Network().ClosePeer(conn.RemotePeer()); err != nil {
+					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 					}
 					return
 				}
 				defer s.Close()
-				if err := handler(ctx, proto.Message(nil), s); err != nil {
-					log.WithError(err).Error("Could not send hello rpc request")
+				if err := request(ctx, topic, s); err != nil {
+					log.WithError(err).Error("Could not send succesful hello rpc request")
+					if err := p.Disconnect(conn.RemotePeer()); err != nil {
+						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+					}
+					return
 				}
 			}()
 		},

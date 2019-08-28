@@ -20,6 +20,14 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, topic string, str
 	ctx, cancel := context.WithTimeout(r.ctx, 10*time.Second)
 	defer cancel()
 
+	// return if hello already exists
+	hello := r.helloTracker[stream.Conn().RemotePeer()]
+	if hello != nil {
+		return nil
+	}
+
+	r.helloTracker[stream.Conn().RemotePeer()] = nil
+
 	resp := &pb.Hello{
 		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
@@ -38,7 +46,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, topic string, str
 	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
 		return err
 	}
-
+	r.helloTracker[stream.Conn().RemotePeer()] = msg
 	return r.validateHelloMessage(msg, stream)
 }
 
@@ -50,8 +58,18 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
+	// return if hello already exists
+	hello := r.helloTracker[stream.Conn().RemotePeer()]
+	if hello != nil {
+		return nil
+	}
+
+	r.helloTracker[stream.Conn().RemotePeer()] = nil
+
 	log := log.WithField("rpc", "hello")
 	m := msg.(*pb.Hello)
+
+	r.helloTracker[stream.Conn().RemotePeer()] = m
 
 	if err := r.validateHelloMessage(m, stream); err != nil {
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, errWrongForkVersion.Error())

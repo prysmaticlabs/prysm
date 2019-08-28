@@ -48,6 +48,10 @@ type Sender interface {
 	Send(ctx context.Context, msg proto.Message, peer peer.ID) (network.Stream, error)
 }
 
+// Request describes the function signature of any function that sends a request to
+// another peer.
+type Request func(ctx context.Context, topic string, stream network.Stream) error
+
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
 	ctx           context.Context
@@ -428,6 +432,11 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 // PeerID returns the local peer.
 func (s *Server) PeerID() peer.ID {
 	return s.host.ID()
+}
+
+// AddConnectionHandler is a no-op
+func (s *Server) AddConnectionHandler(r Request, topic string) {
+	//no-op
 }
 
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
