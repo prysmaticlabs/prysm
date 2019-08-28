@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -35,7 +36,14 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	if err := c.p2p.Broadcast(ctx, att); err != nil {
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
+
+	attRoot, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		log.WithError(err).Error("Failed to hash attestation")
+	}
+
 	log.WithFields(logrus.Fields{
+		"attRoot": hex.EncodeToString(attRoot[:]),
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
