@@ -109,7 +109,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := store.OnAttestation(ctx, tt.a)
+			_, err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
@@ -197,5 +197,18 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	}
+
+	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
+	if err := store.GenesisStore(ctx, s); err != nil {
+		t.Fatal(err)
+	}
+	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
+	s3, err := store.saveCheckpointState(ctx, s, cp3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s3.Slot != s.Slot {
+		t.Errorf("Wanted state slot: %d, got: %d", s.Slot, s3.Slot)
 	}
 }

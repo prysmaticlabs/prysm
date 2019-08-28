@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -64,18 +62,14 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	// Delay attestation inclusion until the attested slot is in the past.
-	slot, err := c.waitForAttInclDelay(ctx, att)
-	if err != nil {
-		return errors.Wrap(err, "could not delay attestation inclusion")
-	}
-
 	// Update forkchoice store for the new attestation
-	if err := c.forkChoiceStore.OnAttestation(ctx, att); err != nil {
+	attSlot, err := c.forkChoiceStore.OnAttestation(ctx, att)
+	if err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
+
 	log.WithFields(logrus.Fields{
-		"attSlot":     slot,
+		"attSlot":     attSlot,
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Finished updating fork choice store for attestation")
 
@@ -94,7 +88,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	}).Debug("Finished applying fork choice for attestation")
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
-	if helpers.IsEpochEnd(slot) {
+	if !helpers.IsEpochStart(attSlot) {
 		targetRoot, err := helpers.BlockRoot(c.headState, att.Data.Target.Epoch)
 		if err != nil {
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
@@ -109,30 +103,6 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 
 	processedAttNoPubsub.Inc()
 	return nil
-}
-
-// waitForAttInclDelay waits until the next slot because attestation can only affect
-// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
-// until the attested slot is in the past.
-func (c *ChainService) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
-	defer span.End()
-
-	s, err := c.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get state")
-	}
-	slot, err := helpers.AttestationDataSlot(s, a.Data)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get attestation slot")
-	}
-
-	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclude := time.Unix(int64(s.GenesisTime), 0).Add(duration)
-
-	time.Sleep(time.Until(timeToInclude))
-	return slot, nil
 }
 
 // This checks if the attestation is from a competing chain, emits warning and updates metrics.

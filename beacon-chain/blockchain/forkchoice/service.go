@@ -23,7 +23,7 @@ import (
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
 	GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
