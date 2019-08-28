@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -25,7 +27,7 @@ import (
 // beacon chain.
 type BeaconChainServer struct {
 	beaconDB db.Database
-	head     blockchain.HeadRetriever
+	head     interface{}
 	pool     operations.Pool
 }
 
@@ -223,13 +225,13 @@ func (bs *BeaconChainServer) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.head.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.head.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.head.HeadState().PreviousJustifiedCheckpoint
+	finalizedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.head.HeadRoot(),
-		BlockSlot:                  bs.head.HeadSlot(),
+		BlockRoot:                  bs.head.(blockchain.HeadRetriever).HeadRoot(),
+		BlockSlot:                  bs.head.(blockchain.HeadRetriever).HeadSlot(),
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
@@ -503,24 +505,31 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-	s, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
+
+	var headState *pbp2p.BeaconState
+	var err error
+	if _, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
+		headState, err = bs.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve beacon state")
+		}
+	} else {
+		headState = bs.head.(blockchain.HeadRetriever).HeadState()
 	}
 
-	currentEpoch := helpers.SlotToEpoch(s.Slot)
-	finalized := currentEpoch == s.FinalizedCheckpoint.Epoch
+	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
 
-	atts, err := epoch.MatchAttestations(s, currentEpoch)
+	atts, err := epoch.MatchAttestations(headState, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
 	}
-	attestedBalances, err := epoch.AttestingBalance(s, atts.Target)
+	attestedBalances, err := epoch.AttestingBalance(headState, atts.Target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve attested balances: %v", err)
 	}
 
-	totalBalances, err := helpers.TotalActiveBalance(s)
+	totalBalances, err := helpers.TotalActiveBalance(headState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve total balances: %v", err)
 	}
