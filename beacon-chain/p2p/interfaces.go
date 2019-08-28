@@ -9,7 +9,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	p2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 )
 
 // P2P represents the full p2p interface composed of all of the sub-interfaces.
@@ -39,7 +38,7 @@ type SetStreamHandler interface {
 
 // ConnectionHandler configures p2p to handle connections with a peer.
 type ConnectionHandler interface {
-	AddConnectionHandler(request p2p.Request, topic string)
+	AddConnectionHandler(f func(ctx context.Context, topic string, stream network.Stream) error, topic string)
 }
 
 // EncodingProvider provides p2p network encoding.
