@@ -49,7 +49,8 @@ type Sender interface {
 }
 
 // Request describes the function signature of any function that sends a request to
-// another peer.
+// another peer. This will be shifted to the new p2p package once this whole package is
+// deleted.
 type Request func(ctx context.Context, topic string, stream network.Stream) error
 
 // Server is a placeholder for a p2p service. To be designed.
