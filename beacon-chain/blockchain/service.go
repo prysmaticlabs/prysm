@@ -212,7 +212,6 @@ func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32
 		"slots": b.Slot,
 		"root":  hex.EncodeToString(r[:]),
 	}).Debug("Saved head info")
-
 	return nil
 }
 
