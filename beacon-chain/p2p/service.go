@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	network "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -116,7 +116,9 @@ func (s *Service) Start() {
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
 	s.started = false
-	s.dv5Listener.Close()
+	if s.dv5Listener != nil {
+		s.dv5Listener.Close()
+	}
 	return nil
 }
 
