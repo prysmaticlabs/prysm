@@ -69,6 +69,7 @@ func generateUnencryptedKeys(r io.Reader) *unencryptedKeysContainer {
 			WithdrawalKey: withdrawalKey.Marshal(),
 		}
 	}
+	return ctnr
 }
 
 func saveUnencryptedKeysToFile(w io.Writer, ctnr *unencryptedKeysContainer) error {
