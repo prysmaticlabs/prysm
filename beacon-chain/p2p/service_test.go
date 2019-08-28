@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/multiformats/go-multiaddr"
+	multiaddr "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -85,6 +85,11 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 	if s.started != false {
 		t.Error("Expected Service.started to be false, got true")
 	}
+}
+
+func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
+	s, _ := NewService(nil)
+	_ = s.Stop()
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
