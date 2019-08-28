@@ -291,6 +291,10 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
+	chainStarted := vs.powChainService.HasChainStarted()
+	if !chainStarted {
+		return false, nil, nil
+	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 	var headState *pbp2p.BeaconState
@@ -303,9 +307,6 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	} else {
 		headState = vs.chainService.(blockchain.HeadRetriever).HeadState()
 	}
-
-	chainStarted := vs.powChainService.HasChainStarted()
-
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
