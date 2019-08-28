@@ -120,3 +120,82 @@ func TestStore_OnAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestStore_SaveCheckpointState(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseDemoBeaconConfig()
+
+	store := NewForkChoiceService(ctx, db)
+
+	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(crosslinks); i++ {
+		crosslinks[i] = &ethpb.Crosslink{
+			ParentRoot: make([]byte, 32),
+			DataRoot:   make([]byte, 32),
+		}
+	}
+	s := &pb.BeaconState{
+		Fork: &pb.Fork{
+			Epoch:           0,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
+		JustificationBits:          []byte{0},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		CurrentCrosslinks:          crosslinks,
+		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+	}
+	if err := store.GenesisStore(ctx, s); err != nil {
+		t.Fatal(err)
+	}
+
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	s1, err := store.saveCheckpointState(ctx, s, cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
+	s2, err := store.saveCheckpointState(ctx, s, cp2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	}
+
+	s1, err = store.saveCheckpointState(ctx, nil, cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	s1, err = store.checkpointState.StateByCheckpoint(cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	s2, err = store.checkpointState.StateByCheckpoint(cp2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	}
+}

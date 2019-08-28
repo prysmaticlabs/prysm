@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -76,7 +77,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	}
 
 	// Store target checkpoint state if not yet seen.
-	baseState, err = s.saveChkptState(ctx, baseState, tgt)
+	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
 		return err
 	}
@@ -111,25 +112,30 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	return baseState, nil
 }
 
-// saveChkptState saves the block root with check point to avoid excessive slot processing down the line.
-func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	h, err := hashutil.HashProto(c)
+// saveCheckpointState saves and returns the processed state with the associated check point.
+func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	targetState, err := s.checkpointState.StateByCheckpoint(c)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not hash justified checkpoint")
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	s.lock.RLock()
-	_, exists := s.checkptBlkRoot[h]
-	s.lock.RUnlock()
-	if !exists {
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
-		}
-		s.lock.Lock()
-		defer s.lock.Unlock()
-		s.checkptBlkRoot[h] = bytesutil.ToBytes32(c.Root)
+	if targetState != nil {
+		return targetState, nil
 	}
-	return baseState, nil
+
+	stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+	targetState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+	}
+
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: c,
+		State:      targetState,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
+
+	return targetState, nil
 }
 
 // verifyAttSlotTime validates input attestation is not from the future.
