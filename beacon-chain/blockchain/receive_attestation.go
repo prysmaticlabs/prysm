@@ -43,7 +43,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 	}
 
 	log.WithFields(logrus.Fields{
-		"attRoot": hex.EncodeToString(attRoot[:]),
+		"attRoot":     hex.EncodeToString(attRoot[:]),
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 

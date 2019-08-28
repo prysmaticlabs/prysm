@@ -24,7 +24,9 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	headState := r.chain.HeadState()
 
 	// Ignore block older than last finalized checkpoint.
-	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch+1) {
+	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch) {
+		log.Debugf("Received a block that's older than finalized checkpoint, %d < %d",
+			block.Slot, helpers.StartSlot(headState.FinalizedCheckpoint.Epoch))
 		return nil
 	}
 
