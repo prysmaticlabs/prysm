@@ -4,11 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 var _ = shared.Service(&RegularSync{})
@@ -82,4 +84,8 @@ func (r *RegularSync) Syncing() bool {
 type Checker interface {
 	Syncing() bool
 	Status() error
+}
+
+type HelloTracker interface {
+	Hellos() map[peer.ID]*pb.Hello
 }

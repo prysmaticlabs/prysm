@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -413,6 +414,35 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
 	return b.services.RegisterService(syncService)
+}
+
+func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
+	var operationService *operations.Service
+	if err := b.services.FetchService(&operationService); err != nil {
+		return err
+	}
+
+	var attsService *attestation.Service
+	if err := b.services.FetchService(&attsService); err != nil {
+		return err
+	}
+
+	var web3Service *powchain.Web3Service
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+
+	if featureconfig.FeatureConfig().UseNewSync {
+		var chainService *blockchain.ChainService
+		if err := b.services.FetchService(&chainService); err != nil {
+			return err
+		}
+
+		is := initialsync.NewInitialSync(&initialsync.Config{})
+
+		return b.services.RegisterService(is)
+	}
+	return nil
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
