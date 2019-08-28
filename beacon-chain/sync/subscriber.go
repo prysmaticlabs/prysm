@@ -132,7 +132,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				continue
 			}
 
-			messageSentCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 
 			go pipeline(msg.Data)
 		}

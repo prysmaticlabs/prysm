@@ -8,10 +8,10 @@ import (
 // TODO(3147): Add metrics for RPC & subscription success/error.
 
 var (
-	messageSentCounter = promauto.NewCounterVec(
+	messageReceivedCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "p2p_message_sent_total",
-			Help: "Count of messages sent.",
+			Name: "p2p_message_recieved_total",
+			Help: "Count of messages received.",
 		},
 		[]string{"topic"},
 	)
