@@ -51,7 +51,7 @@ import (
 //    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
@@ -60,44 +60,49 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+		return 0, fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
 	baseState, err := s.verifyAttPreState(ctx, tgt)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(time.Now().Unix())
 	if slotTime > currentTime {
-		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
+		return 0, fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
 	}
 
 	// Store target checkpoint state if not yet seen.
 	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
-		return err
+		return 0, err
+	}
+
+	// Delay attestation processing until the subsequent slot.
+	if err := s.waitForAttInclDelay(ctx, a, baseState); err != nil {
+		return 0, err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Update every validator's latest vote.
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return 0, nil
 }
 
 // verifyAttPreState validates input attested check point has a valid pre-state.
@@ -136,6 +141,26 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	}
 
 	return targetState, nil
+}
+
+// waitForAttInclDelay waits until the next slot because attestation can only affect
+// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
+// until the attested slot is in the past.
+func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, targetState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
+	defer span.End()
+
+	slot, err := helpers.AttestationDataSlot(targetState, a.Data)
+	if err != nil {
+		return errors.Wrap(err, "could not get attestation slot")
+	}
+
+	nextSlot := slot + 1
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToInclude))
+	return nil
 }
 
 // verifyAttSlotTime validates input attestation is not from the future.
