@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -33,15 +35,32 @@ func main() {
 		log.Fatal("Please specify an --output-json file to write the unencrypted keys to")
 	}
 
+	file, err := os.Create(*outputJSON)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	ctnr := generateUnencryptedKeys(rand.Reader)
+	if err := saveUnencryptedKeysToFile(file, ctnr); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func generateUnencryptedKeys(r io.Reader) *unencryptedKeysContainer {
 	ctnr := &unencryptedKeysContainer{
 		Keys: make([]*unencryptedKeys, *numKeys),
 	}
 	for i := 0; i < *numKeys; i++ {
-		signingKey, err := bls.RandKey(rand.Reader)
+		signingKey, err := bls.RandKey(r)
 		if err != nil {
 			log.Fatal(err)
 		}
-		withdrawalKey, err := bls.RandKey(rand.Reader)
+		withdrawalKey, err := bls.RandKey(r)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -50,28 +69,19 @@ func main() {
 			WithdrawalKey: withdrawalKey.Marshal(),
 		}
 	}
+}
 
+func saveUnencryptedKeysToFile(w io.Writer, ctnr *unencryptedKeysContainer) error {
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	newCont := &unencryptedKeysContainer{}
-	if err := json.Unmarshal(enc, newCont); err != nil {
-		log.Fatal(err)
-	}
-
-	file, err := os.Create(*outputJSON)
+	n, err := w.Write(enc)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	n, err := file.Write(enc)
-	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if n != len(enc) {
-		log.Fatalf("Failed to write %d bytes to file, wrote %d", len(enc), n)
+		return fmt.Errorf("Failed to write %d bytes to file, wrote %d", len(enc), n)
 	}
+	return nil
 }
