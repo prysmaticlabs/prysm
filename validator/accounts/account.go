@@ -17,7 +17,7 @@ import (
 var log = logrus.WithField("prefix", "accounts")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
-// and encrypted keystore directory and a password string.
+// an encrypted keystore directory and a password string.
 func DecryptKeysFromKeystore(directory string, password string) (map[string]*keystore.Key, error) {
 	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
