@@ -133,6 +133,12 @@ func (s *InitialSync) Start() {
 		headSlot = s.chain.HeadSlot()
 	}
 
+
+	// Force a fork choice update since fork choice was not run during initial sync.
+	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), s.chain.HeadBlock()); err != nil {
+		panic(err)
+	}
+	
 	log.Infof("Synced up to %d", best.HeadSlot)
 }
 
