@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 var _ = shared.Service(&RegularSync{})
@@ -39,6 +38,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		p2p:        cfg.P2P,
 		operations: cfg.Operations,
 		chain:      cfg.Chain,
+		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
 
 	r.registerRPCHandlers()
@@ -81,7 +81,7 @@ func (r *RegularSync) Syncing() bool {
 }
 
 func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
-	return nil
+	return r.helloTracker
 }
 
 // Checker defines a struct which can verify whether a node is currently
