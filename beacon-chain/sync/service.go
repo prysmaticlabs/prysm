@@ -76,6 +76,10 @@ func (r *RegularSync) Syncing() bool {
 	return false
 }
 
+func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
+	return nil
+}
+
 // Checker defines a struct which can verify whether a node is currently
 // synchronizing a chain with the rest of peers in the network.
 type Checker interface {

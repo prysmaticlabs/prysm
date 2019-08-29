@@ -35,7 +35,9 @@ type InitialSync struct {
 }
 
 func NewInitialSync(cfg *Config) *InitialSync {
-	return &InitialSync{}
+	return &InitialSync{
+		helloTracker: cfg.RegSync,
+	}
 }
 
 func (s *InitialSync) Start() {
@@ -46,6 +48,7 @@ func (s *InitialSync) Start() {
 			break
 		}
 
+
 		log.WithField(
 			"hellos received",
 			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
@@ -53,8 +56,6 @@ func (s *InitialSync) Start() {
 
 		time.Sleep(5 * time.Second)
 	}
-
-
 }
 
 func (s *InitialSync) Stop() error {

@@ -438,7 +438,14 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 			return err
 		}
 
-		is := initialsync.NewInitialSync(&initialsync.Config{})
+		var regSync *prysmsync.RegularSync
+		if err := b.services.FetchService(&regSync); err != nil {
+			return err
+		}
+
+		is := initialsync.NewInitialSync(&initialsync.Config{
+			RegSync: regSync,
+		})
 
 		return b.services.RegisterService(is)
 	}
