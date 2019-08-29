@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
-var oneYear = 365 * 24 * time.Hour
+const oneYear = 365 * 24 * time.Hour
 
 // prefix to add to keys, so that we can represent invalid objects
-var invalid = "invalidObject"
+const invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -131,6 +131,8 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			if msg.GetFrom() == r.p2p.PeerID() {
 				continue
 			}
+
+			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 
 			go pipeline(msg.Data)
 		}
