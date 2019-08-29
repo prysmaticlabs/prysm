@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -161,6 +162,55 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 
 	if err := service.HandleAttestation(context.Background(), att); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
+	data := &ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+		Target: &ethpb.Checkpoint{Epoch: 0},
+		Crosslink: &ethpb.Crosslink{
+			Shard:      1,
+			StartEpoch: 0,
+		},
+	}
+	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+		Data:       data,
+		CustodyBit: false,
+	}
+	root, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	if err != nil {
+		t.Error(err)
+	}
+	att := &ethpb.Attestation{
+		Data:        data,
+		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+	}
+
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 256)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	committee, err := helpers.CrosslinkCommittee(beaconState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
+	if err != nil {
+		t.Error(err)
+	}
+	att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
+
+	// We create the aggregate signature from the committee members.
+	sigs := make([]*bls.Signature, len(committee))
+	for i := 0; i < len(sigs); i++ {
+		att.AggregationBits.SetBitAt(uint64(i), true)
+		domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+		sigs[i] = privKeys[committee[0]].Sign(root[:], domain)
+	}
+	aggregatedSig := bls.AggregateSignatures(sigs)
+	att.Signature = aggregatedSig.Marshal()
+
+	if err := blocks.VerifyAttestation(beaconState, att); err != nil {
+		t.Errorf("Attestation failed to verify")
 	}
 }
 
