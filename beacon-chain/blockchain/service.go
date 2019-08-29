@@ -99,6 +99,7 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		c.stateInitializedFeed.Send(c.genesisTime)
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
