@@ -85,7 +85,7 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}
 
-		return validationErr
+		return errors.Wrap(validationErr, "hello message failed validation")
 	}
 
 	r.helloTrackerLock.Lock()
