@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// registerRPC for a given topic with an expected protobuf message type.
+// sendRPCHelloRequest for a given topic with an expected protobuf message type.
 func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error {
 	log := log.WithField("rpc", "hello")
 
@@ -73,7 +73,8 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	r.helloTrackerLock.RUnlock()
 
 	if err := r.validateHelloMessage(m, stream); err != nil {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, errWrongForkVersion.Error())
+		originalErr := err
+		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -88,6 +89,7 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}
+		return originalErr
 	}
 
 	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
