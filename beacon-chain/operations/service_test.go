@@ -175,6 +175,8 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		BeaconDB: beaconDB,
 		P2P:      broadcaster,
 	})
+
+	// First, we create a common attestation data.
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0},
@@ -195,7 +197,9 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		Data:        data,
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 128)
+
+	// We setup the genesis state with 256 validators.
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 256)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -219,33 +223,47 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Next up, we compute the committee for the attestation we're testing.
 	committee, err := helpers.CrosslinkCommittee(beaconState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
 		t.Error(err)
 	}
-	att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Logf("Committee length %d", len(committee))
+	totalAggBits := bitfield.NewBitlist(uint64(len(committee)))
+
+	// For every single member of the committee, we sign the attestation data and handle
+	// the attestation through the operations service, which will perform basic aggregation
+	// and verification.
 	for i := 0; i < len(committee); i++ {
+		att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 		att.AggregationBits.SetBitAt(uint64(i), true)
+		totalAggBits = totalAggBits.Or(att.AggregationBits)
 		domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 		att.Signature = privKeys[committee[i]].Sign(root[:], domain).Marshal()
 		if err := opsSrv.HandleAttestation(ctx, att); err != nil {
-			t.Errorf("Could not handle attestation: %v", err)
+			t.Fatalf("Could not handle attestation: %v", err)
 		}
 	}
+
+	// We fetch the final attestation from the DB, which should be an aggregation of
+	// all committee members effectively.
 	aggAtt, err := beaconDB.Attestation(ctx, attDataRoot)
 	if err != nil {
 		t.Error(err)
 	}
 	b1 := aggAtt.AggregationBits.Bytes()
-	b2 := att.AggregationBits.Bytes()
+	b2 := totalAggBits.Bytes()
+
+	// We check if the aggregation bits are what we want.
 	if !bytes.Equal(b1, b2) {
 		t.Errorf("Wanted aggregation bytes %v, received %v", b2, b1)
 	}
+
+	// If the committee is larger than 1, the signature from the attestation fetched from the DB
+	// should be an aggregate of signatures and not equal to an individual signature from a validator.
 	if len(committee) > 1 && bytes.Equal(aggAtt.Signature, att.Signature) {
 		t.Errorf("Expected aggregate signature %v to be different from individual sig %v", aggAtt.Signature, att.Signature)
 	}
