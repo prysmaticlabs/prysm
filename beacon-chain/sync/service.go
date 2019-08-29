@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -49,15 +50,18 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx        context.Context
-	p2p        p2p.P2P
-	db         db.Database
-	operations *operations.Service
-	chain      blockchainService
+	ctx          context.Context
+	p2p          p2p.P2P
+	db           db.Database
+	operations   *operations.Service
+	chain        blockchainService
+	helloTracker map[peer.ID]*pb.Hello
 }
 
 // Start the regular sync service.
 func (r *RegularSync) Start() {
+	// Add connection handler for new peers
+	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest, "/eth2/beacon_chain/req/hello/1")
 }
 
 // Stop the regular sync service.
