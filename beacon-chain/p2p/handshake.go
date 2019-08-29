@@ -24,6 +24,9 @@ func (p *Service) Handshakes() map[peer.ID]*pb.Hello {
 	return nil
 }
 
+// AddConnectionHandler adds a callback function which handles the connection with a
+// newly added peer. It performs a handshake with that peer by sending a hello request
+// and validating the response from the peer.
 func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
 	p.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {

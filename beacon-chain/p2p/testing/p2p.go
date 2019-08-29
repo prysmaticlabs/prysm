@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TopicMappings are the protocol ids for the different types of requests.
 var TopicMappings = map[reflect.Type]string{
 	reflect.TypeOf(&pb.Hello{}):                     "/eth2/beacon_chain/req/hello/1",
 	reflect.TypeOf(&pb.Goodbye{}):                   "/eth2/beacon_chain/req/goodbye/1",
