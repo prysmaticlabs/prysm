@@ -89,10 +89,9 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 		log.Fatal(err)
 	}
 
-	log.Infof("Compare all heads for head slot :%d", head1.BlockSlot)
-	if head1.BlockSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		p, err := clients[endpt1].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
-			Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
+	log.Infof("Comparing all heads for head slot :%d", head1.BlockSlot)
+	if (head1.BlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		p, err := clients[endpt1].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,13 +104,12 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			log.Fatal(err)
 		}
 		if !reflect.DeepEqual(head1, head2) {
-			log.Error("Uh oh! Head miss-matched!")
+			log.Error("Uh oh! Heads missmatched!")
 			logHead(endpt1, head1)
 			logHead(endpt2, head2)
 
-			if head1.BlockSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
-				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
-					Epoch: (head1.BlockSlot / params.BeaconConfig().SlotsPerEpoch) - 1})
+			if (head1.BlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{})
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -124,12 +122,12 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 func logHead(endpt string, head *pb.ChainHead) {
 	log.WithFields(
 		logrus.Fields{
-			"HeadSlot":      head.BlockSlot,
-			"HeadRoot":      hex.EncodeToString(head.BlockRoot),
-			"JustifiedSlot": head.JustifiedSlot,
-			"JustifiedRoot": hex.EncodeToString(head.JustifiedBlockRoot),
-			"FinalizedSlot": head.FinalizedSlot,
-			"Finalizedroot": hex.EncodeToString(head.FinalizedBlockRoot),
+			"HeadSlot":       head.BlockSlot,
+			"HeadRoot":       hex.EncodeToString(head.BlockRoot),
+			"JustifiedEpoch": head.JustifiedSlot / params.BeaconConfig().SlotsPerEpoch,
+			"JustifiedRoot":  hex.EncodeToString(head.JustifiedBlockRoot),
+			"FinalizedEpoch": head.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch,
+			"FinalizedRoot":  hex.EncodeToString(head.FinalizedBlockRoot),
 		}).Info("Head from beacon node ", endpt)
 }
 
