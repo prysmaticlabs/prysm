@@ -525,8 +525,14 @@ func ProcessAttestationsNoVerify(
 //    Process ``Attestation`` operation.
 //    """
 //    data = attestation.data
+//    assert data.crosslink.shard < SHARD_COUNT
+//    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//
 //    attestation_slot = get_attestation_data_slot(state, data)
 //    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+//
+//    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
+//    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
@@ -535,7 +541,6 @@ func ProcessAttestationsNoVerify(
 //        proposer_index=get_beacon_proposer_index(state),
 //    )
 //
-//    assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
 //    if data.target_epoch == get_current_epoch(state):
 //        ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
 //        parent_crosslink = state.current_crosslinks[data.crosslink.shard]
@@ -564,6 +569,24 @@ func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*p
 // method is used to validate attestations whose signatures have already been verified.
 func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	data := att.Data
+
+	if data.Crosslink.Shard >= params.BeaconConfig().ShardCount {
+		return nil, fmt.Errorf(
+			"expected crosslink shard to be less than SHARD_COUNT, recevied: %d, expected :%d",
+			data.Crosslink.Shard,
+			params.BeaconConfig().ShardCount,
+		)
+	}
+
+	if !(data.Target.Epoch == helpers.PrevEpoch(beaconState) || data.Target.Epoch == helpers.CurrentEpoch(beaconState)) {
+		return nil, fmt.Errorf(
+			"expected target epoch %d == %d or %d",
+			data.Target.Epoch,
+			helpers.PrevEpoch(beaconState),
+			helpers.CurrentEpoch(beaconState),
+		)
+	}
+
 	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation slot")
@@ -586,6 +609,11 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
+
+	if err := helpers.VerifyAttestationBitfields(beaconState, att); err != nil {
+		return nil, fmt.Errorf("could not verify attestation bitfields: %v", err)
+	}
+
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
@@ -595,15 +623,6 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		AggregationBits: att.AggregationBits,
 		InclusionDelay:  beaconState.Slot - attestationSlot,
 		ProposerIndex:   proposerIndex,
-	}
-
-	if !(data.Target.Epoch == helpers.PrevEpoch(beaconState) || data.Target.Epoch == helpers.CurrentEpoch(beaconState)) {
-		return nil, fmt.Errorf(
-			"expected target epoch %d == %d or %d",
-			data.Target.Epoch,
-			helpers.PrevEpoch(beaconState),
-			helpers.CurrentEpoch(beaconState),
-		)
 	}
 
 	var ffgSourceEpoch uint64
