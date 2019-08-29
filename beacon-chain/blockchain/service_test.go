@@ -46,8 +46,8 @@ func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
-	return nil
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
+	return 0, nil
 }
 
 func (s *store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
