@@ -210,7 +210,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	att.Signature = aggregatedSig.Marshal()
 
 	if err := blocks.VerifyAttestation(beaconState, att); err != nil {
-		t.Errorf("Attestation failed to verify")
+		t.Errorf("Attestation failed to verify: %v", err)
 	}
 }
 
