@@ -16,7 +16,8 @@ import (
 )
 
 var TopicAdvertisementPeriod = 60 * time.Second
-var TopicSearchInterval = 10 * time.Second
+var TopicSearchReqInterval = 10 * time.Second
+var TopicSearchDelay = 5 * time.Second
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -46,8 +47,59 @@ func (s *Service) Advertise(ctx context.Context, topic string, opts ...libp2p.Op
 }
 
 func (s *Service) FindPeers(ctx context.Context, topic string, opts ...libp2p.Option) (<-chan peer.AddrInfo, error) {
-	ticker := time.NewTicker(TopicSearchInterval)
-	s.dv5Listener.SearchTopic()
+	ticker := time.NewTicker(TopicSearchReqInterval)
+	setPeriod := make(chan time.Duration)
+	found := make(chan *discv5.Node)
+	lookup := make(chan bool)
+	peerInfo := make(chan peer.AddrInfo)
+	// set off the topic search routine, to process any search results
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				setPeriod <- TopicSearchDelay
+			case node := <-found:
+				multiAddr, err := convertSingleNodeToMultiAddr(node)
+				if err != nil {
+					log.WithError(err).Error("Could not convert to multiAddr")
+					continue
+				}
+				addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+				if err != nil {
+					log.WithError(err).Error("Could not make it into peer addr info")
+					continue
+				}
+				peerInfo <- *addrInfo
+			case <-ctx.Done():
+				break
+			}
+		}
+	}()
+
+	// set off topic search in another routine
+	go s.dv5Listener.SearchTopic(discv5.Topic(topic), setPeriod, found, lookup)
+	return peerInfo, nil
+}
+
+func (s *Service) FindPeer(ctx context.Context, id peer.ID) (peer.AddrInfo, error) {
+	pubkey, err := id.ExtractPublicKey()
+	if err != nil {
+		return peer.AddrInfo{}, errors.Wrapf(err, "could not extract public key from peer id")
+	}
+	ecdsaKey := convertFromInterfacePubKey(pubkey)
+	node := s.dv5Listener.Resolve(discv5.PubkeyID(ecdsaKey))
+	if node == nil {
+		return peer.AddrInfo{}, errors.New("could not find peer with that id")
+	}
+	multiAddr, err := convertSingleNodeToMultiAddr(node)
+	if err != nil {
+		return peer.AddrInfo{}, errors.Wrapf(err, "could not convert to multiaddr")
+	}
+	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return peer.AddrInfo{}, errors.Wrapf(err, "Could not make it into peer addr info")
+	}
+	return *addrInfo, nil
 }
 
 func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
@@ -84,30 +136,36 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 	var multiAddrs []ma.Multiaddr
 	for _, node := range nodes {
-		ip4 := node.IP.To4()
-		if ip4 == nil {
-			log.Error("Node doesn't have an ip4 address")
-			continue
-		}
-		pubkey, err := node.ID.Pubkey()
+		multiAddr, err := convertSingleNodeToMultiAddr(node)
 		if err != nil {
-			log.Errorf("Could not get pubkey from node ID: %v", err)
-			continue
-		}
-		assertedKey := convertToInterfacePubkey(pubkey)
-		id, err := peer.IDFromPublicKey(assertedKey)
-		if err != nil {
-			log.Errorf("Could not get peer id: %v", err)
-		}
-		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
-		multiAddr, err := ma.NewMultiaddr(multiAddrString)
-		if err != nil {
-			log.Errorf("Could not get multiaddr:%v", err)
+			log.WithError(err).Error("Could not convert discv5 node to multiaddr")
 			continue
 		}
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
+}
+
+func convertSingleNodeToMultiAddr(node *discv5.Node) (ma.Multiaddr, error) {
+	ip4 := node.IP.To4()
+	if ip4 == nil {
+		return nil, errors.New("node doesn't have an ip4 address")
+	}
+	pubkey, err := node.ID.Pubkey()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pubkey from node ID")
+	}
+	assertedKey := convertToInterfacePubkey(pubkey)
+	id, err := peer.IDFromPublicKey(assertedKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get peer id")
+	}
+	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
+	multiAddr, err := ma.NewMultiaddr(multiAddrString)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get multiaddr")
+	}
+	return multiAddr, nil
 }
 
 func manyMultiAddrsFromString(addrs []string) ([]ma.Multiaddr, error) {
