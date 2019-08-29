@@ -3,8 +3,10 @@ package blockchain
 import (
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ChainInfoRetriever defines a common interface for methods in blockchain service which
@@ -39,7 +41,12 @@ type FinalizationRetriever interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
 func (c *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return c.forkChoiceStore.FinalizedCheckpt()
+	cp := c.forkChoiceStore.FinalizedCheckpt()
+	if cp != nil {
+		return cp
+	}
+
+	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -52,17 +59,22 @@ func (c *ChainService) HeadRoot() []byte {
 	c.canonicalRootsLock.RLock()
 	defer c.canonicalRootsLock.RUnlock()
 
-	return c.canonicalRoots[c.headSlot]
+	root := c.canonicalRoots[c.headSlot]
+	if len(root) != 0 {
+		return root
+	}
+
+	return params.BeaconConfig().ZeroHash[:]
 }
 
 // HeadBlock returns the head block of the chain.
 func (c *ChainService) HeadBlock() *ethpb.BeaconBlock {
-	return c.headBlock
+	return proto.Clone(c.headBlock).(*ethpb.BeaconBlock)
 }
 
 // HeadState returns the head state of the chain.
 func (c *ChainService) HeadState() *pb.BeaconState {
-	return c.headState
+	return proto.Clone(c.headState).(*pb.BeaconState)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

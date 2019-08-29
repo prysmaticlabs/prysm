@@ -2,12 +2,15 @@ package sync
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -32,22 +35,25 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	return &RegularSync{
-		ctx:        context.Background(),
-		db:         cfg.DB,
-		p2p:        cfg.P2P,
-		operations: cfg.Operations,
-		chain:      cfg.Chain,
+		ctx:          context.Background(),
+		db:           cfg.DB,
+		p2p:          cfg.P2P,
+		operations:   cfg.Operations,
+		chain:        cfg.Chain,
+		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
 }
 
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx        context.Context
-	p2p        p2p.P2P
-	db         db.Database
-	operations *operations.Service
-	chain      blockchainService
+	ctx              context.Context
+	p2p              p2p.P2P
+	db               db.Database
+	operations       *operations.Service
+	chain            blockchainService
+	helloTracker     map[peer.ID]*pb.Hello
+	helloTrackerLock sync.RWMutex
 }
 
 // Start the regular sync service by initializing all of the p2p sync handlers.
@@ -56,6 +62,8 @@ func (r *RegularSync) Start() {
 	for !r.p2p.Started() {
 		time.Sleep(200 * time.Millisecond)
 	}
+	// Add connection handler for new peers
+	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
 	r.registerRPCHandlers()
 	r.registerSubscribers()
 	log.Info("Regular sync started")
