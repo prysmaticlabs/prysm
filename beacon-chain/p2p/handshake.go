@@ -37,6 +37,8 @@ func (p *Service) AddConnectionHandler(handler func(context.Context, peer.ID) er
 				if err := handler(ctx, conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Failed to negotiate with peer.")
 				}
+
+				log.Info("Successful peer connect!")
 			}()
 		},
 	})

@@ -9,6 +9,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,6 +27,15 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, pid peer.ID) erro
 	strm, err := r.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return err
+	}
+
+
+	code, errMsg, err := r.readStatusCode(strm)
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		return errors.New(errMsg.ErrorMessage)
 	}
 
 	msg := &pb.Hello{}
@@ -57,11 +67,8 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 
 	m := msg.(*pb.Hello)
 
-	r.helloTrackerLock.Lock()
-	r.helloTracker[stream.Conn().RemotePeer()] = m
-	r.helloTrackerLock.Unlock()
-
 	if err := r.validateHelloMessage(m, stream); err != nil {
+		validationErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, errWrongForkVersion.Error())
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
@@ -77,7 +84,13 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}
+
+		return validationErr
 	}
+
+	r.helloTrackerLock.Lock()
+	r.helloTracker[stream.Conn().RemotePeer()] = m
+	r.helloTrackerLock.Unlock()
 
 	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
