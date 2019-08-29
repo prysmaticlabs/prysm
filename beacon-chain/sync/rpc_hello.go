@@ -8,27 +8,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, topic string, stream network.Stream) error {
-	topic += r.p2p.Encoding().ProtocolSuffix()
-	setRPCStreamDeadlines(stream)
-
-	ctx, cancel := context.WithTimeout(r.ctx, 10*time.Second)
-	defer cancel()
-
-	// return if hello already exists
-	hello := r.helloTracker[stream.Conn().RemotePeer()]
-	if hello != nil {
-		return nil
-	}
-
-	r.helloTracker[stream.Conn().RemotePeer()] = nil
-
-	resp := &pb.Hello{
+func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, pid peer.ID) error {
+	req := &pb.Hello{
 		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
@@ -36,18 +23,17 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, topic string, str
 		HeadSlot:       r.chain.HeadSlot(),
 	}
 
-	if _, err := r.p2p.Encoding().Encode(stream, resp); err != nil {
+	strm, err := r.p2p.Send(ctx, req, pid)
+	if err != nil {
 		return err
 	}
-	// Close stream after finishing writing the request
-	stream.Close()
 
 	msg := &pb.Hello{}
-	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
+	if err := r.p2p.Encoding().Decode(strm, msg); err != nil {
 		return err
 	}
-	r.helloTracker[stream.Conn().RemotePeer()] = msg
-	return r.validateHelloMessage(msg, stream)
+	r.helloTracker[pid] = msg
+	return r.validateHelloMessage(msg, strm)
 }
 
 // helloRPCHandler reads the incoming Hello RPC from the peer and responds with our version of a hello message.

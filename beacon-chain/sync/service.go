@@ -61,7 +61,7 @@ type RegularSync struct {
 // Start the regular sync service.
 func (r *RegularSync) Start() {
 	// Add connection handler for new peers
-	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest, "/eth2/beacon_chain/req/hello/1")
+	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
 }
 
 // Stop the regular sync service.

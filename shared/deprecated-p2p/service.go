@@ -431,7 +431,7 @@ func (s *Server) PeerID() peer.ID {
 }
 
 // AddConnectionHandler is a no-op
-func (s *Server) AddConnectionHandler(f func(ctx context.Context, topic string, stream network.Stream) error, topic string) {
+func (s *Server) AddConnectionHandler(f func(ctx context.Context, pid peer.ID) error) {
 	//no-op
 }
 
