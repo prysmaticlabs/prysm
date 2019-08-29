@@ -248,8 +248,5 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 // FinalizedCheckpt returns the latest finalized check point from fork choice store.
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.finalizedCheckpt != nil {
-		return s.finalizedCheckpt
-	}
-	return &ethpb.Checkpoint{}
+	return s.finalizedCheckpt
 }

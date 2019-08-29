@@ -421,18 +421,8 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
-	var operationService *operations.Service
-	if err := b.services.FetchService(&operationService); err != nil {
-		return err
-	}
-
 	var attsService *attestation.Service
 	if err := b.services.FetchService(&attsService); err != nil {
-		return err
-	}
-
-	var web3Service *powchain.Web3Service
-	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
 
@@ -451,6 +441,8 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 			Chain: chainService,
 			RegSync: regSync,
 			P2P: b.fetchP2P(ctx),
+			DB: b.db,
+
 		})
 
 		return b.services.RegisterService(is)

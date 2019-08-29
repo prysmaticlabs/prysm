@@ -7,11 +7,14 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 var _ = shared.Service(&InitialSync{})
@@ -21,6 +24,7 @@ type blockchainService interface {
 	blockchain.HeadRetriever
 	blockchain.FinalizationRetriever
 	blockchain.AttestationReceiver
+	blockchain.ChainFeeds
 }
 
 const minHelloCount = 1 // TODO: Set this to more than 1, maybe configure from flag?
@@ -35,19 +39,39 @@ type Config struct {
 
 type InitialSync struct {
 	helloTracker sync.HelloTracker
-	chain blockchainService
-	p2p p2p.P2P
+	chain        blockchainService
+	p2p          p2p.P2P
+	db           db.Database
 }
 
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
 		helloTracker: cfg.RegSync,
-		chain: cfg.Chain,
-		p2p: cfg.P2P,
+		chain:        cfg.Chain,
+		p2p:          cfg.P2P,
+		db:           cfg.DB,
 	}
 }
 
 func (s *InitialSync) Start() {
+	ch := make(chan time.Time)
+	sub :=  s.chain.StateInitializedFeed().Subscribe(ch)
+	defer sub.Unsubscribe()
+
+	// Wait until chain start.
+	genesis := <-ch
+	currentSlot := uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
+	if currentSlot < params.BeaconConfig().SlotsPerEpoch {
+		log.Info("Chain started within the last epoch. Not syncing.")
+		return
+	}
+
+	// Are we already in sync, or close to it?
+	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
+		log.Info("Already synced to the current epoch.")
+		return
+	}
+
 	// Every 5 sec, report handshake count.
 	for {
 		helloCount := len(s.helloTracker.Hellos())
@@ -67,11 +91,13 @@ func (s *InitialSync) Start() {
 
 	for headSlot := s.chain.HeadSlot(); headSlot < best.HeadSlot; {
 		req := &pb.BeaconBlocksRequest{
-			HeadSlot: headSlot,
+			HeadSlot:      headSlot,
 			HeadBlockRoot: s.chain.HeadRoot(),
-			Count: 64,
-			Step: 1,
+			Count:         64,
+			Step:          1,
 		}
+
+		log.WithField("data", fmt.Sprintf("%+v", req)).Info("Sending msg")
 
 		strm, err := s.p2p.Send(context.Background(), req, pid)
 		if err != nil {
@@ -89,9 +115,11 @@ func (s *InitialSync) Start() {
 		}
 
 		resp := &pb.BeaconBlocksResponse{}
-		if  err := s.p2p.Encoding().Decode(strm, resp); err != nil {
+		if err := s.p2p.Encoding().Decode(strm, resp); err != nil {
 			panic(err)
 		}
+
+		log.Infof("Received %d blocks", len(resp.Blocks))
 
 		for _, blk := range resp.Blocks {
 			if blk.Slot <= headSlot {
@@ -101,7 +129,11 @@ func (s *InitialSync) Start() {
 				panic(err)
 			}
 		}
+
+		headSlot = s.chain.HeadSlot()
 	}
+
+	log.Infof("Synced up to %d", best.HeadSlot)
 }
 
 func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {

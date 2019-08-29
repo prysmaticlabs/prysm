@@ -40,7 +40,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 		return err
 	}
 
-	code, errMsg, err := r.readStatusCode(stream)
+	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
 		return err
 	}
