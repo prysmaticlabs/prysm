@@ -20,6 +20,7 @@ type P2P interface {
 	PeerManager
 	HandshakeManager
 	Sender
+	ConnectionHandler
 	DeprecatedSubscriber
 
 	Started() bool
@@ -33,6 +34,11 @@ type Broadcaster interface {
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
 type SetStreamHandler interface {
 	SetStreamHandler(topic string, handler network.StreamHandler)
+}
+
+// ConnectionHandler configures p2p to handle connections with a peer.
+type ConnectionHandler interface {
+	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error)
 }
 
 // EncodingProvider provides p2p network encoding.
