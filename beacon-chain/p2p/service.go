@@ -2,11 +2,12 @@ package p2p
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	network "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -70,6 +71,21 @@ func (s *Service) Start() {
 		return
 	}
 	s.host = h
+
+	// TODO(3147): Add gossip sub options
+	// Gossipsub registration is done before we add in any new peers
+	// due to libp2p's gossipsub implementation not taking into
+	// account previously added peers when creating the gossipsub
+	// object.
+	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
+	if err != nil {
+		s.startupErr = err
+
+		log.WithError(err).Error("Failed to start pubsub")
+		return
+	}
+	s.pubsub = gs
+
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
@@ -82,6 +98,8 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
+	s.started = true
+
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := manyMultiAddrsFromString(s.cfg.StaticPeers)
 		if err != nil {
@@ -90,28 +108,17 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
-	// TODO(3147): Add gossip sub options
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
-	if err != nil {
-		s.startupErr = err
-
-		log.WithError(err).Error("Failed to start pubsub")
-		return
-	}
-	s.pubsub = gs
-
-	s.started = true
-
 	registerMetrics(s)
-
 	multiAddrs := s.host.Network().ListenAddresses()
-	log.Infof("Node currently listening at %s", multiAddrs[1].String())
+	logIP4Addr(s.host.ID(), multiAddrs...)
 }
 
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
 	s.started = false
-	s.dv5Listener.Close()
+	if s.dv5Listener != nil {
+		s.dv5Listener.Close()
+	}
 	return nil
 }
 
@@ -201,6 +208,17 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			log.Errorf("Could not connect with peer: %v", err)
 		}
 	}
+}
+
+func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
+	var correctAddr ma.Multiaddr
+	for _, addr := range addrs {
+		if strings.Contains(addr.String(), "/ip4/") {
+			correctAddr = addr
+			break
+		}
+	}
+	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
 }
 
 // Subscribe to some topic.
