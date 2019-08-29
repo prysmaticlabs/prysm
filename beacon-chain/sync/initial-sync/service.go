@@ -92,6 +92,15 @@ func (s *InitialSync) Start() {
 		if  err := s.p2p.Encoding().Decode(strm, resp); err != nil {
 			panic(err)
 		}
+
+		for _, blk := range resp.Blocks {
+			if blk.Slot <= headSlot {
+				continue
+			}
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
+				panic(err)
+			}
+		}
 	}
 }
 
