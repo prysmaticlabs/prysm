@@ -106,6 +106,7 @@ func (c *ChainService) Start() {
 		if err := c.forkChoiceStore.GenesisStore(c.ctx, genesisState); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
+		c.stateInitializedFeed.Send(c.genesisTime)
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
