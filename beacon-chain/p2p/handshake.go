@@ -37,7 +37,7 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					"Performing handshake with to peer",
 				)
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil {
-					log.WithError(err).Error("Could not send succesful hello rpc request")
+					log.WithError(err).Error("Could not send successful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 					}
