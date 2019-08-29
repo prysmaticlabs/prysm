@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -166,6 +167,14 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 }
 
 func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+	broadcaster := &mockBroadcaster{}
+	opsSrv := NewOpsPoolService(ctx, &Config{
+		BeaconDB: beaconDB,
+		P2P:      broadcaster,
+	})
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0},
@@ -186,10 +195,27 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		Data:        data,
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 512)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 128)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := blocks.NewGenesisBlock(stateRoot[:])
+	blockRoot, err := ssz.HashTreeRoot(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -198,19 +224,30 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		t.Error(err)
 	}
 	att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
-
-	// We create the aggregate signature from the committee members.
-	sigs := make([]*bls.Signature, len(committee))
-	for i := 0; i < len(sigs); i++ {
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("Committee length %d", len(committee))
+	for i := 0; i < len(committee); i++ {
 		att.AggregationBits.SetBitAt(uint64(i), true)
 		domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
-		sigs[i] = privKeys[committee[i]].Sign(root[:], domain)
+		att.Signature = privKeys[committee[i]].Sign(root[:], domain).Marshal()
+		if err := opsSrv.HandleAttestation(ctx, att); err != nil {
+			t.Errorf("Could not handle attestation: %v", err)
+		}
 	}
-	aggregatedSig := bls.AggregateSignatures(sigs)
-	att.Signature = aggregatedSig.Marshal()
-
-	if err := blocks.VerifyAttestation(beaconState, att); err != nil {
-		t.Errorf("Attestation failed to verify: %v", err)
+	aggAtt, err := beaconDB.Attestation(ctx, attDataRoot)
+	if err != nil {
+		t.Error(err)
+	}
+	b1 := aggAtt.AggregationBits.Bytes()
+	b2 := att.AggregationBits.Bytes()
+	if !bytes.Equal(b1, b2) {
+		t.Errorf("Wanted aggregation bytes %v, received %v", b2, b1)
+	}
+	if len(committee) > 1 && bytes.Equal(aggAtt.Signature, att.Signature) {
+		t.Errorf("Expected aggregate signature %v to be different from individual sig %v", aggAtt.Signature, att.Signature)
 	}
 }
 
