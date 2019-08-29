@@ -26,5 +26,6 @@ var (
 
 	// Specific item keys.
 	headBlockRootKey          = []byte("head-root")
+	genesisBlockRootKey       = []byte("genesis-root")
 	depositContractAddressKey = []byte("deposit-contract")
 )

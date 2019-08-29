@@ -259,6 +259,16 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	})
 }
 
+// SaveGenesisBlockRoot to the db.
+func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
+	defer span.End()
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		return bucket.Put(genesisBlockRootKey, blockRoot[:])
+	})
+}
+
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
 // range scan using sorted left-padded byte keys using a start slot and an end slot.
 // If both the start and end slot are the same, and are 0, the function returns nil.
