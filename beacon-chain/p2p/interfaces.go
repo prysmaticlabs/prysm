@@ -36,7 +36,7 @@ type SetStreamHandler interface {
 
 // ConnectionHandler configures p2p to handle connections with a peer.
 type ConnectionHandler interface {
-	AddConnectionHandler(f func(ctx context.Context, pid peer.ID) error)
+	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error)
 }
 
 // EncodingProvider provides p2p network encoding.

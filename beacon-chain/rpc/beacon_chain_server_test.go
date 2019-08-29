@@ -807,20 +807,7 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
-	}
-
-	block := &ethpb.BeaconBlock{
-		Slot: 1,
-	}
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveState(ctx, s, blockRoot); err != nil {
-		t.Fatal(err)
+		head:     &mock.ChainService{State: s},
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
