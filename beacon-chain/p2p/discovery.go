@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
@@ -8,10 +9,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	iaddr "github.com/ipfs/go-ipfs-addr"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 )
+
+var TopicAdvertisementPeriod = 60 * time.Second
+var TopicSearchInterval = 10 * time.Second
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -24,6 +29,25 @@ type Listener interface {
 	Resolve(discv5.NodeID) *discv5.Node
 	RegisterTopic(discv5.Topic, <-chan struct{})
 	SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *discv5.Node, chan<- bool)
+}
+
+// Advertise the topic for a period of time, before closing off advertisement of the topic.
+func (s *Service) Advertise(ctx context.Context, topic string, opts ...libp2p.Option) (time.Duration, error) {
+	stopChan := make(chan struct{})
+	timeChan := time.After(TopicAdvertisementPeriod)
+
+	go func() {
+		<-timeChan
+		stopChan <- struct{}{}
+	}()
+
+	go s.dv5Listener.RegisterTopic(discv5.Topic(topic), stopChan)
+	return TopicAdvertisementPeriod, nil
+}
+
+func (s *Service) FindPeers(ctx context.Context, topic string, opts ...libp2p.Option) (<-chan peer.AddrInfo, error) {
+	ticker := time.NewTicker(TopicSearchInterval)
+	s.dv5Listener.SearchTopic()
 }
 
 func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.Network {

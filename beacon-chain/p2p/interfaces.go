@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/discovery"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/routing"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,6 +23,8 @@ type P2P interface {
 	HandshakeManager
 	Sender
 	DeprecatedSubscriber
+	discovery.Discovery // Conform to libp2p interfaces
+	routing.PeerRouting
 
 	Started() bool
 }
