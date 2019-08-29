@@ -187,7 +187,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 128)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 512)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -197,7 +197,6 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Logf("Committee length %d", len(committee))
 	att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 
 	// We create the aggregate signature from the committee members.
@@ -205,7 +204,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	for i := 0; i < len(sigs); i++ {
 		att.AggregationBits.SetBitAt(uint64(i), true)
 		domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
-		sigs[i] = privKeys[committee[0]].Sign(root[:], domain)
+		sigs[i] = privKeys[committee[i]].Sign(root[:], domain)
 	}
 	aggregatedSig := bls.AggregateSignatures(sigs)
 	att.Signature = aggregatedSig.Marshal()
