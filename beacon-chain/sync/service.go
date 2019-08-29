@@ -34,11 +34,12 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	return &RegularSync{
-		ctx:        context.Background(),
-		db:         cfg.DB,
-		p2p:        cfg.P2P,
-		operations: cfg.Operations,
-		chain:      cfg.Chain,
+		ctx:          context.Background(),
+		db:           cfg.DB,
+		p2p:          cfg.P2P,
+		operations:   cfg.Operations,
+		chain:        cfg.Chain,
+		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
 }
 

@@ -4,11 +4,9 @@ import (
 	"context"
 	"sync"
 
-	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/sirupsen/logrus"
 )
 
 var handshakes = make(map[peer.ID]*pb.Hello)
@@ -26,7 +24,7 @@ func (p *Service) Handshakes() map[peer.ID]*pb.Hello {
 	return nil
 }
 
-func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, topic string, stream network.Stream) error, topic string) {
+func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, topic string, id peer.ID) error, topic string) {
 	p.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
@@ -35,25 +33,7 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, topic s
 				log.WithField("peer", conn.RemotePeer()).Debug(
 					"Performing handshake with to peer",
 				)
-
-				s, err := p.host.NewStream(
-					ctx,
-					conn.RemotePeer(),
-					core.ProtocolID(topic+p.Encoding().ProtocolSuffix()),
-				)
-				if err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"peer":    conn.RemotePeer(),
-						"address": conn.RemoteMultiaddr(),
-					}).Debug("Failed to open stream with newly connected peer")
-
-					if err := p.Disconnect(conn.RemotePeer()); err != nil {
-						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-					}
-					return
-				}
-				defer s.Close()
-				if err := reqFunc(ctx, topic, s); err != nil {
+				if err := reqFunc(ctx, topic, conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Could not send succesful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
