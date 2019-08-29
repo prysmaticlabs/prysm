@@ -143,6 +143,8 @@ func (c *ChainService) initializeBeaconChain(
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
+	c.headState = genesisState
+
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
