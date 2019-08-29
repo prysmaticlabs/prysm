@@ -9,6 +9,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -37,6 +38,15 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	stream, err := r.p2p.Send(ctx, resp, id)
 	if err != nil {
 		return err
+	}
+
+	code, errMsg, err := r.readStatusCode(stream)
+	if err != nil {
+		return err
+	}
+
+	if code != 0 {
+		return errors.New(errMsg.ErrorMessage)
 	}
 
 	msg := &pb.Hello{}
