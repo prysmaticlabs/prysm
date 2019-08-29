@@ -15,6 +15,7 @@ import (
 var (
 	numKeys    = flag.Int("num-keys", 0, "Number of validator private/withdrawal keys to generate")
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
+	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
 
 type unencryptedKeysContainer struct {
@@ -33,6 +34,12 @@ func main() {
 	}
 	if *outputJSON == "" {
 		log.Fatal("Please specify an --output-json file to write the unencrypted keys to")
+	}
+
+	if !*overwrite {
+		if _, err := os.Stat(*outputJSON); err == nil {
+			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
+		}
 	}
 
 	file, err := os.Create(*outputJSON)
