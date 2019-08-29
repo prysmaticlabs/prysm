@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -33,11 +34,11 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:        context.Background(),
-		db:         cfg.DB,
-		p2p:        cfg.P2P,
-		operations: cfg.Operations,
-		chain:      cfg.Chain,
+		ctx:          context.Background(),
+		db:           cfg.DB,
+		p2p:          cfg.P2P,
+		operations:   cfg.Operations,
+		chain:        cfg.Chain,
 		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
 
@@ -50,12 +51,13 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx          context.Context
-	p2p          p2p.P2P
-	db           db.Database
-	operations   *operations.Service
-	chain        blockchainService
-	helloTracker map[peer.ID]*pb.Hello
+	ctx              context.Context
+	p2p              p2p.P2P
+	db               db.Database
+	operations       *operations.Service
+	chain            blockchainService
+	helloTracker     map[peer.ID]*pb.Hello
+	helloTrackerLock sync.RWMutex
 }
 
 // Start the regular sync service.
@@ -81,6 +83,8 @@ func (r *RegularSync) Syncing() bool {
 }
 
 func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
+	r.helloTrackerLock.RLock()
+	defer r.helloTrackerLock.RUnlock()
 	return r.helloTracker
 }
 

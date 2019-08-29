@@ -32,7 +32,9 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, pid peer.ID) erro
 	if err := r.p2p.Encoding().Decode(strm, msg); err != nil {
 		return err
 	}
+	r.helloTrackerLock.Lock()
 	r.helloTracker[pid] = msg
+	r.helloTrackerLock.Unlock()
 	return r.validateHelloMessage(msg, strm)
 }
 
@@ -45,17 +47,19 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	setRPCStreamDeadlines(stream)
 
 	// return if hello already exists
+
+	r.helloTrackerLock.RLock()
 	hello := r.helloTracker[stream.Conn().RemotePeer()]
+	r.helloTrackerLock.RUnlock()
 	if hello != nil {
 		return nil
 	}
 
-	r.helloTracker[stream.Conn().RemotePeer()] = nil
-
-	log := log.WithField("rpc", "hello")
 	m := msg.(*pb.Hello)
 
+	r.helloTrackerLock.Lock()
 	r.helloTracker[stream.Conn().RemotePeer()] = m
+	r.helloTrackerLock.Unlock()
 
 	if err := r.validateHelloMessage(m, stream); err != nil {
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, errWrongForkVersion.Error())
