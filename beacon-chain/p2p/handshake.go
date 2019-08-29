@@ -24,7 +24,7 @@ func (p *Service) Handshakes() map[peer.ID]*pb.Hello {
 	return nil
 }
 
-func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, topic string, id peer.ID) error, topic string) {
+func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
 	p.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
@@ -33,7 +33,7 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, topic s
 				log.WithField("peer", conn.RemotePeer()).Debug(
 					"Performing handshake with to peer",
 				)
-				if err := reqFunc(ctx, topic, conn.RemotePeer()); err != nil {
+				if err := reqFunc(ctx, conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Could not send succesful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
