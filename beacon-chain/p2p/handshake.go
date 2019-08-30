@@ -40,8 +40,9 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					log.WithError(err).Error("Could not send successful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+						return
 					}
-					return
+					log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")
 				}
 			}()
 		},

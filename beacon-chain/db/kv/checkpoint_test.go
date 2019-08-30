@@ -17,18 +17,11 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Root:  []byte{'A'},
 	}
 
-	retrieved, err := db.JustifiedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil check point, received %v", retrieved)
-	}
 	if err := db.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		t.Fatal(err)
 	}
 
-	retrieved, err = db.JustifiedCheckpoint(ctx)
+	retrieved, err := db.JustifiedCheckpoint(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,18 +39,51 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	retrieved, err := db.FinalizedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil check point, received %v", retrieved)
-	}
 	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		t.Fatal(err)
 	}
 
-	retrieved, err = db.FinalizedCheckpoint(ctx)
+	retrieved, err := db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(cp, retrieved) {
+		t.Errorf("Wanted %v, received %v", cp, retrieved)
+	}
+}
+
+func TestStore_JustifiedCheckpoint_DefaultCantBeNil(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisRoot := [32]byte{'A'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	retrieved, err := db.JustifiedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(cp, retrieved) {
+		t.Errorf("Wanted %v, received %v", cp, retrieved)
+	}
+}
+
+func TestStore_FinalizedCheckpoint_DefaultCantBeNil(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisRoot := [32]byte{'B'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	retrieved, err := db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

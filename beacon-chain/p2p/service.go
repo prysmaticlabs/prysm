@@ -40,35 +40,26 @@ type Service struct {
 // connections are made until the Start function is called during the service registry startup.
 func NewService(cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Service{
+
+	s := &Service{
 		ctx:    ctx,
 		cancel: cancel,
 		cfg:    cfg,
-	}, nil
-}
-
-// Start the p2p service.
-func (s *Service) Start() {
-	if s.started {
-		log.Error("Attempted to start p2p service when it was already started")
-		return
 	}
 
 	ipAddr := ipAddr(s.cfg)
 	privKey, err := privKey(s.cfg)
 	if err != nil {
-		s.startupErr = err
 		log.WithError(err).Error("Failed to generate p2p private key")
-		return
+		return nil, err
 	}
 
 	// TODO(3147): Add host options
 	opts := buildOptions(s.cfg, ipAddr, privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
-		s.startupErr = err
 		log.WithError(err).Error("Failed to create p2p host")
-		return
+		return nil, err
 	}
 	s.host = h
 
@@ -79,14 +70,30 @@ func (s *Service) Start() {
 	// object.
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
 	if err != nil {
-		s.startupErr = err
-
 		log.WithError(err).Error("Failed to start pubsub")
-		return
+		return nil, err
 	}
 	s.pubsub = gs
 
+	return s, nil
+}
+
+// Start the p2p service.
+func (s *Service) Start() {
+	if s.started {
+		log.Error("Attempted to start p2p service when it was already started")
+		return
+	}
+
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
+		ipAddr := ipAddr(s.cfg)
+		privKey, err := privKey(s.cfg)
+		if err != nil {
+			s.startupErr = err
+			log.WithError(err).Error("Failed to generate p2p private key")
+			return
+		}
+
 		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")

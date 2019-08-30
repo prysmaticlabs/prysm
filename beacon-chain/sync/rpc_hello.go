@@ -40,7 +40,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 		return err
 	}
 
-	code, errMsg, err := r.readStatusCode(stream)
+	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,9 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
 		return err
 	}
-	r.helloTrackerLock.RLock()
+	r.helloTrackerLock.Lock()
 	r.helloTracker[stream.Conn().RemotePeer()] = msg
-	r.helloTrackerLock.RUnlock()
+	r.helloTrackerLock.Unlock()
 
 	return r.validateHelloMessage(msg, stream)
 }
@@ -70,7 +70,9 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	log := log.WithField("rpc", "hello")
 
 	// return if hello already exists
+	r.helloTrackerLock.RLock()
 	hello := r.helloTracker[stream.Conn().RemotePeer()]
+	r.helloTrackerLock.RUnlock()
 	if hello != nil {
 		log.Debugf("Peer %s already exists", stream.Conn().RemotePeer())
 		return nil
@@ -78,9 +80,9 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 
 	m := msg.(*pb.Hello)
 
-	r.helloTrackerLock.RLock()
+	r.helloTrackerLock.Lock()
 	r.helloTracker[stream.Conn().RemotePeer()] = m
-	r.helloTrackerLock.RUnlock()
+	r.helloTrackerLock.Unlock()
 
 	if err := r.validateHelloMessage(m, stream); err != nil {
 		originalErr := err
@@ -101,6 +103,10 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 		}
 		return originalErr
 	}
+
+	r.helloTrackerLock.Lock()
+	r.helloTracker[stream.Conn().RemotePeer()] = m
+	r.helloTrackerLock.Unlock()
 
 	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
