@@ -9,6 +9,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.JustifiedCheckpoint")
 	defer span.End()
@@ -25,6 +26,7 @@ func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 	return checkpoint, err
 }
 
+// FinalizedCheckpoint returns the latest finalized checkpoint in beacon chain.
 func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedCheckpoint")
 	defer span.End()
@@ -41,6 +43,7 @@ func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 	return checkpoint, err
 }
 
+// SaveJustifiedCheckpoint saves justified checkpoint in beacon chain.
 func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
@@ -55,6 +58,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	})
 }
 
+// SaveJustifiedCheckpoint saves finalized checkpoint in beacon chain.
 func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()

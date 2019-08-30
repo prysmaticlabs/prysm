@@ -480,7 +480,7 @@ func (db *BeaconDB) Balances(ctx context.Context) ([]uint64, error) {
 	return beaconState.Balances, err
 }
 
-// GenesisState is not implemented.
+// JustifiedCheckpoint is not implemented.
 func (db *BeaconDB) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	return nil, errors.New("not implemented")
 }
