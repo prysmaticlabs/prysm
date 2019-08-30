@@ -65,3 +65,43 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", cp, retrieved)
 	}
 }
+
+func TestStore_JustifiedCheckpoint_CantBeNil(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisRoot := [32]byte{'A'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	retrieved, err := db.JustifiedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(cp, retrieved) {
+		t.Errorf("Wanted %v, received %v", cp, retrieved)
+	}
+}
+
+func TestStore_FinalizedCheckpoint_CantBeNil(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisRoot := [32]byte{'B'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	retrieved, err := db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(cp, retrieved) {
+		t.Errorf("Wanted %v, received %v", cp, retrieved)
+	}
+}
