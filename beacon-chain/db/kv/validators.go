@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"time"
@@ -99,12 +98,8 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 		if enc == nil {
 			return nil
 		}
-		var err error
-		buf := bytes.NewBuffer(enc)
-		validatorIdx, err = binary.ReadUvarint(buf)
-		if err != nil {
-			return err
-		}
+		validatorIdx = binary.LittleEndian.Uint64(enc)
+
 		ok = true
 		return nil
 	})

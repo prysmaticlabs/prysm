@@ -22,8 +22,6 @@ type P2P interface {
 	Sender
 	ConnectionHandler
 	DeprecatedSubscriber
-
-	Started() bool
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.

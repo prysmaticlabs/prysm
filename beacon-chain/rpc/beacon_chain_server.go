@@ -279,7 +279,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 			}
 			if !ok {
-				return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
+				return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
 			}
 		}
 
@@ -400,7 +400,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 			}
 			if !ok {
-				return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubKey)
+				return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
 			}
 		}
 

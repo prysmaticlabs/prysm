@@ -45,7 +45,13 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+
+	genesisBlkRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, cp, cp); err != nil {
 		t.Fatal(err)
 	}
 
@@ -227,7 +233,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 

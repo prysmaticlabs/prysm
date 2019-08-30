@@ -35,7 +35,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		code, errMsg, err := r.readStatusCode(stream)
+		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
 		if err != nil {
 			t.Fatal(err)
 		}
