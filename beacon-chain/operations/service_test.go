@@ -167,6 +167,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 }
 
 func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
+	params.UseDemoBeaconConfig()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	ctx := context.Background()
