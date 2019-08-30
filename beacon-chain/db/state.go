@@ -150,6 +150,11 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
+// GenesisState is not implemented.
+func (db *BeaconDB) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
+	return nil, errors.New("not implemented")
+}
+
 // HeadStateRoot returns the root of the current state from the db.
 func (db *BeaconDB) HeadStateRoot() [32]byte {
 	return db.stateHash
@@ -473,6 +478,26 @@ func (db *BeaconDB) Balances(ctx context.Context) ([]uint64, error) {
 	})
 
 	return beaconState.Balances, err
+}
+
+// JustifiedCheckpoint is not implemented.
+func (db *BeaconDB) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+	return nil, errors.New("not implemented")
+}
+
+// FinalizedCheckpoint is not implemented.
+func (db *BeaconDB) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+	return nil, errors.New("not implemented")
+}
+
+// SaveJustifiedCheckpoint is not implemented.
+func (db *BeaconDB) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+	return errors.New("not implemented")
+}
+
+// SaveFinalizedCheckpoint is not implemented.
+func (db *BeaconDB) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+	return errors.New("not implemented")
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {

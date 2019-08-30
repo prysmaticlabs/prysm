@@ -72,7 +72,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, tt.s); err != nil {
+			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
