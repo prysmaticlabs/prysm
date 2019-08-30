@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -60,8 +61,11 @@ func (s *InitialSync) Start() {
 
 	// Wait until chain start.
 	genesis := <-ch
+	if genesis.After(roughtime.Now()) {
+		time.Sleep(roughtime.Until(genesis))
+	}
 	currentSlot := uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
-	if currentSlot < params.BeaconConfig().SlotsPerEpoch {
+	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch. Not syncing.")
 		return
 	}
@@ -89,6 +93,7 @@ func (s *InitialSync) Start() {
 
 	pid, best := bestHello(s.helloTracker.Hellos())
 
+	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < best.HeadSlot; {
 		req := &pb.BeaconBlocksRequest{
 			HeadSlot:      headSlot,
@@ -128,6 +133,7 @@ func (s *InitialSync) Start() {
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
 				panic(err)
 			}
+			last = blk
 		}
 
 		headSlot = s.chain.HeadSlot()
@@ -135,10 +141,10 @@ func (s *InitialSync) Start() {
 
 
 	// Force a fork choice update since fork choice was not run during initial sync.
-	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), s.chain.HeadBlock()); err != nil {
+	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), last); err != nil {
 		panic(err)
 	}
-	
+
 	log.Infof("Synced up to %d", best.HeadSlot)
 }
 
