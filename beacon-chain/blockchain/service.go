@@ -99,6 +99,14 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		genesisState, err := c.beaconDB.GenesisState(c.ctx)
+		if err != nil {
+			log.Fatalf("Could not retrieve genesis state from db: %v", err)
+		}
+		if err := c.forkChoiceStore.GenesisStore(c.ctx, genesisState); err != nil {
+			log.Fatalf("Could not start fork choice service: %v", err)
+		}
+		c.stateInitializedFeed.Send(c.genesisTime)
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
@@ -158,9 +166,12 @@ func (c *ChainService) initializeBeaconChain(
 		return errors.Wrap(err, "could not start genesis store for fork choice")
 	}
 
+	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(c.FinalizedCheckpt().Root)); err != nil {
+		return errors.Wrap(err, "could save genesis block root")
+	}
+
 	c.headBlock = genesisBlk
 	c.headState = genesisState
-	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
 
 	return nil
