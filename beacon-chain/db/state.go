@@ -480,6 +480,26 @@ func (db *BeaconDB) Balances(ctx context.Context) ([]uint64, error) {
 	return beaconState.Balances, err
 }
 
+// JustifiedCheckpoint is not implemented.
+func (db *BeaconDB) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+	return nil, errors.New("not implemented")
+}
+
+// FinalizedCheckpoint is not implemented.
+func (db *BeaconDB) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+	return nil, errors.New("not implemented")
+}
+
+// SaveJustifiedCheckpoint is not implemented.
+func (db *BeaconDB) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+	return errors.New("not implemented")
+}
+
+// SaveFinalizedCheckpoint is not implemented.
+func (db *BeaconDB) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+	return errors.New("not implemented")
+}
+
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	err := proto.Unmarshal(enc, protoState)

@@ -50,7 +50,7 @@ func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	return 0, nil
 }
 
-func (s *store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
+func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
 	return nil
 }
 
@@ -285,6 +285,9 @@ func TestChainStartStop_Initialized(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}); err != nil {
 		t.Fatal(err)
 	}
 

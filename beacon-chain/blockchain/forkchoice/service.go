@@ -5,13 +5,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +21,7 @@ type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
 	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
-	GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error
+	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
 
@@ -68,35 +65,21 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 //        block_states={root: genesis_state.copy()},
 //        checkpoint_states={justified_checkpoint: genesis_state.copy()},
 //    )
-func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+func (s *Store) GenesisStore(
+	ctx context.Context,
+	justifiedCheckpoint *ethpb.Checkpoint,
+	finalizedCheckpoint *ethpb.Checkpoint) error {
+	s.justifiedCheckpt = justifiedCheckpoint
+	s.finalizedCheckpt = finalizedCheckpoint
+
+	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
-	}
-
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-
-	blkRoot, err := ssz.SigningRoot(genesisBlk)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis block")
-	}
-
-	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
-	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
-
-	if err := s.db.SaveBlock(ctx, genesisBlk); err != nil {
-		return errors.Wrap(err, "could not save genesis block")
-	}
-	if err := s.db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
-	if err := s.db.SaveState(ctx, genesisState, blkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
+		return errors.Wrap(err, "could not retrieve last justified state")
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: s.justifiedCheckpt,
-		State:      genesisState,
+		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}

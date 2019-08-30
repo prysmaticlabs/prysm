@@ -15,6 +15,7 @@ var (
 	attesterSlashingsBucket = []byte("attester-slashings")
 	voluntaryExitsBucket    = []byte("voluntary-exits")
 	chainMetadataBucket     = []byte("chain-metadata")
+	checkpointBucket        = []byte("check-point")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket       = []byte("block-parent-root-indices")
@@ -28,4 +29,6 @@ var (
 	headBlockRootKey          = []byte("head-root")
 	genesisBlockRootKey       = []byte("genesis-root")
 	depositContractAddressKey = []byte("deposit-contract")
+	justifiedCheckpointKey    = []byte("justified-checkpoint")
+	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 )
