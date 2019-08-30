@@ -10,10 +10,25 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // Ensure ChainService implements chain info interface.
 var _ = ChainInfoRetriever(&ChainService{})
+
+func TestFinalizedCheckpt_Nil(t *testing.T) {
+	c := setupBeaconChain(t, nil)
+	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
+		t.Error("Incorrect pre chain start value")
+	}
+}
+
+func TestHeadRoot_Nil(t *testing.T) {
+	c := setupBeaconChain(t, nil)
+	if !bytes.Equal(c.HeadRoot(), params.BeaconConfig().ZeroHash[:]) {
+		t.Error("Incorrect pre chain start value")
+	}
+}
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)

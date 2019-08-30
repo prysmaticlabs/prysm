@@ -3,11 +3,14 @@ package testing
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -18,7 +21,16 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
+
+// TopicMappings are the protocol ids for the different types of requests.
+var TopicMappings = map[reflect.Type]string{
+	reflect.TypeOf(&pb.Hello{}):                     "/eth2/beacon_chain/req/hello/1",
+	reflect.TypeOf(&pb.Goodbye{}):                   "/eth2/beacon_chain/req/goodbye/1",
+	reflect.TypeOf(&pb.BeaconBlocksRequest{}):       "/eth2/beacon_chain/req/beacon_blocks/1",
+	reflect.TypeOf(&pb.RecentBeaconBlocksRequest{}): "/eth2/beacon_chain/req/recent_beacon_blocks/1",
+}
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
@@ -144,9 +156,47 @@ func (p *TestP2P) PeerID() peer.ID {
 	return p.Host.ID()
 }
 
+// AddConnectionHandler handles the connection with a newly connected peer.
+func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+	p.Host.Network().Notify(&network.NotifyBundle{
+		ConnectedF: func(net network.Network, conn network.Conn) {
+			// Must be handled in a goroutine as this callback cannot be blocking.
+			go func() {
+				ctx := context.Background()
+
+				if err := f(ctx, conn.RemotePeer()); err != nil {
+					logrus.WithError(err).Error("Could not send succesful hello rpc request")
+					if err := p.Disconnect(conn.RemotePeer()); err != nil {
+						logrus.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+					}
+					return
+				}
+			}()
+		},
+	})
+}
+
 // Send a message to a specific peer.
 func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (network.Stream, error) {
-	return nil, nil
+	protocol := TopicMappings[reflect.TypeOf(msg)]
+	if protocol == "" {
+		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)
+	}
+	stream, err := p.Host.NewStream(ctx, pid, core.ProtocolID(protocol+p.Encoding().ProtocolSuffix()))
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.Encoding().Encode(stream, msg); err != nil {
+		return nil, err
+	}
+
+	// Close stream for writing.
+	if err := stream.Close(); err != nil {
+		return nil, err
+	}
+
+	return stream, nil
 }
 
 // Subscribe to some topic. Not implemented.

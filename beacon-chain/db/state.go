@@ -150,6 +150,11 @@ func (db *BeaconDB) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
+// GenesisState is not implemented.
+func (db *BeaconDB) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
+	return nil, errors.New("not implemented")
+}
+
 // HeadStateRoot returns the root of the current state from the db.
 func (db *BeaconDB) HeadStateRoot() [32]byte {
 	return db.stateHash
