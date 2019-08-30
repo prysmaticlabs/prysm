@@ -81,6 +81,7 @@ func (r *RegularSync) Syncing() bool {
 	return false
 }
 
+// Hellos returns the map of hello messages received so far.
 func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
 	r.helloTrackerLock.RLock()
 	defer r.helloTrackerLock.RUnlock()
@@ -94,6 +95,7 @@ type Checker interface {
 	Status() error
 }
 
+// HelloTracker interface for accessing the hello / handshake messages received so far.
 type HelloTracker interface {
 	Hellos() map[peer.ID]*pb.Hello
 }

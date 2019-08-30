@@ -39,6 +39,7 @@ type Config struct {
 	RegSync sync.HelloTracker
 }
 
+// InitialSync service.
 type InitialSync struct {
 	helloTracker sync.HelloTracker
 	chain        blockchainService
@@ -46,6 +47,8 @@ type InitialSync struct {
 	db           db.Database
 }
 
+// NewInitialSync configures the initial sync service responsible for bringing the node up to the
+// latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
 		helloTracker: cfg.RegSync,
@@ -55,6 +58,7 @@ func NewInitialSync(cfg *Config) *InitialSync {
 	}
 }
 
+// Start the initial sync service.
 func (s *InitialSync) Start() {
 	ch := make(chan time.Time)
 	sub :=  s.chain.StateInitializedFeed().Subscribe(ch)
@@ -167,10 +171,12 @@ func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
 	return "", nil
 }
 
+// Stop initial sync
 func (s *InitialSync) Stop() error {
 	return nil
 }
 
+// Status of initial sync.
 func (s *InitialSync) Status() error {
 	return nil
 }
