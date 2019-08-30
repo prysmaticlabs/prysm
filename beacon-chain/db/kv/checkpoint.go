@@ -20,7 +20,7 @@ func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 		if enc == nil {
 			blockBucket := tx.Bucket(blocksBucket)
 			genesisRoot := blockBucket.Get(genesisBlockRootKey)
-			checkpoint = &ethpb.Checkpoint{Root:genesisRoot}
+			checkpoint = &ethpb.Checkpoint{Root: genesisRoot}
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
@@ -40,7 +40,7 @@ func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 		if enc == nil {
 			blockBucket := tx.Bucket(blocksBucket)
 			genesisRoot := blockBucket.Get(genesisBlockRootKey)
-			checkpoint = &ethpb.Checkpoint{Root:genesisRoot}
+			checkpoint = &ethpb.Checkpoint{Root: genesisRoot}
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
