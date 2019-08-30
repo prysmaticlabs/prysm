@@ -243,19 +243,19 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	// We perform these operations concurrently with a wait group to more closely
 	// emulate a production environment.
 	var wg sync.WaitGroup
-	wg.Add(len(committee))
 	for i := 0; i < len(committee); i++ {
-		go func(j int, w *sync.WaitGroup) {
+		wg.Add(1)
+		go func(tt *testing.T, j int, w *sync.WaitGroup) {
+			defer w.Done()
 			att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 			att.AggregationBits.SetBitAt(uint64(j), true)
 			totalAggBits = totalAggBits.Or(att.AggregationBits)
 			domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 			att.Signature = privKeys[committee[j]].Sign(root[:], domain).Marshal()
 			if err := opsSrv.HandleAttestation(ctx, att); err != nil {
-				t.Fatalf("Could not handle attestation: %v", err)
+				tt.Fatalf("Could not handle attestation %d: %v", j, err)
 			}
-			w.Done()
-		}(i, &wg)
+		}(t, i, &wg)
 	}
 	wg.Wait()
 
@@ -276,7 +276,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	// If the committee is larger than 1, the signature from the attestation fetched from the DB
 	// should be an aggregate of signatures and not equal to an individual signature from a validator.
 	if len(committee) > 1 && bytes.Equal(aggAtt.Signature, att.Signature) {
-		t.Errorf("Expected aggregate signature %v to be different from individual sig %v", aggAtt.Signature, att.Signature)
+		t.Errorf("Expected aggregate signature %#x to be different from individual sig %#x", aggAtt.Signature, att.Signature)
 	}
 }
 
