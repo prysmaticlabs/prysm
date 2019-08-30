@@ -30,34 +30,28 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
 	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := store.GenesisStore(ctx, genesisState); err != nil {
+	if err := db.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	genesisCheckpt := &ethpb.Checkpoint{Epoch: 0, Root: genesisBlkRoot[:]}
-	if !reflect.DeepEqual(store.justifiedCheckpt, genesisCheckpt) {
+	checkPoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(store.justifiedCheckpt, checkPoint) {
 		t.Error("Justified check point from genesis store did not match")
 	}
-	if !reflect.DeepEqual(store.finalizedCheckpt, genesisCheckpt) {
+	if !reflect.DeepEqual(store.finalizedCheckpt, checkPoint) {
 		t.Error("Finalized check point from genesis store did not match")
 	}
 
-	b, err := store.db.Block(ctx, genesisBlkRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(b, genesisBlk) {
-		t.Error("Incorrect genesis block saved in store")
-	}
-
-	cachedState, err := store.checkpointState.StateByCheckpoint(genesisCheckpt)
+	cachedState, err := store.checkpointState.StateByCheckpoint(checkPoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,8 +149,21 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 
-	if err := store.GenesisStore(ctx, s); err != nil {
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,7 +258,19 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {

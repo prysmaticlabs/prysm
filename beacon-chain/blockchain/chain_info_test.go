@@ -37,8 +37,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 	c := setupBeaconChain(t, db)
 
-	s := &pb.BeaconState{}
-	if err := c.forkChoiceStore.GenesisStore(ctx, s); err != nil {
+	if err := c.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 
