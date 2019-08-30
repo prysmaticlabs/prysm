@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -14,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
 
@@ -160,7 +160,7 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 // verifyBlkSlotTime validates the input block slot is not from the future.
 func verifyBlkSlotTime(gensisTime uint64, blkSlot uint64) error {
 	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	if slotTime > currentTime {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, currentTime)
 	}
