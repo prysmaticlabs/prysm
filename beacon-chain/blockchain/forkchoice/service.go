@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -34,6 +35,7 @@ type Store struct {
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
 	checkpointState  *cache.CheckpointStateCache
+	lock         sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
