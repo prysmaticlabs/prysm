@@ -99,11 +99,16 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
-		genesisState, err := c.beaconDB.GenesisState(c.ctx)
+		justifiedCheckpoint, err := c.beaconDB.JustifiedCheckpoint(c.ctx)
 		if err != nil {
-			log.Fatalf("Could not retrieve genesis state from db: %v", err)
+			log.Fatalf("Could not get justified checkpoint: %v", err)
 		}
-		if err := c.forkChoiceStore.GenesisStore(c.ctx, genesisState); err != nil {
+		finalizedCheckpoint, err := c.beaconDB.FinalizedCheckpoint(c.ctx)
+		if err != nil {
+			log.Fatalf("Could not get finalized checkpoint: %v", err)
+		}
+
+		if err := c.forkChoiceStore.GenesisStore(c.ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
 		c.stateInitializedFeed.Send(c.genesisTime)
@@ -151,19 +156,35 @@ func (c *ChainService) initializeBeaconChain(
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
-
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block root")
+	}
 
+	if err := c.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
+		return errors.Wrap(err, "could not save genesis block")
+	}
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save head block root")
+	}
+	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could save genesis block root")
+	}
+	if err := c.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
+	}
 	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")
 	}
 
-	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not start genesis store for fork choice")
+	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := c.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
+		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
 	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(c.FinalizedCheckpt().Root)); err != nil {
@@ -172,7 +193,7 @@ func (c *ChainService) initializeBeaconChain(
 
 	c.headBlock = genesisBlk
 	c.headState = genesisState
-	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
+	c.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
 
 	return nil
 }

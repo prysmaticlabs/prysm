@@ -72,6 +72,11 @@ type Database interface {
 	SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error
 	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
 	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
+	// Checkpoint operations.
+	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
