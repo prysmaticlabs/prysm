@@ -53,6 +53,7 @@ import (
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
 func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
 	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
@@ -104,7 +105,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
 		return 0, err
 	}
-	s.lock.Unlock()
 
 	return 0, nil
 }
