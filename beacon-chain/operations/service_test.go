@@ -235,6 +235,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		t.Error(err)
 	}
 	totalAggBits := bitfield.NewBitlist(uint64(len(committee)))
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
 
 	// For every single member of the committee, we sign the attestation data and handle
 	// the attestation through the operations service, which will perform basic aggregation
@@ -247,14 +248,17 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		wg.Add(1)
 		go func(tt *testing.T, j int, w *sync.WaitGroup) {
 			defer w.Done()
-			att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
-			att.AggregationBits.SetBitAt(uint64(j), true)
-			totalAggBits = totalAggBits.Or(att.AggregationBits)
-			domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
-			att.Signature = privKeys[committee[j]].Sign(root[:], domain).Marshal()
-			if err := opsSrv.HandleAttestation(ctx, att); err != nil {
+			newAtt := &ethpb.Attestation{
+				AggregationBits: bitfield.NewBitlist(uint64(len(committee))),
+				Data:            data,
+				CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+				Signature:       privKeys[committee[j]].Sign(root[:], domain).Marshal(),
+			}
+			newAtt.AggregationBits.SetBitAt(uint64(j), true)
+			if err := opsSrv.HandleAttestation(ctx, newAtt); err != nil {
 				tt.Fatalf("Could not handle attestation %d: %v", j, err)
 			}
+			totalAggBits = totalAggBits.Or(newAtt.AggregationBits)
 		}(t, i, &wg)
 	}
 	wg.Wait()
