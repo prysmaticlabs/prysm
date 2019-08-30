@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -238,16 +239,25 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	// For every single member of the committee, we sign the attestation data and handle
 	// the attestation through the operations service, which will perform basic aggregation
 	// and verification.
+	//
+	// We perform these operations concurrently with a wait group to more closely
+	// emulate a production environment.
+	var wg sync.WaitGroup
+	wg.Add(len(committee))
 	for i := 0; i < len(committee); i++ {
-		att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
-		att.AggregationBits.SetBitAt(uint64(i), true)
-		totalAggBits = totalAggBits.Or(att.AggregationBits)
-		domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
-		att.Signature = privKeys[committee[i]].Sign(root[:], domain).Marshal()
-		if err := opsSrv.HandleAttestation(ctx, att); err != nil {
-			t.Fatalf("Could not handle attestation: %v", err)
-		}
+		go func(j int, w *sync.WaitGroup) {
+			att.AggregationBits = bitfield.NewBitlist(uint64(len(committee)))
+			att.AggregationBits.SetBitAt(uint64(j), true)
+			totalAggBits = totalAggBits.Or(att.AggregationBits)
+			domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+			att.Signature = privKeys[committee[j]].Sign(root[:], domain).Marshal()
+			if err := opsSrv.HandleAttestation(ctx, att); err != nil {
+				t.Fatalf("Could not handle attestation: %v", err)
+			}
+			w.Done()
+		}(i, &wg)
 	}
+	wg.Wait()
 
 	// We fetch the final attestation from the DB, which should be an aggregation of
 	// all committee members effectively.
