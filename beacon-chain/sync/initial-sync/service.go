@@ -26,7 +26,10 @@ type blockchainService interface {
 	blockchain.ChainFeeds
 }
 
-const minHelloCount = 1 // TODO(3147): Set this to more than 1, maybe configure from flag?
+const (
+	minHelloCount            = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
+	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
+)
 
 // Config to set up the initial sync service.
 type Config struct {
@@ -56,7 +59,7 @@ func NewInitialSync(cfg *Config) *InitialSync {
 // Start the initial sync service.
 func (s *InitialSync) Start() {
 	ch := make(chan time.Time)
-	sub :=  s.chain.StateInitializedFeed().Subscribe(ch)
+	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 
 	// Wait until chain start.
@@ -64,7 +67,7 @@ func (s *InitialSync) Start() {
 	if genesis.After(roughtime.Now()) {
 		time.Sleep(roughtime.Until(genesis))
 	}
-	currentSlot := uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch. Not syncing.")
 		return
@@ -87,14 +90,13 @@ func (s *InitialSync) Start() {
 		if helloCount >= minHelloCount {
 			break
 		}
-
-		time.Sleep(5 * time.Second)
+		time.Sleep(handshakePollingInterval)
 	}
 
 	pid, best := bestHello(s.helloTracker.Hellos())
 
 	var last *eth.BeaconBlock
-	for headSlot := s.chain.HeadSlot(); headSlot < uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot; {
+	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
 		req := &pb.BeaconBlocksRequest{
 			HeadSlot:      headSlot,
 			HeadBlockRoot: s.chain.HeadRoot(),
@@ -109,7 +111,7 @@ func (s *InitialSync) Start() {
 			panic(err)
 		}
 
-		// Read status code
+		// Read status code.
 		code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
 		if err != nil {
 			panic(err)
@@ -145,13 +147,22 @@ func (s *InitialSync) Start() {
 		headSlot = s.chain.HeadSlot()
 	}
 
-
 	// Force a fork choice update since fork choice was not run during initial sync.
 	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), last); err != nil {
 		panic(err)
 	}
 
 	log.Infof("Synced up to %d", s.chain.HeadSlot())
+}
+
+// Stop initial sync.
+func (s *InitialSync) Stop() error {
+	return nil
+}
+
+// Status of initial sync.
+func (s *InitialSync) Status() error {
+	return nil
 }
 
 func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
@@ -162,12 +173,6 @@ func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
 	return "", nil
 }
 
-// Stop initial sync
-func (s *InitialSync) Stop() error {
-	return nil
-}
-
-// Status of initial sync.
-func (s *InitialSync) Status() error {
-	return nil
+func slotsSinceGenesis(genesisTime time.Time) uint64 {
+	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
