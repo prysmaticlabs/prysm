@@ -139,8 +139,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 4000
-	cfg.UDPPort = 4000
+	cfg.Port = 14000
+	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
 
 	s, err := NewService(cfg)

@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -34,7 +33,7 @@ type blockchainService interface {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
-	return &RegularSync{
+	r := &RegularSync{
 		ctx:          context.Background(),
 		db:           cfg.DB,
 		p2p:          cfg.P2P,
@@ -42,6 +41,11 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		chain:        cfg.Chain,
 		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
+
+	r.registerRPCHandlers()
+	r.registerSubscribers()
+
+	return r
 }
 
 // RegularSync service is responsible for handling all run time p2p related operations as the
@@ -56,17 +60,9 @@ type RegularSync struct {
 	helloTrackerLock sync.RWMutex
 }
 
-// Start the regular sync service by initializing all of the p2p sync handlers.
+// Start the regular sync service.
 func (r *RegularSync) Start() {
-	log.Info("Starting regular sync")
-	for !r.p2p.Started() {
-		time.Sleep(200 * time.Millisecond)
-	}
-	// Add connection handler for new peers
 	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
-	r.registerRPCHandlers()
-	r.registerSubscribers()
-	log.Info("Regular sync started")
 }
 
 // Stop the regular sync service.
@@ -85,9 +81,21 @@ func (r *RegularSync) Syncing() bool {
 	return false
 }
 
+// Hellos returns the map of hello messages received so far.
+func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
+	r.helloTrackerLock.RLock()
+	defer r.helloTrackerLock.RUnlock()
+	return r.helloTracker
+}
+
 // Checker defines a struct which can verify whether a node is currently
 // synchronizing a chain with the rest of peers in the network.
 type Checker interface {
 	Syncing() bool
 	Status() error
+}
+
+// HelloTracker interface for accessing the hello / handshake messages received so far.
+type HelloTracker interface {
+	Hellos() map[peer.ID]*pb.Hello
 }
