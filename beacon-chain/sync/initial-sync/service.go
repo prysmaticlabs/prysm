@@ -94,7 +94,7 @@ func (s *InitialSync) Start() {
 	pid, best := bestHello(s.helloTracker.Hellos())
 
 	var last *eth.BeaconBlock
-	for headSlot := s.chain.HeadSlot(); headSlot < best.HeadSlot; {
+	for headSlot := s.chain.HeadSlot(); headSlot < uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot; {
 		req := &pb.BeaconBlocksRequest{
 			HeadSlot:      headSlot,
 			HeadBlockRoot: s.chain.HeadRoot(),
@@ -130,8 +130,14 @@ func (s *InitialSync) Start() {
 			if blk.Slot <= headSlot {
 				continue
 			}
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
-				panic(err)
+			if blk.Slot < helpers.StartSlot(best.FinalizedEpoch+1) {
+				if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
+					panic(err)
+				}
+			} else {
+				if err := s.chain.ReceiveBlockNoPubsub(context.Background(), blk); err != nil {
+					panic(err)
+				}
 			}
 			last = blk
 		}
@@ -145,7 +151,7 @@ func (s *InitialSync) Start() {
 		panic(err)
 	}
 
-	log.Infof("Synced up to %d", best.HeadSlot)
+	log.Infof("Synced up to %d", s.chain.HeadSlot())
 }
 
 func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
