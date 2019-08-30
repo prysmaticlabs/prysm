@@ -29,7 +29,7 @@ type blockchainService interface {
 	blockchain.ChainFeeds
 }
 
-const minHelloCount = 1 // TODO: Set this to more than 1, maybe configure from flag?
+const minHelloCount = 1 // TODO(3147): Set this to more than 1, maybe configure from flag?
 
 // Config to set up the initial sync service.
 type Config struct {
