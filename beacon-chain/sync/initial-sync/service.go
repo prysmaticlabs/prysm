@@ -43,7 +43,6 @@ type InitialSync struct {
 	helloTracker sync.HelloTracker
 	chain        blockchainService
 	p2p          p2p.P2P
-	db           db.Database
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -53,7 +52,6 @@ func NewInitialSync(cfg *Config) *InitialSync {
 		helloTracker: cfg.RegSync,
 		chain:        cfg.Chain,
 		p2p:          cfg.P2P,
-		db:           cfg.DB,
 	}
 }
 
