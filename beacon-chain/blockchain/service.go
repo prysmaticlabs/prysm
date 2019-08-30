@@ -187,6 +187,10 @@ func (c *ChainService) initializeBeaconChain(
 		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
+	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(c.FinalizedCheckpt().Root)); err != nil {
+		return errors.Wrap(err, "could save genesis block root")
+	}
+
 	c.headBlock = genesisBlk
 	c.headState = genesisState
 	c.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
