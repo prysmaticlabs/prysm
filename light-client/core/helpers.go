@@ -1,6 +1,9 @@
 package core
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/light/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -56,8 +59,25 @@ func UnpackCompactValidator(compactValidator uint64) (uint64, bool, uint64) {
 //            pubkeys.append(pubkey)
 //            balances.append(balance)
 //    return pubkeys, balances
-func PersistentCommitteePubkeysBalances(store *pb.LightClientStore, epoch uint64) ([][]byte, []uint64){
+func PersistentCommitteePubkeysBalances(store *pb.LightClientStore, epoch uint64) ([][]byte, []uint64, error){
 	currentEpoch := helpers.SlotToEpoch(store.Header.Slot) / params.BeaconConfig().EpochsPerShardPeriod
 	nextEpoch := epoch / params.BeaconConfig().EpochsPerShardPeriod
+
+	if nextEpoch != currentEpoch || nextEpoch != currentEpoch + 1 {
+		return nil, nil, fmt.Errorf("next epoch update does not equal to current epoch or plus one, %d != (%d, %d)",
+			nextEpoch, currentEpoch, currentEpoch + 1)
+	}
+	var earlyCommittee *pb.CompactCommittee
+	var laterCommittee *pb.CompactCommittee
+	if nextEpoch == currentEpoch {
+		store.PreviousCommittee = earlyCommittee
+		store.CurrentCommittee = laterCommittee
+	} else {
+		store.CurrentCommittee = earlyCommittee
+		store.NextCommittee = laterCommittee
+	}
+	var pubkeys [][]byte
+	var balances []uint64
+
 	return nil, nil
 }
