@@ -26,6 +26,7 @@ func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, e
 	return buf.Bytes(), nil
 }
 
+// ReadStatusCode response from a RPC stream.
 func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, *pb.ErrorMessage, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
