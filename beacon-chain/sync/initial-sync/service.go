@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -75,12 +74,8 @@ func (s *InitialSync) Start() {
 		return
 	}
 
-	// Get last saved head block in DB
-	headBlock, _ := s.db.HeadBlock(context.Background())
-	headRoot, _ := ssz.SigningRoot(headBlock)
-
 	// Are we already in sync, or close to it?
-	if helpers.SlotToEpoch(headBlock.Slot) == helpers.SlotToEpoch(currentSlot) {
+	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current epoch.")
 		return
 	}
@@ -103,10 +98,10 @@ func (s *InitialSync) Start() {
 	pid, best := bestHello(s.helloTracker.Hellos())
 
 	var last *eth.BeaconBlock
-	for headSlot := headBlock.Slot; headSlot < uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot; {
+	for headSlot := s.chain.HeadSlot(); headSlot < uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot; {
 		req := &pb.BeaconBlocksRequest{
 			HeadSlot:      headSlot,
-			HeadBlockRoot: headRoot[:],
+			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
 		}
