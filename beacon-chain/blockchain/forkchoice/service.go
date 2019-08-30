@@ -35,7 +35,7 @@ type Store struct {
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
 	checkpointState  *cache.CheckpointStateCache
-	lock         sync.RWMutex
+	lock             sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
