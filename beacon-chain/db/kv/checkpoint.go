@@ -58,7 +58,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	})
 }
 
-// SaveJustifiedCheckpoint saves finalized checkpoint in beacon chain.
+// SaveFinalizedCheckpoint saves finalized checkpoint in beacon chain.
 func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
