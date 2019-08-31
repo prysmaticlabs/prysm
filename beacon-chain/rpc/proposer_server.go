@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -27,7 +26,7 @@ import (
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
 	beaconDB           db.Database
-	chainService       *blockchain.ChainService
+	chainService       chainService
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState

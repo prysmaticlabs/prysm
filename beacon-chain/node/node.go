@@ -95,7 +95,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-
 	if err := beacon.registerOperationService(ctx); err != nil {
 		return nil, err
 	}
@@ -196,31 +195,31 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-		svc, err := p2p.NewService(&p2p.Config{
-			NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
-			StaticPeers:       ctx.GlobalStringSlice(cmd.StaticPeers.Name),
-			BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
-			RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
-			HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
-			PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
-			Port:              ctx.GlobalUint(cmd.P2PPort.Name),
-			MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
-			WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
-			EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
-			Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
-		})
-		if err != nil {
-			return err
-		}
-		return b.services.RegisterService(svc)
+	svc, err := p2p.NewService(&p2p.Config{
+		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
+		StaticPeers:       ctx.GlobalStringSlice(cmd.StaticPeers.Name),
+		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
+		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
+		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
+		Port:              ctx.GlobalUint(cmd.P2PPort.Name),
+		MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
+		WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
+		EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
+		Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
+	})
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
 }
 
 func (b *BeaconNode) fetchP2P(ctx *cli.Context) p2p.P2P {
-		var p *p2p.Service
-		if err := b.services.FetchService(&p); err != nil {
-			panic(err)
-		}
-		return p
+	var p *p2p.Service
+	if err := b.services.FetchService(&p); err != nil {
+		panic(err)
+	}
+	return p
 }
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {

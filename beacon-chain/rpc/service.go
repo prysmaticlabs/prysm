@@ -39,6 +39,13 @@ func init() {
 	log = logrus.WithField("prefix", "rpc")
 }
 
+type chainService interface {
+	blockchain.HeadRetriever
+	blockchain.AttestationReceiver
+	blockchain.BlockReceiver
+	StateInitializedFeed() *event.Feed
+}
+
 type operationService interface {
 	operations.Pool
 	HandleAttestation(context.Context, proto.Message) error
@@ -66,7 +73,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
-	chainService        *blockchain.ChainService
+	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
 	syncService         sync.Checker
@@ -88,7 +95,7 @@ type Config struct {
 	CertFlag         string
 	KeyFlag          string
 	BeaconDB         db.Database
-	ChainService     *blockchain.ChainService
+	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      sync.Checker
@@ -192,9 +199,9 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB: s.beaconDB,
-		pool:     s.operationService,
-		head:     s.chainService,
+		beaconDB:     s.beaconDB,
+		pool:         s.operationService,
+		chainService: s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
