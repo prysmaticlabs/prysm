@@ -233,7 +233,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.MinGenesisTime = 0
-	demoConfig.Eth1FollowDistance = 16
+	demoConfig.Eth1FollowDistance = 2
 
 	return demoConfig
 }
@@ -256,11 +256,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EffectiveBalanceIncrement = 1e9
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 4
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.ActivationExitDelay = 4
+	minimalConfig.ActivationExitDelay = 1
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.HistoricalRootsLimit = 64
 	minimalConfig.SlotsPerHistoricalRoot = 64
