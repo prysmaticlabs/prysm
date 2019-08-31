@@ -174,8 +174,9 @@ func (s *Store) saveNewValidator(ctx context.Context, preStateValidatorCount int
 				return errors.Wrapf(err, "could not save activated validator: %d", i)
 			}
 			log.WithFields(logrus.Fields{
-				"index":  i,
-				"pubKey": hex.EncodeToString(bytesutil.Trunc(pubKey)),
+				"index":               i,
+				"pubKey":              hex.EncodeToString(bytesutil.Trunc(pubKey)),
+				"totalValidatorCount": i + 1,
 			}).Info("New validator index saved in DB")
 		}
 	}
