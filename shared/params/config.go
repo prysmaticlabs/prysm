@@ -50,6 +50,7 @@ type BeaconChainConfig struct {
 	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	EpochsPerShardPeriod             uint64 // EpochsPerShardPeriod defines how many epochs for a shard to shuffle persistent committee.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -148,6 +149,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxEpochsPerCrosslink:            64,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
+	EpochsPerShardPeriod:             256,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -233,7 +235,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.MinGenesisTime = 0
-	demoConfig.Eth1FollowDistance = 2
+	demoConfig.Eth1FollowDistance = 16
 
 	return demoConfig
 }
@@ -256,11 +258,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EffectiveBalanceIncrement = 1e9
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
-	minimalConfig.SecondsPerSlot = 4
+	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.ActivationExitDelay = 1
+	minimalConfig.ActivationExitDelay = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.HistoricalRootsLimit = 64
 	minimalConfig.SlotsPerHistoricalRoot = 64
