@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
 
@@ -74,7 +75,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	// Verify Attestations cannot be from future epochs.
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	if slotTime > currentTime {
 		return 0, fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
 	}
