@@ -52,4 +52,5 @@ docker_push(
     name = "push_images",
     bundle = ":image_bundle",
     tags = ["manual"],
+    skip_unchanged_digest = True,
 )
