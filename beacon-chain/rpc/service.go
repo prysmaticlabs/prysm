@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -65,7 +66,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
-	chainService        interface{}
+	chainService        *blockchain.ChainService
 	powChainService     powChainService
 	operationService    operationService
 	syncService         sync.Checker
@@ -87,7 +88,7 @@ type Config struct {
 	CertFlag         string
 	KeyFlag          string
 	BeaconDB         db.Database
-	ChainService     interface{}
+	ChainService     *blockchain.ChainService
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      sync.Checker
@@ -156,7 +157,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
-		chainService:        s.chainService.(stateFeedListener),
+		chainService:        s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,

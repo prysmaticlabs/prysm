@@ -248,17 +248,9 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	var root [32]byte
-	if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
-		root, err = hashutil.HashProto(attestation.Data)
-		if err != nil {
-			return err
-		}
-	} else {
-		root, err = ssz.HashTreeRoot(attestation.Data)
-		if err != nil {
-			return err
-		}
+	root, err := ssz.HashTreeRoot(attestation.Data)
+	if err != nil {
+		return err
 	}
 
 	incomingAttBits := attestation.AggregationBits
@@ -334,18 +326,9 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
-		var root [32]byte
-		var err error
-		if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
-			root, err = hashutil.HashProto(attestation.Data)
-			if err != nil {
-				return err
-			}
-		} else {
-			root, err = ssz.HashTreeRoot(attestation.Data)
-			if err != nil {
-				return err
-			}
+		root, err := ssz.HashTreeRoot(attestation.Data)
+		if err != nil {
+			return err
 		}
 
 		if s.beaconDB.HasAttestation(ctx, root) {
