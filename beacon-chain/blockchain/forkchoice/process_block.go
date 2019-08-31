@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -57,6 +59,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
+	preStateValidatorCount := len(preState.Validators)
 
 	// Verify block slot time is not from the feature.
 	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
@@ -110,8 +113,12 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 	}
 
-	// Log epoch summary before the next epoch.
+	// Epoch boundary bookkeeping such as logging epoch summaries
+	// and saving newly activated validator indices in db.
 	if helpers.IsEpochStart(postState.Slot) {
+		if err := s.saveNewValidator(ctx, preStateValidatorCount, postState); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
 		logEpochData(postState)
 	}
 	return nil
@@ -153,6 +160,25 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 	finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if finalizedSlot >= b.Slot {
 		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
+	}
+	return nil
+}
+
+// saveNewValidator saves newly added validator index from state to db.
+func (s *Store) saveNewValidator(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
+	postStateValidatorCount := len(postState.Validators)
+	if preStateValidatorCount != postStateValidatorCount {
+		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
+			pubKey := postState.Validators[i].PublicKey
+			if err := s.db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), uint64(i)); err != nil {
+				return errors.Wrapf(err, "could not save activated validator: %d", i)
+			}
+			log.WithFields(logrus.Fields{
+				"index":               i,
+				"pubKey":              hex.EncodeToString(bytesutil.Trunc(pubKey)),
+				"totalValidatorCount": i + 1,
+			}).Info("New validator index saved in DB")
+		}
 	}
 	return nil
 }
