@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -24,7 +23,7 @@ type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         db.Database
 	operationService operationService
-	chainService     *blockchain.ChainService
+	chainService     chainService
 	cache            *cache.AttestationCache
 }
 

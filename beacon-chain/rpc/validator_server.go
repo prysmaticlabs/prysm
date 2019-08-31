@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -30,7 +29,7 @@ import (
 type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
-	chainService       *blockchain.ChainService
+	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
 	depositCache       *depositcache.DepositCache

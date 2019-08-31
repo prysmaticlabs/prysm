@@ -24,9 +24,9 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB db.Database
-	head     *blockchain.ChainService
-	pool     operations.Pool
+	beaconDB     db.Database
+	chainService blockchain.HeadRetriever
+	pool         operations.Pool
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -197,13 +197,13 @@ func (bs *BeaconChainServer) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.head.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.head.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.head.HeadState().PreviousJustifiedCheckpoint
+	finalizedCheckpoint := bs.chainService.HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.chainService.HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.chainService.HeadState().PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.head.HeadRoot(),
-		BlockSlot:                  bs.head.HeadSlot(),
+		BlockRoot:                  bs.chainService.HeadRoot(),
+		BlockSlot:                  bs.chainService.HeadSlot(),
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
@@ -290,19 +290,19 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	head, err := bs.beaconDB.HeadState(ctx)
+	headState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
 	}
 
-	validatorCount := len(head.Validators)
+	validatorCount := len(headState.Validators)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ethpb.Validators{
-		Validators:    head.Validators[start:end],
+		Validators:    headState.Validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}
@@ -460,7 +460,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	headState := bs.head.HeadState()
+	headState := bs.chainService.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
 
