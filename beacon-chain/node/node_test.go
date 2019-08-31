@@ -23,6 +23,7 @@ func TestNodeClose_OK(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	set.Bool("test-skip-pow", true, "skip pow dial")
 	set.String("datadir", tmp, "node data directory")
+	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "0x0000000000000000000000000000000000000000", "deposit contract address")
 
