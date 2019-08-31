@@ -51,7 +51,6 @@ type BeaconChainConfig struct {
 	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	EpochsPerShardPeriod             uint64 // EpochsPerShardPeriod defines how many epochs for a shard to shuffle persistent committee.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -153,7 +152,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxEpochsPerCrosslink:            64,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
-	EpochsPerShardPeriod:             256,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
