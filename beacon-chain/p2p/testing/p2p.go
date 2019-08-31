@@ -19,8 +19,6 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 
@@ -197,12 +195,6 @@ func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (net
 	}
 
 	return stream, nil
-}
-
-// Subscribe to some topic. Not implemented.
-func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) event.Subscription {
-	// TODO(3147): remove this.
-	return nil
 }
 
 // Started always returns true.
