@@ -176,7 +176,7 @@ func (s *Store) saveNewValidator(ctx context.Context, preStateValidatorCount int
 			log.WithFields(logrus.Fields{
 				"index":  i,
 				"pubKey": hex.EncodeToString(bytesutil.Trunc(pubKey)),
-			}).Debug("New validator index saved in DB")
+			}).Info("New validator index saved in DB")
 		}
 	}
 	return nil
