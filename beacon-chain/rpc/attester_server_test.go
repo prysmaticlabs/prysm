@@ -31,7 +31,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		chainService: &mock.ChainService{},
+		chainService:     &mock.ChainService{},
 		operationService: mockOperationService,
 		p2p:              &mockBroadcaster{},
 		beaconDB:         db,

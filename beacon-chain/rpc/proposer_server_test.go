@@ -62,12 +62,12 @@ func TestProposeBlock_OK(t *testing.T) {
 	proposerServer := &ProposerServer{
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
-		chainService: &mock.ChainService{},
+		chainService:    &mock.ChainService{},
 	}
 	req := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: []byte("parent-hash"),
-		Body: &ethpb.BeaconBlockBody{},
+		Body:       &ethpb.BeaconBlockBody{},
 	}
 	if err := proposerServer.beaconDB.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
