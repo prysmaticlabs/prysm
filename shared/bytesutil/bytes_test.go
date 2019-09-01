@@ -205,3 +205,28 @@ func TestTruncate(t *testing.T) {
 		}
 	}
 }
+
+func TestIsBitSet(t *testing.T) {
+
+	tests := []struct {
+		pos uint64
+		b   byte
+		want bool
+	}{
+		{0, 1, true},
+		{6, 64, true},
+		{0, 254, false},
+		{1, 254, true},
+		{2, 254, true},
+		{3, 254, true},
+		{4, 254, true},
+		{5, 254, true},
+		{6, 254, true},
+		{7, 254, true},
+	}
+	for _, tt := range tests {
+			if got := IsBitSet(tt.b, tt.pos); got != tt.want {
+				t.Errorf("IsBitSet() = %v, want %v", got, tt.want)
+			}
+	}
+}

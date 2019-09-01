@@ -1,9 +1,8 @@
-package core
+package light
 
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/light/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,24 +59,42 @@ func UnpackCompactValidator(compactValidator uint64) (uint64, bool, uint64) {
 //            balances.append(balance)
 //    return pubkeys, balances
 func PersistentCommitteePubkeysBalances(store *pb.LightClientStore, epoch uint64) ([][]byte, []uint64, error){
-	currentEpoch := helpers.SlotToEpoch(store.Header.Slot) / params.BeaconConfig().EpochsPerShardPeriod
-	nextEpoch := epoch / params.BeaconConfig().EpochsPerShardPeriod
+	epochsPerShardPeriod := params.BeaconConfig().EpochsPerShardPeriod
+	currentPeriod := helpers.SlotToEpoch(store.Header.Slot) / epochsPerShardPeriod
+	nextPeriod := epoch / epochsPerShardPeriod
 
-	if nextEpoch != currentEpoch || nextEpoch != currentEpoch + 1 {
-		return nil, nil, fmt.Errorf("next epoch update does not equal to current epoch or plus one, %d != (%d, %d)",
-			nextEpoch, currentEpoch, currentEpoch + 1)
+	// TODO: Turn this check into a helper function
+	if nextPeriod != currentPeriod || nextPeriod != currentPeriod + 1 {
+		return nil, nil, fmt.Errorf("next epoch not equal to current epoch or plus one, %d != (%d, %d)",
+			nextPeriod, currentPeriod, currentPeriod + 1)
 	}
+
 	var earlyCommittee *pb.CompactCommittee
 	var laterCommittee *pb.CompactCommittee
-	if nextEpoch == currentEpoch {
+	if nextPeriod == currentPeriod {
 		store.PreviousCommittee = earlyCommittee
 		store.CurrentCommittee = laterCommittee
 	} else {
 		store.CurrentCommittee = earlyCommittee
 		store.NextCommittee = laterCommittee
 	}
-	var pubkeys [][]byte
+	var pubKeys [][]byte
 	var balances []uint64
 
-	return nil, nil
+	for i, compactValidator := range earlyCommittee.CompactValidators {
+		index, _, balance := UnpackCompactValidator(compactValidator)
+		if epoch % epochsPerShardPeriod < index % epochsPerShardPeriod {
+			pubKeys = append(pubKeys, earlyCommittee.PublicKeys[i])
+			balances = append(balances, balance)
+		}
+	}
+
+	for i, compactValidator := range laterCommittee.CompactValidators {
+		index, _, balance := UnpackCompactValidator(compactValidator)
+		if epoch % epochsPerShardPeriod >= index % epochsPerShardPeriod {
+			pubKeys = append(pubKeys, laterCommittee.PublicKeys[i])
+			balances = append(balances, balance)
+		}
+	}
+	return pubKeys, balances, nil
 }

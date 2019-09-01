@@ -142,3 +142,8 @@ func Trunc(x []byte) []byte {
 	}
 	return x
 }
+
+// IsBitSet returns true of the bit pos is set to 1, else returns false.
+func IsBitSet(b byte, pos uint64) bool {
+	return ((b >> pos) & 1) != 0;
+}
