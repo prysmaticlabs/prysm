@@ -4,14 +4,14 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
 	"github.com/gogo/protobuf/proto"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/karlseguin/ccache"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
-	network "github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -37,8 +37,7 @@ type Service struct {
 	dv5Listener   Listener
 	host          host.Host
 	pubsub        *pubsub.PubSub
-	exclusionList map[peer.ID]time.Time
-	listLock      sync.RWMutex
+	exclusionList *ccache.Cache
 	privKey       *ecdsa.PrivateKey
 }
 
@@ -52,7 +51,7 @@ func NewService(cfg *Config) (*Service, error) {
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: make(map[peer.ID]time.Time),
+		exclusionList: ccache.New(ccache.Configure()),
 	}
 
 	ipAddr := ipAddr(s.cfg)
@@ -214,7 +213,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
-		if !s.validToDialPeer(info.ID) {
+		if s.exclusionList.Get(info.ID.String()) != nil {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
@@ -236,26 +235,10 @@ func (s *Service) addBootNodeToExclusionList() error {
 	if err != nil {
 		return err
 	}
-	s.listLock.RLock()
-	defer s.listLock.RUnlock()
 	// bootnode is never dialled, so ttl is tentatively 1 year
-	s.exclusionList[addrInfo.ID] = time.Now().Add(365 * 24 * time.Hour)
+	s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
 
 	return nil
-}
-
-func (s *Service) validToDialPeer(id peer.ID) bool {
-	ttlTime := s.exclusionList[id]
-	if ttlTime.Equal(time.Time{}) {
-		return true
-	}
-	if time.Now().Unix() > ttlTime.Unix() {
-		s.listLock.RLock()
-		defer s.listLock.RUnlock()
-		delete(s.exclusionList, id)
-		return true
-	}
-	return false
 }
 
 func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
