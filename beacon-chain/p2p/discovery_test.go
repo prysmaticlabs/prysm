@@ -106,7 +106,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	node := discv5.NewNode(nodeID, ipAddr, 0, 0)
 	_ = convertToMultiAddr([]*discv5.Node{node})
 
-	testutil.AssertLogsContain(t, hook, "Node doesn't have an ip4 address")
+	testutil.AssertLogsContain(t, hook, "node doesn't have an ip4 address")
 }
 
 func TestMultiAddrConversion_OK(t *testing.T) {
