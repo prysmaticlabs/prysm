@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"io"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -77,12 +76,4 @@ type Database interface {
 // NewDB initializes a new DB.
 func NewDB(dirPath string) (Database, error) {
 	return kv.NewKVStore(dirPath)
-}
-
-// ClearDB removes the previously stored directory at the data directory.
-func ClearDB(dirPath string) error {
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return nil
-	}
-	return os.RemoveAll(dirPath)
 }
