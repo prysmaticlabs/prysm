@@ -77,17 +77,17 @@ func convertToSingleMultiAddr(node *discv5.Node) (ma.Multiaddr, error) {
 	}
 	pubkey, err := node.ID.Pubkey()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pubkey from node ID")
+		return nil, errors.Wrap(err, "could not get pubkey from node ID")
 	}
 	assertedKey := convertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get peer id")
+		return nil, errors.Wrap(err, "could not get peer id")
 	}
 	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
 	multiAddr, err := ma.NewMultiaddr(multiAddrString)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get multiaddr")
+		return nil, errors.Wrap(err, "could not get multiaddr")
 	}
 	return multiAddr, nil
 }

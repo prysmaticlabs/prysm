@@ -120,6 +120,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 		logEpochData(postState)
+		reportStateMetrics(postState)
 	}
 	return nil
 }
