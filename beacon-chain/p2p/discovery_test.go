@@ -86,7 +86,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	nodes := lastListener.Lookup(bootNode.ID)
 	if len(nodes) != 6 {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
-			"Expected %d but got %d", 11, len(nodes))
+			"Expected %d but got %d", 6, len(nodes))
 	}
 
 	// Close all ports

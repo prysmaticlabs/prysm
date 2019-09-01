@@ -34,7 +34,7 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			go func() {
 				ctx := context.Background()
 				log.WithField("peer", conn.RemotePeer()).Debug(
-					"Performing handshake with to peer",
+					"Performing handshake with peer",
 				)
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Could not send successful hello rpc request")
@@ -44,6 +44,22 @@ func (p *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					}
 					log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")
 				}
+			}()
+		},
+	})
+}
+
+// addDisconnectionHandler ensures that previously disconnected peers aren't dialed again. Due
+// to either their ports being closed, nodes are no longer active,etc.
+func (p *Service) addDisconnectionHandler() {
+	p.host.Network().Notify(&network.NotifyBundle{
+		DisconnectedF: func(net network.Network, conn network.Conn) {
+			// Must be handled in a goroutine as this callback cannot be blocking.
+			go func() {
+				p.exclusionList[conn.RemotePeer()] = true
+				log.WithField("peer", conn.RemotePeer()).Debug(
+					"Peer is added to exclusion list",
+				)
 			}()
 		},
 	})

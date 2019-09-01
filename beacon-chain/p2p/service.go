@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"strings"
 	"time"
 
@@ -26,36 +27,40 @@ var pollingPeriod = 1 * time.Second
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	started     bool
-	cfg         *Config
-	startupErr  error
-	dv5Listener Listener
-	host        host.Host
-	pubsub      *pubsub.PubSub
+	ctx           context.Context
+	cancel        context.CancelFunc
+	started       bool
+	cfg           *Config
+	startupErr    error
+	dv5Listener   Listener
+	host          host.Host
+	pubsub        *pubsub.PubSub
+	exclusionList map[peer.ID]bool
+	privKey       *ecdsa.PrivateKey
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
 func NewService(cfg *Config) (*Service, error) {
+	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Service{
-		ctx:    ctx,
-		cancel: cancel,
-		cfg:    cfg,
+		ctx:           ctx,
+		cancel:        cancel,
+		cfg:           cfg,
+		exclusionList: make(map[peer.ID]bool),
 	}
 
 	ipAddr := ipAddr(s.cfg)
-	privKey, err := privKey(s.cfg)
+	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
 		return nil, err
 	}
 
 	// TODO(3147): Add host options
-	opts := buildOptions(s.cfg, ipAddr, privKey)
+	opts := buildOptions(s.cfg, ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
@@ -84,19 +89,20 @@ func (s *Service) Start() {
 		log.Error("Attempted to start p2p service when it was already started")
 		return
 	}
+	s.addDisconnectionHandler()
 
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		ipAddr := ipAddr(s.cfg)
-		privKey, err := privKey(s.cfg)
-		if err != nil {
-			s.startupErr = err
-			log.WithError(err).Error("Failed to generate p2p private key")
-			return
-		}
 
-		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
+		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
+			s.startupErr = err
+			return
+		}
+		err = s.addBootNodeToExclusionList()
+		if err != nil {
+			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
 			return
 		}
@@ -179,20 +185,16 @@ func (s *Service) Disconnect(pid peer.ID) error {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	node, err := discv5.ParseNode(s.cfg.BootstrapNodeAddr)
-	if err != nil {
-		log.Fatalf("could not parse bootstrap address: %v", err)
-	}
-	nodeID := node.ID
+	nodes := make([]*discv5.Node, 10)
 	ticker := time.NewTicker(pollingPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			nodes := s.dv5Listener.Lookup(nodeID)
-			multiAddresses := convertToMultiAddr(nodes)
+			num := s.dv5Listener.ReadRandomNodes(nodes)
+			multiAddresses := convertToMultiAddr(nodes[:num])
 			s.connectWithAllPeers(multiAddresses)
 			// store furthest node as the next to lookup
-			nodeID = nodes[len(nodes)-1].ID
+			//nodeID = nodes[len(nodes)-1].ID
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
@@ -211,10 +213,33 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
+		if s.exclusionList[info.ID] {
+			log.Info("Skipping bootnode")
+			continue
+		}
+		log.Infof("Connecting with %s with id %s", info.Addrs, info.ID)
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer: %v", err)
 		}
 	}
+}
+
+func (s *Service) addBootNodeToExclusionList() error {
+	bootNode, err := discv5.ParseNode(s.cfg.BootstrapNodeAddr)
+	if err != nil {
+		return err
+	}
+	multAddr, err := convertToSingleMultiAddr(bootNode)
+	if err != nil {
+		return err
+	}
+	addrInfo, err := peer.AddrInfoFromP2pAddr(multAddr)
+	if err != nil {
+		return err
+	}
+	s.exclusionList[addrInfo.ID] = true
+
+	return nil
 }
 
 func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
