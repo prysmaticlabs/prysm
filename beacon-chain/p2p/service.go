@@ -214,10 +214,8 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			continue
 		}
 		if s.exclusionList[info.ID] {
-			log.Info("Skipping bootnode")
 			continue
 		}
-		log.Infof("Connecting with %s with id %s", info.Addrs, info.ID)
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer: %v", err)
 		}
