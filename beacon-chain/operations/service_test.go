@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -72,8 +71,8 @@ func TestServiceStatus_Error(t *testing.T) {
 
 func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exit := &ethpb.VoluntaryExit{Epoch: 100}
@@ -86,8 +85,8 @@ func TestIncomingExits_Ok(t *testing.T) {
 }
 
 func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
@@ -145,10 +144,18 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	newBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	if err := beaconDB.SaveBlockDeprecated(newBlock); err != nil {
+	ctx := context.Background()
+	if err := beaconDB.SaveBlock(ctx, newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
+	newBlockRoot, err := ssz.HashTreeRoot(newBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveHeadBlockRoot(ctx, newBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -485,9 +492,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 
 func TestRetrieveAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
@@ -507,11 +513,15 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-	if err := beaconDB.SaveStateDeprecated(context.Background(), &pb.BeaconState{
+	headBlockRoot := [32]byte{1, 2, 3}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 64,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
@@ -530,9 +540,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for slots 0 to 139.
@@ -554,11 +563,15 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	}
 
 	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
-	if err := beaconDB.SaveStateDeprecated(context.Background(), &pb.BeaconState{
+	newHeadBlockRoot := [32]byte{4, 5, 6}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newHeadBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 2,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, newHeadBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.AttestationPool(context.Background(), 200)
