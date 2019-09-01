@@ -25,6 +25,7 @@ import (
 
 var _ = shared.Service(&Service{})
 var pollingPeriod = 1 * time.Second
+var ttl = 1 * time.Hour
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -36,7 +37,7 @@ type Service struct {
 	dv5Listener   Listener
 	host          host.Host
 	pubsub        *pubsub.PubSub
-	exclusionList map[peer.ID]bool
+	exclusionList map[peer.ID]time.Time
 	listLock      sync.RWMutex
 	privKey       *ecdsa.PrivateKey
 }
@@ -51,7 +52,7 @@ func NewService(cfg *Config) (*Service, error) {
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: make(map[peer.ID]bool),
+		exclusionList: make(map[peer.ID]time.Time),
 	}
 
 	ipAddr := ipAddr(s.cfg)
@@ -195,8 +196,6 @@ func (s *Service) listenForNewNodes() {
 			num := s.dv5Listener.ReadRandomNodes(nodes)
 			multiAddresses := convertToMultiAddr(nodes[:num])
 			s.connectWithAllPeers(multiAddresses)
-			// store furthest node as the next to lookup
-			//nodeID = nodes[len(nodes)-1].ID
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
@@ -215,7 +214,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
-		if s.exclusionList[info.ID] {
+		if !s.validToDialPeer(info.ID) {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
@@ -239,9 +238,24 @@ func (s *Service) addBootNodeToExclusionList() error {
 	}
 	s.listLock.RLock()
 	defer s.listLock.RUnlock()
-	s.exclusionList[addrInfo.ID] = true
+	// bootnode is never dialled, so ttl is tentatively 1 year
+	s.exclusionList[addrInfo.ID] = time.Now().Add(365 * 24 * time.Hour)
 
 	return nil
+}
+
+func (s *Service) validToDialPeer(id peer.ID) bool {
+	ttlTime := s.exclusionList[id]
+	if ttlTime.Equal(time.Time{}) {
+		return true
+	}
+	if time.Now().Unix() > ttlTime.Unix() {
+		s.listLock.RLock()
+		defer s.listLock.RUnlock()
+		delete(s.exclusionList, id)
+		return true
+	}
+	return false
 }
 
 func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {

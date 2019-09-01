@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -58,7 +59,7 @@ func (s *Service) addDisconnectionHandler() {
 			go func() {
 				s.listLock.RLock()
 				defer s.listLock.RUnlock()
-				s.exclusionList[conn.RemotePeer()] = true
+				s.exclusionList[conn.RemotePeer()] = time.Now().Add(ttl)
 				log.WithField("peer", conn.RemotePeer()).Debug(
 					"Peer is added to exclusion list",
 				)
