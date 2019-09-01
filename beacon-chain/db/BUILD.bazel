@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -11,17 +11,5 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    size = "medium",
-    srcs = ["db_test.go"],
-    embed = [":go_default_library"],
-    race = "on",
-    deps = [
-        "//beacon-chain/db/kv:go_default_library",
-        "//beacon-chain/db/testing:go_default_library",
     ],
 )
