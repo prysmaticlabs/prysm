@@ -52,6 +52,22 @@ func ClosestPowerOf2(n uint64) uint64 {
 	return PowerOf2(uint64(exponent))
 }
 
+// NextPowerOf2 returns the next power of 2 >= the input
+func NextPowerOf2(n int) int {
+	if n <= 2 {
+		return n
+	}
+	return 2 * NextPowerOf2((n+1)/2)
+}
+
+// PrevPowerOf2 returns the previous power of 2 >= the input
+func PrevPowerOf2(n int) int {
+	if n <= 2 {
+		return n
+	}
+	return 2 * PrevPowerOf2(n/2)
+}
+
 // Max returns the larger integer of the two
 // given ones.This is used over the Max function
 // in the standard math library because that max function
