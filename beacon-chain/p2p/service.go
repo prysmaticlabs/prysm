@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
@@ -36,6 +37,7 @@ type Service struct {
 	host          host.Host
 	pubsub        *pubsub.PubSub
 	exclusionList map[peer.ID]bool
+	listLock      sync.RWMutex
 	privKey       *ecdsa.PrivateKey
 }
 
@@ -235,6 +237,8 @@ func (s *Service) addBootNodeToExclusionList() error {
 	if err != nil {
 		return err
 	}
+	s.listLock.RLock()
+	defer s.listLock.RUnlock()
 	s.exclusionList[addrInfo.ID] = true
 
 	return nil
