@@ -1,4 +1,4 @@
-package db
+package forkchoice
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,35 +9,35 @@ import (
 
 var (
 	lastSlotGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_last_slot",
+		Name: "state_last_slot",
 		Help: "Last slot number of the processed state",
 	})
 	lastJustifiedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_last_justified_epoch",
+		Name: "state_last_justified_epoch",
 		Help: "Last justified epoch of the processed state",
 	})
 	lastPrevJustifiedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_last_prev_justified_epoch",
+		Name: "state_last_prev_justified_epoch",
 		Help: "Last prev justified epoch of the processed state",
 	})
 	lastFinalizedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_last_finalized_epoch",
+		Name: "state_last_finalized_epoch",
 		Help: "Last finalized epoch of the processed state",
 	})
 	activeValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_active_validators",
+		Name: "state_active_validators",
 		Help: "Total number of active validators",
 	})
 	slashedValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_slashed_validators",
+		Name: "state_slashed_validators",
 		Help: "Total slashed validators",
 	})
 	withdrawnValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_withdrawn_validators",
+		Name: "state_withdrawn_validators",
 		Help: "Total withdrawn validators",
 	})
 	totalValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "deprecated_state_total_validators",
+		Name: "state_total_validators",
 		Help: "All time total validators",
 	})
 )
