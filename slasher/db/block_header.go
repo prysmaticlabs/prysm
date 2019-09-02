@@ -103,8 +103,7 @@ func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		max := bytesutil.Bytes8(uint64(pruneTill))
-		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
+		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= uint64(pruneTill); k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
 			}
