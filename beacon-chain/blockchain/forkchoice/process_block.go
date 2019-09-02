@@ -3,8 +3,8 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -14,6 +14,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -57,6 +59,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
+	preStateValidatorCount := len(preState.Validators)
 
 	// Verify block slot time is not from the feature.
 	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
@@ -110,9 +113,14 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 	}
 
-	// Log epoch summary before the next epoch.
+	// Epoch boundary bookkeeping such as logging epoch summaries
+	// and saving newly activated validator indices in db.
 	if helpers.IsEpochStart(postState.Slot) {
+		if err := s.saveNewValidator(ctx, preStateValidatorCount, postState); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
 		logEpochData(postState)
+		reportStateMetrics(postState)
 	}
 	return nil
 }
@@ -157,10 +165,29 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 	return nil
 }
 
+// saveNewValidator saves newly added validator index from state to db.
+func (s *Store) saveNewValidator(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
+	postStateValidatorCount := len(postState.Validators)
+	if preStateValidatorCount != postStateValidatorCount {
+		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
+			pubKey := postState.Validators[i].PublicKey
+			if err := s.db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), uint64(i)); err != nil {
+				return errors.Wrapf(err, "could not save activated validator: %d", i)
+			}
+			log.WithFields(logrus.Fields{
+				"index":               i,
+				"pubKey":              hex.EncodeToString(bytesutil.Trunc(pubKey)),
+				"totalValidatorCount": i + 1,
+			}).Info("New validator index saved in DB")
+		}
+	}
+	return nil
+}
+
 // verifyBlkSlotTime validates the input block slot is not from the future.
 func verifyBlkSlotTime(gensisTime uint64, blkSlot uint64) error {
 	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	if slotTime > currentTime {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, currentTime)
 	}

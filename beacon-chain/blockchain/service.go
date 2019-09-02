@@ -99,6 +99,9 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		if err := c.initializeChainInfo(c.ctx); err != nil {
+			log.Fatalf("Could not set up chain info: %v", err)
+		}
 		justifiedCheckpoint, err := c.beaconDB.JustifiedCheckpoint(c.ctx)
 		if err != nil {
 			log.Fatalf("Could not get justified checkpoint: %v", err)
@@ -107,7 +110,6 @@ func (c *ChainService) Start() {
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
-
 		if err := c.forkChoiceStore.GenesisStore(c.ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
@@ -255,5 +257,28 @@ func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconSt
 			return errors.Wrapf(err, "could not save validator index: %d", i)
 		}
 	}
+	return nil
+}
+
+// This gets called to initialize chain info variables using the head stored in DB
+func (c *ChainService) initializeChainInfo(ctx context.Context) error {
+	headBlock, err := c.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head block in db")
+	}
+	headState, err := c.beaconDB.HeadState(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head state in db")
+	}
+	c.headSlot = headBlock.Slot
+	c.headBlock = headBlock
+	c.headState = headState
+
+	headRoot, err := ssz.SigningRoot(headBlock)
+	if err != nil {
+		return errors.Wrap(err, "could not sign root on head block")
+	}
+	c.canonicalRoots[c.headSlot] = headRoot[:]
+
 	return nil
 }
