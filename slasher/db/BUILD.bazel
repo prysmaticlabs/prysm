@@ -8,7 +8,7 @@ go_library(
         "schema.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db",
-    visibility = ["//visibility:public"],
+    visibility = ["//slasher:__subpackages__"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",

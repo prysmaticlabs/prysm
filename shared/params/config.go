@@ -98,7 +98,7 @@ type BeaconChainConfig struct {
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod uint64 // WeakSubjectivityPeriod defines the period were proof of stake network should validate block headers and attestations for slashable events.
+	WeakSubjectivityPeriod uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 }
 
 // DepositContractConfig contains the deposits for

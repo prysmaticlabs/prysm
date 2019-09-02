@@ -12,16 +12,16 @@ import (
 )
 
 func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
-	protoBlockHead := &ethpb.BeaconBlockHeader{}
-	err := proto.Unmarshal(enc, protoBlockHead)
+	protoBlockHeader := &ethpb.BeaconBlockHeader{}
+	err := proto.Unmarshal(enc, protoBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	return protoBlockHead, nil
+	return protoBlockHeader, nil
 }
 
-// BlockHeader accepts a block root and returns the corresponding block.
-// Returns nil if the block does not exist.
+// BlockHeader accepts an epoch and validator id and returns the corresponding block header array.
+// Returns nil if the block header for those values does not exist.
 func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
 	var bha []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
@@ -81,7 +81,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 	return err
 }
 
-// DeleteBlockHeader deletes a block header using the slot and its root as keys in their respective buckets.
+// DeleteBlockHeader deletes a block header using the epoch and validator id.
 func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
