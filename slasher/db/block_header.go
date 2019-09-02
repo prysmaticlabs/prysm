@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -75,8 +76,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 
 	// prune history to max size every 10th epoch
 	if epoch%10 == 0 {
-		weakSubjectivityPeriod := uint64(54000)
-		err = db.pruneHistory(epoch, weakSubjectivityPeriod)
+		err = db.pruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
