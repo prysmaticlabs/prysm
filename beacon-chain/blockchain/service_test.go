@@ -1,11 +1,13 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -50,7 +52,7 @@ func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	return 0, nil
 }
 
-func (s *store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
+func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
 	return nil
 }
 
@@ -287,6 +289,9 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, blkRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Test the start function.
 	chainService.Start()
@@ -335,5 +340,40 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 	if bc.CanonicalRoot(0) == nil {
 		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
+	}
+}
+
+func TestChainService_InitializeChainInfo(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	headBlock := &ethpb.BeaconBlock{Slot: 1}
+	headState := &pb.BeaconState{Slot: 1}
+	headRoot, _ := ssz.SigningRoot(headBlock)
+	if err := db.SaveState(ctx, headState, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, headBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	c := &ChainService{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}
+	if err := c.initializeChainInfo(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(c.HeadBlock(), headBlock) {
+		t.Error("head block incorrect")
+	}
+	if !reflect.DeepEqual(c.HeadState(), headState) {
+		t.Error("head block incorrect")
+	}
+	if headBlock.Slot != c.HeadSlot() {
+		t.Error("head slot incorrect")
+	}
+	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
+		t.Error("head slot incorrect")
 	}
 }

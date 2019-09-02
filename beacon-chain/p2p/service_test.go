@@ -77,7 +77,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, _ := NewService(nil)
+	s, _ := NewService(&Config{})
 	s.started = true
 	s.dv5Listener = &mockListener{}
 	_ = s.Stop()
@@ -88,7 +88,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, _ := NewService(nil)
+	s, _ := NewService(&Config{})
 	_ = s.Stop()
 }
 
@@ -149,8 +149,8 @@ func TestListenForNewNodes(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 4000
-	cfg.UDPPort = 4000
+	cfg.Port = 14000
+	cfg.UDPPort = 14000
 
 	s, err := NewService(cfg)
 	if err != nil {
@@ -165,6 +165,7 @@ func TestListenForNewNodes(t *testing.T) {
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
+
 	// close down all peers
 	for _, listener := range listeners {
 		listener.Close()
