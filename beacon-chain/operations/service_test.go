@@ -574,10 +574,9 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 }
 
 func TestRemoveProcessedAttestations_Ok(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
-	ctx := context.Background()
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
@@ -594,15 +593,15 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
-	headRoot := [32]byte{'A'}
-	if err := db.SaveState(ctx, &pb.BeaconState{
+	headBlockRoot := [32]byte{1, 2, 3}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -625,10 +624,9 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
@@ -646,15 +644,15 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		}
 	}
 
-	headRoot := [32]byte{'A'}
-	if err := db.SaveState(ctx, &pb.BeaconState{
+	headBlockRoot := [32]byte{1, 2, 3}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 15,
 		CurrentCrosslinks: []*ethpb.Crosslink{{
 			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
