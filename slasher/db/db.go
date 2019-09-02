@@ -78,7 +78,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "beaconchain.db")
+	datafile := path.Join(dirPath, "slasher.db")
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -91,9 +91,10 @@ func NewKVStore(dirPath string) (*Store, error) {
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
-			tx, cleanupHistoryBucket,
-			historicAttestationsBucket,
+			tx,
+			historicIndexedAttestationsBucket,
 			historicBlockHeadersBucket,
+			indexedAttestationsIndicesBucket,
 		)
 	}); err != nil {
 		return nil, err

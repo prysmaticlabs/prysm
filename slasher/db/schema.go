@@ -1,8 +1,6 @@
 package db
 
 import (
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -20,7 +18,9 @@ var (
 
 	// Slasher
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
-	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
+	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
+
+	historicBlockHeadersBucket = []byte("historic-block-headers-bucket")
 
 	// DB internal use
 	cleanupHistoryBucket = []byte("cleanup-history-bucket")
@@ -38,12 +38,8 @@ func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []b
 	return append(append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorID)...), sig...)
 }
 
-func encodeEpochCustodyBitSig(epoch uint64, custodyBits []uint64, sig []byte) ([]byte, err) {
-	custodyBytes, err := ssz.Marshal(custodyBits)
-	if err != nil {
-		return []byte{}, errors.Wrap(err, "failed to marshal custody bits")
-	}
-	return append(append(bytesutil.Bytes8(epoch), custodyBytes...), sig...), nil
+func encodeEpochSig(epoch uint64, sig []byte) []byte {
+	return append(bytesutil.Bytes8(epoch), sig...)
 }
 
 // encodeSlotNumber encodes a slot number as little-endian uint32.

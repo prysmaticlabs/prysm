@@ -2,6 +2,9 @@ package db
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/go-ssz"
+	"reflect"
+	"sort"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -19,36 +22,68 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIndexedAttestationList, error) {
+	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestationList{}
+	err := proto.Unmarshal(enc, protoIdxAtt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+	}
+	return protoIdxAtt, nil
+}
+
 // IndexedAttestation accepts a epoch and validator index and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist.
-func (db *Store) IndexedAttestation(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
-	var bha []*ethpb.BeaconBlockHeader
+func (db *Store) IndexedAttestation(epoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
+	var iAtt []*ethpb.IndexedAttestation
+	key := bytesutil.Bytes8(epoch)
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		prefix := encodeEpochValidatorID(epoch, validatorID)
-		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			bh, err := createBlockHeader(v)
-			if err != nil {
-				return err
+		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
+		enc := bucket.Get(key)
+		iList, err := createValidatorIDsToIndexedAttestationList(enc)
+		if err != nil {
+			return err
+		}
+		for _, a := range iList.IndicesList {
+			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
+			if i < len(a.Indices) && a.Indices[i] == validatorID {
+				iaBucket := tx.Bucket(historicIndexedAttestationsBucket)
+				key := encodeEpochSig(epoch, a.Signature)
+				enc = iaBucket.Get(key)
+				if len(enc) == 0 {
+					continue
+				}
+				iA, err := createIndexedAttestation(enc)
+				if err != nil {
+					return err
+				}
+				iAtt = append(iAtt, iA)
 			}
-			bha = append(bha, bh)
 		}
 		return nil
 	})
-	return bha, err
+
+	return iAtt, err
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the block header exists.
 func (db *Store) HasIndexedAttestation(epoch uint64, validatorID uint64) bool {
-	prefix := encodeEpochValidatorID(epoch, validatorID)
+	key := bytesutil.Bytes8(epoch)
 	var hasAttestation bool
 	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
-			hasAttestation = true
-			return nil
+		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
+		enc := bucket.Get(key)
+		iList, err := createValidatorIDsToIndexedAttestationList(enc)
+		if err != nil {
+			return err
+		}
+		for _, a := range iList.IndicesList {
+			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] <= validatorID })
+			if i < len(a.Indices) && a.Indices[i] == validatorID {
+				hasAttestation = true
+				return nil
+			}
 		}
 		hasAttestation = false
 		return nil
@@ -59,11 +94,7 @@ func (db *Store) HasIndexedAttestation(epoch uint64, validatorID uint64) bool {
 
 // SaveIndexedAttestation accepts epoch  and indexed attestation and writes it to disk.
 func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.IndexedAttestation) error {
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
-	key, err := encodeEpochCustodyBitSig(epoch, indices, idxAttestation.Signature)
-	if err != nil {
-		return errors.Wrap(err, "failed in encoding")
-	}
+	key := encodeEpochSig(epoch, idxAttestation.Signature)
 	enc, err := proto.Marshal(idxAttestation)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
@@ -71,6 +102,12 @@ func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.Inde
 
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
+		//if data is in db skip put and index functions
+		val := bucket.Get(key)
+		if val != nil {
+			return nil
+		}
+		createIndexedAttestationIndicesFromData(epoch, idxAttestation, tx)
 		if err := bucket.Put(key, enc); err != nil {
 			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
 		}
@@ -86,21 +123,86 @@ func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.Inde
 	return err
 }
 
+func createIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
+	dataRoot, err := ssz.Marshal(idxAttestation.Data)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal indexed attestation data.")
+	}
+	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestation{
+		Signature: idxAttestation.Signature,
+		Indices:   indices,
+		DataRoot:  dataRoot,
+	}
+	key := bytesutil.Bytes8(epoch)
+	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
+	enc := bucket.Get(key)
+	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
+	}
+	vIdxList.IndicesList = append(vIdxList.IndicesList, protoIdxAtt)
+	enc, err = proto.Marshal(vIdxList)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal")
+	}
+	if err := bucket.Put(key, enc); err != nil {
+		return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+	}
+	return nil
+}
+
 // DeleteIndexedAttestation deletes a block header using the slot and its root as keys in their respective buckets.
 func (db *Store) DeleteIndexedAttestation(epoch uint64, idxAttestation *ethpb.IndexedAttestation) error {
-
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
-	key, err := encodeEpochCustodyBitSig(epoch, indices, idxAttestation.Signature)
-	if err != nil {
-		return errors.Wrap(err, "failed in encoding")
-	}
+	key := encodeEpochSig(epoch, idxAttestation.Signature)
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
+		enc := bucket.Get(key)
+		if enc == nil {
+			return nil
+		}
 		if err := bucket.Delete(key); err != nil {
 			return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
 		}
-		return bucket.Delete(key)
+		enc = bucket.Get(key)
+		if enc != nil {
+			return errors.New("key wasn't deleted")
+		}
+		return nil
 	})
+}
+
+func removeIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
+	dataRoot, err := ssz.Marshal(idxAttestation.Data)
+	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestation{
+		Signature: idxAttestation.Signature,
+		Indices:   indices,
+		DataRoot:  dataRoot,
+	}
+	key := bytesutil.Bytes8(epoch)
+	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
+	enc := bucket.Get(key)
+	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
+	}
+	for i, v := range vIdxList.IndicesList {
+		if reflect.DeepEqual(v, protoIdxAtt) {
+			copy(vIdxList.IndicesList[i:], vIdxList.IndicesList[i+1:])
+			vIdxList.IndicesList[len(vIdxList.IndicesList)-1] = nil // or the zero value of T
+			vIdxList.IndicesList = vIdxList.IndicesList[:len(vIdxList.IndicesList)-1]
+			break
+		}
+	}
+	enc, err = proto.Marshal(vIdxList)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal")
+	}
+	if err := bucket.Put(key, enc); err != nil {
+		return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+	}
+	return nil
 }
 
 func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error {

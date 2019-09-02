@@ -14,121 +14,150 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 	epoch := uint64(1)
 	validatorID := uint64(1)
 
-	hasBlockHeader := db.HasBlockHeader(epoch, validatorID)
-	if hasBlockHeader {
+	hasIdxAtt := db.HasIndexedAttestation(epoch, validatorID)
+	if hasIdxAtt {
 		t.Fatal("HasBlockHeader should return false")
 	}
 
-	bPrime, err := db.BlockHeader(epoch, validatorID)
+	idxAtt, err := db.IndexedAttestation(epoch, validatorID)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	if bPrime != nil {
+	if idxAtt != nil {
 		t.Fatalf("get should return nil for a non existent key")
 	}
 }
 
-func TestSaveHistoryBlkHdr(t *testing.T) {
+func TestSaveIdxAtt(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
+		iA    *ethpb.IndexedAttestation
 	}{
 		{
 			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 		{
 			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 2nd"), CustodyBit_0Indices: []uint64{1, 2}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 		{
 			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 3rd"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 	}
 
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveIndexedAttestation(tt.epoch, tt.iA)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		iAarray, err := db.IndexedAttestation(tt.epoch, tt.iA.CustodyBit_0Indices[0])
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
 
-		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-			t.Fatalf("get should return bh: %v", bha)
+		if iAarray == nil || !reflect.DeepEqual(iAarray[0], tt.iA) {
+			t.Fatalf("get should return indexed attestation: %v", iAarray)
 		}
 	}
 
 }
 
-func TestDeleteHistoryBlkHdr(t *testing.T) {
+func TestDeleteHistoryIdxAtt(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
+		iA    *ethpb.IndexedAttestation
 	}{
 		{
 			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 		{
 			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 2nd"), CustodyBit_0Indices: []uint64{1, 2}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 		{
 			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 3rd"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			}},
 		},
 	}
 	for _, tt := range tests {
 
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveIndexedAttestation(tt.epoch, tt.iA)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		iAarray, err := db.IndexedAttestation(tt.epoch, tt.iA.CustodyBit_0Indices[0])
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
 
-		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-			t.Fatalf("get should return bh: %v", bha)
+		if iAarray == nil || !reflect.DeepEqual(iAarray[0], tt.iA) {
+			t.Fatalf("get should return bh: %v", iAarray)
 		}
-		err = db.DeleteBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err = db.DeleteIndexedAttestation(tt.epoch, tt.iA)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
-		bh, err := db.BlockHeader(tt.epoch, tt.vID)
+		iAarray, err = db.IndexedAttestation(tt.epoch, tt.iA.CustodyBit_0Indices[0])
 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bh != nil {
-			t.Errorf("Expected block to have been deleted, received: %v", bh)
+		if len(iAarray) != 0 {
+			t.Errorf("Expected block to have been deleted, received: %v", iAarray)
 		}
 
 	}
 
 }
 
+/*
 func TestHasHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
@@ -252,3 +281,4 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 
 	}
 }
+*/

@@ -6,11 +6,11 @@ package eth
 import (
 	context "context"
 	fmt "fmt"
-	math "math"
-
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,29 +24,151 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+type ValidatorIDToIndexedAttestation struct {
+	Indices              []uint64 `protobuf:"varint,1,rep,packed,name=indices,proto3" json:"indices,omitempty"`
+	DataRoot             []byte   `protobuf:"bytes,2,opt,name=data_root,json=dataRoot,proto3" json:"data_root,omitempty"`
+	Signature            []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ValidatorIDToIndexedAttestation) Reset()         { *m = ValidatorIDToIndexedAttestation{} }
+func (m *ValidatorIDToIndexedAttestation) String() string { return proto.CompactTextString(m) }
+func (*ValidatorIDToIndexedAttestation) ProtoMessage()    {}
+func (*ValidatorIDToIndexedAttestation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{0}
+}
+func (m *ValidatorIDToIndexedAttestation) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ValidatorIDToIndexedAttestation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ValidatorIDToIndexedAttestation.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ValidatorIDToIndexedAttestation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorIDToIndexedAttestation.Merge(m, src)
+}
+func (m *ValidatorIDToIndexedAttestation) XXX_Size() int {
+	return m.Size()
+}
+func (m *ValidatorIDToIndexedAttestation) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorIDToIndexedAttestation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorIDToIndexedAttestation proto.InternalMessageInfo
+
+func (m *ValidatorIDToIndexedAttestation) GetIndices() []uint64 {
+	if m != nil {
+		return m.Indices
+	}
+	return nil
+}
+
+func (m *ValidatorIDToIndexedAttestation) GetDataRoot() []byte {
+	if m != nil {
+		return m.DataRoot
+	}
+	return nil
+}
+
+func (m *ValidatorIDToIndexedAttestation) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type ValidatorIDToIndexedAttestationList struct {
+	IndicesList          []*ValidatorIDToIndexedAttestation `protobuf:"bytes,1,rep,name=indicesList,proto3" json:"indicesList,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
+	XXX_unrecognized     []byte                             `json:"-"`
+	XXX_sizecache        int32                              `json:"-"`
+}
+
+func (m *ValidatorIDToIndexedAttestationList) Reset()         { *m = ValidatorIDToIndexedAttestationList{} }
+func (m *ValidatorIDToIndexedAttestationList) String() string { return proto.CompactTextString(m) }
+func (*ValidatorIDToIndexedAttestationList) ProtoMessage()    {}
+func (*ValidatorIDToIndexedAttestationList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{1}
+}
+func (m *ValidatorIDToIndexedAttestationList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ValidatorIDToIndexedAttestationList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ValidatorIDToIndexedAttestationList.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ValidatorIDToIndexedAttestationList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorIDToIndexedAttestationList.Merge(m, src)
+}
+func (m *ValidatorIDToIndexedAttestationList) XXX_Size() int {
+	return m.Size()
+}
+func (m *ValidatorIDToIndexedAttestationList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorIDToIndexedAttestationList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorIDToIndexedAttestationList proto.InternalMessageInfo
+
+func (m *ValidatorIDToIndexedAttestationList) GetIndicesList() []*ValidatorIDToIndexedAttestation {
+	if m != nil {
+		return m.IndicesList
+	}
+	return nil
+}
+
+func init() {
+	proto.RegisterType((*ValidatorIDToIndexedAttestation)(nil), "ethereum.eth.v1alpha1.ValidatorIDToIndexedAttestation")
+	proto.RegisterType((*ValidatorIDToIndexedAttestationList)(nil), "ethereum.eth.v1alpha1.ValidatorIDToIndexedAttestationList")
+}
+
 func init() { proto.RegisterFile("proto/eth/v1alpha1/slasher.proto", fileDescriptor_c3db2cc39857595b) }
 
 var fileDescriptor_c3db2cc39857595b = []byte{
-	// 296 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x91, 0xc1, 0x4a, 0xf4, 0x30,
-	0x14, 0x85, 0x29, 0x3f, 0xfc, 0x42, 0x56, 0x12, 0x98, 0x59, 0x8c, 0x50, 0x44, 0x14, 0x5d, 0x25,
-	0x33, 0x8a, 0x2b, 0x57, 0x56, 0x04, 0xdd, 0x09, 0x2e, 0x84, 0xd9, 0xc8, 0x4d, 0xbd, 0x36, 0xc5,
-	0xb4, 0x29, 0xc9, 0xad, 0x30, 0xef, 0xe0, 0x83, 0xb9, 0xf4, 0x11, 0xa4, 0x4f, 0x22, 0x93, 0x38,
-	0x5a, 0xb4, 0x23, 0xba, 0xbc, 0xbd, 0xdf, 0x3d, 0xe7, 0xf4, 0x84, 0x6d, 0x37, 0xce, 0x92, 0x95,
-	0x48, 0x5a, 0x3e, 0xce, 0xc0, 0x34, 0x1a, 0x66, 0xd2, 0x1b, 0xf0, 0x1a, 0x9d, 0x08, 0x2b, 0x3e,
-	0x42, 0xd2, 0xe8, 0xb0, 0xad, 0x04, 0x92, 0x16, 0x2b, 0x68, 0xb2, 0x55, 0x58, 0x5b, 0x18, 0x94,
-	0x01, 0x52, 0xed, 0xbd, 0xc4, 0xaa, 0xa1, 0x45, 0xbc, 0x99, 0xec, 0x0d, 0xa8, 0x2a, 0x84, 0xdc,
-	0xd6, 0xb7, 0xca, 0xd8, 0xfc, 0xe1, 0x1d, 0xdb, 0x1d, 0xc0, 0x80, 0x08, 0x3d, 0x01, 0x95, 0xb6,
-	0x8e, 0xd4, 0xe1, 0xd3, 0x3f, 0xb6, 0x71, 0x1d, 0x23, 0x71, 0x64, 0xe3, 0x4b, 0x1f, 0x06, 0x50,
-	0x06, 0x4f, 0x3f, 0x59, 0xbe, 0x23, 0x06, 0x73, 0x8a, 0x1e, 0x33, 0xd9, 0xff, 0x91, 0x41, 0x17,
-	0x84, 0xcb, 0xba, 0xe0, 0xc8, 0x36, 0x7b, 0x36, 0xd9, 0x32, 0x32, 0x3f, 0x58, 0x73, 0x9c, 0x85,
-	0xff, 0x0a, 0xcc, 0x05, 0xc2, 0x1d, 0xba, 0xb5, 0x36, 0x57, 0xce, 0x36, 0xd6, 0xf7, 0x6c, 0x6e,
-	0x18, 0xff, 0x30, 0x89, 0x4b, 0x30, 0x9e, 0x8f, 0x45, 0xac, 0x56, 0xac, 0xaa, 0x15, 0xe7, 0xcb,
-	0x6a, 0x7f, 0x2d, 0x3b, 0x4d, 0xf8, 0x9c, 0x8d, 0x86, 0x4a, 0xfa, 0xbb, 0xf6, 0xd7, 0x66, 0xa6,
-	0x49, 0x76, 0xf6, 0xdc, 0xa5, 0xc9, 0x4b, 0x97, 0x26, 0xaf, 0x5d, 0x9a, 0xcc, 0x8f, 0x8b, 0x92,
-	0x74, 0xab, 0x44, 0x6e, 0x2b, 0xd9, 0xb8, 0x85, 0xaf, 0x80, 0xca, 0xdc, 0x80, 0xf2, 0x71, 0x92,
-	0xdf, 0x5f, 0xf8, 0x04, 0x49, 0xab, 0xff, 0xe1, 0xfb, 0xd1, 0x5b, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0xcd, 0x19, 0xa4, 0x22, 0x7f, 0x02, 0x00, 0x00,
+	// 406 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0x86, 0x65, 0x82, 0x28, 0xdd, 0x72, 0x40, 0x2b, 0xb5, 0xb2, 0x52, 0x14, 0xa2, 0x00, 0x22,
+	0xa7, 0x75, 0x5b, 0x04, 0x17, 0x4e, 0x04, 0x90, 0x88, 0xc4, 0x01, 0x19, 0x04, 0xa8, 0x97, 0x6a,
+	0x6c, 0x0f, 0xf6, 0x8a, 0xb5, 0xc7, 0xda, 0x1d, 0x57, 0xf4, 0xc4, 0x0b, 0xf0, 0x60, 0x1c, 0x79,
+	0x04, 0x94, 0x27, 0x41, 0x5e, 0x37, 0xd4, 0x02, 0x87, 0xd2, 0xe3, 0xcc, 0x7c, 0xfb, 0xff, 0xda,
+	0x99, 0x5f, 0x4c, 0x6b, 0x4b, 0x4c, 0x11, 0x72, 0x11, 0x9d, 0x1e, 0x82, 0xa9, 0x0b, 0x38, 0x8c,
+	0x9c, 0x01, 0x57, 0xa0, 0x55, 0x7e, 0x24, 0x77, 0x91, 0x0b, 0xb4, 0xd8, 0x94, 0x0a, 0xb9, 0x50,
+	0x6b, 0x68, 0xbc, 0x9f, 0x13, 0xe5, 0x06, 0x23, 0x0f, 0x25, 0xcd, 0xa7, 0x08, 0xcb, 0x9a, 0xcf,
+	0xba, 0x37, 0xe3, 0x07, 0x03, 0xaa, 0x09, 0x42, 0x4a, 0xd5, 0x49, 0x62, 0x28, 0xfd, 0x7c, 0x8e,
+	0xdd, 0x1f, 0xc0, 0x80, 0x19, 0x1d, 0x03, 0x6b, 0xaa, 0x3a, 0x6a, 0x76, 0x2a, 0xee, 0xbe, 0x07,
+	0xa3, 0x33, 0x60, 0xb2, 0xcb, 0x17, 0xef, 0x68, 0x59, 0x65, 0xf8, 0x05, 0xb3, 0x67, 0x17, 0xa0,
+	0x0c, 0xc5, 0x96, 0xae, 0x32, 0x9d, 0xa2, 0x0b, 0x83, 0xe9, 0x68, 0x7e, 0x3d, 0x5e, 0x97, 0x72,
+	0x5f, 0x6c, 0x67, 0xc0, 0x70, 0x62, 0x89, 0x38, 0xbc, 0x36, 0x0d, 0xe6, 0xb7, 0xe2, 0x9b, 0x6d,
+	0x23, 0x26, 0x62, 0x79, 0x47, 0x6c, 0x3b, 0x9d, 0x57, 0xc0, 0x8d, 0xc5, 0x70, 0xe4, 0x87, 0x17,
+	0x8d, 0xd9, 0x57, 0x71, 0xef, 0x12, 0xdf, 0xd7, 0xda, 0xb1, 0xfc, 0x28, 0x76, 0xce, 0xcd, 0xda,
+	0xd2, 0xfb, 0xef, 0x1c, 0x3d, 0x51, 0x83, 0x5b, 0x53, 0x97, 0x08, 0xc6, 0x7d, 0xa9, 0xa3, 0x6f,
+	0x23, 0xb1, 0xf5, 0xb6, 0xbb, 0x85, 0x44, 0xb1, 0xb7, 0x74, 0xbe, 0x80, 0xc4, 0x60, 0xff, 0xef,
+	0xb3, 0x0d, 0x56, 0x3d, 0x66, 0xfc, 0xf0, 0x9f, 0x0c, 0x5a, 0x2f, 0xac, 0xab, 0x5c, 0xa2, 0xb8,
+	0xdd, 0xb3, 0x59, 0xb4, 0xb7, 0x92, 0xf3, 0x0d, 0x8f, 0x17, 0xfe, 0xa0, 0x9e, 0x79, 0x85, 0x90,
+	0xa1, 0xdd, 0x68, 0xf3, 0xc6, 0x52, 0x4d, 0xae, 0x67, 0xf3, 0x41, 0xc8, 0xdf, 0x26, 0xdd, 0x10,
+	0x8c, 0x93, 0x7b, 0xaa, 0xcb, 0x94, 0x5a, 0x67, 0x4a, 0xbd, 0x6c, 0x33, 0xf5, 0xdf, 0xb2, 0x07,
+	0x81, 0x3c, 0x16, 0xbb, 0x43, 0x4b, 0xba, 0xba, 0xf6, 0x9f, 0x9b, 0x39, 0x08, 0x16, 0xcf, 0xbf,
+	0xaf, 0x26, 0xc1, 0x8f, 0xd5, 0x24, 0xf8, 0xb9, 0x9a, 0x04, 0xc7, 0x8f, 0x73, 0xcd, 0x45, 0x93,
+	0xa8, 0x94, 0xca, 0xa8, 0xb6, 0x67, 0xae, 0x04, 0xd6, 0xa9, 0x81, 0xc4, 0x75, 0x55, 0xf4, 0x77,
+	0xb4, 0x9f, 0x22, 0x17, 0xc9, 0x0d, 0xdf, 0x7f, 0xf4, 0x2b, 0x00, 0x00, 0xff, 0xff, 0x9b, 0xf8,
+	0xa3, 0x68, 0x78, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -274,3 +396,550 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "proto/eth/v1alpha1/slasher.proto",
 }
+
+func (m *ValidatorIDToIndexedAttestation) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorIDToIndexedAttestation) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Indices) > 0 {
+		dAtA2 := make([]byte, len(m.Indices)*10)
+		var j1 int
+		for _, num := range m.Indices {
+			for num >= 1<<7 {
+				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
+				num >>= 7
+				j1++
+			}
+			dAtA2[j1] = uint8(num)
+			j1++
+		}
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(j1))
+		i += copy(dAtA[i:], dAtA2[:j1])
+	}
+	if len(m.DataRoot) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(len(m.DataRoot)))
+		i += copy(dAtA[i:], m.DataRoot)
+	}
+	if len(m.Signature) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ValidatorIDToIndexedAttestationList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorIDToIndexedAttestationList) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.IndicesList) > 0 {
+		for _, msg := range m.IndicesList {
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintSlasher(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func encodeVarintSlasher(dAtA []byte, offset int, v uint64) int {
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return offset + 1
+}
+func (m *ValidatorIDToIndexedAttestation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Indices) > 0 {
+		l = 0
+		for _, e := range m.Indices {
+			l += sovSlasher(uint64(e))
+		}
+		n += 1 + sovSlasher(uint64(l)) + l
+	}
+	l = len(m.DataRoot)
+	if l > 0 {
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ValidatorIDToIndexedAttestationList) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.IndicesList) > 0 {
+		for _, e := range m.IndicesList {
+			l = e.Size()
+			n += 1 + l + sovSlasher(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func sovSlasher(x uint64) (n int) {
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
+}
+func sozSlasher(x uint64) (n int) {
+	return sovSlasher(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *ValidatorIDToIndexedAttestation) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorIDToIndexedAttestation: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorIDToIndexedAttestation: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType == 0 {
+				var v uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					v |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				m.Indices = append(m.Indices, v)
+			} else if wireType == 2 {
+				var packedLen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					packedLen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if packedLen < 0 {
+					return ErrInvalidLengthSlasher
+				}
+				postIndex := iNdEx + packedLen
+				if postIndex < 0 {
+					return ErrInvalidLengthSlasher
+				}
+				if postIndex > l {
+					return io.ErrUnexpectedEOF
+				}
+				var elementCount int
+				var count int
+				for _, integer := range dAtA[iNdEx:postIndex] {
+					if integer < 128 {
+						count++
+					}
+				}
+				elementCount = count
+				if elementCount != 0 && len(m.Indices) == 0 {
+					m.Indices = make([]uint64, 0, elementCount)
+				}
+				for iNdEx < postIndex {
+					var v uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowSlasher
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						v |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					m.Indices = append(m.Indices, v)
+				}
+			} else {
+				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DataRoot", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DataRoot = append(m.DataRoot[:0], dAtA[iNdEx:postIndex]...)
+			if m.DataRoot == nil {
+				m.DataRoot = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ValidatorIDToIndexedAttestationList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorIDToIndexedAttestationList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorIDToIndexedAttestationList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IndicesList", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.IndicesList = append(m.IndicesList, &ValidatorIDToIndexedAttestation{})
+			if err := m.IndicesList[len(m.IndicesList)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func skipSlasher(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return 0, ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				iNdEx++
+				if dAtA[iNdEx-1] < 0x80 {
+					break
+				}
+			}
+			return iNdEx, nil
+		case 1:
+			iNdEx += 8
+			return iNdEx, nil
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if length < 0 {
+				return 0, ErrInvalidLengthSlasher
+			}
+			iNdEx += length
+			if iNdEx < 0 {
+				return 0, ErrInvalidLengthSlasher
+			}
+			return iNdEx, nil
+		case 3:
+			for {
+				var innerWire uint64
+				var start int = iNdEx
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return 0, ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return 0, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					innerWire |= (uint64(b) & 0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				innerWireType := int(innerWire & 0x7)
+				if innerWireType == 4 {
+					break
+				}
+				next, err := skipSlasher(dAtA[start:])
+				if err != nil {
+					return 0, err
+				}
+				iNdEx = start + next
+				if iNdEx < 0 {
+					return 0, ErrInvalidLengthSlasher
+				}
+			}
+			return iNdEx, nil
+		case 4:
+			return iNdEx, nil
+		case 5:
+			iNdEx += 4
+			return iNdEx, nil
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+	}
+	panic("unreachable")
+}
+
+var (
+	ErrInvalidLengthSlasher = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowSlasher   = fmt.Errorf("proto: integer overflow")
+)
