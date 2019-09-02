@@ -31,7 +31,6 @@ message BeaconState {
   uint64 start_shard = 5001;
   repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
   repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
@@ -50,7 +49,12 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 9002;
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 9003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 9004;
+
+  // Period committees [10001-11000]
+  repeated bytes period_committee_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
+  repeated uint64 next_shard_receipt_period = 5005  [(gogoproto.moretags) = "ssz-size:\"1024\""];
 }
+
 
 message Fork {
   bytes previous_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
@@ -96,8 +100,8 @@ message HistoricalBatch {
 }
 
 message CompactCommittee {
-  // The list of the validator public keys in the committee.
-  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\" ssz-max:\"4096\""];
-  // The list of the validator indices in the committee.
+  // The list of the compact validator public keys in the committee.
+  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"48\" ssz-max:\"4096\""];
+  // The list of the compact validator indices in the committee.
   repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 }

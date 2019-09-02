@@ -185,3 +185,15 @@ message IndexedAttestation {
     // 96 bytes aggregate signature.
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
+
+message ShardReceiptProof {
+    uint64 shard = 1;
+    repeated bytes proof = 2 [(gogoproto.moretags) = "ssz-max:\"?\""];
+    repeated ShardReceiptDelta receipt = 3 [(gogoproto.moretags) = "ssz-max:\"?\""];
+}
+
+message ShardReceiptDelta {
+    uint64 validator_index = 1;
+    uint64 reward_coefficient = 2;
+    uint64 block_fee = 3;
+}
