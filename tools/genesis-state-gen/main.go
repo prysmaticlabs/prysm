@@ -1,22 +1,36 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
+
 	"gopkg.in/yaml.v2"
 )
 
-type keyPair struct {
-	PrivateKey []byte `yaml:"privkey"`
-	PublicKey  []byte `yaml:"pubkey"`
-}
+var (
+	inputFile = flag.String("validator-keys-yaml", "", "Input validator keys YAML file")
+)
 
-type validatorKeys struct {
-	Keys []*keyPair
+type keyPair struct {
+	PrivateKey string `yaml:"privkey"`
+	PublicKey  string `yaml:"pubkey"`
 }
 
 func main() {
-	enc := []byte{}
-	var ks *validatorKeys
-	if err := yaml.Unmarshal(enc, ks); err != nil {
+	flag.Parse()
+	f, err := os.Open(*inputFile)
+	if err != nil {
 		panic(err)
 	}
+	enc, err := ioutil.ReadAll(f)
+	if err != nil {
+		panic(err)
+	}
+	var ks []*keyPair
+	if err := yaml.Unmarshal(enc, &ks); err != nil {
+		panic(err)
+	}
+	fmt.Println(ks)
 }
