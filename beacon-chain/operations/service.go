@@ -150,7 +150,6 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	})
 
 	var validAttsCount uint64
-	fmt.Printf("Atts from db: %d\n", len(attestationsFromDB))
 	for _, att := range attestationsFromDB {
 		slot, err := helpers.AttestationDataSlot(bState, att.Data)
 		if err != nil {

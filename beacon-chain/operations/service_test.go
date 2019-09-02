@@ -171,7 +171,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 }
 
 func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
-	params.UseDemoBeaconConfig()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	ctx := context.Background()
@@ -514,7 +513,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	sort.Slice(attestations, func(i, j int) bool {
 		return attestations[i].Data.Crosslink.Shard < attestations[j].Data.Crosslink.Shard
 	})
-	t.Log(attestations)
 	if !reflect.DeepEqual(attestations, origAttestations[0:127]) {
 		t.Error("Retrieved attestations did not match")
 	}
