@@ -2,8 +2,21 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["helpers.go"],
+    srcs = [
+        "committee.go",
+        "genesis.go",
+        "reward_fee.go",
+        "slot.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shard-chains/core",
     visibility = ["//visibility:public"],
-    deps = ["//shared/params:go_default_library"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_terencechain_prysm_phase2//shared/ssz:go_default_library",
+    ],
 )

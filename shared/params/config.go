@@ -27,6 +27,8 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
+	ShardGenesisEpoch              uint64 // SHARD_GENESIS_EPOCH is the genesis shard epoch.
+	MinBlockSizePrices             uint64 // MinBlockSizePrices defines the min block size prices.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -53,6 +55,7 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	ShardSlotsPerEpoch               uint64 // ShardSlotsPerEpoch is the number of slots in a shard epoch.
 	EpochsPerShardPeriod             uint64 // EpochsPerShardPeriod defines how many epochs are in a shard period.
+	MaxPeriodCommitteeSize           uint64 // MaxPeriodCommitteeSize defines the committee size of a shard period.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -130,6 +133,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 65536,
 	MinGenesisTime:                 1578009600,
+	ShardGenesisEpoch:              0,
+	MinBlockSizePrices:             0,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
@@ -156,6 +161,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               1024,
 	ShardSlotsPerEpoch:               128,
 	EpochsPerShardPeriod:             256,
+	MaxPeriodCommitteeSize:           128,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,

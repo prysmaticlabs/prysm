@@ -1,14 +1,17 @@
 package core
 
-import "github.com/prysmaticlabs/prysm/shared/params"
+import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
+)
 
 // ShardSlotToEpoch returns the epoch number of the input shard slot.
 //
 // Spec pseudocode definition:
 //  def compute_epoch_of_shard_slot(slot: ShardSlot) -> Epoch:
-//    return Epoch(slot // SHARD_SLOTS_PER_EPOCH)
+//    return compute_epoch_of_slot(slot // SHARD_SLOTS_PER_EPOCH)
 func ShardSlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().ShardSlotsPerEpoch
+	return helpers.SlotToEpoch(slot / params.BeaconConfig().ShardSlotsPerEpoch)
 }
 
 // ShardPeriodStartEpoch returns the start epoch number of the a
