@@ -215,7 +215,7 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	if err != nil {
 		return err
 	}
-	if err := s.beaconDB.(*db.BeaconDB).SaveExit(ctx, exit); err != nil {
+	if err := s.beaconDB.SaveVoluntaryExit(ctx, exit); err != nil {
 		return err
 	}
 	log.WithField("hash", fmt.Sprintf("%#x", hash)).Info("Exit request saved in DB")
