@@ -99,7 +99,7 @@ type BeaconChainConfig struct {
 
 	// Slasher constants.
 	WeakSubjectivityPeriod   uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
-	PruneSlasherStorageEvery uint64 // PruneSlasherStorageEvery defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 }
 
@@ -203,7 +203,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:   54000,
-	PruneSlasherStorageEvery: 10,
+	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
