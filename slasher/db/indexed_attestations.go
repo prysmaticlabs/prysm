@@ -66,7 +66,7 @@ func (db *Store) IndexedAttestation(epoch uint64, validatorID uint64) ([]*ethpb.
 	return iAtt, err
 }
 
-// HasIndexedAttestation accepts an epoch and validator id and returns true if the block header exists.
+// HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
 func (db *Store) HasIndexedAttestation(epoch uint64, validatorID uint64) bool {
 	key := bytesutil.Bytes8(epoch)
 	var hasAttestation bool
@@ -79,7 +79,7 @@ func (db *Store) HasIndexedAttestation(epoch uint64, validatorID uint64) bool {
 			return err
 		}
 		for _, a := range iList.IndicesList {
-			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] <= validatorID })
+			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
 			if i < len(a.Indices) && a.Indices[i] == validatorID {
 				hasAttestation = true
 				return nil
@@ -109,7 +109,7 @@ func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.Inde
 		}
 		createIndexedAttestationIndicesFromData(epoch, idxAttestation, tx)
 		if err := bucket.Put(key, enc); err != nil {
-			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+			return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
 		}
 
 		return err
@@ -147,12 +147,12 @@ func createIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb
 		return errors.Wrap(err, "failed to marshal")
 	}
 	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+		return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
 	}
 	return nil
 }
 
-// DeleteIndexedAttestation deletes a block header using the slot and its root as keys in their respective buckets.
+// DeleteIndexedAttestation deletes a indexed attestation using the slot and its root as keys in their respective buckets.
 func (db *Store) DeleteIndexedAttestation(epoch uint64, idxAttestation *ethpb.IndexedAttestation) error {
 	key := encodeEpochSig(epoch, idxAttestation.Signature)
 	return db.update(func(tx *bolt.Tx) error {
@@ -161,12 +161,9 @@ func (db *Store) DeleteIndexedAttestation(epoch uint64, idxAttestation *ethpb.In
 		if enc == nil {
 			return nil
 		}
+		removeIndexedAttestationIndicesFromData(epoch, idxAttestation, tx)
 		if err := bucket.Delete(key); err != nil {
 			return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
-		}
-		enc = bucket.Get(key)
-		if enc != nil {
-			return errors.New("key wasn't deleted")
 		}
 		return nil
 	})
@@ -200,7 +197,7 @@ func removeIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb
 		return errors.Wrap(err, "failed to marshal")
 	}
 	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+		return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
 	}
 	return nil
 }
@@ -216,7 +213,14 @@ func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error 
 		max := bytesutil.Bytes8(uint64(pruneTill))
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the block header from historic indexed attestation bucket")
+				return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
+			}
+		}
+		idxBucket := tx.Bucket(indexedAttestationsIndicesBucket)
+		c = tx.Bucket(indexedAttestationsIndicesBucket).Cursor()
+		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
+			if err := idxBucket.Delete(k); err != nil {
+				return errors.Wrap(err, "failed to delete the indexed attestation from indexed attestation indexes bucket")
 			}
 		}
 		return nil
