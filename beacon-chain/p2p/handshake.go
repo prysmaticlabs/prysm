@@ -42,8 +42,9 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 						return
 					}
-					log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")
+					return
 				}
+				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")
 			}()
 		},
 	})

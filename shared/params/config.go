@@ -96,6 +96,11 @@ type BeaconChainConfig struct {
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
+
+	// Slasher constants.
+	WeakSubjectivityPeriod   uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+
 }
 
 // DepositContractConfig contains the deposits for
@@ -195,6 +200,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPageSize:               500,
+
+	// Slasher related values.
+	WeakSubjectivityPeriod:   54000,
+	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
