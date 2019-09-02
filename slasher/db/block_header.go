@@ -3,13 +3,12 @@ package db
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
