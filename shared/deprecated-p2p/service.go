@@ -430,6 +430,11 @@ func (s *Server) PeerID() peer.ID {
 	return s.host.ID()
 }
 
+// AddConnectionHandler is a no-op
+func (s *Server) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+	//no-op
+}
+
 // Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
 // this method will act as a broadcast.
 func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) (network.Stream, error) {

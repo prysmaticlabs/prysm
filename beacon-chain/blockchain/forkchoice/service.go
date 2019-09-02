@@ -6,15 +6,12 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -24,8 +21,8 @@ import (
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
-	GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
+	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
 
@@ -37,8 +34,8 @@ type Store struct {
 	db               db.Database
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
+	checkpointState  *cache.CheckpointStateCache
 	lock             sync.RWMutex
-	checkptBlkRoot   map[[32]byte][32]byte
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -46,10 +43,10 @@ type Store struct {
 func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Store{
-		ctx:            ctx,
-		cancel:         cancel,
-		db:             db,
-		checkptBlkRoot: make(map[[32]byte][32]byte),
+		ctx:             ctx,
+		cancel:          cancel,
+		db:              db,
+		checkpointState: cache.NewCheckpointStateCache(),
 	}
 }
 
@@ -70,36 +67,24 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 //        block_states={root: genesis_state.copy()},
 //        checkpoint_states={justified_checkpoint: genesis_state.copy()},
 //    )
-func (s *Store) GenesisStore(ctx context.Context, genesisState *pb.BeaconState) error {
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+func (s *Store) GenesisStore(
+	ctx context.Context,
+	justifiedCheckpoint *ethpb.Checkpoint,
+	finalizedCheckpoint *ethpb.Checkpoint) error {
+	s.justifiedCheckpt = justifiedCheckpoint
+	s.finalizedCheckpt = finalizedCheckpoint
+
+	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
+		return errors.Wrap(err, "could not retrieve last justified state")
 	}
 
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-
-	blkRoot, err := ssz.SigningRoot(genesisBlk)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis block")
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: s.justifiedCheckpt,
+		State:      justifiedState,
+	}); err != nil {
+		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
-
-	s.justifiedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
-	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 0, Root: blkRoot[:]}
-
-	if err := s.db.SaveBlock(ctx, genesisBlk); err != nil {
-		return errors.Wrap(err, "could not save genesis block")
-	}
-	if err := s.db.SaveState(ctx, genesisState, blkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	h, err := hashutil.HashProto(s.justifiedCheckpt)
-	if err != nil {
-		return errors.Wrap(err, "could not hash proto justified checkpoint")
-	}
-	s.checkptBlkRoot[h] = blkRoot
 
 	return nil
 }
@@ -148,17 +133,9 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	h, err := hashutil.HashProto(s.justifiedCheckpt)
+	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.justifiedCheckpt)
 	if err != nil {
-		return 0, errors.Wrap(err, "could not hash proto justified checkpoint")
-	}
-	lastJustifiedBlkRoot := s.checkptBlkRoot[h]
-
-	lastJustifiedState, err := s.db.State(ctx, lastJustifiedBlkRoot)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get checkpoint state")
+		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}
 	if lastJustifiedState == nil {
 		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.justifiedCheckpt.Epoch)

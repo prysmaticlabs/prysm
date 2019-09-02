@@ -174,11 +174,13 @@ func (s *Service) Start() {
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 		p2p:              s.p2p,
+		chainService:     s.chainService,
 		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
+		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
 		depositCache:       s.depositCache,
@@ -191,6 +193,7 @@ func (s *Service) Start() {
 	beaconChainServer := &BeaconChainServer{
 		beaconDB: s.beaconDB,
 		pool:     s.operationService,
+		head:     s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

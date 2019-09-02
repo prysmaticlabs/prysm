@@ -16,9 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -101,6 +99,21 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		if err := c.initializeChainInfo(c.ctx); err != nil {
+			log.Fatalf("Could not set up chain info: %v", err)
+		}
+		justifiedCheckpoint, err := c.beaconDB.JustifiedCheckpoint(c.ctx)
+		if err != nil {
+			log.Fatalf("Could not get justified checkpoint: %v", err)
+		}
+		finalizedCheckpoint, err := c.beaconDB.FinalizedCheckpoint(c.ctx)
+		if err != nil {
+			log.Fatalf("Could not get finalized checkpoint: %v", err)
+		}
+		if err := c.forkChoiceStore.GenesisStore(c.ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
+			log.Fatalf("Could not start fork choice service: %v", err)
+		}
+		c.stateInitializedFeed.Send(c.genesisTime)
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 		if c.web3Service == nil {
@@ -150,19 +163,39 @@ func (c *ChainService) initializeBeaconChain(
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block root")
+	}
 
+	if err := c.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
+		return errors.Wrap(err, "could not save genesis block")
+	}
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save head block root")
+	}
+	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could save genesis block root")
+	}
+	if err := c.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
+	}
 	if err := c.saveGenesisValidators(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")
 	}
 
-	if err := c.forkChoiceStore.GenesisStore(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not start genesis store for fork choice")
+	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := c.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
+		return errors.Wrap(err, "Could not start fork choice service: %v")
+	}
+
+	if err := c.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(c.FinalizedCheckpt().Root)); err != nil {
+		return errors.Wrap(err, "could save genesis block root")
 	}
 
 	c.headBlock = genesisBlk
 	c.headState = genesisState
-	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
-	c.canonicalRoots[genesisState.Slot] = c.FinalizedCheckpt().Root
+	c.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
 
 	return nil
 }
@@ -190,47 +223,6 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
 }
 
-// saveValidatorIdx saves the validators public key to index mapping in DB, these
-// validators were activated from current epoch. After it saves, current epoch key
-// is deleted from ActivatedValidators mapping.
-func (c *ChainService) saveValidatorIdx(ctx context.Context, state *pb.BeaconState) error {
-	nextEpoch := helpers.CurrentEpoch(state) + 1
-	activatedValidators := validators.ActivatedValFromEpoch(nextEpoch)
-	var idxNotInState []uint64
-	for _, idx := range activatedValidators {
-		// If for some reason the activated validator indices is not in state,
-		// we skip them and save them to process for next epoch.
-		if int(idx) >= len(state.Validators) {
-			idxNotInState = append(idxNotInState, idx)
-			continue
-		}
-		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), idx); err != nil {
-			return errors.Wrap(err, "could not save validator index")
-		}
-	}
-	// Since we are processing next epoch, save the can't processed validator indices
-	// to the epoch after that.
-	validators.InsertActivatedIndices(nextEpoch+1, idxNotInState)
-	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
-	return nil
-}
-
-// deleteValidatorIdx deletes the validators public key to index mapping in DB, the
-// validators were exited from current epoch. After it deletes, current epoch key
-// is deleted from ExitedValidators mapping.
-func (c *ChainService) deleteValidatorIdx(ctx context.Context, state *pb.BeaconState) error {
-	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state) + 1)
-	for _, idx := range exitedValidators {
-		pubKey := state.Validators[idx].PublicKey
-		if err := c.beaconDB.DeleteValidatorIndex(ctx, bytesutil.ToBytes48(pubKey)); err != nil {
-			return errors.Wrap(err, "could not delete validator index")
-		}
-	}
-	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
-	return nil
-}
-
 // This gets called to update canonical root mapping.
 func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
 
@@ -255,7 +247,6 @@ func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32
 		"slots": b.Slot,
 		"root":  hex.EncodeToString(r[:]),
 	}).Debug("Saved head info")
-
 	return nil
 }
 
@@ -266,5 +257,28 @@ func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconSt
 			return errors.Wrapf(err, "could not save validator index: %d", i)
 		}
 	}
+	return nil
+}
+
+// This gets called to initialize chain info variables using the head stored in DB
+func (c *ChainService) initializeChainInfo(ctx context.Context) error {
+	headBlock, err := c.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head block in db")
+	}
+	headState, err := c.beaconDB.HeadState(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head state in db")
+	}
+	c.headSlot = headBlock.Slot
+	c.headBlock = headBlock
+	c.headState = headState
+
+	headRoot, err := ssz.SigningRoot(headBlock)
+	if err != nil {
+		return errors.Wrap(err, "could not sign root on head block")
+	}
+	c.canonicalRoots[c.headSlot] = headRoot[:]
+
 	return nil
 }

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/multiformats/go-multiaddr"
+	multiaddr "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -77,7 +77,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, _ := NewService(nil)
+	s, _ := NewService(&Config{})
 	s.started = true
 	s.dv5Listener = &mockListener{}
 	_ = s.Stop()
@@ -85,6 +85,11 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 	if s.started != false {
 		t.Error("Expected Service.started to be false, got true")
 	}
+}
+
+func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
+	s, _ := NewService(&Config{})
+	_ = s.Stop()
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
@@ -144,8 +149,8 @@ func TestListenForNewNodes(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 4000
-	cfg.UDPPort = 4000
+	cfg.Port = 14000
+	cfg.UDPPort = 14000
 
 	s, err := NewService(cfg)
 	if err != nil {
@@ -160,6 +165,7 @@ func TestListenForNewNodes(t *testing.T) {
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
+
 	// close down all peers
 	for _, listener := range listeners {
 		listener.Close()

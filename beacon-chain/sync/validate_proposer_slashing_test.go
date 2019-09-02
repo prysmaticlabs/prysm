@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -99,7 +100,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	r := &RegularSync{
 		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		chain: &mock.ChainService{State: s},
 	}
 
 	if !r.validateProposerSlashing(ctx, slashing, p2p) {

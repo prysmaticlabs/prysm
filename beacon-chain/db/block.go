@@ -154,6 +154,11 @@ func (db *BeaconDB) SaveHeadBlockRoot(_ context.Context, root [32]byte) error {
 	return errors.New("not implemented")
 }
 
+// SaveGenesisBlockRoot is not implemented.
+func (db *BeaconDB) SaveGenesisBlockRoot(_ context.Context, root [32]byte) error {
+	return errors.New("not implemented")
+}
+
 // SaveBlocks in db.
 func (db *BeaconDB) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
 	for _, blk := range blocks {

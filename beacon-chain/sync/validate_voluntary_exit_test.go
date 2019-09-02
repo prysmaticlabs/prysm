@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -62,8 +63,10 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
 	}
 
 	if !r.validateVoluntaryExit(ctx, exit, p2p) {
