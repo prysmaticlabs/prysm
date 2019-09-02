@@ -98,7 +98,9 @@ type BeaconChainConfig struct {
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	WeakSubjectivityPeriod   uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	PruneSlasherStorageEvery uint64 // PruneSlasherStorageEvery defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+
 }
 
 // DepositContractConfig contains the deposits for
@@ -200,7 +202,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxPageSize:               500,
 
 	// Slasher related values.
-	WeakSubjectivityPeriod: 54000,
+	WeakSubjectivityPeriod:   54000,
+	PruneSlasherStorageEvery: 10,
 
 	// Testnet misc values.
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
