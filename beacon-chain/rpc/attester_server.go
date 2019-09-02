@@ -6,11 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -20,18 +20,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type attestationReceiver interface {
+	ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error
+}
+
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         db.Database
 	operationService operationService
+	chainService     interface{}
 	cache            *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
+	if srv, ok := as.chainService.(attestationReceiver); ok {
+		root, err := ssz.SigningRoot(att)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to sign root attestation")
+		}
+
+		if err := as.operationService.HandleAttestation(ctx, att); err != nil {
+			return nil, err
+		}
+
+		go func() {
+			if err := srv.ReceiveAttestation(ctx, att); err != nil {
+				log.WithError(err).Error("could not receive attestation in chain service")
+			}
+		}()
+
+		return &pb.AttestResponse{Root: root[:]}, nil
+	}
+
 	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
@@ -106,27 +130,25 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
-	var headBlock *ethpb.BeaconBlock
+	var headRoot []byte
+	var headState *pbp2p.BeaconState
 	if d, isLegacyDB := as.beaconDB.(*db.BeaconDB); isLegacyDB {
-		headBlock, err = d.ChainHead()
+		headBlock, err := d.ChainHead()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to retrieve chain head")
 		}
+		headState, err = as.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not fetch head state")
+		}
+		r, err := ssz.SigningRoot(headBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not tree hash beacon block")
+		}
+		headRoot = r[:]
 	} else {
-		headBlock, err = as.beaconDB.(*kv.Store).HeadBlock(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to retrieve chain head")
-		}
-	}
-	headRoot, err := ssz.SigningRoot(headBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash beacon block")
-	}
-
-	// Let head state be the state of head block processed through empty slots up to assigned slot.
-	headState, err := as.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch head state")
+		headState = as.chainService.(blockchain.HeadRetriever).HeadState()
+		headRoot = as.chainService.(blockchain.HeadRetriever).HeadRoot()
 	}
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)

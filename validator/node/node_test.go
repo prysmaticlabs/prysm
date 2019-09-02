@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/urfave/cli"
@@ -25,7 +26,8 @@ func TestNode_Builds(t *testing.T) {
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)
 	}
-	_, err := NewValidatorClient(context, "1234")
+	keys := make(map[string]*keystore.Key)
+	_, err := NewValidatorClient(context, keys)
 	if err != nil {
 		t.Fatalf("Failed to create ValidatorClient: %v", err)
 	}

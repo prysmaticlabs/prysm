@@ -44,7 +44,7 @@ func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.
 }
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
-	listener := createListener(addr, int(cfg.UDPPort), privKey)
+	listener := createListener(addr, int(cfg.Port), privKey)
 	bootNode, err := discv5.ParseNode(cfg.BootstrapNodeAddr)
 	if err != nil {
 		return nil, err
@@ -60,30 +60,36 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
 	var multiAddrs []ma.Multiaddr
 	for _, node := range nodes {
-		ip4 := node.IP.To4()
-		if ip4 == nil {
-			log.Error("Node doesn't have an ip4 address")
-			continue
-		}
-		pubkey, err := node.ID.Pubkey()
+		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
-			log.Errorf("Could not get pubkey from node ID: %v", err)
-			continue
-		}
-		assertedKey := convertToInterfacePubkey(pubkey)
-		id, err := peer.IDFromPublicKey(assertedKey)
-		if err != nil {
-			log.Errorf("Could not get peer id: %v", err)
-		}
-		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
-		multiAddr, err := ma.NewMultiaddr(multiAddrString)
-		if err != nil {
-			log.Errorf("Could not get multiaddr:%v", err)
+			log.WithError(err).Error("Could not convert to multiAddr")
 			continue
 		}
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
+}
+
+func convertToSingleMultiAddr(node *discv5.Node) (ma.Multiaddr, error) {
+	ip4 := node.IP.To4()
+	if ip4 == nil {
+		return nil, errors.New("node doesn't have an ip4 address")
+	}
+	pubkey, err := node.ID.Pubkey()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get pubkey from node ID")
+	}
+	assertedKey := convertToInterfacePubkey(pubkey)
+	id, err := peer.IDFromPublicKey(assertedKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get peer id")
+	}
+	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
+	multiAddr, err := ma.NewMultiaddr(multiAddrString)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get multiaddr")
+	}
+	return multiAddr, nil
 }
 
 func manyMultiAddrsFromString(addrs []string) ([]ma.Multiaddr, error) {

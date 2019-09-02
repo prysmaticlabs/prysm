@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
 
@@ -50,7 +52,10 @@ import (
 //    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
@@ -59,44 +64,50 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+		return 0, fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
 	baseState, err := s.verifyAttPreState(ctx, tgt)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	if slotTime > currentTime {
-		return fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
+		return 0, fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
 	}
 
 	// Store target checkpoint state if not yet seen.
-	baseState, err = s.saveChkptState(ctx, baseState, tgt)
+	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
-		return err
+		return 0, err
+	}
+
+	// Delay attestation processing until the subsequent slot.
+	if err := s.waitForAttInclDelay(ctx, a, baseState); err != nil {
+		return 0, err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Update every validator's latest vote.
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+
+	return 0, nil
 }
 
 // verifyAttPreState validates input attested check point has a valid pre-state.
@@ -111,25 +122,53 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	return baseState, nil
 }
 
-// saveChkptState saves the block root with check point to avoid excessive slot processing down the line.
-func (s *Store) saveChkptState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	h, err := hashutil.HashProto(c)
+// saveCheckpointState saves and returns the processed state with the associated check point.
+func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	cachedState, err := s.checkpointState.StateByCheckpoint(c)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not hash justified checkpoint")
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	s.lock.RLock()
-	_, exists := s.checkptBlkRoot[h]
-	s.lock.RUnlock()
-	if !exists {
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+	if cachedState != nil {
+		return cachedState, nil
+	}
+
+	// Advance slots only when it's higher than current state slot.
+	if helpers.StartSlot(c.Epoch) > baseState.Slot {
+		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+		baseState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
-		s.lock.Lock()
-		defer s.lock.Unlock()
-		s.checkptBlkRoot[h] = bytesutil.ToBytes32(c.Root)
 	}
+
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: c,
+		State:      baseState,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
+
 	return baseState, nil
+}
+
+// waitForAttInclDelay waits until the next slot because attestation can only affect
+// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
+// until the attested slot is in the past.
+func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, targetState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
+	defer span.End()
+
+	slot, err := helpers.AttestationDataSlot(targetState, a.Data)
+	if err != nil {
+		return errors.Wrap(err, "could not get attestation slot")
+	}
+
+	nextSlot := slot + 1
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToInclude))
+	return nil
 }
 
 // verifyAttSlotTime validates input attestation is not from the future.

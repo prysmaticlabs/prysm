@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -25,7 +26,8 @@ func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, e
 	return buf.Bytes(), nil
 }
 
-func (r *RegularSync) readStatusCode(stream io.Reader) (uint8, *pb.ErrorMessage, error) {
+// ReadStatusCode response from a RPC stream.
+func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, *pb.ErrorMessage, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
@@ -37,7 +39,7 @@ func (r *RegularSync) readStatusCode(stream io.Reader) (uint8, *pb.ErrorMessage,
 	}
 
 	msg := &pb.ErrorMessage{}
-	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
+	if err := encoding.Decode(stream, msg); err != nil {
 		return 0, nil, err
 	}
 
