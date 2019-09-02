@@ -19,9 +19,6 @@ var (
 	// Slasher
 	historicAttestationsBucket = []byte("historic-attestations-bucket")
 	historicBlockHeadersBucket = []byte("historic-block-headers-bucket")
-
-	// DB internal use
-	cleanupHistoryBucket = []byte("cleanup-history-bucket")
 )
 
 func encodeSlotNumberRoot(number uint64, root [32]byte) []byte {
