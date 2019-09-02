@@ -8,6 +8,7 @@ ssz_proto_files(
     srcs = [
         "attestation.proto",
         "beacon_block.proto",
+        "shard_block.proto",
         "beacon_chain.proto",
         "node.proto",
         "validator.proto",
