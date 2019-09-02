@@ -8,19 +8,20 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
-	protoBlockHead := &ethpb.BeaconBlockHeader{}
-	err := proto.Unmarshal(enc, protoBlockHead)
+	protoBlockHeader := &ethpb.BeaconBlockHeader{}
+	err := proto.Unmarshal(enc, protoBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	return protoBlockHead, nil
+	return protoBlockHeader, nil
 }
 
-// BlockHeader accepts a block root and returns the corresponding block.
-// Returns nil if the block does not exist.
+// BlockHeader accepts an epoch and validator id and returns the corresponding block header array.
+// Returns nil if the block header for those values does not exist.
 func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
 	var bha []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
@@ -74,14 +75,13 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 	})
 
 	// prune history to max size every 10th epoch
-	if epoch%10 == 0 {
-		weakSubjectivityPeriod := uint64(54000)
-		err = db.pruneHistory(epoch, weakSubjectivityPeriod)
+	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
+		err = db.pruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
 
-// DeleteBlockHeader deletes a block header using the slot and its root as keys in their respective buckets.
+// DeleteBlockHeader deletes a block header using the epoch and validator id.
 func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
@@ -103,8 +103,7 @@ func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		max := bytesutil.Bytes8(uint64(pruneTill))
-		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
+		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= uint64(pruneTill); k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
 			}

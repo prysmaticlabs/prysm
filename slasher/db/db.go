@@ -13,7 +13,7 @@ import (
 
 var log = logrus.WithField("prefix", "beacondb")
 
-// Database defines the necessary methods for Prysm's eth2 backend which may
+// Database defines the necessary methods for slasher service which may
 // be implemented by any key-value or relational database in practice.
 type Database interface {
 	io.Closer
