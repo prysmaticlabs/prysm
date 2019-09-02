@@ -95,7 +95,7 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", req.PublicKey)
+			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
 		}
 	}
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
@@ -125,7 +125,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", req.PublicKey)
+			return nil, status.Errorf(codes.Internal, "could not find  validator index for public key  %#x not found", req.PublicKey)
 		}
 		headState = vs.chainService.(blockchain.HeadRetriever).HeadState()
 
@@ -238,7 +238,7 @@ func (vs *ValidatorServer) assignment(
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.Internal, "could validator index for public key  %#x not found", pubkey)
+			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubkey)
 		}
 	}
 

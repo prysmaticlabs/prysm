@@ -68,7 +68,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	}
 
 	var listeners []*discv5.Network
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 5; i++ {
 		port = 2000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
@@ -84,9 +84,9 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 
 	lastListener := listeners[len(listeners)-1]
 	nodes := lastListener.Lookup(bootNode.ID)
-	if len(nodes) != 11 {
+	if len(nodes) != 6 {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
-			"Expected %d but got %d", 11, len(nodes))
+			"Expected %d but got %d", 6, len(nodes))
 	}
 
 	// Close all ports
@@ -106,7 +106,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	node := discv5.NewNode(nodeID, ipAddr, 0, 0)
 	_ = convertToMultiAddr([]*discv5.Node{node})
 
-	testutil.AssertLogsContain(t, hook, "Node doesn't have an ip4 address")
+	testutil.AssertLogsContain(t, hook, "node doesn't have an ip4 address")
 }
 
 func TestMultiAddrConversion_OK(t *testing.T) {
@@ -139,8 +139,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 4000
-	cfg.UDPPort = 4000
+	cfg.Port = 14000
+	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
 
 	s, err := NewService(cfg)

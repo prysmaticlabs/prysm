@@ -105,7 +105,7 @@ func TestStore_OnAttestation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, tt.s); err != nil {
+			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -153,7 +153,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -200,7 +200,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}

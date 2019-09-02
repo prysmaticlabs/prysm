@@ -18,10 +18,9 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/discv5"
-
-	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -29,8 +28,9 @@ var (
 	debug      = flag.Bool("debug", false, "Enable debug logging")
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
+	externalIP = flag.String("external-ip", "0.0.0.0", "External IP for the bootnode")
 
-	log = logging.Logger("prysm-bootnode")
+	log = logrus.WithField("prefix", "bootnode")
 )
 
 func main() {
@@ -39,21 +39,23 @@ func main() {
 	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
 
 	if *debug {
-		logging.SetDebugLogging()
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	defaultIP := "0.0.0.0"
-
 	privKey := extractPrivateKey()
-	listener := createListener(defaultIP, *port, privKey)
+	listener := createListener(*externalIP, *port, privKey)
 
 	node := listener.Self()
-	fmt.Printf("Running bootnode, url: %s", node.String())
+	log.Infof("Running bootnode, url: %s", node.String())
 
 	select {}
 }
 
 func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+	ip := net.ParseIP(ipAddr)
+	if ip.To4() == nil {
+		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
+	}
 	udpAddr := &net.UDPAddr{
 		IP:   net.ParseIP(ipAddr),
 		Port: port,
@@ -90,6 +92,13 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
 		log.Warning("No private key was provided. Using default/random private key")
+
+		b, err := privInterfaceKey.Bytes()
+		if err != nil {
+			panic(err)
+		}
+		log.Debugf("Private key %s", crypto.ConfigEncodeKey(b))
 	}
+
 	return privKey
 }

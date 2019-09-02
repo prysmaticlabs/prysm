@@ -7,7 +7,7 @@ client for fast development startup times instead of using the Prysm keystore.
 Usage:
 
 ```
-bazel run //tools/unencrypted-keys-gen -- --num-keys 64 --output-file /path/to/output.json
+bazel run //tools/unencrypted-keys-gen -- --num-keys 64 --output-json /path/to/output.json
 ```
 
 Which will create 64 BLS private keys each for validator signing and withdrawals. 

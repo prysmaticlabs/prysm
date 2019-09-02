@@ -102,7 +102,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		s := &pb.BeaconState{Validators: validators}
 
-		if err := store.GenesisStore(ctx, s); err != nil {
+		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 			t.Fatal(err)
 		}
 

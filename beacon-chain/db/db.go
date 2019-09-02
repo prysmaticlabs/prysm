@@ -43,6 +43,7 @@ type Database interface {
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
@@ -55,6 +56,7 @@ type Database interface {
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error)
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	GenesisState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
@@ -70,6 +72,11 @@ type Database interface {
 	SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error
 	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
 	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
+	// Checkpoint operations.
+	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error

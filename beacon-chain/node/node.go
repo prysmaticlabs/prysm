@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -111,6 +112,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerSyncService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerInitialSyncService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -413,6 +418,34 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
 	return b.services.RegisterService(syncService)
+}
+
+func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
+	var attsService *attestation.Service
+	if err := b.services.FetchService(&attsService); err != nil {
+		return err
+	}
+
+	if featureconfig.FeatureConfig().UseNewSync {
+		var chainService *blockchain.ChainService
+		if err := b.services.FetchService(&chainService); err != nil {
+			return err
+		}
+
+		var regSync *prysmsync.RegularSync
+		if err := b.services.FetchService(&regSync); err != nil {
+			return err
+		}
+
+		is := initialsync.NewInitialSync(&initialsync.Config{
+			Chain:   chainService,
+			RegSync: regSync,
+			P2P:     b.fetchP2P(ctx),
+		})
+
+		return b.services.RegisterService(is)
+	}
+	return nil
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {

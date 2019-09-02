@@ -29,7 +29,8 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
@@ -90,7 +91,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
@@ -144,7 +145,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
