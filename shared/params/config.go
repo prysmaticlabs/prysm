@@ -98,7 +98,7 @@ type BeaconChainConfig struct {
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod   uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 }
@@ -202,7 +202,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxPageSize:               500,
 
 	// Slasher related values.
-	WeakSubjectivityPeriod:   54000,
+	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
@@ -263,7 +263,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.BaseRewardsPerEpoch = 5
 	minimalConfig.ShuffleRoundCount = 10
-	minimalConfig.MinGenesisActiveValidatorCount = 128
+	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.MinDepositAmount = 1e9
 	minimalConfig.MaxEffectiveBalance = 32e9
