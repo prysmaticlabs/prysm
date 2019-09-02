@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["helpers.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shard-chains/core",
+    visibility = ["//visibility:public"],
+    deps = ["//shared/params:go_default_library"],
+)
