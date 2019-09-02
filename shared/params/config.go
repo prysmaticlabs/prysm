@@ -15,7 +15,6 @@ type BeaconChainConfig struct {
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	JustificationBitsLength  uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines the length in bytes of the justification bits.
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
@@ -100,7 +99,6 @@ type BeaconChainConfig struct {
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
-
 }
 
 // DepositContractConfig contains the deposits for
@@ -110,18 +108,11 @@ type DepositContractConfig struct {
 	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
-// ShardChainConfig contains configs for node to participate in shard chains.
-type ShardChainConfig struct {
-	ChunkSize         uint64 // ChunkSize defines the size of each chunk in bytes.
-	MaxShardBlockSize uint64 // MaxShardBlockSize defines the max size of each shard block in bytes.
-}
-
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      5,
 	DepositContractTreeDepth: 32,
-	JustificationBitsLength:  4,
 	SecondsPerDay:            86400,
 
 	// Misc constant.
@@ -209,11 +200,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
-var defaultShardConfig = &ShardChainConfig{
-	ChunkSize:         uint64(256),
-	MaxShardBlockSize: uint64(32768),
-}
-
 var defaultDepositContractConfig = &DepositContractConfig{
 	MinGenesisActiveValidatorCount: big.NewInt(16384),
 	MinDepositAmount:               big.NewInt(1e9),
@@ -221,7 +207,6 @@ var defaultDepositContractConfig = &DepositContractConfig{
 }
 
 var beaconConfig = defaultBeaconConfig
-var shardConfig = defaultShardConfig
 var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
@@ -306,11 +291,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinGenesisTime = 1578009600
 
 	return &minimalConfig
-}
-
-// ShardConfig retrieves shard chain config.
-func ShardConfig() *ShardChainConfig {
-	return shardConfig
 }
 
 // ContractConfig retrieves the deposit contract config
