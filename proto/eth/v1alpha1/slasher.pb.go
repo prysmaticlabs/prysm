@@ -6,11 +6,10 @@ package eth
 import (
 	context "context"
 	fmt "fmt"
-	math "math"
-
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
