@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
