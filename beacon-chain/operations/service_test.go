@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -31,8 +31,7 @@ import (
 var _ = OperationFeeds(&Service{})
 var _ = Pool(&Service{})
 
-type mockBroadcaster struct {
-}
+type mockBroadcaster struct{}
 
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	return nil
@@ -74,8 +73,8 @@ func TestServiceStatus_Error(t *testing.T) {
 
 func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exit := &ethpb.VoluntaryExit{Epoch: 100}
@@ -88,8 +87,8 @@ func TestIncomingExits_Ok(t *testing.T) {
 }
 
 func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
@@ -284,139 +283,9 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 }
 
-func TestHandleAttestation_Aggregates_SameAttestationData(t *testing.T) {
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
-	ctx := context.Background()
-	broadcaster := &mockBroadcaster{}
-	service := NewOpsPoolService(context.Background(), &Config{
-		BeaconDB: beaconDB,
-		P2P:      broadcaster,
-	})
-
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	att1 := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      1,
-				StartEpoch: 0,
-			},
-		},
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
-	}
-
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1.Data.Crosslink.ParentRoot = encoded[:]
-	att1.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-
-	committee, err := helpers.CrosslinkCommittee(beaconState, att1.Data.Target.Epoch, att1.Data.Crosslink.Shard)
-	if err != nil {
-		t.Error(err)
-	}
-	aggregationBits := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBits.SetBitAt(0, true)
-	att1.AggregationBits = aggregationBits
-
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
-	if err != nil {
-		t.Error(err)
-	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
-	att1.Signature = privKeys[committee[0]].Sign(hashTreeRoot[:], domain).Marshal()
-
-	att2 := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      1,
-				StartEpoch: 0,
-			},
-		},
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
-	}
-	aggregationBits = bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBits.SetBitAt(1, true)
-	att2.AggregationBits = aggregationBits
-
-	att2.Data.Crosslink.ParentRoot = encoded[:]
-	att2.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	att2.Signature = privKeys[committee[1]].Sign(hashTreeRoot[:], domain).Marshal()
-
-	newBlock := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	if err := beaconDB.SaveBlockDeprecated(newBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconDB.UpdateChainHead(context.Background(), newBlock, beaconState); err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-
-	if err := service.HandleAttestation(context.Background(), att1); err != nil {
-		t.Error(err)
-	}
-
-	if err := service.HandleAttestation(context.Background(), att2); err != nil {
-		t.Error(err)
-	}
-
-	attDataHash, err := hashutil.HashProto(att2.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	dbAtt, err := service.beaconDB.Attestation(ctx, attDataHash)
-	if err != nil {
-		t.Error(err)
-	}
-
-	dbAttBits := dbAtt.AggregationBits.Bytes()
-	aggregatedBits := att1.AggregationBits.Or(att2.AggregationBits).Bytes()
-	if !bytes.Equal(dbAttBits, aggregatedBits) {
-		t.Error("Expected aggregation bits to be equal.")
-	}
-
-	att1Sig, err := bls.SignatureFromBytes(att1.Signature)
-	if err != nil {
-		t.Error(err)
-	}
-	att2Sig, err := bls.SignatureFromBytes(att2.Signature)
-	if err != nil {
-		t.Error(err)
-	}
-	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{att1Sig, att2Sig})
-	if !bytes.Equal(dbAtt.Signature, aggregatedSig.Marshal()) {
-		t.Error("Expected aggregated signatures to be equal")
-	}
-}
-
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 	broadcaster := &mockBroadcaster{}
@@ -596,9 +465,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 
 func TestRetrieveAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
@@ -641,9 +509,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	beaconDB := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, beaconDB)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for slots 0 to 139.
@@ -692,8 +559,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 }
 
 func TestRemoveProcessedAttestations_Ok(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	attestations := make([]*ethpb.Attestation, 10)
@@ -738,8 +605,8 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
 
 	attestations := make([]*ethpb.Attestation, 10)
