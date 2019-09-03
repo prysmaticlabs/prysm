@@ -7,10 +7,13 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -43,17 +46,48 @@ func main() {
 	if err := yaml.Unmarshal(enc, &ks); err != nil {
 		panic(err)
 	}
-	deps := make([]*ethpb.Deposit, len(ks))
+	hashes := make([][]byte, len(ks))
+	dataList := make([]*ethpb.Deposit_Data, len(ks))
 	for i, item := range ks {
-		dp, err := createDepositData([]byte(item.PrivateKey), []byte(item.PublicKey))
+		data, err := createDepositData([]byte(item.PrivateKey), []byte(item.PublicKey))
 		if err != nil {
 			panic(err)
 		}
-		deps[i] = &ethpb.Deposit{
-			Data: dp,
+		hash, err := ssz.HashTreeRoot(data)
+		if err != nil {
+			panic(err)
+		}
+		hashes[i] = hash[:]
+		dataList[i] = data
+	}
+	trie, err := trieutil.GenerateTrieFromItems(
+		hashes,
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
+	if err != nil {
+		panic(err)
+	}
+	deposits := make([]*ethpb.Deposit, len(dataList))
+	for i, item := range dataList {
+		proof, err := trie.MerkleProof(i)
+		if err != nil {
+			panic(err)
+		}
+		deposits[i] = &ethpb.Deposit{
+			Proof: proof,
+			Data:  item,
 		}
 	}
-	fmt.Println(deps)
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
+		DepositRoot:  make([]byte, 32),
+		DepositCount: 0,
+		BlockHash:    make([]byte, 32),
+	})
+	if err != nil {
+		panic(err)
+	}
+	// Now we need to marshal to yaml...
+	fmt.Println(genesisState)
 }
 
 func createDepositData(privKey []byte, pubKey []byte) (*ethpb.Deposit_Data, error) {
