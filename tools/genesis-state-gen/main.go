@@ -28,11 +28,12 @@ const (
 var (
 	domainDeposit      = [4]byte{3, 0, 0, 0}
 	genesisForkVersion = []byte{0, 0, 0, 0}
+	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
+	useMainnetConfig   = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
+	genesisTime        = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
 	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile     = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
-	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
-	genesisTime        = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
 )
 
 func main() {
@@ -46,7 +47,9 @@ func main() {
 	if *sszOutputFile == "" && *yamlOutputFile == "" && *jsonOutputFile == "" {
 		log.Fatal("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")
 	}
-	params.UseDemoBeaconConfig()
+	if !*useMainnetConfig {
+		params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	}
 	privKeys, pubKeys := deterministicallyGenerateKeys(*numValidators)
 	hashes := make([][]byte, len(privKeys))
 	dataList := make([]*ethpb.Deposit_Data, len(privKeys))
