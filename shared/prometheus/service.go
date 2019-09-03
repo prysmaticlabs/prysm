@@ -26,7 +26,7 @@ type Service struct {
 
 // Handler represents a path and handler func to serve on the same port as /metrics, /healthz, /goroutinez, etc.
 type Handler struct {
-	Path string
+	Path    string
 	Handler func(http.ResponseWriter, *http.Request)
 }
 
