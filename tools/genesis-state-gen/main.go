@@ -1,20 +1,15 @@
 package main
 
 import (
-	"flag"
+	"encoding/binary"
 	"fmt"
-	"io/ioutil"
-	"os"
+	"math/big"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
-
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -22,72 +17,87 @@ const (
 )
 
 var (
-	inputFile          = flag.String("validator-keys-yaml", "", "Input validator keys YAML file")
 	domainDeposit      = [4]byte{3, 0, 0, 0}
 	genesisForkVersion = []byte{0, 0, 0, 0}
 )
 
-type keyPair struct {
-	PrivateKey string `yaml:"privkey"`
-	PublicKey  string `yaml:"pubkey"`
+func main() {
+	//hashes := make([][]byte, len(ks))
+	//dataList := make([]*ethpb.Deposit_Data, len(ks))
+	//for i, item := range ks {
+	//	data, err := createDepositData()
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	hash, err := ssz.HashTreeRoot(data)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	hashes[i] = hash[:]
+	//	dataList[i] = data
+	//}
+	//trie, err := trieutil.GenerateTrieFromItems(
+	//	hashes,
+	//	int(params.BeaconConfig().DepositContractTreeDepth),
+	//)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//deposits := make([]*ethpb.Deposit, len(dataList))
+	//for i, item := range dataList {
+	//	proof, err := trie.MerkleProof(i)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	deposits[i] = &ethpb.Deposit{
+	//		Proof: proof,
+	//		Data:  item,
+	//	}
+	//}
+	//genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
+	//	DepositRoot:  make([]byte, 32),
+	//	DepositCount: 0,
+	//	BlockHash:    make([]byte, 32),
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//// Now we need to marshal to yaml...
+	//fmt.Println(genesisState)
+	GenerateKeys(10)
 }
 
-func main() {
-	flag.Parse()
-	f, err := os.Open(*inputFile)
-	if err != nil {
-		panic(err)
-	}
-	enc, err := ioutil.ReadAll(f)
-	if err != nil {
-		panic(err)
-	}
-	var ks []*keyPair
-	if err := yaml.Unmarshal(enc, &ks); err != nil {
-		panic(err)
-	}
-	hashes := make([][]byte, len(ks))
-	dataList := make([]*ethpb.Deposit_Data, len(ks))
-	for i, item := range ks {
-		data, err := createDepositData([]byte(item.PrivateKey), []byte(item.PublicKey))
-		if err != nil {
-			panic(err)
+//CURVE_ORDER = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+//validator_index_to_pubkey = {}
+//pubkey_to_privkey = {}
+//privkey_to_pubkey = {}
+//for index in range(N):
+//privkey = int.from_bytes(
+//sha256(int_to_bytes(n=index, length=32)),
+//byteorder='littlej
+//    ) % CURVE_ORDER
+//pubkey = bls.privtopubkey(privkey)
+//pubkey_to_privkey[pubkey] = privkey
+//privkey_to_pubkey[privkey] = pubkey
+//validator_index_to_pubkey[index] = pubkey
+
+func GenerateKeys(n int) ([]byte, []byte) {
+	for i := 0; i < n; i++ {
+		enc := make([]byte, 4)
+		binary.LittleEndian.PutUint32(enc, uint32(i))
+		hash := hashutil.Hash(enc)
+		encHash := binary.LittleEndian.Uint64(hash[:])
+		order := new(big.Int)
+		ok := false
+		order, ok = order.SetString("52435875175126190479447740508185965837690552500527637822603658699938581184513", 10)
+		if !ok {
+			panic("Not ok")
 		}
-		hash, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			panic(err)
-		}
-		hashes[i] = hash[:]
-		dataList[i] = data
+		num := big.NewInt(int64(encHash))
+		num = num.Mod(num, order)
+		fmt.Println(num.String())
 	}
-	trie, err := trieutil.GenerateTrieFromItems(
-		hashes,
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
-	if err != nil {
-		panic(err)
-	}
-	deposits := make([]*ethpb.Deposit, len(dataList))
-	for i, item := range dataList {
-		proof, err := trie.MerkleProof(i)
-		if err != nil {
-			panic(err)
-		}
-		deposits[i] = &ethpb.Deposit{
-			Proof: proof,
-			Data:  item,
-		}
-	}
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
-		DepositRoot:  make([]byte, 32),
-		DepositCount: 0,
-		BlockHash:    make([]byte, 32),
-	})
-	if err != nil {
-		panic(err)
-	}
-	// Now we need to marshal to yaml...
-	fmt.Println(genesisState)
+	return nil, nil
 }
 
 func createDepositData(privKey []byte, pubKey []byte) (*ethpb.Deposit_Data, error) {
