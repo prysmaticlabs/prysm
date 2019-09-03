@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
+	"flag"
+	"io/ioutil"
+	"log"
 	"math/big"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -23,9 +25,11 @@ const (
 var (
 	domainDeposit      = [4]byte{3, 0, 0, 0}
 	genesisForkVersion = []byte{0, 0, 0, 0}
+	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 )
 
 func main() {
+	flag.Parse()
 	params.UseDemoBeaconConfig()
 	privKeys, pubKeys := GenerateKeys(8)
 	hashes := make([][]byte, len(privKeys))
@@ -78,7 +82,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(encodedState)
+	if *sszOutputFile != "" {
+		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
+			panic(err)
+		}
+		log.Printf("Done writing to %s", *sszOutputFile)
+	}
 }
 
 func GenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
