@@ -40,7 +40,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		pendingBlocks.Set(b64BlockRoot, block, 2*time.Hour)
 
 		// TODO(3147): Request parent block from peers
-		log.Warnf("Received a block from slot %d which we do not have the parent block in the database. " +
+		log.Warnf("Received a block from slot %d which we do not have the parent block in the database. "+
 			"Requesting missing blocks from peers is not yet implemented.", block.Slot)
 		return nil
 	}
