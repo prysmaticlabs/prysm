@@ -104,13 +104,17 @@ func (m *MerkleTrie) HashTreeRoot() [32]byte {
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
 	branchIndices := branchIndices(merkleIndex, len(proof))
+	fmt.Println(branchIndices)
+	fmt.Println("--Verifying")
 	for i := 0; i < len(proof)-1; i++ {
 		if branchIndices[i]%2 == 0 {
 			parentHash := hashutil.Hash(append(node[:], proof[i]...))
 			node = parentHash
+			fmt.Printf("%#x\n", node)
 		} else {
 			parentHash := hashutil.Hash(append(proof[i], node[:]...))
 			node = parentHash
+			fmt.Printf("%#x\n", node)
 		}
 	}
 	return bytes.Equal(root, node[:])
