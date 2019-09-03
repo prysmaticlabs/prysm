@@ -217,7 +217,8 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
-			log.Errorf("Could not connect with peer: %v", err)
+			log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+			s.exclusionList.Set(info.ID.String(), true, ttl)
 		}
 	}
 }

@@ -28,6 +28,7 @@ var (
 	debug      = flag.Bool("debug", false, "Enable debug logging")
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
+	externalIP = flag.String("external-ip", "0.0.0.0", "External IP for the bootnode")
 
 	log = logrus.WithField("prefix", "bootnode")
 )
@@ -41,10 +42,8 @@ func main() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	defaultIP := "0.0.0.0"
-
 	privKey := extractPrivateKey()
-	listener := createListener(defaultIP, *port, privKey)
+	listener := createListener(*externalIP, *port, privKey)
 
 	node := listener.Self()
 	log.Infof("Running bootnode, url: %s", node.String())
@@ -53,6 +52,10 @@ func main() {
 }
 
 func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+	ip := net.ParseIP(ipAddr)
+	if ip.To4() == nil {
+		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
+	}
 	udpAddr := &net.UDPAddr{
 		IP:   net.ParseIP(ipAddr),
 		Port: port,
