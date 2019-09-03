@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -44,6 +45,7 @@ type InitialSync struct {
 	helloTracker sync.HelloTracker
 	chain        blockchainService
 	p2p          p2p.P2P
+	synced       bool
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -70,12 +72,14 @@ func (s *InitialSync) Start() {
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch. Not syncing.")
+		s.synced = true
 		return
 	}
 
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current epoch.")
+		s.synced = true
 		return
 	}
 
@@ -153,6 +157,7 @@ func (s *InitialSync) Start() {
 	}
 
 	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	s.synced = true
 }
 
 // Stop initial sync.
@@ -162,6 +167,9 @@ func (s *InitialSync) Stop() error {
 
 // Status of initial sync.
 func (s *InitialSync) Status() error {
+	if !s.synced {
+		return errors.New("syncing")
+	}
 	return nil
 }
 

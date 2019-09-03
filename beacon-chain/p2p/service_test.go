@@ -165,6 +165,7 @@ func TestListenForNewNodes(t *testing.T) {
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
+
 	// close down all peers
 	for _, listener := range listeners {
 		listener.Close()
