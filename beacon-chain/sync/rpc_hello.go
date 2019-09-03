@@ -18,7 +18,7 @@ import (
 func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error {
 	log := log.WithField("rpc", "hello")
 
-	ctx, cancel := context.WithTimeout(r.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	// return if hello already exists
