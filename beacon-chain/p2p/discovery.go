@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -35,18 +36,21 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	bootNode, err := enode.Parse(enode.ValidSchemes, cfg.BootstrapNodeAddr)
+	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.Port))
 	if err != nil {
 		log.Fatal(err)
 	}
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
-		Bootnodes:  []*enode.Node{bootNode},
 	}
+	if cfg.BootstrapNodeAddr != "" {
+		bootNode, err := enode.Parse(enode.ValidSchemes, cfg.BootstrapNodeAddr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dv5Cfg.Bootnodes = []*enode.Node{bootNode}
+	}
+
 	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -54,17 +58,22 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey) (*enode.LocalNode, error) {
+func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not open node's peer databse")
+		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
-	return enode.NewLocalNode(db, privKey), nil
+	localNode := enode.NewLocalNode(db, privKey)
+	ipEntry := enr.IP(ipAddr)
+	udpEntry := enr.UDP(port)
+	localNode.Set(ipEntry)
+	localNode.Set(udpEntry)
+
+	return localNode, nil
 }
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
-
 	node := listener.Self()
 	log.Infof("Started Discovery: %s", node.String())
 	return listener, nil

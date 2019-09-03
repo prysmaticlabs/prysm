@@ -34,7 +34,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{})
+	listener := createListener(ipAddr, pkey, &Config{Port: uint(port)})
 	defer listener.Close()
 
 	if !listener.Self().IP().Equal(ipAddr) {
@@ -56,7 +56,7 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, pkey, &Config{})
+	bootListener := createListener(ipAddr, pkey, &Config{Port: uint(port)})
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -69,7 +69,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 2000 + i
-		cfg.UDPPort = uint(port)
+		cfg.Port = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 		if err != nil {
