@@ -85,7 +85,7 @@ func TestStore_OnBlock(t *testing.T) {
 	}
 }
 
-func TestStore_SaveNewValidator(t *testing.T) {
+func TestStore_SaveNewValidators(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -96,7 +96,7 @@ func TestStore_SaveNewValidator(t *testing.T) {
 		{PublicKey: []byte{0}}, {PublicKey: []byte{1}},
 		{PublicKey: []byte{2}}, {PublicKey: []byte{3}},
 	}}
-	if err := store.saveNewValidator(ctx, preCount, s); err != nil {
+	if err := store.saveNewValidators(ctx, preCount, s); err != nil {
 		t.Fatal(err)
 	}
 
