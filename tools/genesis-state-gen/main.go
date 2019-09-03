@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -14,6 +15,7 @@ import (
 
 const (
 	blsWithdrawalPrefixByte = byte(0)
+	curveOrder              = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 )
 
 var (
@@ -67,35 +69,39 @@ func main() {
 	GenerateKeys(10)
 }
 
-//CURVE_ORDER = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-//validator_index_to_pubkey = {}
-//pubkey_to_privkey = {}
-//privkey_to_pubkey = {}
-//for index in range(N):
-//privkey = int.from_bytes(
-//sha256(int_to_bytes(n=index, length=32)),
-//byteorder='littlej
-//    ) % CURVE_ORDER
-//pubkey = bls.privtopubkey(privkey)
-//pubkey_to_privkey[pubkey] = privkey
-//privkey_to_pubkey[privkey] = pubkey
-//validator_index_to_pubkey[index] = pubkey
-
 func GenerateKeys(n int) ([]byte, []byte) {
 	for i := 0; i < n; i++ {
-		enc := make([]byte, 4)
+		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
 		hash := hashutil.Hash(enc)
-		encHash := binary.LittleEndian.Uint64(hash[:])
+		b := hash[:]
+		// Reverse byte order to big endian for use with big ints.
+		for i := 0; i < len(b)/2; i++ {
+			b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+		}
+		num := new(big.Int)
+		num = num.SetBytes(b)
 		order := new(big.Int)
 		ok := false
-		order, ok = order.SetString("52435875175126190479447740508185965837690552500527637822603658699938581184513", 10)
+		order, ok = order.SetString(curveOrder, 10)
 		if !ok {
 			panic("Not ok")
 		}
-		num := big.NewInt(int64(encHash))
 		num = num.Mod(num, order)
 		fmt.Println(num.String())
+		b = num.Bytes()
+		for i := 0; i < len(b)/2; i++ {
+			b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+		}
+		priv, err := bls.SecretKeyFromBytes(b)
+		if err != nil {
+			panic(err)
+		}
+		pub := priv.PublicKey()
+		p := base64.StdEncoding.EncodeToString(pub.Marshal())
+		fmt.Printf("%#x\n", priv.Marshal())
+		fmt.Printf("%s\n", p)
+		fmt.Println(" ")
 	}
 	return nil, nil
 }
