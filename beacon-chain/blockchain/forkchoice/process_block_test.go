@@ -72,7 +72,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, tt.s); err != nil {
+			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
@@ -82,5 +82,31 @@ func TestStore_OnBlock(t *testing.T) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
 		})
+	}
+}
+
+func TestStore_SaveNewValidator(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	preCount := 2 // validators 0 and validators 1
+	s := &pb.BeaconState{Validators: []*ethpb.Validator{
+		{PublicKey: []byte{0}}, {PublicKey: []byte{1}},
+		{PublicKey: []byte{2}}, {PublicKey: []byte{3}},
+	}}
+	if err := store.saveNewValidator(ctx, preCount, s); err != nil {
+		t.Fatal(err)
+	}
+
+	if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48([]byte{2})) {
+		t.Error("Wanted validator saved in db")
+	}
+	if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48([]byte{3})) {
+		t.Error("Wanted validator saved in db")
+	}
+	if db.HasValidatorIndex(ctx, bytesutil.ToBytes48([]byte{1})) {
+		t.Error("validator not suppose to be saved in db")
 	}
 }

@@ -193,6 +193,7 @@ func (s *Service) Start() {
 	beaconChainServer := &BeaconChainServer{
 		beaconDB: s.beaconDB,
 		pool:     s.operationService,
+		head:     s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

@@ -75,3 +75,41 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 		t.Error("unsaved head state should've been nil")
 	}
 }
+
+func TestGenesisState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	s := &pb.BeaconState{Slot: 1}
+	headRoot := [32]byte{'B'}
+
+	if err := db.SaveGenesisBlockRoot(context.Background(), headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveState(context.Background(), s, headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	savedGenesisS, err := db.GenesisState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(s, savedGenesisS) {
+		t.Error("did not retrieve saved state")
+	}
+
+	if err := db.SaveGenesisBlockRoot(context.Background(), [32]byte{'C'}); err != nil {
+		t.Fatal(err)
+	}
+
+	savedGenesisS, err = db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if savedGenesisS != nil {
+		t.Error("unsaved genesis state should've been nil")
+	}
+}
