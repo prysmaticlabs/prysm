@@ -509,9 +509,15 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
+	var p *p2p.Service
+	if err := b.services.FetchService(&p); err != nil {
+		panic(err)
+	}
+
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
 		b.services,
+		prometheus.Handler{Path: "/p2p", Handler: p.InfoHandler},
 	)
 	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)
