@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"go.opencensus.io/trace"
 )
 
 const oneYear = 365 * 24 * time.Hour
@@ -92,6 +93,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				debug.PrintStack()
 			}
 		}()
+		ctx := context.Background()
+		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
+		defer span.End()
+		span.AddAttributes(trace.StringAttribute("topic", topic))
 
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
@@ -104,14 +109,14 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			return
 		}
 
-		if !validate(r.ctx, msg, r.p2p) {
+		if !validate(ctx, msg, r.p2p) {
 			log.WithField("message", msg.String()).Debug("Message did not verify")
 
 			// TODO(3147): Increment metrics.
 			return
 		}
 
-		if err := handle(r.ctx, msg); err != nil {
+		if err := handle(ctx, msg); err != nil {
 			// TODO(3147): Increment metrics.
 			log.WithError(err).Error("Failed to handle p2p pubsub")
 			return

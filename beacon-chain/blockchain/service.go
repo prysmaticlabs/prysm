@@ -91,7 +91,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.HeadState(c.ctx)
+	ctx := context.TODO()
+	beaconState, err := c.beaconDB.HeadState(ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -99,18 +100,18 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
-		if err := c.initializeChainInfo(c.ctx); err != nil {
+		if err := c.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
-		justifiedCheckpoint, err := c.beaconDB.JustifiedCheckpoint(c.ctx)
+		justifiedCheckpoint, err := c.beaconDB.JustifiedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get justified checkpoint: %v", err)
 		}
-		finalizedCheckpoint, err := c.beaconDB.FinalizedCheckpoint(c.ctx)
+		finalizedCheckpoint, err := c.beaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
-		if err := c.forkChoiceStore.GenesisStore(c.ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
+		if err := c.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
 		c.stateInitializedFeed.Send(c.genesisTime)
@@ -123,7 +124,7 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			c.processChainStartTime(c.ctx, genesisTime, subChainStart)
+			c.processChainStartTime(ctx, genesisTime, subChainStart)
 			return
 		}()
 	}
