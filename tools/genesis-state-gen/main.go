@@ -1,16 +1,17 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math/big"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 const (
@@ -24,52 +25,55 @@ var (
 )
 
 func main() {
-	//hashes := make([][]byte, len(ks))
-	//dataList := make([]*ethpb.Deposit_Data, len(ks))
-	//for i, item := range ks {
-	//	data, err := createDepositData()
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	hash, err := ssz.HashTreeRoot(data)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	hashes[i] = hash[:]
-	//	dataList[i] = data
-	//}
-	//trie, err := trieutil.GenerateTrieFromItems(
-	//	hashes,
-	//	int(params.BeaconConfig().DepositContractTreeDepth),
-	//)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//deposits := make([]*ethpb.Deposit, len(dataList))
-	//for i, item := range dataList {
-	//	proof, err := trie.MerkleProof(i)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	deposits[i] = &ethpb.Deposit{
-	//		Proof: proof,
-	//		Data:  item,
-	//	}
-	//}
-	//genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
-	//	DepositRoot:  make([]byte, 32),
-	//	DepositCount: 0,
-	//	BlockHash:    make([]byte, 32),
-	//})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//// Now we need to marshal to yaml...
-	//fmt.Println(genesisState)
-	GenerateKeys(10)
+	params.UseDemoBeaconConfig()
+	privKeys, pubKeys := GenerateKeys(8)
+	hashes := make([][]byte, len(privKeys))
+	dataList := make([]*ethpb.Deposit_Data, len(privKeys))
+	for i := 0; i < len(dataList); i++ {
+		data, err := createDepositData(privKeys[i], pubKeys[i])
+		if err != nil {
+			panic(err)
+		}
+		hash, err := ssz.HashTreeRoot(data)
+		if err != nil {
+			panic(err)
+		}
+		hashes[i] = hash[:]
+		dataList[i] = data
+	}
+	trie, err := trieutil.GenerateTrieFromItems(
+		hashes,
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
+	if err != nil {
+		panic(err)
+	}
+	deposits := make([]*ethpb.Deposit, len(dataList))
+	for i, item := range dataList {
+		proof, err := trie.MerkleProof(i)
+		if err != nil {
+			panic(err)
+		}
+		deposits[i] = &ethpb.Deposit{
+			Proof: proof,
+			Data:  item,
+		}
+	}
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
+		DepositRoot:  make([]byte, 32),
+		DepositCount: 0,
+		BlockHash:    make([]byte, 32),
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(genesisState)
+	fmt.Println(genesisState.Validators)
 }
 
-func GenerateKeys(n int) ([]byte, []byte) {
+func GenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
+	privKeys := make([]*bls.SecretKey, n)
+	pubKeys := make([]*bls.PublicKey, n)
 	for i := 0; i < n; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
@@ -82,48 +86,34 @@ func GenerateKeys(n int) ([]byte, []byte) {
 		num := new(big.Int)
 		num = num.SetBytes(b)
 		order := new(big.Int)
-		ok := false
+		var ok bool
 		order, ok = order.SetString(curveOrder, 10)
 		if !ok {
 			panic("Not ok")
 		}
 		num = num.Mod(num, order)
-		fmt.Println(num.String())
-		b = num.Bytes()
-		for i := 0; i < len(b)/2; i++ {
-			b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
-		}
-		priv, err := bls.SecretKeyFromBytes(b)
+		priv, err := bls.SecretKeyFromBytes(num.Bytes())
 		if err != nil {
 			panic(err)
 		}
-		pub := priv.PublicKey()
-		p := base64.StdEncoding.EncodeToString(pub.Marshal())
-		fmt.Printf("%#x\n", priv.Marshal())
-		fmt.Printf("%s\n", p)
-		fmt.Println(" ")
+		privKeys[i] = priv
+		pubKeys[i] = priv.PublicKey()
 	}
-	return nil, nil
+	return privKeys, pubKeys
 }
 
-func createDepositData(privKey []byte, pubKey []byte) (*ethpb.Deposit_Data, error) {
-	sk1, err := bls.SecretKeyFromBytes(privKey)
-	if err != nil {
-		return nil, err
-	}
+func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.Deposit_Data, error) {
 	di := &ethpb.Deposit_Data{
-		PublicKey:             pubKey,
-		WithdrawalCredentials: withdrawalCredentialsHash(pubKey),
+		PublicKey:             pubKey.Marshal(),
+		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 	}
-
 	sr, err := ssz.HashTreeRoot(di)
 	if err != nil {
 		return nil, err
 	}
-
 	domain := bls.Domain(domainDeposit[:], genesisForkVersion)
-	di.Signature = sk1.Sign(sr[:], domain).Marshal()
+	di.Signature = privKey.Sign(sr[:], domain).Marshal()
 	return di, nil
 }
 
