@@ -18,32 +18,32 @@ import (
 //                           block: ShardBlock,
 //                           validate_state_root: bool=False) -> ShardState:
 //    # Process slots (including those with no blocks) since block
-//    process_shard_slots(state, shard_state, block.data.slot)
+//    process_shard_slots(state, shard_state, block.slot)
 //    # Process block
 //    process_shard_block(state, shard_state, block)
 //    # Validate state root (`validate_state_root == True` in production)
 //    if validate_state_root:
-//        assert block.data.state_root == hash_tree_root(shard_state)
+//        assert block.state_root == hash_tree_root(shard_state)
 //    # Return post-state
 //    return shard_state
 func ShardStateTransition(beaconState *pb.BeaconState, shardState *ethpb.ShardState, shardBlock *ethpb.ShardBlock) (*ethpb.ShardState, error) {
 	var err error
-	shardState, err = ProcessShardSlots(beaconState, shardState, shardBlock.Data.Slot)
+	shardState, err = ProcessShardSlots(beaconState, shardState, shardBlock.Slot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not process shard slots up to %d", shardBlock.Data.Slot)
+		return nil, errors.Wrapf(err, "could not process shard slots up to %d", shardBlock.Slot)
 	}
 	shardState, err = ProcessShardBlock(beaconState, shardState, shardBlock)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not process shard block", shardBlock.Data.Slot)
+		return nil, errors.Wrapf(err, "could not process shard block", shardBlock.Slot)
 	}
 
 	postStateRoot, err := ssz.HashTreeRoot(shardState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash processed shard state")
 	}
-	if !bytes.Equal(postStateRoot[:], shardBlock.Data.StateRoot) {
+	if !bytes.Equal(postStateRoot[:], shardBlock.StateRoot) {
 		return nil, fmt.Errorf("validate shard state root failed, wanted: %#x, received: %#x",
-			postStateRoot[:], shardBlock.Data.StateRoot)
+			postStateRoot[:], shardBlock.StateRoot)
 	}
 
 	return shardState, nil

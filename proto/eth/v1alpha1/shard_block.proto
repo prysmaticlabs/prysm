@@ -5,60 +5,32 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
-// The signatures from a shard chain block.
-message ShardBlockSignatures {
-    // 96 byte BLS signature from the attesters that attested this block.
-    bytes attesters = 1 [(gogoproto.moretags) = "ssz-size:\"96\""];
-    // 96 byte BLS signature from the proposer that proposed this block.
-    bytes proposers = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
-}
-
-// The data object of a shard chain block.
-message ShardBlockData {
-    // shard chain slot that this block represents.
-    uint64 slot = 1;
-    // 32 byte root of beacon block root.
-    bytes beacon_block_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // 32 byte root of the shard block's parent root.
-    bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // 32 byte root of the resulting state after processing this block.
-    bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // A bitfield represting which validators in the committee have voted for this block.
-    bytes aggregation_bits = 5 [(gogoproto.moretags) = "ssz-max:\"256\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    // The total size of the shard block
-    uint64 block_size_sum = 6;
-    // The block body itself.
-    repeated bytes body = 7 [(gogoproto.moretags) = "ssz-max:\"65024\""];
-}
-
 // The Ethereum 2.0 shard block.
 message ShardBlock {
-    ShardBlockData data = 1;
-    ShardBlockSignatures signatures = 2;
-}
-
-// The data object of a shard chain block header.
-message ShardBlockHeaderData {
-    // shard chain slot that this block represents.
-    uint64 slot = 1;
-    // 32 byte root of beacon block root.
-    bytes beacon_block_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // 32 byte root of the shard block's parent root.
-    bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // 32 byte root of the resulting state after processing this block.
-    bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    // A bitfield represting which validators in the committee have voted for this block.
-    bytes aggregation_bits = 5 [(gogoproto.moretags) = "ssz-max:\"256\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    // The total size of the shard block
+    uint64 shard = 1;
+    uint64 slot = 2;
+    bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes parent_root = 4[(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes state_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
     uint64 block_size_sum = 6;
-    // The body root of itself.
-    bytes body_root = 7 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    repeated bytes body = 7 [(gogoproto.moretags) = "ssz-max:\"65024\""];
+    bytes aggregation_bits = 8 [(gogoproto.moretags) = "ssz-max:\"256\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes attestations_signature = 9 [(gogoproto.moretags) = "ssz-size:\"96\""];
+    bytes signature = 10 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 // The Ethereum 2.0 shard block header.
 message ShardBlockHeader {
-    ShardBlockHeaderData data = 1;
-    ShardBlockSignatures signatures = 2;
+    uint64 shard = 1;
+    uint64 slot = 2;
+    bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes parent_root = 4[(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes state_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    uint64 block_size_sum = 6;
+    bytes body_root = 7 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes aggregation_bits = 8 [(gogoproto.moretags) = "ssz-max:\"256\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes attestations_signature = 9 [(gogoproto.moretags) = "ssz-size:\"96\""];
+    bytes signature = 10 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message ShardState {
@@ -69,15 +41,13 @@ message ShardState {
     // The history accumulator of the current state.
     repeated bytes history_accumulator = 3 [(gogoproto.moretags) = "ssz-size:\"32,64\""];
     // The last shard block header.
-    ShardBlockHeaderData latest_block_header_data = 4;
+    ShardBlockHeader latest_block_header = 4;
     // The last block size total.
     uint64 block_size_sum = 5;
     // Fee and rewards
     uint64 block_size_price = 6;
-    repeated uint64 older_committee_fees = 7 [(gogoproto.moretags) = "ssz-max:\"128\""];
-    repeated uint64 newer_committee_fees = 8 [(gogoproto.moretags) = "ssz-max:\"128\""];
-    repeated uint64 older_committee_rewards = 9 [(gogoproto.moretags) = "ssz-max:\"128\""];
-    repeated uint64 newer_committee_rewards = 10 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 older_committee_deltas = 7 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 newer_committee_deltas = 8 [(gogoproto.moretags) = "ssz-max:\"128\""];
 }
 
 message ShardCheckpoint {
