@@ -28,7 +28,7 @@ func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
 // validator should verify the contents of the message, propagate the message
 // as expected, and return true or false to continue the message processing
 // pipeline.
-type validator func(context.Context, proto.Message, p2p.Broadcaster) bool
+type validator func(ctx context.Context, msg proto.Message, broadcastter p2p.Broadcaster, fromSelf bool) bool
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
@@ -86,7 +86,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
-	pipeline := func(data []byte) {
+	pipeline := func(data []byte, fromSelf bool) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.WithField("error", r).Error("Panic occurred")
@@ -109,7 +109,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			return
 		}
 
-		if !validate(ctx, msg, r.p2p) {
+		if !validate(ctx, msg, r.p2p, fromSelf) {
 			log.WithField("message", msg.String()).Debug("Message did not verify")
 
 			// TODO(3147): Increment metrics.
@@ -133,13 +133,12 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				return
 			}
 
-			if msg.GetFrom() == r.p2p.PeerID() {
-				continue
-			}
+			// Special validation occurs on messages received from ourselves.
+			fromSelf := msg.GetFrom() == r.p2p.PeerID()
 
 			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 
-			go pipeline(msg.Data)
+			go pipeline(msg.Data, fromSelf)
 		}
 	}
 

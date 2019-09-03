@@ -26,7 +26,7 @@ func attSlashingCacheKey(slashing *ethpb.AttesterSlashing) (string, error) {
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
+func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
 		return false
@@ -63,6 +63,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		return false
 	}
 	seenAttesterSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+
+	if fromSelf {
+		return false
+	}
 
 	if err := p.Broadcast(ctx, slashing); err != nil {
 		log.WithError(err).Error("Failed to propagate attester slashing")
