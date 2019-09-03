@@ -28,6 +28,12 @@ type BeaconChainConfig struct {
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
 	ShardGenesisEpoch              uint64 // SHARD_GENESIS_EPOCH is the genesis shard epoch.
 	MinBlockSizePrices             uint64 // MinBlockSizePrices defines the min block size prices.
+	ShardHeaderSize                uint64 // ShardHeaderSize defines the header size of shard block.
+	ShardBlockSizeLimit            uint64 // ShardBlockSizeLimit defines the size limit of a shard block.
+	ShardBlockSizeTarget           uint64 // ShardBlockSizeTarget defines the block size target of a shard block.
+	BlockSizeQuotient              uint64 // BlockSizeQuotient defines the quotient to determine shard block fees.
+	MinBlockSizePrice              uint64 // MinBlockSizePrice defines the minimal price for a shard block.
+	HistoryAccumulatorVector       uint64 // HistoryAccumulatorVector defines the length of history accumulator.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -131,6 +137,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinGenesisTime:                 1578009600,
 	ShardGenesisEpoch:              0,
 	MinBlockSizePrices:             0,
+	ShardHeaderSize:                512,
+	ShardBlockSizeLimit:            65536,
+	ShardBlockSizeTarget:           16384,
+	BlockSizeQuotient:              8,
+	MinBlockSizePrice:              1,
+	HistoryAccumulatorVector:       64,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,

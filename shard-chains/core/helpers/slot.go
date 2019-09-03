@@ -1,4 +1,4 @@
-package core
+package helpers
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"

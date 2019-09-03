@@ -663,28 +663,6 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 	return winnerCrosslink, crosslinkIndices, nil
 }
 
-// baseReward takes state and validator index and calculate
-// individual validator's base reward quotient.
-//
-// Note: Adjusted quotient is calculated of base reward because it's too inefficient
-// to repeat the same calculation for every validator versus just doing it once.
-//
-// Spec pseudocode definition:
-//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//      total_balance = get_total_active_balance(state)
-//	    effective_balance = state.validator_registry[index].effective_balance
-//	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
-func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
-	totalBalance, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not calculate active balance")
-	}
-	effectiveBalance := state.Validators[index].EffectiveBalance
-	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
-		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
-	return baseReward, nil
-}
-
 // attestationDelta calculates the rewards and penalties of individual
 // validator for voting the correct FFG source, FFG target, and head. It
 // also calculates proposer delay inclusion and inactivity rewards
@@ -801,7 +779,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := helpers.BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
@@ -832,7 +810,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	for i, a := range attestersVotedSoruce {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
-		baseReward, err := baseReward(state, i)
+		baseReward, err := helpers.BaseReward(state, i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get proposer reward")
 		}
@@ -857,7 +835,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			attestedTarget[index] = true
 		}
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := helpers.BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
@@ -928,7 +906,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		attestingBalance := helpers.TotalBalance(state, attestingIndices)
 
 		for _, index := range committee {
-			base, err := baseReward(state, index)
+			base, err := helpers.BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}

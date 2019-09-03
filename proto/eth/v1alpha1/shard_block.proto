@@ -69,7 +69,7 @@ message ShardState {
     // The history accumulator of the current state.
     repeated bytes history_accumulator = 3 [(gogoproto.moretags) = "ssz-size:\"32,64\""];
     // The last shard block header.
-    ShardBlockHeader latest_block_header_data = 4;
+    ShardBlockHeaderData latest_block_header_data = 4;
     // The last block size total.
     uint64 block_size_sum = 5;
     // Fee and rewards

@@ -533,12 +533,12 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
 			Balances: []uint64{tt.a},
 		}
-		c, err := baseReward(state, 0)
+		c, err := helpers.BaseReward(state, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if c != tt.c {
-			t.Errorf("baseReward(%d) = %d, want = %d",
+			t.Errorf("helpers.BaseReward(%d) = %d, want = %d",
 				tt.a, c, tt.c)
 		}
 	}
@@ -922,7 +922,7 @@ func TestCrosslinkDelta_NoOneAttested(t *testing.T) {
 			t.Errorf("Wanted reward balance 0, got %d", rewards[i])
 		}
 		// Since no one attested, all the validators should get penalized the same
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1007,7 +1007,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
@@ -1115,7 +1115,7 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 		}
 		// Since no one attested, all the validators should get penalized the same
 		// it's 3 times the penalized amount because source, target and head.
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
@@ -1172,7 +1172,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 
 	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
@@ -1193,7 +1193,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
@@ -1255,7 +1255,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 
 	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
 	for _, i := range attestedIndices {
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
@@ -1276,7 +1276,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 
 	nonAttestedIndices := []uint64{12, 23, 45, 79}
 	for _, i := range nonAttestedIndices {
-		base, err := baseReward(state, i)
+		base, err := helpers.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}

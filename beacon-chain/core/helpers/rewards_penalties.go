@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -95,4 +96,26 @@ func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 	}
 	state.Balances[idx] -= delta
 	return state
+}
+
+// BaseReward takes state and validator index and calculate
+// individual validator's base reward quotient.
+//
+// Note: Adjusted quotient is calculated of base reward because it's too inefficient
+// to repeat the same calculation for every validator versus just doing it once.
+//
+// Spec pseudocode definition:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//      total_balance = get_total_active_balance(state)
+//	    effective_balance = state.validator_registry[index].effective_balance
+//	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
+func BaseReward(state *pb.BeaconState, index uint64) (uint64, error) {
+	totalBalance, err := TotalActiveBalance(state)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not calculate active balance")
+	}
+	effectiveBalance := state.Validators[index].EffectiveBalance
+	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+	return baseReward, nil
 }
