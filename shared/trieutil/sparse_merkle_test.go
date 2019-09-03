@@ -60,16 +60,6 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	}
 }
 
-func TestMerkleTrie_BranchIndices(t *testing.T) {
-	indices := branchIndices(1024, 3 /* depth */)
-	expected := []int{1024, 512, 256}
-	for i := 0; i < len(indices); i++ {
-		if expected[i] != indices[i] {
-			t.Errorf("Expected %d, received %d", expected[i], indices[i])
-		}
-	}
-}
-
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	h := hashutil.Hash([]byte("hi"))
 	m := &MerkleTrie{
