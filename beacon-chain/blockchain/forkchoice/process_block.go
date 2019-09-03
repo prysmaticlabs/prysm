@@ -113,16 +113,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 	}
 
-	// Epoch boundary bookkeeping such as logging epoch summaries
-	// and saving newly activated validator indices in db.
-	if helpers.IsEpochStart(postState.Slot) {
-		logEpochData(postState)
-		reportStateMetrics(postState)
-	}
-
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+
+	// Epoch boundary bookkeeping such as logging epoch summaries.
+	if helpers.IsEpochStart(postState.Slot) {
+		logEpochData(postState)
+		reportStateMetrics(postState)
 	}
 
 	return nil
