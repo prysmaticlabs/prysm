@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -29,6 +30,7 @@ var (
 	genesisForkVersion = []byte{0, 0, 0, 0}
 	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
+	jsonOutputFile     = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
 	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
 	genesisTime        = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
 )
@@ -41,8 +43,8 @@ func main() {
 	if *genesisTime == 0 {
 		log.Print("No --genesis-time specified, defaulting to 0 as the unix timestamp")
 	}
-	if *sszOutputFile == "" && *yamlOutputFile == "" {
-		log.Fatal("Expected --output-ssz or --output-yaml to have been provided, received nil")
+	if *sszOutputFile == "" && *yamlOutputFile == "" && *jsonOutputFile == "" {
+		log.Fatal("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")
 	}
 	params.UseDemoBeaconConfig()
 	privKeys, pubKeys := deterministicallyGenerateKeys(*numValidators)
@@ -111,6 +113,16 @@ func main() {
 			panic(err)
 		}
 		log.Printf("Done writing to %s", *yamlOutputFile)
+	}
+	if *jsonOutputFile != "" {
+		encodedState, err := json.Marshal(genesisState)
+		if err != nil {
+			panic(err)
+		}
+		if err := ioutil.WriteFile(*jsonOutputFile, encodedState, 0644); err != nil {
+			panic(err)
+		}
+		log.Printf("Done writing to %s", *jsonOutputFile)
 	}
 }
 
