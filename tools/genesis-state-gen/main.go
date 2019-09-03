@@ -19,19 +19,27 @@ import (
 
 const (
 	blsWithdrawalPrefixByte = byte(0)
-	curveOrder              = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
+	blsCurveOrder           = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 )
 
 var (
 	domainDeposit      = [4]byte{3, 0, 0, 0}
 	genesisForkVersion = []byte{0, 0, 0, 0}
 	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
+	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
+	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
 )
 
 func main() {
 	flag.Parse()
+	if *numValidators == 0 {
+		log.Fatal("Expected --num-validators to have been provided, received 0")
+	}
+	if *sszOutputFile == "" || *yamlOutputFile == "" {
+		log.Fatal("Expected --output-ssz or --output-yaml to have been provided, received nil")
+	}
 	params.UseDemoBeaconConfig()
-	privKeys, pubKeys := GenerateKeys(8)
+	privKeys, pubKeys := deterministicallyGenerateKeys(*numValidators)
 	hashes := make([][]byte, len(privKeys))
 	dataList := make([]*ethpb.Deposit_Data, len(privKeys))
 	for i := 0; i < len(dataList); i++ {
@@ -90,7 +98,7 @@ func main() {
 	}
 }
 
-func GenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
+func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
 	privKeys := make([]*bls.SecretKey, n)
 	pubKeys := make([]*bls.PublicKey, n)
 	for i := 0; i < n; i++ {
@@ -106,7 +114,7 @@ func GenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
 		num = num.SetBytes(b)
 		order := new(big.Int)
 		var ok bool
-		order, ok = order.SetString(curveOrder, 10)
+		order, ok = order.SetString(blsCurveOrder, 10)
 		if !ok {
 			panic("Not ok")
 		}
