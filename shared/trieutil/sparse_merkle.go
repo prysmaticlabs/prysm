@@ -74,7 +74,8 @@ func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	for i := uint(0); i < m.depth; i++ {
 		subIndex := (merkleIndex / (1 << i)) ^ 1
 		if subIndex < uint(len(m.branches[i])) {
-			proof[i] = m.branches[i][subIndex]
+			item := bytesutil.ToBytes32(m.branches[i][subIndex])
+			proof[i] = item[:]
 		} else {
 			proof[i] = zeroHashes[i]
 		}
@@ -101,23 +102,32 @@ func (m *MerkleTrie) HashTreeRoot() [32]byte {
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
-	node := item
+	node := bytesutil.ToBytes32(item)
 	branchIndices := branchIndices(merkleIndex, len(proof))
-	for i := 0; i < len(proof)-1; i++ {
+	fmt.Printf("Node %s, Proof item %s\n", node, proof[0])
+	for i := 0; i < len(proof); i++ {
+		if i > 0 {
+			fmt.Printf("Node %#x, Proof item %#x\n", node, proof[i])
+		}
 		if branchIndices[i]%2 == 0 {
 			parentHash := hashutil.Hash(append(node[:], proof[i]...))
-			node = parentHash[:]
+			node = parentHash
 		} else {
 			parentHash := hashutil.Hash(append(proof[i], node[:]...))
-			node = parentHash[:]
+			node = parentHash
 		}
 	}
-	return bytes.Equal(root, node)
+	return bytes.Equal(root, node[:])
 }
 
 func calcTreeFromLeaves(leaves [][]byte, depth int) [][][]byte {
 	layers := make([][][]byte, depth+1)
-	layers[0] = leaves
+	transformedLeaves := make([][]byte, len(leaves))
+	for i := range leaves {
+		arr := bytesutil.ToBytes32(leaves[i])
+		transformedLeaves[i] = arr[:]
+	}
+	layers[0] = transformedLeaves
 	for i := 0; i < depth; i++ {
 		if len(layers[i])%2 == 1 {
 			layers[i] = append(layers[i], zeroHashes[i])
