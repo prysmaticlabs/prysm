@@ -146,7 +146,7 @@ http_archive(
 )
 
 http_archive(
-    name = "eth2_spec_tests",
+    name = "eth2_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -156,8 +156,22 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a531804ac35d2398d37cfa755a686280d8cb3a9649e993e3cf89640f06191d5e",
-    url = "https://github.com/prysmaticlabs/eth2.0-spec-tests/releases/download/v0.8.1/base64_encoded_archive.tar.gz",
+    sha256 = "faa499c82d9831ed6d421b4eb2f7b54a87084b7499e02d24e1f55184f5f8f88d",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.2/minimal.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec_tests_mainnet",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.2/mainnet.tar.gz",
 )
 
 http_archive(

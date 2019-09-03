@@ -25,7 +25,7 @@ go_test(
         exclude = ["*_minimal_test.go"],
     ),
     data = [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_mainnet//:test_data",
     ],
     embed = [":go_default_library"],
     shard_count = 4,
@@ -52,7 +52,7 @@ go_test(
         exclude = ["*_mainnet_test.go"],
     ),
     data = [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
     ],
     embed = [":go_default_library"],
     tags = [
