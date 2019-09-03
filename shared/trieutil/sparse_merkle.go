@@ -70,7 +70,7 @@ func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	if index >= len(leaves) {
 		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", len(leaves), index)
 	}
-	proof := make([][]byte, m.depth)
+	proof := make([][]byte, m.depth+1)
 	for i := uint(0); i < m.depth; i++ {
 		subIndex := (merkleIndex / (1 << i)) ^ 1
 		if subIndex < uint(len(m.branches[i])) {
@@ -79,6 +79,8 @@ func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
 			proof[i] = zeroHashes[i]
 		}
 	}
+	root := m.Root()
+	proof[len(proof)-1] = root[:]
 	return proof, nil
 }
 
@@ -101,7 +103,7 @@ func (m *MerkleTrie) HashTreeRoot() [32]byte {
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := item
 	branchIndices := branchIndices(merkleIndex, len(proof))
-	for i := 0; i < len(proof); i++ {
+	for i := 0; i < len(proof)-1; i++ {
 		if branchIndices[i]%2 == 0 {
 			parentHash := hashutil.Hash(append(node[:], proof[i]...))
 			node = parentHash[:]

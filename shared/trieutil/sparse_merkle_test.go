@@ -1,6 +1,7 @@
 package trieutil
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
@@ -12,6 +13,61 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestMarshalDepositWithProof(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	m, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	proof, err := m.MerkleProof(2)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	if len(proof) != 33 {
+		t.Errorf("Received len %d, wanted 33", len(proof))
+	}
+	someRoot := [32]byte{1, 2, 3, 4}
+	someSig := [96]byte{1, 2, 3, 4}
+	someKey := [48]byte{1, 2, 3, 4}
+	dep := &ethpb.Deposit{
+		Proof: proof,
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             someKey[:],
+			WithdrawalCredentials: someRoot[:],
+			Amount:                32,
+			Signature:             someSig[:],
+		},
+	}
+	enc, err := ssz.Marshal(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec := &ethpb.Deposit{}
+	if err := ssz.Unmarshal(enc, &dec); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("--Unmarshaled")
+	for _, item := range dec.Proof {
+		fmt.Printf("%#x\n", item)
+	}
+	fmt.Println(" ")
+	fmt.Println("--Original")
+	for _, item := range dep.Proof {
+		fmt.Printf("%#x\n", item)
+	}
+	//if !reflect.DeepEqual(dec, dep) {
+	//	t.Errorf("Wanted %v, received %v", dep, dec)
+	//}
+}
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
 	indices := branchIndices(1024, 3 /* depth */)
@@ -86,6 +142,9 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	proof, err := m.MerkleProof(2)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	if len(proof) != 33 {
+		t.Errorf("Received len %d, wanted 33", len(proof))
 	}
 	root := m.Root()
 	if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
