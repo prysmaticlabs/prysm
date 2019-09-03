@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -59,16 +60,25 @@ func main() {
 			Data:  item,
 		}
 	}
+	root := trie.Root()
+	// Mock eth1 data for the beacon state.
+	blockHash, err := hex.DecodeString("4242424242424242424242424242424242424242424242424242424242424242")
+	if err != nil {
+		panic(err)
+	}
 	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
-		DepositRoot:  make([]byte, 32),
-		DepositCount: 0,
-		BlockHash:    make([]byte, 32),
+		DepositRoot:  root[:],
+		DepositCount: uint64(len(deposits)),
+		BlockHash:    blockHash,
 	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(genesisState)
-	fmt.Println(genesisState.Validators)
+	encodedState, err := ssz.Marshal(genesisState)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(encodedState)
 }
 
 func GenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
