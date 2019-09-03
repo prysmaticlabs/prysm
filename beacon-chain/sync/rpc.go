@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"go.opencensus.io/trace"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -56,9 +57,12 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHa
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
-		ctx, cancel := context.WithTimeout(r.ctx, ttfbTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer stream.Close()
+		ctx, span := trace.StartSpan(ctx, "sync.rpc")
+		defer span.End()
+		span.AddAttributes(trace.StringAttribute("topic", topic))
 
 		if err := stream.SetReadDeadline(roughtime.Now().Add(ttfbTimeout)); err != nil {
 			log.WithError(err).Error("Could not set stream read deadline")
