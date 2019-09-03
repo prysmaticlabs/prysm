@@ -151,7 +151,7 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.yaml",
+        "**/*.ssz",
     ]),
     visibility = ["//visibility:public"],
 )
@@ -166,7 +166,7 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.yaml",
+        "**/*.ssz",
     ]),
     visibility = ["//visibility:public"],
 )
