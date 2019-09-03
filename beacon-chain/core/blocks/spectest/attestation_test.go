@@ -3,6 +3,7 @@ package spectest
 import (
 	"io/ioutil"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -13,22 +14,25 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runAttestationTest(t *testing.T, config string) {
-	attFolderPath := path.Join("tests", config, "phase0/operations/attestation/pyspec_tests")
-	filepath, err := bazel.Runfile(attFolderPath)
+	testsFolderPath := path.Join("tests", config, "phase0/operations/attestation/pyspec_tests")
+	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	folders, err := ioutil.ReadDir(filepath)
+	testFolders, err := ioutil.ReadDir(filepath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	for _, folder := range folders {
-		attFilepath, err := bazel.Runfile(path.Join(attFolderPath, folder.Name(), "attestation.ssz"))
+	if err := spectest.SetConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, folder := range testFolders {
+		attFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "attestation.ssz"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -41,7 +45,7 @@ func runAttestationTest(t *testing.T, config string) {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		preSSZFilepath, err := bazel.Runfile(path.Join(attFolderPath, folder.Name(), "pre.ssz"))
+		preSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "pre.ssz"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,13 +53,9 @@ func runAttestationTest(t *testing.T, config string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		beaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(preBeaconStateFile, beaconState); err != nil {
+		preBeaconState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
-		}
-
-		if err := spectest.SetConfig(config); err != nil {
-			t.Fatal(err)
 		}
 
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -64,43 +64,41 @@ func runAttestationTest(t *testing.T, config string) {
 				Attestations: []*ethpb.Attestation{att},
 			}
 
-			post, err := blocks.ProcessAttestations(beaconState, body)
-			// if !reflect.ValueOf(tt.Post).IsValid() {
-			// 	// Note: This doesn't test anything worthwhile. It essentially tests
-			// 	// that *any* error has occurred, not any specific error.
-			// 	if err == nil {
-			// 		t.Fatal("did not fail when expected")
-			// 	}
-			// 	return
-			// }
+			postState, err := blocks.ProcessAttestations(preBeaconState, body)
 
-			// If the post.ssz is not present, it means the transition should fail on our end.
-			postBeaconStateFile, err := ioutil.ReadFile(filepath + "/" + folder.Name() + "/post.ssz")
-			if err != nil {
+			// If the post.ssz is not present, it means the test should fail on our end.
+			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz"))
+			postSSZExists := true
+			if err != nil && strings.Contains(err.Error(), "could not locate file") {
+				postSSZExists = false
+			} else if err != nil {
 				t.Fatal(err)
 			}
 
-			// Note: This doesn't test anything worthwhile. It essentially tests
-			// that *any* error has occurred, not any specific error.
-			if postBeaconStateFile == nil {
+			if postSSZExists {
+				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				postBeaconState := &pb.BeaconState{}
+				if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
+					t.Fatalf("Failed to unmarshal: %v", err)
+				}
+
+				if !proto.Equal(postState, postBeaconState) {
+					// diff, _ := messagediff.PrettyDiff(postState, postBeaconState)
+					// t.Log(diff)
+					t.Fatal("Post state does not match expected")
+				}
+			} else {
+				// Note: This doesn't test anything worthwhile. It essentially tests
+				// that *any* error has occurred, not any specific error.
 				if err == nil {
 					t.Fatal("Did not fail when expected")
 				}
 				t.Logf("Expected failure; failure reason = %v", err)
 				return
-			} else if err != nil {
-				t.Fatal(err)
-			}
-
-			postBeaconState := &pb.BeaconState{}
-			if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
-
-			if !proto.Equal(post, postBeaconState) {
-				diff, _ := messagediff.PrettyDiff(post, postBeaconState)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
 			}
 		})
 	}
