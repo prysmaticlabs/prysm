@@ -10,7 +10,6 @@ import (
 	"math/big"
 
 	"github.com/ghodss/yaml"
-
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
