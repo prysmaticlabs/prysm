@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"io"
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -36,7 +37,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				log.WithField("peer", conn.RemotePeer()).Debug(
 					"Performing handshake with peer",
 				)
-				if err := reqFunc(ctx, conn.RemotePeer()); err != nil {
+				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Error("Could not send successful hello rpc request")
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
