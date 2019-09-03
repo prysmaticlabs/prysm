@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runAttestationTest(t *testing.T, config string) {
@@ -53,18 +54,13 @@ func runAttestationTest(t *testing.T, config string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		preBeaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+		beaconState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(preBeaconStateFile, beaconState); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearAllCaches()
-			body := &ethpb.BeaconBlockBody{
-				Attestations: []*ethpb.Attestation{att},
-			}
-
-			postState, err := blocks.ProcessAttestations(preBeaconState, body)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
 			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz"))
@@ -75,7 +71,15 @@ func runAttestationTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 
+			body := &ethpb.BeaconBlockBody{
+				Attestations: []*ethpb.Attestation{att},
+			}
+			beaconState, err := blocks.ProcessAttestations(beaconState, body)
 			if postSSZExists {
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
 				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
 				if err != nil {
 					t.Fatal(err)
@@ -86,9 +90,9 @@ func runAttestationTest(t *testing.T, config string) {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 
-				if !proto.Equal(postState, postBeaconState) {
-					// diff, _ := messagediff.PrettyDiff(postState, postBeaconState)
-					// t.Log(diff)
+				if !proto.Equal(beaconState, postBeaconState) {
+					diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}
 			} else {
