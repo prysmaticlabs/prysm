@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -32,20 +34,17 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, port, pkey)
+	listener := createListener(ipAddr, pkey, &Config{})
 	defer listener.Close()
 
-	if !listener.Self().IP.Equal(ipAddr) {
-		t.Errorf("Ip address is not the expected type, wanted %s but got %s", ipAddr.String(), listener.Self().IP.String())
+	if !listener.Self().IP().Equal(ipAddr) {
+		t.Errorf("Ip address is not the expected type, wanted %s but got %s", ipAddr.String(), listener.Self().IP().String())
 	}
 
-	if port != int(listener.Self().UDP) {
-		t.Errorf("In correct port number, wanted %d but got %d", port, listener.Self().UDP)
+	if port != int(listener.Self().UDP()) {
+		t.Errorf("In correct port number, wanted %d but got %d", port, listener.Self().UDP())
 	}
-	pubkey, err := listener.Self().ID.Pubkey()
-	if err != nil {
-		t.Error(err)
-	}
+	pubkey := listener.Self().Pubkey()
 	XisSame := pkey.PublicKey.X.Cmp(pubkey.X) == 0
 	YisSame := pkey.PublicKey.Y.Cmp(pubkey.Y) == 0
 
@@ -57,7 +56,7 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, port, pkey)
+	bootListener := createListener(ipAddr, pkey, &Config{})
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -67,7 +66,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		Encoding:          "ssz",
 	}
 
-	var listeners []*discv5.Network
+	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 2000 + i
 		cfg.UDPPort = uint(port)
@@ -83,7 +82,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	lastListener := listeners[len(listeners)-1]
-	nodes := lastListener.Lookup(bootNode.ID)
+	nodes := lastListener.Lookup(bootNode.ID())
 	if len(nodes) != 6 {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
 			"Expected %d but got %d", 6, len(nodes))
@@ -102,20 +101,24 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate key %v", err)
 	}
-	nodeID := discv5.PubkeyID(&pkey.PublicKey)
-	node := discv5.NewNode(nodeID, ipAddr, 0, 0)
-	_ = convertToMultiAddr([]*discv5.Node{node})
-
+	_ = enode.PubkeyToIDV4(&pkey.PublicKey)
+	record := &enr.Record{}
+	record.Set(enr.IPv4(ipAddr))
+	node, err := enode.New(enode.ValidSchemes, record)
+	if err != nil {
+		t.Fatalf("Could not create new node: %v", err)
+	}
+	_ = convertToMultiAddr([]*enode.Node{node})
 	testutil.AssertLogsContain(t, hook, "node doesn't have an ip4 address")
 }
 
 func TestMultiAddrConversion_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	port := 1024
+	_ = 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, port, pkey)
+	listener := createListener(ipAddr, pkey, &Config{})
 
-	_ = convertToMultiAddr([]*discv5.Node{listener.Self()})
+	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not get multiaddr")
