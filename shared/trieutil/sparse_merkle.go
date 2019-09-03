@@ -2,6 +2,7 @@ package trieutil
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -60,7 +61,9 @@ func (m *MerkleTrie) Items() [][]byte {
 
 // Root returns the top-most, Merkle root of the trie.
 func (m *MerkleTrie) Root() [32]byte {
-	return bytesutil.ToBytes32(m.branches[len(m.branches)-1][0])
+	enc := [32]byte{}
+	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
+	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
@@ -80,8 +83,9 @@ func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
 			proof[i] = zeroHashes[i]
 		}
 	}
-	root := m.Root()
-	proof[len(proof)-1] = root[:]
+	enc := [32]byte{}
+	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
+	proof[len(proof)-1] = enc[:]
 	return proof, nil
 }
 
