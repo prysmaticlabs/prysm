@@ -8,6 +8,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/ghodss/yaml"
+
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -28,6 +30,7 @@ var (
 	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
+	genesisTime        = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
 )
 
 func main() {
@@ -35,7 +38,10 @@ func main() {
 	if *numValidators == 0 {
 		log.Fatal("Expected --num-validators to have been provided, received 0")
 	}
-	if *sszOutputFile == "" || *yamlOutputFile == "" {
+	if *genesisTime == 0 {
+		log.Print("No --genesis-time specified, defaulting to 0 as the unix timestamp")
+	}
+	if *sszOutputFile == "" && *yamlOutputFile == "" {
 		log.Fatal("Expected --output-ssz or --output-yaml to have been provided, received nil")
 	}
 	params.UseDemoBeaconConfig()
@@ -78,7 +84,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
+	genesisState, err := state.GenesisBeaconState(deposits, *genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    blockHash,
@@ -86,15 +92,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	encodedState, err := ssz.Marshal(genesisState)
-	if err != nil {
-		panic(err)
-	}
 	if *sszOutputFile != "" {
+		encodedState, err := ssz.Marshal(genesisState)
+		if err != nil {
+			panic(err)
+		}
 		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
 			panic(err)
 		}
 		log.Printf("Done writing to %s", *sszOutputFile)
+	}
+	if *yamlOutputFile != "" {
+		encodedState, err := yaml.Marshal(genesisState)
+		if err != nil {
+			panic(err)
+		}
+		if err := ioutil.WriteFile(*yamlOutputFile, encodedState, 0644); err != nil {
+			panic(err)
+		}
+		log.Printf("Done writing to %s", *yamlOutputFile)
 	}
 }
 
