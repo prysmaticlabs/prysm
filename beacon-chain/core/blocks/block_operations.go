@@ -986,6 +986,12 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
+	fmt.Printf("Root %#x\n", receiptRoot)
+	fmt.Printf("Dep index %d\n", beaconState.Eth1DepositIndex)
+	fmt.Println("--Proof")
+	for _, item := range deposit.Proof {
+		fmt.Printf("%#x\n", item)
+	}
 	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
 		leaf[:],
