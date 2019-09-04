@@ -50,7 +50,7 @@ type Service struct {
 	beaconDB            db.Database
 	chainService        interface{}
 	powChainService     powchain.POWChain
-	mockPOWChain        bool
+	mockEth1Votes       bool
 	operationService    operationService
 	syncService         sync.Checker
 	port                string
@@ -73,7 +73,7 @@ type Config struct {
 	BeaconDB         db.Database
 	ChainService     interface{}
 	POWChainService  powchain.POWChain
-	MockPOWChain     bool
+	MockEth1Votes    bool
 	OperationService operationService
 	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
@@ -91,7 +91,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		p2p:                 cfg.Broadcaster,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
-		mockPOWChain:        cfg.MockPOWChain,
+		mockEth1Votes:       cfg.MockEth1Votes,
 		operationService:    cfg.OperationService,
 		syncService:         cfg.SyncService,
 		port:                cfg.Port,
@@ -141,6 +141,7 @@ func (s *Service) Start() {
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
+		chainStartFetcher:   s.powChainService,
 		chainService:        s.chainService.(stateFeedListener),
 		genesisRetriever:    s.chainService.(blockchain.GenesisRetriever),
 		operationService:    s.operationService,
@@ -151,7 +152,10 @@ func (s *Service) Start() {
 	proposerServer := &ProposerServer{
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
-		mockPowChain:       s.mockPOWChain,
+		chainStartFetcher:  s.powChainService,
+		eth1InfoRetriever:  s.powChainService,
+		eth1BlockFetcher:   s.powChainService,
+		mockEth1Votes:      s.mockEth1Votes,
 		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
 		depositCache:       s.depositCache,
@@ -167,6 +171,8 @@ func (s *Service) Start() {
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
+		blockFetcher:       s.powChainService,
+		chainStartFetcher:  s.powChainService,
 		canonicalStateChan: s.canonicalStateChan,
 		depositCache:       s.depositCache,
 	}

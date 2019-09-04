@@ -33,9 +33,9 @@ import (
 type ProposerServer struct {
 	beaconDB           db.Database
 	chainService       interface{}
-	mockPOWChain       bool
+	mockEth1Votes      bool
 	chainStartFetcher  powchain.ChainStartFetcher
-	genesisRetriever   powchain.POWChainInfoFetcher
+	eth1InfoRetriever  powchain.POWChainInfoFetcher
 	eth1BlockFetcher   powchain.POWBlockFetcher
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
@@ -71,8 +71,8 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	}
 
 	var eth1Data *ethpb.Eth1Data
-	if ps.mockPOWChain {
-		// If a mock pow chain flag is specified, we use the following for the
+	if ps.mockEth1Votes {
+		// If a mock eth1 data votes is specified, we use the following for the
 		// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
 		//
 		// slot_in_voting_period = current_slot % SLOTS_PER_ETH1_VOTING_PERIOD
@@ -332,7 +332,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, err
 	}
 
-	_, genesisEth1Block := ps.genesisRetriever.Eth2GenesisPowchainInfo()
+	_, genesisEth1Block := ps.eth1InfoRetriever.Eth2GenesisPowchainInfo()
 	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
