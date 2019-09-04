@@ -176,14 +176,14 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 }
 
 // VerifyBitfield validates a bitfield with a given committee size.
-func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
+func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) error {
 	if bf.Len() != committeeSize {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			committeeSize,
 			bf.Len())
 	}
-	return true, nil
+	return nil
 }
 
 // CommitteeAssignment is used to query committee assignment from
@@ -357,18 +357,26 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	return startShard, nil
 }
 
-// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
-// to the committees at that slot.
-func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
+// VerifyAttestationBitfields verifies that an attestations aggregation and custody bitfield is valid in respect
+// to the committee at that slot.
+func VerifyAttestationBitfields(bState *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve crosslink committees at slot")
+		return errors.Wrap(err, "could not retrieve crosslink committees at slot")
 	}
 
 	if committee == nil {
-		return false, fmt.Errorf("no committee exist for shard in the attestation")
+		return fmt.Errorf("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBits, uint64(len(committee)))
+
+	if err := VerifyBitfield(att.AggregationBits, uint64(len(committee))); err != nil {
+		return fmt.Errorf("failed to verify aggregation bitfield: %v", err)
+	}
+	if err := VerifyBitfield(att.CustodyBits, uint64(len(committee))); err != nil {
+		return fmt.Errorf("failed to verify custody bitfield: %v", err)
+	}
+
+	return nil
 }
 
 // CompactCommitteesRoot returns the index root of a given epoch.
