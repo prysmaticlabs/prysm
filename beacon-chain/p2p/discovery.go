@@ -61,7 +61,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not open node's peer database")
+		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
 	ipEntry := enr.IP(ipAddr)
