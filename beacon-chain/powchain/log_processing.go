@@ -47,7 +47,7 @@ func (w *Web3Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) 
 			if depositLog.BlockHash == [32]byte{} {
 				return errors.New("got empty blockhash from powchain service")
 			}
-			blk, err := w.client.BlockByHash(ctx, depositLog.BlockHash)
+			blk, err := w.blockFetcher.BlockByHash(ctx, depositLog.BlockHash)
 			if err != nil {
 				return errors.Wrap(err, "could not get eth1 block")
 			}
