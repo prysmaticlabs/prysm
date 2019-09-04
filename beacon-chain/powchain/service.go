@@ -59,7 +59,7 @@ type ChainStartFetcher interface {
 	HasChainStarted() bool
 }
 
-type POWChainInfoFetcher interface {
+type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 }
 
@@ -71,10 +71,10 @@ type POWBlockFetcher interface {
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
-// POWChain defines a standard interface for the powchain service in Prysm.
-type POWChain interface {
+// Chain defines a standard interface for the powchain service in Prysm.
+type Chain interface {
 	ChainStartFetcher
-	POWChainInfoFetcher
+	ChainInfoFetcher
 	POWBlockFetcher
 }
 

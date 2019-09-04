@@ -30,7 +30,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
-	eth1InfoRetriever   powchain.POWChainInfoFetcher
+	eth1InfoRetriever   powchain.ChainInfoFetcher
 	chainService        stateFeedListener
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation

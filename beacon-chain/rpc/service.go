@@ -48,7 +48,7 @@ type Service struct {
 	cancel              context.CancelFunc
 	beaconDB            db.Database
 	chainService        interface{}
-	powChainService     powchain.POWChain
+	powChainService     powchain.Chain
 	mockEth1Votes       bool
 	operationService    operationService
 	syncService         sync.Checker
@@ -71,7 +71,7 @@ type Config struct {
 	KeyFlag          string
 	BeaconDB         db.Database
 	ChainService     interface{}
-	POWChainService  powchain.POWChain
+	POWChainService  powchain.Chain
 	MockEth1Votes    bool
 	OperationService operationService
 	SyncService      sync.Checker

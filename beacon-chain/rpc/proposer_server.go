@@ -35,7 +35,7 @@ type ProposerServer struct {
 	chainService       interface{}
 	mockEth1Votes      bool
 	chainStartFetcher  powchain.ChainStartFetcher
-	eth1InfoRetriever  powchain.POWChainInfoFetcher
+	eth1InfoRetriever  powchain.ChainInfoFetcher
 	eth1BlockFetcher   powchain.POWBlockFetcher
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState

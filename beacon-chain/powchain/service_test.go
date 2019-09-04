@@ -22,9 +22,9 @@ import (
 )
 
 var _ = ChainStartFetcher(&Web3Service{})
-var _ = POWChainInfoFetcher(&Web3Service{})
+var _ = ChainInfoFetcher(&Web3Service{})
 var _ = POWBlockFetcher(&Web3Service{})
-var _ = POWChain(&Web3Service{})
+var _ = Chain(&Web3Service{})
 
 type badReader struct{}
 
