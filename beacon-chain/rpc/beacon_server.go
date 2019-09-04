@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -28,7 +29,8 @@ type stateFeedListener interface {
 type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
-	powChainService     powChainService
+	powChainService     powchain.ChainStartFetcher
+	genesisRetriever    blockchain.GenesisRetriever
 	chainService        stateFeedListener
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
@@ -42,13 +44,11 @@ type BeaconServer struct {
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
 	ok := bs.powChainService.HasChainStarted()
-
 	if ok {
-		genesisTime, _ := bs.powChainService.ETH2GenesisTime()
-
+		genesisTime := bs.genesisRetriever.GenesisTime()
 		res := &pb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: genesisTime,
+			GenesisTime: uint64(genesisTime.Unix()),
 		}
 		return stream.Send(res)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -33,6 +34,7 @@ type ValidatorServer struct {
 	chainService       interface{}
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
+	chainStartFetcher  powchain.ChainStartFetcher
 	depositCache       *depositcache.DepositCache
 }
 

@@ -51,6 +51,7 @@ type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	ChainStartFeed() *event.Feed
+	HasChainStarted() bool
 }
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.

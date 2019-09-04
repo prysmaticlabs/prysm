@@ -9,13 +9,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// GenesisRetriever provides an interface for retrieving the genesis time.
+type GenesisRetriever interface {
+	GenesisTime() time.Time
+}
+
 // ChainInfoRetriever defines a common interface for methods in blockchain service which
 // directly retrieves chain info related data.
 type ChainInfoRetriever interface {
 	HeadRetriever
 	CanonicalRetriever
 	FinalizationRetriever
-	GenesisTime() time.Time
+	GenesisRetriever
 }
 
 // HeadRetriever defines a common interface for methods in blockchain service which
