@@ -268,12 +268,12 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 
 	if featureconfig.FeatureConfig().UseNewBlockChainService {
 		blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-			BeaconDB:       b.db,
-			DepositCache:   b.depositCache,
-			Web3Service:    web3Service,
-			OpsPoolService: opsService,
-			P2p:            b.fetchP2P(ctx),
-			MaxRoutines:    maxRoutines,
+			BeaconDB:          b.db,
+			DepositCache:      b.depositCache,
+			ChainStartFetcher: web3Service,
+			OpsPoolService:    opsService,
+			P2p:               b.fetchP2P(ctx),
+			MaxRoutines:       maxRoutines,
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not register blockchain service")
@@ -349,7 +349,6 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Reader:          powClient,
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
 		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,

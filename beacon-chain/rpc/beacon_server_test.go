@@ -39,7 +39,7 @@ type faultyPOWChainService struct {
 func (f *faultyPOWChainService) HasChainStarted() bool {
 	return false
 }
-func (f *faultyPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+func (f *faultyPOWChainService) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
 }
 
@@ -86,7 +86,7 @@ func (f *faultyPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, errors.New("hashing failed")
 }
 
-func (f *faultyPOWChainService) ChainStartETH1Data() *ethpb.Eth1Data {
+func (f *faultyPOWChainService) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
@@ -104,7 +104,7 @@ func (m *mockPOWChainService) HasChainStarted() bool {
 	return true
 }
 
-func (m *mockPOWChainService) ETH2GenesisTime() (uint64, *big.Int) {
+func (m *mockPOWChainService) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.genesisEth1Block
 	if blk == nil {
 		blk = big.NewInt(0)
@@ -167,7 +167,7 @@ func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, nil
 }
 
-func (m *mockPOWChainService) ChainStartETH1Data() *ethpb.Eth1Data {
+func (m *mockPOWChainService) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.eth1Data
 }
 
@@ -177,14 +177,21 @@ func (m *mockStateFeedListener) StateInitializedFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+type mockGenesisRetriever struct{}
+
+func (m *mockGenesisRetriever) GenesisTime() time.Time {
+	return time.Now()
+}
+
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx: ctx,
-		powChainService: &faultyPOWChainService{
+		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockStateFeedListener{},
+		genesisRetriever: &mockGenesisRetriever{},
+		chainService:     &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -203,10 +210,11 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),
-		powChainService: &mockPOWChainService{
+		chainStartFetcher: &mockPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockStateFeedListener{},
+		genesisRetriever: &mockGenesisRetriever{},
+		chainService:     &mockStateFeedListener{},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -227,10 +235,11 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	beaconServer := &BeaconServer{
 		ctx:            context.Background(),
 		chainStartChan: make(chan time.Time, 1),
-		powChainService: &faultyPOWChainService{
+		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockStateFeedListener{},
+		genesisRetriever: &mockGenesisRetriever{},
+		chainService:     &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

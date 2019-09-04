@@ -71,7 +71,7 @@ type POWBlockFetcher interface {
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
-// POWChain --
+// POWChain defines a standard interface for the powchain service in Prysm.
 type POWChain interface {
 	ChainStartFetcher
 	POWChainInfoFetcher
