@@ -492,6 +492,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	mockEth1DataVotes := ctx.GlobalBool(flags.MockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
 		Port:             port,
 		CertFlag:         cert,
@@ -501,6 +502,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:     chainService,
 		OperationService: operationService,
 		POWChainService:  web3Service,
+		MockEth1Votes:    mockEth1DataVotes,
 		SyncService:      syncChecker,
 		DepositCache:     b.depositCache,
 	})
