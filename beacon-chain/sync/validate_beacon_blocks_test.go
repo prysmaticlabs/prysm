@@ -152,7 +152,6 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	}
 }
 
-
 func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
