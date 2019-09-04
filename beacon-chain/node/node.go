@@ -274,6 +274,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 			OpsPoolService: opsService,
 			P2p:            b.fetchP2P(ctx),
 			MaxRoutines:    maxRoutines,
+			PreloadStatePath: ctx.GlobalString(flags.GenesisState.Name),
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not register blockchain service")

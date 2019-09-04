@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"runtime"
 	"sync"
 	"time"
@@ -55,6 +56,7 @@ type ChainService struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	canonicalRootsLock   sync.RWMutex
+	preloadStatePath       string
 }
 
 // Config options for the service.
@@ -66,6 +68,7 @@ type Config struct {
 	OpsPoolService operations.OperationFeeds
 	P2p            p2p.Broadcaster
 	MaxRoutines    int64
+	PreloadStatePath string
 }
 
 // NewChainService instantiates a new service instance that will
@@ -86,6 +89,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
+		preloadStatePath:       cfg.PreloadStatePath,
 	}, nil
 }
 
@@ -113,6 +117,21 @@ func (c *ChainService) Start() {
 		}
 		if err := c.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
+		}
+		c.stateInitializedFeed.Send(c.genesisTime)
+	} else if c.preloadStatePath != "" {
+		log.Infof("Loading generated genesis state from %v", c.preloadStatePath)
+		s, err := ioutil.ReadFile(c.preloadStatePath)
+		if err != nil {
+			log.Fatalf("Could not read pre-loaded state: %v", err)
+		}
+		genesisState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(s, genesisState); err != nil {
+			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
+		}
+		c.genesisTime = time.Unix(int64(genesisState.GenesisTime), 0)
+		if err := c.saveGenesisData(ctx, genesisState); err != nil {
+			log.Fatalf("Could not save genesis data: %v", err)
 		}
 		c.stateInitializedFeed.Send(c.genesisTime)
 	} else {
@@ -159,6 +178,75 @@ func (c *ChainService) initializeBeaconChain(
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
+
+	if err := c.saveGenesisData(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis data")
+	}
+
+	return nil
+}
+
+// Stop the blockchain service's main event loop and associated goroutines.
+func (c *ChainService) Stop() error {
+	defer c.cancel()
+
+	log.Info("Stopping service")
+	return nil
+}
+
+// Status always returns nil.
+// TODO(1202): Add service health checks.
+func (c *ChainService) Status() error {
+	if runtime.NumGoroutine() > int(c.maxRoutines) {
+		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
+	}
+	return nil
+}
+
+// StateInitializedFeed returns a feed that is written to
+// when the beacon state is first initialized.
+func (c *ChainService) StateInitializedFeed() *event.Feed {
+	return c.stateInitializedFeed
+}
+
+// This gets called to update canonical root mapping.
+func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	c.headSlot = b.Slot
+
+	c.canonicalRootsLock.Lock()
+	c.canonicalRoots[b.Slot] = r[:]
+	defer c.canonicalRootsLock.Unlock()
+
+	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
+		return errors.Wrap(err, "could not save head root in DB")
+	}
+	c.headBlock = b
+
+	s, err := c.beaconDB.State(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	c.headState = s
+
+	log.WithFields(logrus.Fields{
+		"slots": b.Slot,
+		"root":  hex.EncodeToString(r[:]),
+	}).Debug("Saved head info")
+	return nil
+}
+
+// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
+func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconState) error {
+	for i, v := range s.Validators {
+		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
+	}
+	return nil
+}
+
+// This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
+func (c *ChainService) saveGenesisData(ctx context.Context, genesisState *pb.BeaconState) error {
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
@@ -198,66 +286,6 @@ func (c *ChainService) initializeBeaconChain(
 	c.headState = genesisState
 	c.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
 
-	return nil
-}
-
-// Stop the blockchain service's main event loop and associated goroutines.
-func (c *ChainService) Stop() error {
-	defer c.cancel()
-
-	log.Info("Stopping service")
-	return nil
-}
-
-// Status always returns nil.
-// TODO(1202): Add service health checks.
-func (c *ChainService) Status() error {
-	if runtime.NumGoroutine() > int(c.maxRoutines) {
-		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
-	}
-	return nil
-}
-
-// StateInitializedFeed returns a feed that is written to
-// when the beacon state is first initialized.
-func (c *ChainService) StateInitializedFeed() *event.Feed {
-	return c.stateInitializedFeed
-}
-
-// This gets called to update canonical root mapping.
-func (c *ChainService) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
-
-	c.headSlot = b.Slot
-
-	c.canonicalRootsLock.Lock()
-	c.canonicalRoots[b.Slot] = r[:]
-	defer c.canonicalRootsLock.Unlock()
-
-	if err := c.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
-	}
-	c.headBlock = b
-
-	s, err := c.beaconDB.State(ctx, r)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	c.headState = s
-
-	log.WithFields(logrus.Fields{
-		"slots": b.Slot,
-		"root":  hex.EncodeToString(r[:]),
-	}).Debug("Saved head info")
-	return nil
-}
-
-// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
-func (c *ChainService) saveGenesisValidators(ctx context.Context, s *pb.BeaconState) error {
-	for i, v := range s.Validators {
-		if err := c.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
-	}
 	return nil
 }
 

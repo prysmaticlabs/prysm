@@ -30,6 +30,7 @@ var appFlags = []cli.Flag{
 	flags.KeyFlag,
 	flags.EnableDBCleanup,
 	flags.GRPCGatewayPort,
+	flags.GenesisState,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
