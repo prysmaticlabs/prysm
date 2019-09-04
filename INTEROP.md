@@ -12,9 +12,9 @@ This README details how to setup Prysm for interop testing for usage with other 
 
 Prysm supports a few ways to quickly launch a beacon node from basic configurations:
 
-- `Yaml Genesis`: Launches a beacon node from a .yaml file specifying a genesis beacon state **(recommended)**
-- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state
-- `JSON Genesis`: Launches a beacon node  from a .json file specifying a genesis beacon state
+- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state  **(recommended)**
+- `Yaml Genesis`: Launches a beacon node from a .yaml file specifying a genesis beacon state - binary data is _base64 encoded_
+- `JSON Genesis`: Launches a beacon node  from a .json file specifying a genesis beacon state - binary data is _base64 encoded_
 
 ## Generating a Genesis State
 
