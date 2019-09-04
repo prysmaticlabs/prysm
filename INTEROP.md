@@ -4,14 +4,14 @@ This README details how to setup Prysm for interop testing for usage with other 
 
 ## Installation & Setup
 
-1. Install Bazel
-2. TODO: Add more detailed steps
+1. Install [Bazel](https://docs.bazel.build/versions/master/install.html) **(Recommended)**
+2. `git clone https://github.com/prysmaticlabs/prysm && cd prysm`
 
 ## Starting from Genesis
 
 Prysm supports a few ways to quickly launch a beacon node from basic configurations:
 
-- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state  **(recommended)**
+- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state  **(Recommended)**
 - `Yaml Genesis`: Launches a beacon node from a .yaml file specifying a genesis beacon state - binary data is _base64 encoded_
 - `JSON Genesis`: Launches a beacon node  from a .json file specifying a genesis beacon state - binary data is _base64 encoded_
 
