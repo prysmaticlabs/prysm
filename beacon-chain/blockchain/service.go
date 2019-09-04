@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -35,6 +34,12 @@ type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
 }
 
+type powchainService interface {
+	ChainStartDeposits() []*ethpb.Deposit
+	ChainStartEth1Data() *ethpb.Eth1Data
+	ChainStartFeed() *event.Feed
+}
+
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
@@ -42,7 +47,7 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	beaconDB             db.Database
 	depositCache         *depositcache.DepositCache
-	web3Service          *powchain.Web3Service
+	web3Service          powchainService
 	opsPoolService       operations.OperationFeeds
 	forkChoiceStore      forkchoice.ForkChoicer
 	chainStartChan       chan time.Time
@@ -60,7 +65,7 @@ type ChainService struct {
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf int
-	Web3Service    *powchain.Web3Service
+	Web3Service    powchainService
 	BeaconDB       db.Database
 	DepositCache   *depositcache.DepositCache
 	OpsPoolService operations.OperationFeeds
@@ -134,7 +139,7 @@ func (c *ChainService) Start() {
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (c *ChainService) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
 	initialDeposits := c.web3Service.ChainStartDeposits()
-	if err := c.initializeBeaconChain(ctx, genesisTime, initialDeposits, c.web3Service.ChainStartETH1Data()); err != nil {
+	if err := c.initializeBeaconChain(ctx, genesisTime, initialDeposits, c.web3Service.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	c.stateInitializedFeed.Send(genesisTime)
