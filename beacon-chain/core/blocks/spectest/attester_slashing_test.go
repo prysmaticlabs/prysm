@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runAttesterSlashingTest(t *testing.T, config string) {
@@ -32,11 +33,7 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 	}
 
 	for _, folder := range testFolders {
-		attSlashingFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "attester_slashing.ssz"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		attSlashingFile, err := ioutil.ReadFile(attSlashingFilepath)
+		attSlashingFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "attester_slashing.ssz")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -45,26 +42,17 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		preSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "pre.ssz"))
+		preBeaconStateFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 		if err != nil {
 			t.Fatal(err)
 		}
-		preBeaconStateFile, err := ioutil.ReadFile(preSSZFilepath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		preBeaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+		beaconState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(preBeaconStateFile, beaconState); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearAllCaches()
-			body := &ethpb.BeaconBlockBody{
-				AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing},
-			}
-
-			postState, err := blocks.ProcessAttesterSlashings(preBeaconState, body)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
 			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz"))
@@ -75,7 +63,15 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 
+			body := &ethpb.BeaconBlockBody{
+				AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing},
+			}
+			beaconState, err := blocks.ProcessAttesterSlashings(beaconState, body)
 			if postSSZExists {
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
 				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
 				if err != nil {
 					t.Fatal(err)
@@ -86,9 +82,9 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 
-				if !proto.Equal(postState, postBeaconState) {
-					// diff, _ := messagediff.PrettyDiff(postState, postBeaconState)
-					// t.Log(diff)
+				if !proto.Equal(beaconState, postBeaconState) {
+					diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}
 			} else {

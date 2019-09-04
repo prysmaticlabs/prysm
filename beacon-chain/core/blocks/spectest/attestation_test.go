@@ -33,11 +33,7 @@ func runAttestationTest(t *testing.T, config string) {
 	}
 
 	for _, folder := range testFolders {
-		attFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "attestation.ssz"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		attestationFile, err := ioutil.ReadFile(attFilepath)
+		attestationFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "attestation.ssz")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,11 +42,7 @@ func runAttestationTest(t *testing.T, config string) {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		preSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "pre.ssz"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		preBeaconStateFile, err := ioutil.ReadFile(preSSZFilepath)
+		preBeaconStateFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 		if err != nil {
 			t.Fatal(err)
 		}

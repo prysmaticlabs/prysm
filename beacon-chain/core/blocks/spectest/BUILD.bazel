@@ -4,10 +4,9 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "attestation_test.yaml.go",
-        "block_operations.yaml.go",
         "blocks_mainnet.yaml.go",
         "blocks_minimal.yaml.go",
+        "utils.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
     visibility = ["//beacon-chain:__subpackages__"],
