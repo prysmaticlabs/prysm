@@ -31,6 +31,7 @@ var appFlags = []cli.Flag{
 	flags.EnableDBCleanup,
 	flags.GRPCGatewayPort,
 	flags.MockEth1DataVotesFlag,
+	flags.GenesisState,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,

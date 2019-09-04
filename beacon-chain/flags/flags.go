@@ -58,4 +58,9 @@ var (
 		Name:  "mock-eth1data-votes",
 		Usage: "Enable mocking of eth1 data votes for proposers to package into blocks",
 	}
+	// GenesisState defines a flag for the beacon node to load genesis state via file.
+	GenesisState = cli.StringFlag{
+		Name:  "load-genesis-state",
+		Usage: "The genesis state file (.SSZ) to load from",
+	}
 )
