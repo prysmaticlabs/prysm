@@ -106,7 +106,6 @@ type Web3Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
-	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
@@ -180,7 +179,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		reader:                  config.Reader,
 		logger:                  config.Logger,
 		httpLogger:              config.HTTPLogger,
-		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
@@ -372,7 +370,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	header, err := w.blockFetcher.HeaderByNumber(context.Background(), nil)
+	header, err := w.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 		w.runError = err
