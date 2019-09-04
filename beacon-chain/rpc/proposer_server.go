@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -39,6 +40,10 @@ type ProposerServer struct {
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
 	// Retrieve the parent block as the current head of the canonical chain
 	var parent *ethpb.BeaconBlock
 	var err error
