@@ -50,21 +50,24 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	privKeys, pubKeys := deterministicallyGenerateKeys(*numValidators)
+	privKeys, pubKeys, err := deterministicallyGenerateKeys(*numValidators)
+	if err != nil {
+		log.Fatalf("Could not deterministically generate keys for %d validators: %v", *numValidators, err)
+	}
 	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Could not generate deposit data from keys: %v", err)
 	}
 	trie, err := trieutil.GenerateTrieFromItems(
 		depositDataRoots,
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Could not generate Merkle trie for deposit proofs: %v", err)
 	}
 	deposits, err := generateDepositsFromData(depositDataItems, trie)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Could not generate deposits from the deposit data provided: %v", err)
 	}
 	root := trie.Root()
 	genesisState, err := state.GenesisBeaconState(deposits, *genesisTime, &ethpb.Eth1Data{
@@ -73,69 +76,66 @@ func main() {
 		BlockHash:    mockEth1BlockHash,
 	})
 	if err != nil {
-		panic(err)
+		log.Fatalf("Could not generate genesis beacon state: %v", err)
 	}
 	if *sszOutputFile != "" {
 		encodedState, err := ssz.Marshal(genesisState)
 		if err != nil {
-			panic(err)
+			log.Fatalf("Could not ssz marshal the genesis beacon state: %v", err)
 		}
 		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
-			panic(err)
+			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
 		}
 		log.Printf("Done writing to %s", *sszOutputFile)
 	}
 	if *yamlOutputFile != "" {
 		encodedState, err := yaml.Marshal(genesisState)
 		if err != nil {
-			panic(err)
+			log.Fatalf("Could not yaml marshal the genesis beacon state: %v", err)
 		}
 		if err := ioutil.WriteFile(*yamlOutputFile, encodedState, 0644); err != nil {
-			panic(err)
+			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
 		}
 		log.Printf("Done writing to %s", *yamlOutputFile)
 	}
 	if *jsonOutputFile != "" {
 		encodedState, err := json.Marshal(genesisState)
 		if err != nil {
-			panic(err)
+			log.Fatalf("Could not json marshal the genesis beacon state: %v", err)
 		}
 		if err := ioutil.WriteFile(*jsonOutputFile, encodedState, 0644); err != nil {
-			panic(err)
+			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
 		}
 		log.Printf("Done writing to %s", *jsonOutputFile)
 	}
 }
 
-func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
+func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
 	privKeys := make([]*bls.SecretKey, n)
 	pubKeys := make([]*bls.PublicKey, n)
 	for i := 0; i < n; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
 		hash := hashutil.Hash(enc)
-		b := hash[:]
 		// Reverse byte order to big endian for use with big ints.
-		for i := 0; i < len(b)/2; i++ {
-			b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
-		}
+		b := reverseByteOrder(hash[:])
 		num := new(big.Int)
 		num = num.SetBytes(b)
 		order := new(big.Int)
 		var ok bool
 		order, ok = order.SetString(blsCurveOrder, 10)
 		if !ok {
-			panic("Not ok")
+			return nil, nil, errors.New("could not set bls curve order as big int")
 		}
 		num = num.Mod(num, order)
 		priv, err := bls.SecretKeyFromBytes(num.Bytes())
 		if err != nil {
-			panic(err)
+			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")
 		}
 		privKeys[i] = priv
 		pubKeys[i] = priv.PublicKey()
 	}
-	return privKeys, pubKeys
+	return privKeys, pubKeys, nil
 }
 
 func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
@@ -196,4 +196,13 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 func withdrawalCredentialsHash(pubKey []byte) []byte {
 	h := hashutil.HashKeccak256(pubKey)
 	return append([]byte{blsWithdrawalPrefixByte}, h[0:]...)[:32]
+}
+
+// Switch the endianness of a byte slice by reversing its order.
+func reverseByteOrder(input []byte) []byte {
+	b := input
+	for i := 0; i < len(b)/2; i++ {
+		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+	}
+	return b
 }
