@@ -159,7 +159,7 @@ func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([
 	for i := 0; i < len(privKeys); i++ {
 		data, err := createDepositData(privKeys[i], pubKeys[i])
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not create deposit data for key: %#x", privKeys[i])
+			return nil, nil, errors.Wrapf(err, "could not create deposit data for key: %#x", privKeys[i].Marshal())
 		}
 		hash, err := ssz.HashTreeRoot(data)
 		if err != nil {
