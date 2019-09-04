@@ -13,7 +13,7 @@ import (
 
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
-func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
+func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
 	att := msg.(*ethpb.Attestation)
 
 	attRoot, err := ssz.HashTreeRoot(att)
@@ -32,6 +32,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	}
 
 	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
+
+	if fromSelf {
+		return false
+	}
 
 	if err := p.Broadcast(ctx, msg); err != nil {
 		log.WithError(err).Error("Failed to broadcast message")
