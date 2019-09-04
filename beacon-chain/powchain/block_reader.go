@@ -22,7 +22,7 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 		return true, blkInfo.Number, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := w.client.BlockByHash(ctx, hash)
+	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), errors.Wrap(err, "could not query block with given hash")
 	}
@@ -47,7 +47,7 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 		return blkInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := w.client.BlockByNumber(ctx, height)
+	block, err := w.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not query block with given height")
 	}
@@ -61,7 +61,7 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	block, err := w.client.BlockByNumber(ctx, height)
+	block, err := w.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not query block with given height")
 	}
@@ -76,7 +76,7 @@ func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := w.client.BlockByNumber(ctx, nil)
+	head, err := w.blockFetcher.BlockByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (
 		}
 
 		if !exists {
-			blk, err := w.client.BlockByNumber(ctx, bn)
+			blk, err := w.blockFetcher.BlockByNumber(ctx, bn)
 			if err != nil {
 				return nil, err
 			}
