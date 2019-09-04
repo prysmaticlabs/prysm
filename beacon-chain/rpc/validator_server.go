@@ -33,7 +33,7 @@ type ValidatorServer struct {
 	beaconDB           db.Database
 	chainService       interface{}
 	canonicalStateChan chan *pbp2p.BeaconState
-	powChainService    powChainService
+	blockFetcher       powchain.POWBlockFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
 	depositCache       *depositcache.DepositCache
 }
@@ -282,7 +282,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 		headState = vs.chainService.(blockchain.HeadRetriever).HeadState()
 	}
 
-	chainStarted := vs.powChainService.HasChainStarted()
+	chainStarted := vs.chainStartFetcher.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, headState), nil
@@ -293,7 +293,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	chainStarted := vs.powChainService.HasChainStarted()
+	chainStarted := vs.chainStartFetcher.HasChainStarted()
 	if !chainStarted {
 		return false, nil, nil
 	}
@@ -487,7 +487,7 @@ func (vs *ValidatorServer) lookupValidatorStatus(validatorIdx uint64, beaconStat
 
 func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,
 	eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
-	blockTimeStamp, err := vs.powChainService.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
+	blockTimeStamp, err := vs.blockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
 	}
@@ -511,7 +511,7 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 
 func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 	pubkeys := make(map[[96]byte]bool)
-	deposits := vs.powChainService.ChainStartDeposits()
+	deposits := vs.chainStartFetcher.ChainStartDeposits()
 	for _, dep := range deposits {
 		pubkeys[bytesutil.ToBytes96(dep.Data.PublicKey)] = true
 	}
