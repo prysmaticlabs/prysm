@@ -17,8 +17,11 @@ import (
 	"net"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -41,35 +44,55 @@ func main() {
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-
-	privKey := extractPrivateKey()
-	listener := createListener(*externalIP, *port, privKey)
+	cfg := discover.Config{
+		PrivateKey: extractPrivateKey(),
+	}
+	listener := createListener(*externalIP, *port, cfg)
 
 	node := listener.Self()
-	log.Infof("Running bootnode, url: %s", node.String())
+	log.Infof("Running bootnode: %s", node.String())
 
 	select {}
 }
 
-func createListener(ipAddr string, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP(ipAddr),
+		IP:   ip,
 		Port: port,
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	network, err := discv5.ListenUDP(privKey, conn, "", nil)
+	network, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return network
+}
+
+func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
+	db, err := enode.OpenDB("")
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not open node's peer database")
+	}
+
+	localNode := enode.NewLocalNode(db, privKey)
+	ipEntry := enr.IP(ipAddr)
+	udpEntry := enr.UDP(port)
+	localNode.Set(ipEntry)
+	localNode.Set(udpEntry)
+
+	return localNode, nil
 }
 
 func extractPrivateKey() *ecdsa.PrivateKey {
