@@ -10,7 +10,7 @@ import (
 )
 
 func TestGenerateGenesisState(t *testing.T) {
-	numValidators := 191
+	numValidators := 64
 	privKeys, pubKeys, err := deterministicallyGenerateKeys(numValidators)
 	if err != nil {
 		t.Fatal(err)

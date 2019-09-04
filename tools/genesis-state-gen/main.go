@@ -120,7 +120,7 @@ func main() {
 func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
 	privKeys := make([]*bls.SecretKey, n)
 	pubKeys := make([]*bls.PublicKey, n)
-	for i := 190; i < n; i++ {
+	for i := 0; i < n; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
 		hash := hashutil.Hash(enc)
