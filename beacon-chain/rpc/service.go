@@ -4,11 +4,9 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -19,13 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -45,29 +43,13 @@ type operationService interface {
 	IncomingAttFeed() *event.Feed
 }
 
-type powChainService interface {
-	HasChainStarted() bool
-	ETH2GenesisTime() (uint64, *big.Int)
-	ChainStartFeed() *event.Feed
-	LatestBlockHeight() *big.Int
-	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
-	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
-	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
-	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
-	DepositRoot() [32]byte
-	DepositTrie() *trieutil.MerkleTrie
-	ChainStartDepositHashes() ([][]byte, error)
-	ChainStartDeposits() []*ethpb.Deposit
-	ChainStartETH1Data() *ethpb.Eth1Data
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
 	chainService        interface{}
-	powChainService     powChainService
+	powChainService     powchain.POWChain
 	operationService    operationService
 	syncService         sync.Checker
 	port                string
@@ -89,7 +71,7 @@ type Config struct {
 	KeyFlag          string
 	BeaconDB         db.Database
 	ChainService     interface{}
-	POWChainService  powChainService
+	POWChainService  powchain.POWChain
 	OperationService operationService
 	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
@@ -156,7 +138,6 @@ func (s *Service) Start() {
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
-		powChainService:     s.powChainService,
 		chainService:        s.chainService.(stateFeedListener),
 		genesisRetriever:    s.chainService.(blockchain.GenesisRetriever),
 		operationService:    s.operationService,
@@ -167,7 +148,6 @@ func (s *Service) Start() {
 	proposerServer := &ProposerServer{
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
-		powChainService:    s.powChainService,
 		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
 		depositCache:       s.depositCache,
@@ -184,7 +164,6 @@ func (s *Service) Start() {
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
-		powChainService:    s.powChainService,
 		depositCache:       s.depositCache,
 	}
 	nodeServer := &NodeServer{

@@ -54,6 +54,10 @@ type ChainStartFetcher interface {
 	HasChainStarted() bool
 }
 
+type POWChainInfoFetcher interface {
+	Eth2GenesisPowchainInfo() (uint64, *big.Int)
+}
+
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
@@ -67,6 +71,14 @@ type POWBlockFetcher interface {
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+}
+
+// POWChain --
+type POWChain interface {
+	ChainStartFetcher
+	POWChainInfoFetcher
+	POWBlockFetcher
 }
 
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required

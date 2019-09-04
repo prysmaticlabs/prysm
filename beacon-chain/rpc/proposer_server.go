@@ -33,6 +33,7 @@ type ProposerServer struct {
 	beaconDB           db.Database
 	chainService       interface{}
 	chainStartFetcher  powchain.ChainStartFetcher
+	genesisRetriever   powchain.POWChainInfoFetcher
 	eth1BlockFetcher   powchain.POWBlockFetcher
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
@@ -302,7 +303,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, err
 	}
 
-	_, genesisEth1Block := ps.genesisRetriever.Eth1GenesisPowchainInfo()
+	_, genesisEth1Block := ps.genesisRetriever.Eth2GenesisPowchainInfo()
 	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
