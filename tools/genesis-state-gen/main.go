@@ -2,14 +2,16 @@ package main
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
 	"math/big"
+	"os"
 
 	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -33,6 +35,7 @@ var (
 	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile     = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
+	mockEth1BlockHash  = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
 
 func main() {
@@ -50,48 +53,26 @@ func main() {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
 	privKeys, pubKeys := deterministicallyGenerateKeys(*numValidators)
-	hashes := make([][]byte, len(privKeys))
-	dataList := make([]*ethpb.Deposit_Data, len(privKeys))
-	for i := 0; i < len(dataList); i++ {
-		data, err := createDepositData(privKeys[i], pubKeys[i])
-		if err != nil {
-			panic(err)
-		}
-		hash, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			panic(err)
-		}
-		hashes[i] = hash[:]
-		dataList[i] = data
+	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
+	if err != nil {
+		panic(err)
 	}
 	trie, err := trieutil.GenerateTrieFromItems(
-		hashes,
+		depositDataRoots,
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
 		panic(err)
 	}
-	deposits := make([]*ethpb.Deposit, len(dataList))
-	for i, item := range dataList {
-		proof, err := trie.MerkleProof(i)
-		if err != nil {
-			panic(err)
-		}
-		deposits[i] = &ethpb.Deposit{
-			Proof: proof,
-			Data:  item,
-		}
-	}
-	root := trie.Root()
-	// Mock eth1 data for the beacon state.
-	blockHash, err := hex.DecodeString("4242424242424242424242424242424242424242424242424242424242424242")
+	deposits, err := generateDepositsFromData(depositDataItems, trie)
 	if err != nil {
 		panic(err)
 	}
+	root := trie.Root()
 	genesisState, err := state.GenesisBeaconState(deposits, *genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
-		BlockHash:    blockHash,
+		BlockHash:    mockEth1BlockHash,
 	})
 	if err != nil {
 		panic(err)
@@ -101,6 +82,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		f, _ := os.Open(*sszOutputFile)
 		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
 			panic(err)
 		}
@@ -157,6 +139,39 @@ func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey) {
 		pubKeys[i] = priv.PublicKey()
 	}
 	return privKeys, pubKeys
+}
+
+func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+	deposits := make([]*ethpb.Deposit, len(depositDataItems))
+	for i, item := range depositDataItems {
+		proof, err := trie.MerkleProof(i)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not generate proof for deposit %d", i)
+		}
+		deposits[i] = &ethpb.Deposit{
+			Proof: proof,
+			Data:  item,
+		}
+	}
+	return deposits, nil
+}
+
+func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
+	dataRoots := make([][]byte, len(privKeys))
+	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+	for i := 0; i < len(privKeys); i++ {
+		data, err := createDepositData(privKeys[i], pubKeys[i])
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not create deposit data for key: %#x", privKeys[i])
+		}
+		hash, err := ssz.HashTreeRoot(data)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not hash tree root deposit data item")
+		}
+		dataRoots[i] = hash[:]
+		depositDataItems[i] = data
+	}
+	return depositDataItems, dataRoots, nil
 }
 
 func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.Deposit_Data, error) {
