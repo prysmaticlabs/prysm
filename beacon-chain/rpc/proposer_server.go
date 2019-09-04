@@ -302,7 +302,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, err
 	}
 
-	_, genesisEth1Block := ps.powChainService.ETH2GenesisTime()
+	_, genesisEth1Block := ps.genesisRetriever.Eth1GenesisPowchainInfo()
 	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
