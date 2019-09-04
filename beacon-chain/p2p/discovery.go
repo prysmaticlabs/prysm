@@ -64,9 +64,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IP(ipAddr)
+	ipEntry := enr.IPv4(ipAddr)
 	udpEntry := enr.UDP(port)
 	localNode.Set(ipEntry)
+	localNode.SetStaticIP(ipAddr)
 	localNode.Set(udpEntry)
 
 	return localNode, nil
