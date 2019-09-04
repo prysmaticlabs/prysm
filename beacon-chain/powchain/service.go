@@ -59,6 +59,7 @@ type ChainStartFetcher interface {
 	HasChainStarted() bool
 }
 
+// ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 }
