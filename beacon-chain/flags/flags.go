@@ -53,4 +53,9 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+	// NoPowChainFlag disables the eth1 proof-of-work chain and replaces its uses in the beacon chain with mocks.
+	NoPowChainFlag = cli.BoolFlag{
+		Name:  "no-powchain",
+		Usage: "Run the beacon chain without an eth1 proof-of-work chain connection, (eth1 votes and block hashes will be mocked).",
+	}
 )
