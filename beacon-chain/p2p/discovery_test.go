@@ -15,6 +15,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var discoveryWaitTime = 1 * time.Second
+
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {
@@ -75,7 +77,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	}
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
-	time.Sleep(1 * time.Second)
+	time.Sleep(discoveryWaitTime)
 
 	lastListener := listeners[len(listeners)-1]
 	nodes := lastListener.Lookup(bootNode.ID())
@@ -104,7 +106,6 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 
 func TestMultiAddrConversion_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	_ = 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	listener := createListener(ipAddr, pkey, &Config{})
 
