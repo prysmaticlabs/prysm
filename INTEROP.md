@@ -1,6 +1,6 @@
 # Prysm Client Interoperability Guide
 
-This README details how to setup Prysm  for interop testing for usage with other Ethereum 2.0 clients.
+This README details how to setup Prysm for interop testing for usage with other Ethereum 2.0 clients.
 
 ## Installation & Setup
 
@@ -10,9 +10,9 @@ This README details how to setup Prysm  for interop testing for usage with other
 
 Prysm supports a few ways to quickly launch a beacon node from basic configurations:
 
-- [`Yaml Genesis`](#yaml-genesis): Launches a beacon node from a .yaml file specifying a genesis beacon state **(recommended)**
-- [`SSZ Genesis`](#ssz-genesis): Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state
-- [`JSON Genesis`](#json-genesis): Launches a beacon node  from a .json file specifying a genesis beacon state
+- `Yaml Genesis`: Launches a beacon node from a .yaml file specifying a genesis beacon state **(recommended)**
+- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state
+- `JSON Genesis`: Launches a beacon node  from a .json file specifying a genesis beacon state
 
 ## Generating a Genesis State
 
@@ -40,3 +40,4 @@ bazel run //tools/genesis-state-gen -- --output-yaml ~/Desktop/genesis.yaml --nu
 
 ## Launching a Beacon Node + Validator Client
 
+TODO: Add section after incorporating the mock start functionality into the beacon chain and validator bazel binaries.
