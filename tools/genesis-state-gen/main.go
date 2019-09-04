@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -135,7 +134,6 @@ func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, e
 			return nil, nil, errors.New("could not set bls curve order as big int")
 		}
 		num = num.Mod(num, order)
-		fmt.Printf("Iteration %d, %s, length(num) = %d\n", i, num.String(), len(num.String()))
 		priv, err := bls.SecretKeyFromBytes(num.Bytes())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")
