@@ -270,7 +270,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.depositCache.AllDeposits(w.ctx, nil)
+	deposits := w.depositCache.AllDeposits(context.TODO(), nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -327,7 +327,7 @@ func (w *Web3Service) handleDelayTicker() {
 	if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 		return
 	}
-	if err := w.requestBatchedLogs(); err != nil {
+	if err := w.requestBatchedLogs(context.Background()); err != nil {
 		w.runError = err
 		log.Error(err)
 	}
@@ -349,7 +349,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	header, err := w.blockFetcher.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 		w.runError = err
@@ -359,7 +359,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
-	if err := w.processPastLogs(); err != nil {
+	if err := w.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
 		w.runError = err
 		return
