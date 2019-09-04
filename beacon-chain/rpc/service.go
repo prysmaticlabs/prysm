@@ -50,6 +50,7 @@ type Service struct {
 	beaconDB            db.Database
 	chainService        interface{}
 	powChainService     powchain.POWChain
+	mockPOWChain        bool
 	operationService    operationService
 	syncService         sync.Checker
 	port                string
@@ -72,6 +73,7 @@ type Config struct {
 	BeaconDB         db.Database
 	ChainService     interface{}
 	POWChainService  powchain.POWChain
+	MockPOWChain     bool
 	OperationService operationService
 	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
@@ -89,6 +91,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		p2p:                 cfg.Broadcaster,
 		chainService:        cfg.ChainService,
 		powChainService:     cfg.POWChainService,
+		mockPOWChain:        cfg.MockPOWChain,
 		operationService:    cfg.OperationService,
 		syncService:         cfg.SyncService,
 		port:                cfg.Port,
@@ -148,6 +151,7 @@ func (s *Service) Start() {
 	proposerServer := &ProposerServer{
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
+		mockPowChain:       s.mockPOWChain,
 		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
 		depositCache:       s.depositCache,

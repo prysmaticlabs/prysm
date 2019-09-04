@@ -21,6 +21,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var _ = POWChain(&Web3Service{})
+
 type badReader struct{}
 
 func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
