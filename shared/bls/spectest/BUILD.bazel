@@ -27,7 +27,10 @@ go_test(
         "priv_to_pub_test.go",
         "sign_message_test.go",
     ],
-    data = ["@eth2_spec_tests//:test_data"],
+    data = [
+        "@eth2_spec_tests_mainnet//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
+    ],
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [

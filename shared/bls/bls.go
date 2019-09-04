@@ -78,7 +78,7 @@ func (s *SecretKey) PublicKey() *PublicKey {
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
 	return &Signature{val: sig}
 }
@@ -105,7 +105,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
@@ -121,7 +121,7 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 		keys = append(keys, v.val)
 	}
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return s.val.VerifyAggregateWithDomain(keys, msg, bytesutil.ToBytes8(b))
 }
 
@@ -137,7 +137,7 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 		keys = append(keys, v.val)
 	}
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
 }
 
