@@ -29,7 +29,7 @@ type stateFeedListener interface {
 type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
-	powChainService     powchain.ChainStartFetcher
+	chainStartFetcher   powchain.ChainStartFetcher
 	genesisRetriever    blockchain.GenesisRetriever
 	chainService        stateFeedListener
 	operationService    operationService
@@ -43,7 +43,7 @@ type BeaconServer struct {
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
-	ok := bs.powChainService.HasChainStarted()
+	ok := bs.chainStartFetcher.HasChainStarted()
 	if ok {
 		genesisTime := bs.genesisRetriever.GenesisTime()
 		res := &pb.ChainStartResponse{

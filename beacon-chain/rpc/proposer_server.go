@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -31,7 +32,8 @@ import (
 type ProposerServer struct {
 	beaconDB           db.Database
 	chainService       interface{}
-	powChainService    powChainService
+	chainStartFetcher  powchain.ChainStartFetcher
+	eth1BlockFetcher   powchain.POWBlockFetcher
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
 	depositCache       *depositcache.DepositCache
@@ -243,7 +245,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
-	blockNumber, err := ps.powChainService.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
+	blockNumber, err := ps.eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +369,7 @@ func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pb
 		canonicalEth1Data = beaconState.Eth1Data
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
 	}
-	_, latestEth1DataHeight, err := ps.powChainService.BlockExists(ctx, eth1BlockHash)
+	_, latestEth1DataHeight, err := ps.eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
@@ -381,14 +383,14 @@ func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pb
 func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := ps.powChainService.BlockHashByHeight(ctx, ancestorHeight)
+	blockHash, err := ps.eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	depositsTillHeight, depositRoot := ps.depositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
-		return ps.powChainService.ChainStartETH1Data(), nil
+		return ps.chainStartFetcher.ChainStartEth1Data(), nil
 	}
 	return &ethpb.Eth1Data{
 		DepositRoot:  depositRoot[:],

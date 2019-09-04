@@ -65,6 +65,7 @@ type POWBlockFetcher interface {
 	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
+	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
 }
 
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
