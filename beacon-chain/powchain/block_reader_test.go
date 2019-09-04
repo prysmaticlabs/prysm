@@ -29,6 +29,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BlockFetcher:    &goodFetcher{},
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},

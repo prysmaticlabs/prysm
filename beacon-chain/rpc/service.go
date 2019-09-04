@@ -11,7 +11,6 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -143,7 +142,7 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		chainStartFetcher:   s.powChainService,
 		chainService:        s.chainService.(stateFeedListener),
-		genesisRetriever:    s.chainService.(blockchain.GenesisRetriever),
+		eth1InfoRetriever:   s.powChainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,

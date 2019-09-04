@@ -378,7 +378,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	header, err := w.client.HeaderByNumber(context.Background(), nil)
+	header, err := w.blockFetcher.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 		w.runError = err

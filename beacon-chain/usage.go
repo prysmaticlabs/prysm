@@ -75,6 +75,7 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.NoCustomConfigFlag,
+			flags.MockEth1DataVotesFlag,
 			flags.DepositContractFlag,
 			flags.Web3ProviderFlag,
 			flags.RPCPort,

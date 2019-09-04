@@ -30,7 +30,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
-	genesisRetriever    blockchain.GenesisRetriever
+	eth1InfoRetriever   powchain.POWChainInfoFetcher
 	chainService        stateFeedListener
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
@@ -45,10 +45,10 @@ type BeaconServer struct {
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
 	ok := bs.chainStartFetcher.HasChainStarted()
 	if ok {
-		genesisTime := bs.genesisRetriever.GenesisTime()
+		genesisTime, _ := bs.eth1InfoRetriever.Eth2GenesisPowchainInfo()
 		res := &pb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: uint64(genesisTime.Unix()),
+			GenesisTime: genesisTime,
 		}
 		return stream.Send(res)
 	}
