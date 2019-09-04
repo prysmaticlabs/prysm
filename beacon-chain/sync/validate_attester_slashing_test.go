@@ -98,7 +98,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 		chain: &mock.ChainService{State: s},
 	}
 
-	if !r.validateAttesterSlashing(ctx, slashing, p2p) {
+	if !r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
 		t.Error("Failed validation")
 	}
 
@@ -109,11 +109,31 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r.validateAttesterSlashing(ctx, slashing, p2p) {
+	if r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
 		t.Error("Passed validation when should have failed")
 	}
 
 	if p2p.BroadcastCalled {
 		t.Error("broadcast was called when it should not have been called")
+	}
+}
+
+func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+
+	r := &RegularSync{
+		p2p:   p2p,
+		chain: &mock.ChainService{State: s},
+	}
+
+	if r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/) {
+		t.Error("Passed validation")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
 	}
 }

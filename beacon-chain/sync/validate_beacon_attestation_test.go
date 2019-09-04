@@ -39,7 +39,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 		},
 	}
 
-	if !rs.validateBeaconAttestation(ctx, msg, p) {
+	if !rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
 		t.Error("Beacon attestation failed validation")
 	}
 
@@ -49,7 +49,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 
 	// It should ignore duplicate identical attestations.
 	p.BroadcastCalled = false
-	if rs.validateBeaconAttestation(ctx, msg, p) {
+	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
 		t.Error("Second identical beacon attestation passed validation when it should not have")
 	}
 	if p.BroadcastCalled {
@@ -73,10 +73,47 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 		},
 	}
 
-	if rs.validateBeaconAttestation(ctx, msg, p) {
+	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
 		t.Error("Invalid beacon attestation passed validation when it should not have")
 	}
 	if p.BroadcastCalled {
 		t.Error("Invalid beacon attestation was broadcast")
+	}
+}
+
+func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	rs := &RegularSync{
+		db: db,
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 55,
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: blockRoot[:],
+		},
+	}
+
+	if rs.validateBeaconAttestation(ctx, msg, p, true /*fromSelf*/) {
+		t.Error("Beacon attestation passed validation")
+	}
+
+	if p.BroadcastCalled {
+		t.Error("Message was broadcast")
 	}
 }
