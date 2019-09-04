@@ -15,7 +15,7 @@ func (m *MockPOWChain) HasChainStarted() bool {
 }
 
 func (m *MockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return 0
+	return nil
 }
 
 func (m *MockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
