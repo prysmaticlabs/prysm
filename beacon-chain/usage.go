@@ -83,6 +83,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDBCleanup,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
+			flags.GenesisState,
 		},
 	},
 	{

@@ -10,6 +10,7 @@ go_library(
         "doc.go",
         "gossip_topic_mappings.go",
         "handshake.go",
+        "info.go",
         "interfaces.go",
         "log.go",
         "monitoring.go",

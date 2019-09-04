@@ -1,6 +1,7 @@
 package powchain
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -34,19 +35,19 @@ func (w *Web3Service) ETH2GenesisTime() (uint64, *big.Int) {
 
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
-func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
+func (w *Web3Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) error {
 	w.processingLock.RLock()
 	defer w.processingLock.RUnlock()
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
-		if err := w.ProcessDepositLog(depositLog); err != nil {
+		if err := w.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
 		if !w.chainStarted {
 			if depositLog.BlockHash == [32]byte{} {
 				return errors.New("got empty blockhash from powchain service")
 			}
-			blk, err := w.blockFetcher.BlockByHash(w.ctx, depositLog.BlockHash)
+			blk, err := w.blockFetcher.BlockByHash(ctx, depositLog.BlockHash)
 			if err != nil {
 				return errors.Wrap(err, "could not get eth1 block")
 			}
@@ -69,7 +70,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) error {
 // ProcessDepositLog processes the log which had been received from
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
-func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
+func (w *Web3Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		return errors.Wrap(err, "Could not unpack log")
@@ -85,7 +86,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 
 	if int64(index) != w.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		if err := w.requestMissingLogs(depositLog.BlockNumber, int64(index-1)); err != nil {
+		if err := w.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
 			return errors.Wrap(err, "Could not get correct merkle index")
 		}
 	}
@@ -123,16 +124,16 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted && validData {
 		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
-		if w.depositCache.PubkeyInChainstart(w.ctx, pubkey) {
+		if w.depositCache.PubkeyInChainstart(ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
 		} else {
-			w.depositCache.MarkPubkeyForChainstart(w.ctx, pubkey)
+			w.depositCache.MarkPubkeyForChainstart(ctx, pubkey)
 		}
 
 	}
 
 	// We always store all historical deposits in the DB.
-	w.depositCache.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
+	w.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
@@ -146,7 +147,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) error {
 			validData = false
 		}
 	} else {
-		w.depositCache.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
+		w.depositCache.InsertPendingDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), w.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -220,32 +221,32 @@ func (w *Web3Service) setGenesisTime(timeStamp uint64) {
 
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
-func (w *Web3Service) processPastLogs() error {
+func (w *Web3Service) processPastLogs(ctx context.Context) error {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
 		},
 	}
 
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		return err
 	}
 
 	for _, log := range logs {
-		if err := w.ProcessLog(log); err != nil {
+		if err := w.ProcessLog(ctx, log); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
 
-	currentState, err := w.beaconDB.HeadState(w.ctx)
+	currentState, err := w.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex > 0 {
-		w.depositCache.PrunePendingDeposits(w.ctx, int(currentState.Eth1DepositIndex))
+		w.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex))
 	}
 
 	return nil
@@ -253,7 +254,7 @@ func (w *Web3Service) processPastLogs() error {
 
 // requestBatchedLogs requests and processes all the logs from the period
 // last polled to now.
-func (w *Web3Service) requestBatchedLogs() error {
+func (w *Web3Service) requestBatchedLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
 	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
@@ -264,7 +265,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 		FromBlock: w.lastRequestedBlock.Add(w.lastRequestedBlock, big.NewInt(1)),
 		ToBlock:   requestedBlock,
 	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
 		for _, log := range logs {
-			if err := w.ProcessLog(log); err != nil {
+			if err := w.ProcessLog(ctx, log); err != nil {
 				return errors.Wrap(err, "could not process log")
 			}
 		}
@@ -284,7 +285,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
-func (w *Web3Service) requestMissingLogs(blkNumber uint64, wantedIndex int64) error {
+func (w *Web3Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
 	query := ethereum.FilterQuery{
@@ -294,7 +295,7 @@ func (w *Web3Service) requestMissingLogs(blkNumber uint64, wantedIndex int64) er
 		FromBlock: big.NewInt(0).Add(w.lastRequestedBlock, big.NewInt(1)),
 		ToBlock:   beforeCurrentBlk,
 	}
-	logs, err := w.httpLogger.FilterLogs(w.ctx, query)
+	logs, err := w.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -302,7 +303,7 @@ func (w *Web3Service) requestMissingLogs(blkNumber uint64, wantedIndex int64) er
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
 		for _, log := range logs {
-			if err := w.ProcessLog(log); err != nil {
+			if err := w.ProcessLog(ctx, log); err != nil {
 				return errors.Wrap(err, "could not process log")
 			}
 		}

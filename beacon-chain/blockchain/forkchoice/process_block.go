@@ -113,15 +113,17 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 	}
 
-	// Epoch boundary bookkeeping such as logging epoch summaries
-	// and saving newly activated validator indices in db.
+	// Update validator indices in database as needed.
+	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
+		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+
+	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
-		if err := s.saveNewValidator(ctx, preStateValidatorCount, postState); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
-		}
 		logEpochData(postState)
 		reportStateMetrics(postState)
 	}
+
 	return nil
 }
 
@@ -165,8 +167,9 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// saveNewValidator saves newly added validator index from state to db.
-func (s *Store) saveNewValidator(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
+// saveNewValidators saves newly added validator index from state to db. Does nothing if validator count has not
+// changed.
+func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
 	postStateValidatorCount := len(postState.Validators)
 	if preStateValidatorCount != postStateValidatorCount {
 		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
