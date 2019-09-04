@@ -10,7 +10,10 @@ import (
 )
 
 func TestGenerateGenesisState(t *testing.T) {
-	privKeys, pubKeys := deterministicallyGenerateKeys(10)
+	privKeys, pubKeys, err := deterministicallyGenerateKeys(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
 		t.Fatal(err)
