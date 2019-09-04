@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
-	"os"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -81,7 +80,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		f, _ := os.Open(*sszOutputFile)
 		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
 			panic(err)
 		}
