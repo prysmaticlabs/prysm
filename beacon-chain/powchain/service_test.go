@@ -21,6 +21,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var _ = ChainStartFetcher(&Web3Service{})
+var _ = POWChainInfoFetcher(&Web3Service{})
+var _ = POWBlockFetcher(&Web3Service{})
 var _ = POWChain(&Web3Service{})
 
 type badReader struct{}

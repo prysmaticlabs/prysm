@@ -65,9 +65,6 @@ type POWChainInfoFetcher interface {
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
-	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
@@ -85,7 +82,9 @@ type POWChain interface {
 // by the beacon chain node.
 type Client interface {
 	Reader
-	POWBlockFetcher
+	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 	bind.ContractFilterer
 	bind.ContractCaller
 }
@@ -225,8 +224,8 @@ func (w *Web3Service) ChainStartDeposits() []*ethpb.Deposit {
 	return w.chainStartDeposits
 }
 
-// ChainStartETH1Data returns the eth1 data at chainstart.
-func (w *Web3Service) ChainStartETH1Data() *ethpb.Eth1Data {
+// ChainStartEth1Data returns the eth1 data at chainstart.
+func (w *Web3Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return w.chainStartETH1Data
 }
 
