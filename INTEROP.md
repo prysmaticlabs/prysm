@@ -6,6 +6,7 @@ This README details how to setup Prysm for interop testing for usage with other 
 
 
 1. Install Bazel
+2. TODO: Add more detailed steps
 
 ## Starting from Genesis
 
