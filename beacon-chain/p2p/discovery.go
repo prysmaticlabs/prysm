@@ -64,10 +64,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IPv4(ipAddr)
+	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(port)
 	localNode.Set(ipEntry)
-	localNode.SetStaticIP(ipAddr)
 	localNode.Set(udpEntry)
 
 	return localNode, nil
@@ -76,7 +75,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
 	node := listener.Self()
-	log.Infof("Started Discovery: %s", node.String())
+	log.Infof("Started Discovery: %s", node.ID())
 	return listener, nil
 }
 
@@ -104,7 +103,7 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP(), id)
+	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.UDP(), id)
 	multiAddr, err := ma.NewMultiaddr(multiAddrString)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get multiaddr")

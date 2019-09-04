@@ -163,7 +163,7 @@ func TestListenForNewNodes(t *testing.T) {
 	s.Start()
 	defer s.Stop()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
