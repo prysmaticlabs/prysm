@@ -32,7 +32,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
-		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        beaconDB,
 	})
@@ -87,8 +86,8 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
+		Endpoint: endpoint,
+		Client:   &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

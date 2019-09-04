@@ -82,11 +82,17 @@ type POWChain interface {
 // by the beacon chain node.
 type Client interface {
 	Reader
+	RPCBlockFetcher
+	bind.ContractFilterer
+	bind.ContractCaller
+}
+
+// RPCBlockFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
+// fetching block information.
+type RPCBlockFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
-	bind.ContractFilterer
-	bind.ContractCaller
 }
 
 // Web3Service fetches important information about the canonical
@@ -106,6 +112,7 @@ type Web3Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
+	blockFetcher            RPCBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
@@ -137,7 +144,7 @@ type Web3ServiceConfig struct {
 	Reader          Reader
 	Logger          bind.ContractFilterer
 	HTTPLogger      bind.ContractFilterer
-	BlockFetcher    POWBlockFetcher
+	BlockFetcher    RPCBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
@@ -179,6 +186,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		reader:                  config.Reader,
 		logger:                  config.Logger,
 		httpLogger:              config.HTTPLogger,
+		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
