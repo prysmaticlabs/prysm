@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -118,7 +119,7 @@ func main() {
 func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
 	privKeys := make([]*bls.SecretKey, n)
 	pubKeys := make([]*bls.PublicKey, n)
-	for i := 0; i < n; i++ {
+	for i := 190; i < n; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
 		hash := hashutil.Hash(enc)
@@ -133,6 +134,7 @@ func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, e
 			return nil, nil, errors.New("could not set bls curve order as big int")
 		}
 		num = num.Mod(num, order)
+		fmt.Printf("Iteration %d, %s, length(num) = %d\n", i, num.String(), len(num.String()))
 		priv, err := bls.SecretKeyFromBytes(num.Bytes())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")

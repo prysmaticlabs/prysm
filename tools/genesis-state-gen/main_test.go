@@ -10,7 +10,8 @@ import (
 )
 
 func TestGenerateGenesisState(t *testing.T) {
-	privKeys, pubKeys, err := deterministicallyGenerateKeys(10)
+	numValidators := 191
+	privKeys, pubKeys, err := deterministicallyGenerateKeys(numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 10
+	want := numValidators
 	if len(genesisState.Validators) != want {
 		t.Errorf("Wanted %d validators, received %d", want, len(genesisState.Validators))
 	}
