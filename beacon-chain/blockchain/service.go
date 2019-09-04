@@ -120,6 +120,7 @@ func (c *ChainService) Start() {
 		}
 		c.stateInitializedFeed.Send(c.genesisTime)
 	} else if c.preloadStatePath != "" {
+		log.Infof("Loading generated genesis state from %v", c.preloadStatePath)
 		s, err := ioutil.ReadFile(c.preloadStatePath)
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
