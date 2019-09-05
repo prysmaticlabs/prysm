@@ -13,7 +13,7 @@ import (
 
 const latestSlotCount = 10
 
-// InfoHandler is a handler to serve /heads page in metrics.
+// HeadsHandler is a handler to serve /heads page in metrics.
 func (c *ChainService) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 	buf := new(bytes.Buffer)
 
