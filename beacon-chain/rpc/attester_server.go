@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
@@ -50,6 +51,12 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
 // with a blank signature field, which the validator will then sign.
 func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
+	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("slot", int64(req.Slot)),
+		trace.Int64Attribute("shard", int64(req.Shard)),
+	)
 	res, err := as.cache.Get(ctx, req)
 	if err != nil {
 		return nil, err

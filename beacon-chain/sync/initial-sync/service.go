@@ -46,6 +46,7 @@ type InitialSync struct {
 	chain        blockchainService
 	p2p          p2p.P2P
 	synced       bool
+	chainStarted bool
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -69,6 +70,7 @@ func (s *InitialSync) Start() {
 	if genesis.After(roughtime.Now()) {
 		time.Sleep(roughtime.Until(genesis))
 	}
+	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch. Not syncing.")
@@ -167,7 +169,7 @@ func (s *InitialSync) Stop() error {
 
 // Status of initial sync.
 func (s *InitialSync) Status() error {
-	if !s.synced {
+	if !s.synced && s.chainStarted {
 		return errors.New("syncing")
 	}
 	return nil

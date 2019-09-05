@@ -188,6 +188,7 @@ func (s *Service) saveOperations() {
 	defer incomingAttSub.Unsubscribe()
 
 	for {
+		ctx := context.TODO()
 		select {
 		case <-incomingSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
@@ -197,9 +198,9 @@ func (s *Service) saveOperations() {
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
-			handler.SafelyHandleMessage(s.ctx, s.HandleValidatorExits, exit)
+			handler.SafelyHandleMessage(ctx, s.HandleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			handler.SafelyHandleMessage(s.ctx, s.HandleAttestation, attestation)
+			handler.SafelyHandleMessage(ctx, s.HandleAttestation, attestation)
 		}
 	}
 }
@@ -292,6 +293,7 @@ func (s *Service) removeOperations() {
 	defer incomingBlockSub.Unsubscribe()
 
 	for {
+		ctx := context.TODO()
 		select {
 		case <-incomingBlockSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
@@ -299,7 +301,7 @@ func (s *Service) removeOperations() {
 			log.Debug("operations service context closed, exiting remove goroutine")
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
-			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
+			handler.SafelyHandleMessage(ctx, s.handleProcessedBlock, block)
 		}
 	}
 }
@@ -311,7 +313,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 	if err := s.removeAttestationsFromPool(ctx, block.Body.Attestations); err != nil {
 		return errors.Wrap(err, "could not remove processed attestations from DB")
 	}
-	state, err := s.beaconDB.HeadState(s.ctx)
+	state, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.New("could not retrieve attestations from DB")
 	}

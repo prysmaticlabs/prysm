@@ -31,6 +31,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 		context.Background(),
 		msg,
 		mock,
+		false, // fromSelf
 	)
 
 	if result {
@@ -61,6 +62,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		context.Background(),
 		msg,
 		mock,
+		false, // fromSelf
 	)
 
 	if result {
@@ -92,6 +94,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 		context.Background(),
 		msg,
 		mock,
+		false, // fromSelf
 	)
 
 	if !result {
@@ -107,6 +110,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 		context.Background(),
 		msg,
 		mock,
+		false, // fromSelf
 	)
 	if result {
 		t.Error("Expected false result, got true")
@@ -137,6 +141,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		context.Background(),
 		msg,
 		mock,
+		false, // fromSelf
 	)
 
 	if !result {
@@ -144,5 +149,37 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	}
 	if !mock.BroadcastCalled {
 		t.Error("Broadcast was not called when it should have been called")
+	}
+}
+
+func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	b := []byte("sk")
+	b32 := bytesutil.ToBytes32(b)
+	sk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := &ethpb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+	}
+
+	mock := &p2ptest.MockBroadcaster{}
+
+	r := &RegularSync{db: db}
+	result := r.validateBeaconBlockPubSub(
+		context.Background(),
+		msg,
+		mock,
+		true, // fromSelf
+	)
+
+	if result {
+		t.Error("Expected false result, got true")
+	}
+	if mock.BroadcastCalled {
+		t.Error("Broadcast was called when it should not have been called")
 	}
 }

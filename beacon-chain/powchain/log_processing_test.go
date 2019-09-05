@@ -74,7 +74,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	web3Service.ProcessLog(logs[0])
+	web3Service.ProcessLog(context.Background(), logs[0])
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
@@ -150,8 +150,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.chainStarted = true
 
-	web3Service.ProcessDepositLog(logs[0])
-	web3Service.ProcessDepositLog(logs[1])
+	web3Service.ProcessDepositLog(context.Background(), logs[0])
+	web3Service.ProcessDepositLog(context.Background(), logs[1])
 	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 2 deposit, got %+v", pendingDeposits)
@@ -294,7 +294,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	}
 
 	for _, log := range logs {
-		web3Service.ProcessLog(log)
+		web3Service.ProcessLog(context.Background(), log)
 	}
 
 	if web3Service.chainStarted {
@@ -364,7 +364,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	for _, log := range logs {
-		web3Service.ProcessLog(log)
+		web3Service.ProcessLog(context.Background(), log)
 	}
 
 	cachedDeposits := web3Service.ChainStartDeposits()
@@ -439,7 +439,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	logsToBeProcessed := append(logs[:depositsWanted-3], logs[depositsWanted-2:]...)
 	// we purposely miss processing the middle two logs so that the service, re-requests them
 	for _, log := range logsToBeProcessed {
-		if err := web3Service.ProcessLog(log); err != nil {
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
 			t.Fatal(err)
 		}
 		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
