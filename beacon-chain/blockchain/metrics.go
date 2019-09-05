@@ -52,5 +52,5 @@ var (
 func (c *ChainService) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(c.HeadSlot()))
-	beaconHeadRoot.Set(float64(bytesutil.ToLowU64(c.HeadRoot())))
+	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(c.HeadRoot())))
 }

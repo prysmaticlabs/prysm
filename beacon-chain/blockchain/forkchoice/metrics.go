@@ -77,16 +77,16 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	// Last justified slot
 	if state.CurrentJustifiedCheckpoint != nil {
 		beaconCurrentJustifiedEpoch.Set(float64(state.CurrentJustifiedCheckpoint.Epoch))
-		beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowU64(state.CurrentJustifiedCheckpoint.Root)))
+		beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.CurrentJustifiedCheckpoint.Root)))
 	}
 	// Last previous justified slot
 	if state.PreviousJustifiedCheckpoint != nil {
 		beaconPrevJustifiedEpoch.Set(float64(state.PreviousJustifiedCheckpoint.Epoch))
-		beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowU64(state.PreviousJustifiedCheckpoint.Root)))
+		beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint.Root)))
 	}
 	// Last finalized slot
 	if state.FinalizedCheckpoint != nil {
 		beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint.Epoch))
-		beaconFinalizedRoot.Set(float64(bytesutil.ToLowU64(state.FinalizedCheckpoint.Root)))
+		beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint.Root)))
 	}
 }

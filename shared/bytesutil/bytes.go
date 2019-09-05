@@ -143,8 +143,8 @@ func Trunc(x []byte) []byte {
 	return x
 }
 
-// ToLowU64 returns the lowest 8 bytes interpreted as little endian.
-func ToLowU64(x []byte) int64 {
+// ToLowInt64 returns the lowest 8 bytes interpreted as little endian.
+func ToLowInt64(x []byte) int64 {
 	if len(x) > 8 {
 		x = x[:8]
 	}
