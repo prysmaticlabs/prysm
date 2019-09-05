@@ -1,4 +1,4 @@
-package spectest
+package testutil
 
 import (
 	"io/ioutil"
@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -22,8 +21,8 @@ type operation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, e
 
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
-func TestFolders(t *testing.T, config string, operation string) ([]os.FileInfo, string) {
-	testsFolderPath := path.Join("tests", config, "phase0/operations", operation, "pyspec_tests")
+func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
+	testsFolderPath := path.Join("tests", config, folderPath, "pyspec_tests")
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
 		t.Fatal(err)
@@ -31,10 +30,6 @@ func TestFolders(t *testing.T, config string, operation string) ([]os.FileInfo, 
 	testFolders, err := ioutil.ReadDir(filepath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
-	}
-
-	if err := spectest.SetConfig(config); err != nil {
-		t.Fatal(err)
 	}
 
 	return testFolders, testsFolderPath

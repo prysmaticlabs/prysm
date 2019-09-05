@@ -152,6 +152,7 @@ filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
+        "**/meta.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
@@ -167,6 +168,7 @@ filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
+        "**/meta.yaml",
     ]),
     visibility = ["//visibility:public"],
 )

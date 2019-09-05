@@ -13,33 +13,38 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runBlockHeaderTest(t *testing.T, config string) {
-	testFolders, testsFolderPath := TestFolders(t, config, "block_header")
+	if err := spectest.SetConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/operations/block_header")
 
 	for _, folder := range testFolders {
-		blockFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "block.ssz")
-		if err != nil {
-			t.Fatal(err)
-		}
-		block := &ethpb.BeaconBlock{}
-		if err := ssz.Unmarshal(blockFile, block); err != nil {
-			t.Fatalf("Failed to unmarshal: %v", err)
-		}
-
-		preBeaconStateFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
-		if err != nil {
-			t.Fatal(err)
-		}
-		beaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(preBeaconStateFile, beaconState); err != nil {
-			t.Fatalf("Failed to unmarshal: %v", err)
-		}
-
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearAllCaches()
+			blockFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "block.ssz")
+			if err != nil {
+				t.Fatal(err)
+			}
+			block := &ethpb.BeaconBlock{}
+			if err := ssz.Unmarshal(blockFile, block); err != nil {
+				t.Fatalf("Failed to unmarshal: %v", err)
+			}
+
+			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			if err != nil {
+				t.Fatal(err)
+			}
+			preBeaconState := &pb.BeaconState{}
+			if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+				t.Fatalf("Failed to unmarshal: %v", err)
+			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
 			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz"))
@@ -50,7 +55,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 
-			beaconState, err := blocks.ProcessBlockHeader(beaconState, block)
+			beaconState, err := blocks.ProcessBlockHeader(preBeaconState, block)
 			if postSSZExists {
 				if err != nil {
 					t.Fatalf("Unexpected error: %v", err)
