@@ -35,7 +35,7 @@ func runDepositTest(t *testing.T, config string) {
 
 			postStatePath := path.Join(testsFolderPath, folder.Name(), "post.ssz")
 			body := &ethpb.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
-			RunBlockOperationTest(t, preBeaconState, body, postStatePath, blocks.ProcessAttesterSlashings)
+			RunBlockOperationTest(t, preBeaconState, body, postStatePath, blocks.ProcessDeposits)
 		})
 	}
 }

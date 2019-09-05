@@ -23,7 +23,7 @@ type operation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, e
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
 func TestFolders(t *testing.T, config string, operation string) ([]os.FileInfo, string) {
-	testsFolderPath := path.Join("tests", config, "phase0", operation, "/pyspec_tests")
+	testsFolderPath := path.Join("tests", config, "phase0/operations", operation, "pyspec_tests")
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
 		t.Fatal(err)
