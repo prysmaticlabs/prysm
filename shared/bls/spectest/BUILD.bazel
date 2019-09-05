@@ -28,8 +28,7 @@ go_test(
         "sign_message_test.go",
     ],
     data = [
-        "@eth2_spec_tests_mainnet//:test_data",
-        "@eth2_spec_tests_minimal//:test_data",
+        "@eth2_spec_tests_general//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],

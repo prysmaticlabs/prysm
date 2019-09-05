@@ -2,7 +2,6 @@ package spectest
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -10,7 +9,7 @@ import (
 )
 
 func TestAggregatePubkeysYaml(t *testing.T) {
-	file, err := loadBlsYaml("aggregate_pubkeys/aggregate_pubkeys.yaml")
+	file, err := loadBlsYaml("aggregate_pubkeys/small/agg_pub_keys/data.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
@@ -20,24 +19,20 @@ func TestAggregatePubkeysYaml(t *testing.T) {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
-	for i, tt := range test.TestCases {
-		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			pk, err := bls.PublicKeyFromBytes(tt.Input[0])
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, pk2 := range tt.Input[1:] {
-				p, err := bls.PublicKeyFromBytes(pk2)
-				if err != nil {
-					t.Fatal(err)
-				}
-				pk.Aggregate(p)
-			}
+	pk, err := bls.PublicKeyFromBytes(test.Input[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pk2 := range test.Input[1:] {
+		p, err := bls.PublicKeyFromBytes(pk2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pk.Aggregate(p)
+	}
 
-			if !bytes.Equal(tt.Output, pk.Marshal()) {
-				t.Fatal("Output does not equal marshaled aggregated public " +
-					"key bytes")
-			}
-		})
+	if !bytes.Equal(test.Output, pk.Marshal()) {
+		t.Fatal("Output does not equal marshaled aggregated public " +
+			"key bytes")
 	}
 }
