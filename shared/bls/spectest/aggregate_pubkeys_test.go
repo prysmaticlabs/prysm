@@ -9,7 +9,7 @@ import (
 )
 
 func TestAggregatePubkeysYaml(t *testing.T) {
-	file, err := loadBlsYaml("aggregate_pubkeys/small/agg_pub_keys/data.yaml")
+	file, err := loadBlsYaml("tests/general/phase0/bls/aggregate_pubkeys/small/agg_pub_keys/data.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}

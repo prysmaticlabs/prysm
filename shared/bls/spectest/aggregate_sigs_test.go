@@ -15,7 +15,7 @@ func TestAggregateSignaturesYaml(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := loadBlsYaml(path.Join("bls/aggregate_sigs/small", folder.Name(), "data.yaml"))
+			file, err := loadBlsYaml(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}

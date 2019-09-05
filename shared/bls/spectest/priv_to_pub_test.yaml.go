@@ -4,6 +4,6 @@
 package spectest
 
 type PrivToPubTest struct {
-	Input  []byte `json:"input" ssz:"size=32"`
-	Output []byte `json:"output" ssz:"size=48"`
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }

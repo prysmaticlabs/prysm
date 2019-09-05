@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestPrivToPubYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/priv_to_pub/small")
+func TestSignMessageYaml(t *testing.T) {
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign_msg/small")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -20,12 +20,12 @@ func TestPrivToPubYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
-			test := &PrivToPubTest{}
+			test := &SignMsgTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pkBytes, err := hexutil.Decode(test.Input)
+			pkBytes, err := hexutil.Decode(test.Input.Privkey)
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
@@ -34,13 +34,26 @@ func TestPrivToPubYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
 
+			msgBytes, err := hexutil.Decode(test.Input.Message)
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			domain, err := hexutil.DecodeUint64(test.Input.Domain)
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			sig := sk.Sign(msgBytes, domain)
+
 			outputBytes, err := hexutil.Decode(test.Output)
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			if !bytes.Equal(outputBytes, sk.PublicKey().Marshal()) {
-				t.Fatal("Output does not marshaled public key bytes")
+			if !bytes.Equal(outputBytes, sig.Marshal()) {
+				t.Logf("Domain=%d", domain)
+				t.Fatalf("Signature does not match the expected output. "+
+					"Expected %#x but received %#x", outputBytes, sig.Marshal())
 			}
+			t.Logf("Success. Domain=%d", domain)
 		})
 	}
 }
