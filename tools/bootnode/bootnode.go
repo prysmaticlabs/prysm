@@ -15,6 +15,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
+	"strconv"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -32,8 +34,10 @@ var (
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
 	externalIP = flag.String("external-ip", "0.0.0.0", "External IP for the bootnode")
+	httpPort   = flag.Int("http-port", 5000, "Port for http server")
 
-	log = logrus.WithField("prefix", "bootnode")
+	bootnode *enode.Node
+	log      = logrus.WithField("prefix", "bootnode")
 )
 
 func main() {
@@ -51,8 +55,16 @@ func main() {
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
+	bootnode = node
 
-	select {}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/enr", sendENR)
+
+	log.Printf("Http server starting on port %d", *httpPort)
+	httpAddr := *externalIP + ":" + strconv.Itoa(*httpPort)
+	if err := http.ListenAndServe(httpAddr, mux); err != nil {
+		log.Fatalf("Failed to start server %v", err)
+	}
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
@@ -124,4 +136,18 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 	}
 
 	return privKey
+}
+
+func sendENR(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte(bootnode.String()))
+	if err != nil {
+		log.Printf("Failed to write data to client: %v\n", err)
+	}
 }
