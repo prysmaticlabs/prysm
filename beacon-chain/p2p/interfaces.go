@@ -21,7 +21,6 @@ type P2P interface {
 	HandshakeManager
 	Sender
 	ConnectionHandler
-	DeprecatedSubscriber
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.

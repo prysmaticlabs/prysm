@@ -10,21 +10,20 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "operation")
@@ -249,17 +248,9 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	var root [32]byte
-	if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
-		root, err = hashutil.HashProto(attestation.Data)
-		if err != nil {
-			return err
-		}
-	} else {
-		root, err = ssz.HashTreeRoot(attestation.Data)
-		if err != nil {
-			return err
-		}
+	root, err := ssz.HashTreeRoot(attestation.Data)
+	if err != nil {
+		return err
 	}
 
 	incomingAttBits := attestation.AggregationBits
@@ -336,18 +327,9 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
 	for _, attestation := range attestations {
-		var root [32]byte
-		var err error
-		if _, isLegacyDB := s.beaconDB.(*db.BeaconDB); isLegacyDB {
-			root, err = hashutil.HashProto(attestation.Data)
-			if err != nil {
-				return err
-			}
-		} else {
-			root, err = ssz.HashTreeRoot(attestation.Data)
-			if err != nil {
-				return err
-			}
+		root, err := ssz.HashTreeRoot(attestation.Data)
+		if err != nil {
+			return err
 		}
 
 		if s.beaconDB.HasAttestation(ctx, root) {
