@@ -17,11 +17,15 @@ import (
 )
 
 // operation types take an int and return a string value.
-type operation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
+type blockOperation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
+type epochOperation func(*pb.BeaconState) (*pb.BeaconState, error)
 
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
 func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
+	if config == "minimal" {
+		t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //... See https://github.com/prysmaticlabs/prysm/issues/3066")
+	}
 	testsFolderPath := path.Join("tests", config, folderPath, "pyspec_tests")
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
@@ -36,8 +40,8 @@ func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo,
 }
 
 // SSZFileBytes returns the unmarshalled SSZ interface at the passed in path.
-func SSZFileBytes(folderPath string, testName string, filename string) ([]byte, error) {
-	filepath, err := bazel.Runfile(path.Join(folderPath, testName, filename))
+func SSZFileBytes(filePaths ...string) ([]byte, error) {
+	filepath, err := bazel.Runfile(path.Join(filePaths...))
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +52,14 @@ func SSZFileBytes(folderPath string, testName string, filename string) ([]byte, 
 	return fileBytes, nil
 }
 
+// RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
+// passed in block operation function and checks the post state with the expected post state.
 func RunBlockOperationTest(
 	t *testing.T,
 	preState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
 	postStatePath string,
-	operationFn operation,
+	operationFn blockOperation,
 ) {
 	helpers.ClearAllCaches()
 
@@ -67,6 +73,65 @@ func RunBlockOperationTest(
 	}
 
 	beaconState, err := operationFn(preState, body)
+	if postSSZExists {
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		postBeaconState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
+			t.Fatalf("Failed to unmarshal: %v", err)
+		}
+
+		if !proto.Equal(beaconState, postBeaconState) {
+			diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+			t.Log(diff)
+			t.Fatal("Post state does not match expected")
+		}
+	} else {
+		// Note: This doesn't test anything worthwhile. It essentially tests
+		// that *any* error has occurred, not any specific error.
+		if err == nil {
+			t.Fatal("Did not fail when expected")
+		}
+		t.Logf("Expected failure; failure reason = %v", err)
+		return
+	}
+}
+
+// RunEpochOperationTest takes in the prestate and processes it through the
+// passed in epoch operation function and checks the post state with the expected post state.
+func RunEpochOperationTest(
+	t *testing.T,
+	testFolderPath string,
+	operationFn epochOperation,
+) {
+	helpers.ClearAllCaches()
+
+	preBeaconStateFile, err := SSZFileBytes(path.Join(testFolderPath, "pre.ssz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	preBeaconState := &pb.BeaconState{}
+	if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	// If the post.ssz is not present, it means the test should fail on our end.
+	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz"))
+	postSSZExists := true
+	if err != nil && strings.Contains(err.Error(), "could not locate file") {
+		postSSZExists = false
+	} else if err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState, err := operationFn(preBeaconState)
 	if postSSZExists {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)

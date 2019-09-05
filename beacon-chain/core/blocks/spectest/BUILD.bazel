@@ -1,16 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "go_default_library",
-    testonly = True,
-    srcs = [],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
-    visibility = ["//beacon-chain:__subpackages__"],
-    deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-    ],
-)
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 test_suite(
     name = "go_default_test",

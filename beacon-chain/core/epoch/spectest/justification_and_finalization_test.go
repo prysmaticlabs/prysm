@@ -2,8 +2,7 @@ package spectest
 
 import (
 	"fmt"
-	"io/ioutil"
-	"reflect"
+	"path"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -12,10 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
-
-const justificationAndFinalizationPrefix = "tests/epoch_processing/justification_and_finalization/"
 
 // This is a subset of state.ProcessEpoch. The spec test defines input data for
 // `justification_and_finalization` only.
@@ -52,51 +48,17 @@ func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.Beac
 	return state, nil
 }
 
-func runJustificationAndFinalizationTests(t *testing.T, filename string) {
-	file, err := ioutil.ReadFile(filename)
-	if err != nil {
-		t.Fatalf("Could not load file %v", err)
-	}
-
-	s := &EpochProcessingTest{}
-	if err := testutil.UnmarshalYaml(file, s); err != nil {
-		t.Fatalf("Failed to Unmarshal: %v", err)
-	}
-
-	if err := spectest.SetConfig(s.Config); err != nil {
+func runJustificationAndFinalizationTests(t *testing.T, config string) {
+	if err := spectest.SetConfig(config); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(s.TestCases) == 0 {
-		t.Fatal("No tests!")
-	}
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/epoch_processing/justification_and_finalization")
 
-	for _, tt := range s.TestCases {
-		t.Run(tt.Description, func(t *testing.T) {
-			preState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Pre, preState); err != nil {
-				t.Fatal(err)
-			}
-
-			postState, err := processJustificationAndFinalizationWrapper(preState)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			expectedPostState := &pb.BeaconState{}
-			if err := testutil.ConvertToPb(tt.Post, expectedPostState); err != nil {
-				t.Fatal(err)
-			}
-
-			if postState.JustificationBits[0] != expectedPostState.JustificationBits[0] {
-				t.Errorf("Justification bits mismatch. PreState.JustificationBits=%v. PostState.JustificationBits=%v. Expected=%v", preState.JustificationBits, postState.JustificationBits, expectedPostState.JustificationBits)
-			}
-
-			if !reflect.DeepEqual(postState, expectedPostState) {
-				diff, _ := messagediff.PrettyDiff(postState, expectedPostState)
-				t.Log(diff)
-				t.Error("Did not get expected state")
-			}
+	for _, folder := range testFolders {
+		t.Run(folder.Name(), func(t *testing.T) {
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			testutil.RunEpochOperationTest(t, folderPath, processJustificationAndFinalizationWrapper)
 		})
 	}
 }
