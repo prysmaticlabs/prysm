@@ -196,6 +196,20 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	activeCount, err := helpers.ActiveValidatorCount(beaconState, currentEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	committeeCount, err := helpers.CommitteeCount(beaconState, currentEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	aggBits := bitfield.NewBitlist(activeCount / committeeCount)
+	for i := uint64(0); i < aggBits.Len(); i++ {
+		aggBits.SetBitAt(i, true)
+	}
+	custodyBits := bitfield.NewBitlist(activeCount / committeeCount)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Crosslink: &ethpb.Crosslink{
@@ -205,27 +219,26 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 			Source: &ethpb.Checkpoint{},
 			Target: &ethpb.Checkpoint{},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-		CustodyBits:     []byte{0x00, 0x00, 0x00, 0x00},
+		AggregationBits: aggBits,
+		CustodyBits:     custodyBits,
 	}
 
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
 	if err != nil {
 		t.Error(err)
 	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
+	dataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: false,
+	}
+	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	if err != nil {
+		t.Error(err)
+	}
 	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainAttestation)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Error(err)
-		}
-		dataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-			Data:       att.Data,
-			CustodyBit: false,
-		}
-		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
 		if err != nil {
 			t.Error(err)
 		}
@@ -310,14 +323,30 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: []byte{}},
 	}
 
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	activeCount, err := helpers.ActiveValidatorCount(beaconState, currentEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	committeeCount, err := helpers.CommitteeCount(beaconState, currentEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	aggBits := bitfield.NewBitlist(activeCount / committeeCount)
+	for i := uint64(0); i < aggBits.Len(); i++ {
+		aggBits.SetBitAt(i, true)
+	}
+	custodyBits := bitfield.NewBitlist(activeCount / committeeCount)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target:    &ethpb.Checkpoint{Epoch: 10},
 			Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
 			Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		AggregationBits: aggBits,
+		CustodyBits:     custodyBits,
 	}
+
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
 	if err != nil {
 		t.Error(err)
@@ -349,38 +378,60 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	opService := &mockOperationService{
 		pendingAttestations: []*ethpb.Attestation{
 			//Expired attestations
-			{Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Epoch: 10},
-				Source: &ethpb.Checkpoint{Epoch: expectedEpoch},
-
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
-			{Data: &ethpb.AttestationData{
-				Target:    &ethpb.Checkpoint{Epoch: 10},
-				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
-			{Data: &ethpb.AttestationData{
-				Target:    &ethpb.Checkpoint{Epoch: 10},
-				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
-			{Data: &ethpb.AttestationData{
-				Target:    &ethpb.Checkpoint{Epoch: 10},
-				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
-			{Data: &ethpb.AttestationData{
-				Target:    &ethpb.Checkpoint{Epoch: 10},
-				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits,
+			},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits,
+			},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits,
+			},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits,
+			},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits},
 			// Non-expired attestation with incorrect justified epoch
-			{Data: &ethpb.AttestationData{
-				Target:    &ethpb.Checkpoint{Epoch: 10},
-				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch - 1},
-				Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
-			}},
+			{
+				Data: &ethpb.AttestationData{
+					Target:    &ethpb.Checkpoint{Epoch: 10},
+					Source:    &ethpb.Checkpoint{Epoch: expectedEpoch - 1},
+					Crosslink: &ethpb.Crosslink{DataRoot: params.BeaconConfig().ZeroHash[:]},
+				},
+				AggregationBits: aggBits,
+				CustodyBits:     custodyBits,
+			},
 			// Non-expired attestations with correct justified epoch
 			att,
 			att2,
@@ -421,7 +472,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
 				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
 			Signature:       aggregateSig,
 		},
 		{
@@ -430,7 +482,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
 				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
 			Signature:       aggregateSig,
 		},
 		{
@@ -439,7 +492,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 				Source:    &ethpb.Checkpoint{Epoch: expectedEpoch},
 				Crosslink: &ethpb.Crosslink{EndEpoch: 10, DataRoot: params.BeaconConfig().ZeroHash[:], ParentRoot: encoded[:]},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
 			Signature:       aggregateSig,
 		},
 	}

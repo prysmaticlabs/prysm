@@ -1011,6 +1011,12 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
+	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
@@ -1031,11 +1037,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{
 			Attestations: attestations,
 		},
-	}
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
 	}
 	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
@@ -1265,6 +1266,9 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	aggBits := bitfield.NewBitlist(1)
+	aggBits.SetBitAt(1, true)
+	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1274,8 +1278,8 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 				StartEpoch: 0,
 			},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+		AggregationBits: aggBits,
+		CustodyBits:     custodyBits,
 	}
 
 	zeroSig := [96]byte{}
