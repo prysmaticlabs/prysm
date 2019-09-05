@@ -20,21 +20,17 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type SanityConfig struct {
-	BlocksCount int `json:"blocks_count"`
-}
-
 func runBlockProcessingTest(t *testing.T, config string) {
 	if err := spectest.SetConfig(config); err != nil {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/sanity/blocks")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/blocks/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearAllCaches()
-			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -43,7 +39,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			file, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
+			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -56,7 +52,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			var transitionError error
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz", i)
-				blockFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), filename)
+				blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), filename)
 				if err != nil {
 					t.Fatal(err)
 				}

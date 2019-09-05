@@ -17,11 +17,11 @@ func runAttestationTest(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/operations/attestation")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/attestation/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			attestationFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "attestation.ssz")
+			attestationFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "attestation.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,7 +30,7 @@ func runAttestationTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}

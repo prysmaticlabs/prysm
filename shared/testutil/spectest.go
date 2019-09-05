@@ -23,10 +23,7 @@ type epochOperation func(*pb.BeaconState) (*pb.BeaconState, error)
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
 func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
-	if config == "minimal" {
-		t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //... See https://github.com/prysmaticlabs/prysm/issues/3066")
-	}
-	testsFolderPath := path.Join("tests", config, folderPath, "pyspec_tests")
+	testsFolderPath := path.Join("tests", config, "phase0", folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
 		t.Fatal(err)
@@ -39,8 +36,8 @@ func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo,
 	return testFolders, testsFolderPath
 }
 
-// SSZFileBytes returns the unmarshalled SSZ interface at the passed in path.
-func SSZFileBytes(filePaths ...string) ([]byte, error) {
+// BazelFileBytes returns the byte array of the bazel file path given.
+func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	filepath, err := bazel.Runfile(path.Join(filePaths...))
 	if err != nil {
 		return nil, err
@@ -113,7 +110,7 @@ func RunEpochOperationTest(
 ) {
 	helpers.ClearAllCaches()
 
-	preBeaconStateFile, err := SSZFileBytes(path.Join(testFolderPath, "pre.ssz"))
+	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
 	if err != nil {
 		t.Fatal(err)
 	}

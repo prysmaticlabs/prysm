@@ -14,7 +14,7 @@ func runCrosslinkProcessingTests(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/epoch_processing/crosslinks")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/crosslinks/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

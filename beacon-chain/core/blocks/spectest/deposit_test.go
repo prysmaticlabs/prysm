@@ -17,11 +17,11 @@ func runDepositTest(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/operations/deposit")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/deposit/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			depositFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "deposit.ssz")
+			depositFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "deposit.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,7 +30,7 @@ func runDepositTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}

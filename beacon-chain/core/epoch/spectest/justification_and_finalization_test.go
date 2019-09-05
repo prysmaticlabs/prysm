@@ -13,6 +13,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+func runJustificationAndFinalizationTests(t *testing.T, config string) {
+	if err := spectest.SetConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/justification_and_finalization/pyspec_tests")
+
+	for _, folder := range testFolders {
+		t.Run(folder.Name(), func(t *testing.T) {
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			testutil.RunEpochOperationTest(t, folderPath, processJustificationAndFinalizationWrapper)
+		})
+	}
+}
+
 // This is a subset of state.ProcessEpoch. The spec test defines input data for
 // `justification_and_finalization` only.
 func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
@@ -46,19 +61,4 @@ func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.Beac
 	}
 
 	return state, nil
-}
-
-func runJustificationAndFinalizationTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
-		t.Fatal(err)
-	}
-
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/epoch_processing/justification_and_finalization")
-
-	for _, folder := range testFolders {
-		t.Run(folder.Name(), func(t *testing.T) {
-			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processJustificationAndFinalizationWrapper)
-		})
-	}
 }

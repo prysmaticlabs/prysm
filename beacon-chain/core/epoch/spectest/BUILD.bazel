@@ -1,12 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["epoch_processing_test.yaml.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/spectest",
-    visibility = ["//beacon-chain:__subpackages__"],
-    deps = ["//proto/beacon/p2p/v1:go_default_library"],
-)
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 test_suite(
     name = "go_default_test",
@@ -27,7 +19,6 @@ go_test(
     data = [
         "@eth2_spec_tests_mainnet//:test_data",
     ],
-    embed = [":go_default_library"],
     shard_count = 4,
     tags = [
         "spectest",
@@ -55,7 +46,6 @@ go_test(
     data = [
         "@eth2_spec_tests_minimal//:test_data",
     ],
-    embed = [":go_default_library"],
     tags = [
         "spectest",
     ],

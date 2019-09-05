@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -23,12 +23,12 @@ func runBlockHeaderTest(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/operations/block_header")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/block_header/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearAllCaches()
-			blockFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "block.ssz")
+			blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -37,7 +37,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}

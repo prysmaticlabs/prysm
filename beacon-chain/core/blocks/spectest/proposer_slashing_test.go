@@ -17,11 +17,11 @@ func runProposerSlashingTest(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0/operations/proposer_slashing")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/proposer_slashing/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			proposerSlashingFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "proposer_slashing.ssz")
+			proposerSlashingFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "proposer_slashing.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,7 +30,7 @@ func runProposerSlashingTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preBeaconStateFile, err := testutil.SSZFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}

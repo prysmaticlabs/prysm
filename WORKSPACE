@@ -146,13 +146,28 @@ http_archive(
 )
 
 http_archive(
+    name = "eth2_spec_tests_general",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.ssz",
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.2/general.tar.gz",
+)
+
+http_archive(
     name = "eth2_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
-        "**/meta.yaml",
+        "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
@@ -168,7 +183,7 @@ filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
-        "**/meta.yaml",
+        "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
