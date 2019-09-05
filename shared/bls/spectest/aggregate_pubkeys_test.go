@@ -3,8 +3,9 @@ package spectest
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
