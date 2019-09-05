@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -26,9 +24,9 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB db.Database
-	head     interface{}
-	pool     operations.Pool
+	beaconDB     db.Database
+	chainService blockchain.HeadRetriever
+	pool         operations.Pool
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -96,18 +94,9 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	var headBlock *ethpb.BeaconBlock
-	var err error
-	if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-		headBlock, err = d.ChainHead()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		headBlock, err = bs.beaconDB.(*kv.Store).HeadBlock(ctx)
-		if err != nil {
-			return nil, err
-		}
+	headBlock, err := bs.beaconDB.(*kv.Store).HeadBlock(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "no head block found in db")
@@ -140,22 +129,11 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
 
-		var blks []*ethpb.BeaconBlock
-		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-			for i := startSlot; i < endSlot; i++ {
-				b, err := d.BlocksBySlot(ctx, i)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", i, err)
-				}
-				blks = append(blks, b...)
-			}
-		} else {
-			var err error
-			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
-			}
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
 		}
+
 		numBlks := len(blks)
 		if numBlks == 0 {
 			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlock, 0), TotalSize: 0}, nil
@@ -188,13 +166,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		var blks []*ethpb.BeaconBlock
-		var err error
-		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-			blks, err = d.BlocksBySlot(ctx, q.Slot)
-		} else {
-			blks, err = bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
-		}
+		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -225,13 +197,13 @@ func (bs *BeaconChainServer) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.head.(blockchain.HeadRetriever).HeadState().PreviousJustifiedCheckpoint
+	finalizedCheckpoint := bs.chainService.HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.chainService.HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.chainService.HeadState().PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.head.(blockchain.HeadRetriever).HeadRoot(),
-		BlockSlot:                  bs.head.(blockchain.HeadRetriever).HeadSlot(),
+		BlockRoot:                  bs.chainService.HeadRoot(),
+		BlockSlot:                  bs.chainService.HeadSlot(),
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
@@ -266,21 +238,12 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		var index uint64
-		var ok bool
-		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-			index, err = d.ValidatorIndexDeprecated(pubKey)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-			}
-		} else {
-			index, ok, err = bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-			}
-			if !ok {
-				return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
-			}
+		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
 		}
 
 		filtered[index] = true
@@ -327,19 +290,19 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	head, err := bs.beaconDB.HeadState(ctx)
+	headState, err := bs.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
 	}
 
-	validatorCount := len(head.Validators)
+	validatorCount := len(headState.Validators)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ethpb.Validators{
-		Validators:    head.Validators[start:end],
+		Validators:    headState.Validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}
@@ -387,21 +350,12 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		var index uint64
-		var ok bool
-		if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-			index, err = d.ValidatorIndexDeprecated(pubKey)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-			}
-		} else {
-			index, ok, err = bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-			}
-			if !ok {
-				return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
-			}
+		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		}
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
 		}
 
 		filtered[index] = true
@@ -506,17 +460,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	var headState *pbp2p.BeaconState
-	var err error
-	if _, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-		headState, err = bs.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
-	} else {
-		headState = bs.head.(blockchain.HeadRetriever).HeadState()
-	}
-
+	headState := bs.chainService.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
 

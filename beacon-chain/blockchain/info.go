@@ -18,7 +18,6 @@ func (c *ChainService) InfoHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-
 // This returns the latest head slots in a slice and up to latestSlotCount
 func (c *ChainService) latestHeadSlots() []int {
 	s := make([]int, 0, len(c.canonicalRoots))

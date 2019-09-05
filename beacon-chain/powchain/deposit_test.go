@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -25,7 +25,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -113,7 +113,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -157,7 +157,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -204,7 +204,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -236,7 +236,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
@@ -290,7 +290,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
 		HTTPLogger:   &goodLogger{},
-		BeaconDB:     &db.BeaconDB{},
+		BeaconDB:     &kv.Store{},
 		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {

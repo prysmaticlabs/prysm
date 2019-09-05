@@ -806,8 +806,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		head:     &mock.ChainService{State: s},
+		beaconDB:     db,
+		chainService: &mock.ChainService{State: s},
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
@@ -1000,7 +1000,7 @@ func TestBeaconChainServer_GetChainHead(t *testing.T) {
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	}
 
-	bs := &BeaconChainServer{head: &mock.ChainService{State: s}}
+	bs := &BeaconChainServer{chainService: &mock.ChainService{State: s}}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	if err != nil {
