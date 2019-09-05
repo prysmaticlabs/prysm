@@ -103,6 +103,9 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
+	// we use the udp port for now, since all udp and tcp connections occur from the same
+	// port. This will be changed to the node's TCP port in the future, when we allow a
+	// beacon node to provide separate TCP and UDP ports.
 	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.UDP(), id)
 	multiAddr, err := ma.NewMultiaddr(multiAddrString)
 	if err != nil {
