@@ -96,6 +96,9 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	// Reports on block and fork choice metrics.
+	c.reportSlotMetrics(block.Slot)
+
 	processedBlkNoPubsub.Inc()
 	return nil
 }
@@ -127,6 +130,9 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	if err := c.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
+
+	// Reports on block and fork choice metrics.
+	c.reportSlotMetrics(block.Slot)
 
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil

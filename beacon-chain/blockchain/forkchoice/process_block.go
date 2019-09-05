@@ -121,7 +121,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		logEpochData(postState)
-		reportStateMetrics(postState)
+		reportEpochMetrics(postState)
 	}
 
 	return nil
