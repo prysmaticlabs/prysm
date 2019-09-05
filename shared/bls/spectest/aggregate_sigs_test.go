@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"bytes"
+	"encoding/hex"
 	"path"
 	"testing"
 
@@ -15,7 +16,7 @@ func TestAggregateSignaturesYaml(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := loadBlsYaml(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
@@ -27,14 +28,23 @@ func TestAggregateSignaturesYaml(t *testing.T) {
 
 			var sigs []*bls.Signature
 			for _, s := range test.Input {
-				sig, err := bls.SignatureFromBytes(s)
+				sigBytes, err := hex.DecodeString(s[2:])
+				if err != nil {
+					t.Fatalf("Cannot decode string to bytes: %v", err)
+				}
+				sig, err := bls.SignatureFromBytes(sigBytes)
 				if err != nil {
 					t.Fatalf("Unable to unmarshal signature from bytes: %v", err)
 				}
 				sigs = append(sigs, sig)
 			}
 			sig := bls.AggregateSignatures(sigs)
-			if !bytes.Equal(test.Output, sig.Marshal()) {
+
+			outputBytes, err := hex.DecodeString(test.Output[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			if !bytes.Equal(outputBytes, sig.Marshal()) {
 				t.Fatal("Output does not equal marshaled aggregated sig bytes")
 			}
 		})

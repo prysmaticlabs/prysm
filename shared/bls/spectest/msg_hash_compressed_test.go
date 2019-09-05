@@ -2,7 +2,7 @@ package spectest
 
 import (
 	"bytes"
-	"encoding/binary"
+	"encoding/hex"
 	"path"
 	"testing"
 
@@ -19,7 +19,7 @@ func TestMsgHashCompressed(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := loadBlsYaml(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
@@ -28,25 +28,34 @@ func TestMsgHashCompressed(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			b := make([]byte, 8)
-			binary.LittleEndian.PutUint64(b, test.Input.Domain)
-
+			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			domain, err := hex.DecodeString(test.Input.Domain[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
 			projective := bls.HashG2WithDomain(
-				bytesutil.ToBytes32(test.Input.Message),
-				bytesutil.ToBytes8(b),
+				bytesutil.ToBytes32(msgBytes),
+				bytesutil.ToBytes8(domain),
 			)
 			hash := bls.CompressG2(projective.ToAffine())
 
 			var buf []byte
-			for _, slice := range test.Output {
+			for _, innerString := range test.Output {
+				slice, err := hex.DecodeString(innerString[2:])
+				if err != nil {
+					t.Fatalf("Cannot decode string to bytes: %v", err)
+				}
 				buf = append(buf, slice...)
 			}
 			if !bytes.Equal(buf, hash[:]) {
-				t.Logf("Domain=%d", test.Input.Domain)
+				t.Logf("Domain=%d", domain)
 				t.Fatalf("Hash does not match the expected output. "+
 					"Expected %#x but received %#x", buf, hash)
 			}
-			t.Logf("Success. Domain=%d", test.Input.Domain)
+			t.Logf("Success. Domain=%d", domain)
 		})
 	}
 }

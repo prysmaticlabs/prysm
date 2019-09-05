@@ -268,12 +268,12 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 
 	if featureconfig.FeatureConfig().UseNewBlockChainService {
 		blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-			BeaconDB:       b.db,
-			DepositCache:   b.depositCache,
-			Web3Service:    web3Service,
-			OpsPoolService: opsService,
-			P2p:            b.fetchP2P(ctx),
-			MaxRoutines:    maxRoutines,
+			BeaconDB:         b.db,
+			DepositCache:     b.depositCache,
+			Web3Service:      web3Service,
+			OpsPoolService:   opsService,
+			P2p:              b.fetchP2P(ctx),
+			MaxRoutines:      maxRoutines,
 			PreloadStatePath: ctx.GlobalString(flags.GenesisState.Name),
 		})
 		if err != nil {

@@ -2,7 +2,7 @@ package spectest
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"encoding/hex"
 	"path"
 	"testing"
 
@@ -16,7 +16,7 @@ func TestPrivToPubYaml(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := loadBlsYaml(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
@@ -25,7 +25,7 @@ func TestPrivToPubYaml(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pkBytes, err := hexutil.Decode(test.Input)
+			pkBytes, err := hex.DecodeString(test.Input[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
@@ -34,7 +34,7 @@ func TestPrivToPubYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
 
-			outputBytes, err := hexutil.Decode(test.Output)
+			outputBytes, err := hex.DecodeString(test.Output[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}

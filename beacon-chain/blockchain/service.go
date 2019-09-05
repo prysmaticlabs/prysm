@@ -56,18 +56,18 @@ type ChainService struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	canonicalRootsLock   sync.RWMutex
-	preloadStatePath       string
+	preloadStatePath     string
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf int
-	Web3Service    *powchain.Web3Service
-	BeaconDB       db.Database
-	DepositCache   *depositcache.DepositCache
-	OpsPoolService operations.OperationFeeds
-	P2p            p2p.Broadcaster
-	MaxRoutines    int64
+	BeaconBlockBuf   int
+	Web3Service      *powchain.Web3Service
+	BeaconDB         db.Database
+	DepositCache     *depositcache.DepositCache
+	OpsPoolService   operations.OperationFeeds
+	P2p              p2p.Broadcaster
+	MaxRoutines      int64
 	PreloadStatePath string
 }
 
@@ -89,7 +89,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
-		preloadStatePath:       cfg.PreloadStatePath,
+		preloadStatePath:     cfg.PreloadStatePath,
 	}, nil
 }
 

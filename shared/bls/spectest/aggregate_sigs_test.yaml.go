@@ -4,6 +4,6 @@
 package spectest
 
 type AggregateSigsTest struct {
-	Input  [][]byte `json:"input"`
-	Output []byte   `json:"output" ssz:"size=96"`
+	Input  []string `json:"input"`
+	Output string   `json:"output" ssz:"size=96"`
 }

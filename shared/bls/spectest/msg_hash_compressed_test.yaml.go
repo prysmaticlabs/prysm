@@ -5,8 +5,8 @@ package spectest
 
 type MsgHashCompressedTest struct {
 	Input struct {
-		Message []byte `json:"message" ssz:"size=32"`
-		Domain  uint64 `json:"domain"`
+		Message string `json:"message"`
+		Domain  string `json:"domain"`
 	} `json:"input"`
-	Output [][]byte `json:"output"`
+	Output []string `json:"output"`
 }

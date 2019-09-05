@@ -2,7 +2,8 @@ package spectest
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"encoding/binary"
+	"encoding/hex"
 	"path"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestSignMessageYaml(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := loadBlsYaml(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
@@ -25,7 +26,7 @@ func TestSignMessageYaml(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pkBytes, err := hexutil.Decode(test.Input.Privkey)
+			pkBytes, err := hex.DecodeString(test.Input.Privkey[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
@@ -34,17 +35,18 @@ func TestSignMessageYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
 
-			msgBytes, err := hexutil.Decode(test.Input.Message)
+			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			domain, err := hexutil.DecodeUint64(test.Input.Domain)
+			domain, err := hex.DecodeString(test.Input.Domain[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			sig := sk.Sign(msgBytes, domain)
+			num := binary.LittleEndian.Uint64(domain)
+			sig := sk.Sign(msgBytes, num)
 
-			outputBytes, err := hexutil.Decode(test.Output)
+			outputBytes, err := hex.DecodeString(test.Output[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}

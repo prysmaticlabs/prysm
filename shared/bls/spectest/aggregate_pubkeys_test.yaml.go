@@ -4,6 +4,6 @@
 package spectest
 
 type AggregatePubkeysTest struct {
-	Input  [][]byte `json:"input"`
-	Output []byte   `json:"output" ssz:"size=48"`
+	Input  []string `json:"input"`
+	Output string   `json:"output" ssz:"size=48"`
 }
