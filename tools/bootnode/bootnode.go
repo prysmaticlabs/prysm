@@ -31,7 +31,7 @@ var (
 	debug      = flag.Bool("debug", false, "Enable debug logging")
 	privateKey = flag.String("private", "", "Private key to use for peer ID")
 	port       = flag.Int("port", 4000, "Port to listen for connections")
-	externalIP = flag.String("external-ip", "0.0.0.0", "External IP for the bootnode")
+	externalIP = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
 
 	log = logrus.WithField("prefix", "bootnode")
 )

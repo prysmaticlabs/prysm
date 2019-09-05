@@ -211,7 +211,6 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
-		log.Infof("multAddr %s", info.Addrs[0])
 		if s.exclusionList.Get(info.ID.String()) != nil {
 			continue
 		}
