@@ -1,7 +1,5 @@
-// This binary is a simple ssz deserializer REST API endpoint for the testnet
-// frontend to decode the deposit data for the user.
-// This should be removed after https://github.com/prysmaticlabs/prysm-testnet-site/issues/37
-// is resolved.
+// This binary is a simple rest API endpoint to calculate
+// the ENR value of a node given its private key,ip address and port.
 package main
 
 import (
