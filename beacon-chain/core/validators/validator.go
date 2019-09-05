@@ -76,32 +76,6 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	return state, nil
 }
 
-// ExitValidator takes in validator index and does house
-// keeping work to exit validator with entry exit delay.
-//
-// Spec pseudocode definition:
-//  def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//    """
-//    Exit the validator of the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//
-//    # The following updates only occur if not previous exited
-//    if validator.exit_epoch <= get_entry_exit_effect_epoch(get_current_epoch(state)):
-//        return
-//
-//    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
-func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	validator := state.Validators[idx]
-
-	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return state
-	}
-	validator.ExitEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	return state
-}
-
 // SlashValidator slashes the malicious validator's balance and awards
 // the whistleblower's balance.
 //

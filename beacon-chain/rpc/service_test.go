@@ -90,7 +90,7 @@ func (ms *mockSyncService) Syncing() bool {
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:         "7348",
 		CertFlag:     "alice.crt",
 		KeyFlag:      "alice.key",
@@ -111,7 +111,7 @@ func TestLifecycle_OK(t *testing.T) {
 func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:         "ralph merkle!!!",
 		SyncService:  &mockSyncService{},
 		ChainService: &mock.ChainService{},
@@ -140,7 +140,7 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:         "7777",
 		SyncService:  &mockSyncService{},
 		ChainService: &mock.ChainService{},

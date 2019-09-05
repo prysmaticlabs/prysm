@@ -33,7 +33,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -95,7 +95,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -164,7 +164,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -242,7 +242,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -311,7 +311,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -391,7 +391,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
