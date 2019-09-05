@@ -13,24 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runBlockHeaderTest(t *testing.T, config string) {
-	testsFolderPath := path.Join("tests", config, "phase0/operations/block_header/pyspec_tests")
-	filepath, err := bazel.Runfile(testsFolderPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	testFolders, err := ioutil.ReadDir(filepath)
-	if err != nil {
-		t.Fatalf("Failed to read file: %v", err)
-	}
-
-	if err := spectest.SetConfig(config); err != nil {
-		t.Fatal(err)
-	}
+	testFolders, testsFolderPath := TestFolders(t, config, "block_header")
 
 	for _, folder := range testFolders {
 		blockFile, err := SSZFileBytes(testsFolderPath, folder.Name(), "block.ssz")
