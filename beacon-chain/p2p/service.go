@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
