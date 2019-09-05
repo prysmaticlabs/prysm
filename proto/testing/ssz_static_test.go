@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+// SSZRoots --
 type SSZRoots struct {
 	Root        string `json:"root"`
 	SigningRoot string `json:"signing_root"`
