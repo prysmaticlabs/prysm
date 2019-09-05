@@ -30,7 +30,7 @@ func main() {
 type deserializationRequest struct {
 	PrivateKey string `json:"privateKey"`
 	Ipv4       string `json:"ipv4"`
-	UdpPort    int    `json:"udpPort"`
+	UDPPort    int    `json:"udpPort"`
 }
 
 func respondToEnrReq(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func respondToEnrReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if requestData.UdpPort == 0 {
+	if requestData.UDPPort == 0 {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Invalid udp port given: %v\n", err)
 		return
@@ -91,7 +91,7 @@ func respondToEnrReq(w http.ResponseWriter, r *http.Request) {
 
 	localNode := enode.NewLocalNode(db, ecdsaPrivKey)
 	ipEntry := enr.IP(net.ParseIP(requestData.Ipv4))
-	udpEntry := enr.UDP(requestData.UdpPort)
+	udpEntry := enr.UDP(requestData.UDPPort)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
 
