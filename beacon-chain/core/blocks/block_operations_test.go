@@ -1039,6 +1039,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	helpers.ClearAllCaches()
+
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*ethpb.Crosslink{
 		{

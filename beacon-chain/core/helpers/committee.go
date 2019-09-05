@@ -362,7 +362,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 func VerifyAttestationBitfields(bState *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve crosslink committees at slot")
+		return errors.Wrap(err, "could not retrieve crosslink committees")
 	}
 
 	if committee == nil {
