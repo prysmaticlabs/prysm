@@ -12,15 +12,10 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-type stateFeedListener interface {
-	StateInitializedFeed() *event.Feed
-}
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
 // providing RPC endpoints for obtaining the canonical beacon chain head,
@@ -29,7 +24,7 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	powChainService     powChainService
-	chainService        stateFeedListener
+	chainService        chainService
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -75,16 +70,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
-	var headBlock *ethpb.BeaconBlock
-	var err error
-	if d, isLegacyDB := bs.beaconDB.(*db.BeaconDB); isLegacyDB {
-		headBlock, err = d.ChainHead()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get canonical head block")
-		}
-	} else {
-		headBlock = bs.chainService.(blockchain.HeadRetriever).HeadBlock()
-	}
+	headBlock := bs.chainService.(blockchain.HeadRetriever).HeadBlock()
 	return headBlock, nil
 }
 
