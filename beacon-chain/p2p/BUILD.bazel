@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "broadcaster.go",
         "config.go",
-        "deprecated.go",
         "discovery.go",
         "doc.go",
         "gossip_topic_mappings.go",
@@ -27,8 +26,6 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared:go_default_library",
-        "//shared/deprecated-p2p:go_default_library",
-        "//shared/event:go_default_library",
         "//shared/iputils:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",

@@ -31,8 +31,6 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
-	// TODO(3225): Unskip after we have fully deprecated the old chain service.
-	t.Skip("Skip until we have fully deprecated the old chain service.")
 	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -64,10 +62,12 @@ func TestProposeBlock_OK(t *testing.T) {
 	proposerServer := &ProposerServer{
 		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
+		chainService:    &mock.ChainService{},
 	}
 	req := &ethpb.BeaconBlock{
 		Slot:       5,
 		ParentRoot: []byte("parent-hash"),
+		Body:       &ethpb.BeaconBlockBody{},
 	}
 	if err := proposerServer.beaconDB.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)

@@ -19,8 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
-	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
-	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var _ = shared.Service(&Service{})
@@ -249,11 +247,4 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 		}
 	}
 	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
-}
-
-// Subscribe to some topic.
-// TODO(3147): Remove
-// DEPRECATED: Do not use.
-func (s *Service) Subscribe(_ proto.Message, _ chan deprecatedp2p.Message) event.Subscription {
-	return nil
 }
