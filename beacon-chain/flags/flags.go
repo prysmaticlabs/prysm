@@ -53,4 +53,9 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+	// GenesisState defines a flag for the beacon node to load genesis state via file.
+	GenesisState = cli.StringFlag{
+		Name:  "load-genesis-state",
+		Usage: "The genesis state file (.SSZ) to load from",
+	}
 )
