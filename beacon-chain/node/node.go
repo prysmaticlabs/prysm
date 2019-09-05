@@ -520,6 +520,15 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/p2p", Handler: p.InfoHandler})
 	}
 
+	if featureconfig.FeatureConfig().UseNewBlockChainService {
+		var p *blockchain.ChainService
+		if err := b.services.FetchService(&p); err != nil {
+			panic(err)
+		}
+
+		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/heads", Handler: p.InfoHandler})
+	}
+
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
 		b.services,
