@@ -1,7 +1,7 @@
 package spectest
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"path"
 	"reflect"
@@ -51,7 +51,7 @@ func runShuffleTests(t *testing.T, config string) {
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func runShuffleTest(testCase *ShuffleTestCase) error {
-	baseSeed, err := base64.StdEncoding.DecodeString(testCase.Seed)
+	baseSeed, err := hex.DecodeString(testCase.Seed[2:])
 	if err != nil {
 		return err
 	}

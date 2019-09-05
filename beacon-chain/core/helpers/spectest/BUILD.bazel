@@ -23,6 +23,5 @@ go_test(
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

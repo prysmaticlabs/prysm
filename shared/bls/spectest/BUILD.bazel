@@ -35,9 +35,7 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
-        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_phoreproject_bls//:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

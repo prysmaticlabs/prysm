@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -13,10 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
-
-type SanityConfig struct {
-	BlocksCount int `json:"blocks_count"`
-}
 
 func runSlotProcessingTests(t *testing.T, config string) {
 	if err := spectest.SetConfig(config); err != nil {
@@ -41,9 +38,10 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			metaYaml := &SanityConfig{}
-			if err := testutil.UnmarshalYaml(file, metaYaml); err != nil {
-				t.Fatalf("Failed to Unmarshal: %v", err)
+			fileStr := string(file)
+			slotsCount, err := strconv.Atoi(fileStr[:len(fileStr)-5])
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			postBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz")
@@ -55,7 +53,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot+64)
+			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot+uint64(slotsCount))
 			if err != nil {
 				t.Fatal(err)
 			}
