@@ -59,7 +59,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
@@ -96,7 +96,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive validator activation from stream")
