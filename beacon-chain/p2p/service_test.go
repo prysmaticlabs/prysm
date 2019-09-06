@@ -152,7 +152,7 @@ func TestListenForNewNodes(t *testing.T) {
 		}
 	}()
 
-	cfg.TCPPort = 14000
+	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 
 	s, err := NewService(cfg)

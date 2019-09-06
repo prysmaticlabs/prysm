@@ -133,7 +133,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	cfg.TCPPort = 14000
+	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
 
