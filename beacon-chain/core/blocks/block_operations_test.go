@@ -1024,7 +1024,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		{
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
-				Target: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 1},
 				Crosslink: &ethpb.Crosslink{
 					Shard: 0,
 				},
@@ -1060,11 +1060,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
+	block.Body.Attestations[0].Data.Target.Epoch = helpers.CurrentEpoch(beaconState)
 	block.Body.Attestations[0].Data.Source.Root = []byte{}
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.PreviousJustifiedCheckpoint.Root,
+		beaconState.CurrentJustifiedCheckpoint.Root,
 		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
