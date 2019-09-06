@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
 var endpoint = "ws://127.0.0.1"
@@ -21,11 +20,8 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-
-	beaconDB, err := db.SetupDB()
-	if err != nil {
-		t.Fatalf("unable to set up simulated db instance: %v", err)
-	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,

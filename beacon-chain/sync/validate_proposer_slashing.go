@@ -25,7 +25,7 @@ func propSlashingCacheKey(slashing *ethpb.ProposerSlashing) (string, error) {
 
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
-func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
+func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
 	slashing, ok := msg.(*ethpb.ProposerSlashing)
 	if !ok {
 		return false
@@ -62,6 +62,10 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 		return false
 	}
 	seenProposerSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+
+	if fromSelf {
+		return false
+	}
 
 	if err := p.Broadcast(ctx, slashing); err != nil {
 		log.WithError(err).Error("Failed to propagate proposer slashing")
