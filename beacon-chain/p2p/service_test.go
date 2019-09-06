@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -19,35 +20,35 @@ import (
 
 type mockListener struct{}
 
-func (m *mockListener) Self() *discv5.Node {
+func (mockListener) Self() *enode.Node {
 	panic("implement me")
 }
 
-func (m *mockListener) Close() {
+func (mockListener) Close() {
 	//no-op
 }
 
-func (m *mockListener) Lookup(discv5.NodeID) []*discv5.Node {
+func (mockListener) Lookup(enode.ID) []*enode.Node {
 	panic("implement me")
 }
 
-func (m *mockListener) ReadRandomNodes([]*discv5.Node) int {
+func (mockListener) ReadRandomNodes([]*enode.Node) int {
 	panic("implement me")
 }
 
-func (m *mockListener) SetFallbackNodes([]*discv5.Node) error {
+func (mockListener) Resolve(*enode.Node) *enode.Node {
 	panic("implement me")
 }
 
-func (m *mockListener) Resolve(discv5.NodeID) *discv5.Node {
+func (mockListener) LookupRandom() []*enode.Node {
 	panic("implement me")
 }
 
-func (m *mockListener) RegisterTopic(discv5.Topic, <-chan struct{}) {
+func (mockListener) Ping(*enode.Node) error {
 	panic("implement me")
 }
 
-func (m *mockListener) SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *discv5.Node, chan<- bool) {
+func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 	panic("implement me")
 }
 
@@ -121,24 +122,26 @@ func TestService_Status_NotRunning(t *testing.T) {
 
 func TestListenForNewNodes(t *testing.T) {
 	// setup bootnode
+	cfg := &Config{}
 	port := 2000
+	cfg.Port = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	bootListener := createListener(ipAddr, port, pkey)
+	bootListener := createListener(ipAddr, pkey, cfg)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
 
-	cfg := &Config{
+	cfg = &Config{
 		BootstrapNodeAddr: bootNode.String(),
 		Encoding:          "ssz",
 	}
-	var listeners []*discv5.Network
+	var listeners []*discover.UDPv5
 	var hosts []host.Host
 	// setup other nodes
 	for i := 1; i <= 5; i++ {
 		listener, h := createPeer(t, cfg, port+i)
-		listeners = append(listeners, listener.(*discv5.Network))
+		listeners = append(listeners, listener.(*discover.UDPv5))
 		hosts = append(hosts, h)
 	}
 
@@ -160,7 +163,7 @@ func TestListenForNewNodes(t *testing.T) {
 	s.Start()
 	defer s.Stop()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
