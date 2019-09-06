@@ -83,6 +83,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDBCleanup,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
+			flags.GenesisState,
 		},
 	},
 	{
@@ -94,6 +95,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
+			cmd.P2PEncoding,
 		},
 	},
 	{

@@ -47,7 +47,7 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 		return blkInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	block, err := w.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not query block with given height")
 	}
@@ -61,7 +61,7 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	block, err := w.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not query block with given height")
 	}

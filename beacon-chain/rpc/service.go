@@ -15,14 +15,15 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -39,15 +40,14 @@ func init() {
 }
 
 type chainService interface {
-	StateInitializedFeed() *event.Feed
+	blockchain.HeadRetriever
+	blockchain.AttestationReceiver
 	blockchain.BlockReceiver
-	blockchain.ForkChoice
-	blockchain.TargetsFetcher
+	StateInitializedFeed() *event.Feed
 }
 
 type operationService interface {
 	operations.Pool
-	IsAttCanonical(ctx context.Context, att *ethpb.Attestation) (bool, error)
 	HandleAttestation(context.Context, proto.Message) error
 	IncomingAttFeed() *event.Feed
 }
@@ -68,20 +68,15 @@ type powChainService interface {
 	ChainStartETH1Data() *ethpb.Eth1Data
 }
 
-type syncService interface {
-	Status() error
-	sync.Checker
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	beaconDB            *db.BeaconDB
+	beaconDB            db.Database
 	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
-	syncService         syncService
+	syncService         sync.Checker
 	port                string
 	listener            net.Listener
 	withCert            string
@@ -91,6 +86,7 @@ type Service struct {
 	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
 	p2p                 p2p.Broadcaster
+	depositCache        *depositcache.DepositCache
 }
 
 // Config options for the beacon node RPC server.
@@ -98,12 +94,13 @@ type Config struct {
 	Port             string
 	CertFlag         string
 	KeyFlag          string
-	BeaconDB         *db.BeaconDB
+	BeaconDB         db.Database
 	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService
-	SyncService      syncService
+	SyncService      sync.Checker
 	Broadcaster      p2p.Broadcaster
+	DepositCache     *depositcache.DepositCache
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -122,6 +119,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
+		depositCache:        cfg.DepositCache,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
@@ -167,7 +165,6 @@ func (s *Service) Start() {
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
 		chainService:        s.chainService,
-		targetsFetcher:      s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -179,11 +176,13 @@ func (s *Service) Start() {
 		powChainService:    s.powChainService,
 		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
+		depositCache:       s.depositCache,
 	}
 	attesterServer := &AttesterServer{
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 		p2p:              s.p2p,
+		chainService:     s.chainService,
 		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
@@ -192,6 +191,7 @@ func (s *Service) Start() {
 		chainService:       s.chainService,
 		canonicalStateChan: s.canonicalStateChan,
 		powChainService:    s.powChainService,
+		depositCache:       s.depositCache,
 	}
 	nodeServer := &NodeServer{
 		beaconDB:    s.beaconDB,
@@ -199,8 +199,9 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB: s.beaconDB,
-		pool:     s.operationService,
+		beaconDB:     s.beaconDB,
+		pool:         s.operationService,
+		chainService: s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

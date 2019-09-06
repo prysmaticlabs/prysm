@@ -7,9 +7,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -19,14 +20,18 @@ import (
 
 type mockBroadcaster struct{}
 
-func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) {
+func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) error {
+	return nil
 }
 
 func TestSubmitAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
+		chainService:     &mock.ChainService{},
 		operationService: mockOperationService,
 		p2p:              &mockBroadcaster{},
 		beaconDB:         db,
@@ -36,7 +41,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		Slot:       999,
 		ParentRoot: []byte{'a'},
 	}
-	if err := attesterServer.beaconDB.SaveBlock(head); err != nil {
+	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
 	root, err := ssz.SigningRoot(head)
@@ -59,7 +64,10 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := db.SaveState(context.Background(), state); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,10 +88,6 @@ func TestSubmitAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	ctx := context.Background()
-
 	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
@@ -128,28 +132,11 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
-		beaconDB: db,
-		p2p:      &mockBroadcaster{},
-		cache:    cache.NewAttestationCache(),
+		p2p:          &mockBroadcaster{},
+		cache:        cache.NewAttestationCache(),
+		chainService: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
-	if err := attesterServer.beaconDB.SaveBlock(targetBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, targetBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.SaveBlock(justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
+
 	req := &pb.AttestationRequest{
 		Shard: 0,
 		Slot:  3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -193,12 +180,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	ctx := context.Background()
 
 	// Ensure HistoricalRootsLimit matches scenario
 	cfg := params.BeaconConfig()
@@ -248,28 +232,11 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
-		beaconDB: db,
-		p2p:      &mockBroadcaster{},
-		cache:    cache.NewAttestationCache(),
+		p2p:          &mockBroadcaster{},
+		cache:        cache.NewAttestationCache(),
+		chainService: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
-	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, epochBoundaryBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.SaveBlock(justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, justifiedBlock, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(ctx, block, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
+
 	req := &pb.AttestationRequest{
 		Shard: 0,
 		Slot:  10000,

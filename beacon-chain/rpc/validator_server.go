@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -17,6 +18,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -25,10 +28,11 @@ import (
 // and more.
 type ValidatorServer struct {
 	ctx                context.Context
-	beaconDB           *db.BeaconDB
+	beaconDB           db.Database
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	powChainService    powChainService
+	depositCache       *depositcache.DepositCache
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -76,9 +80,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get validator index")
+		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+	}
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
 	}
 
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
@@ -89,40 +96,31 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 func (vs *ValidatorServer) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get validator index")
+		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 	}
-	head, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get head")
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "could not find  validator index for public key  %#x not found", req.PublicKey)
 	}
-	Validators, err := vs.beaconDB.Validators(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
-	}
+	headState := vs.chainService.HeadState()
 
-	activeCount, err := helpers.ActiveValidatorCount(head, helpers.SlotToEpoch(req.Slot))
+	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active validator count")
 	}
 
-	totalActiveBalance, err := helpers.TotalActiveBalance(head)
+	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active balance")
 	}
 
-	validatorBalances, err := vs.beaconDB.Balances(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve validator balances")
-	}
-
 	avgBalance := float32(totalActiveBalance / activeCount)
-	balance := validatorBalances[index]
+	balance := headState.Balances[index]
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                       balance,
 		AverageActiveValidatorBalance: avgBalance,
-		TotalValidators:               uint64(len(Validators)),
+		TotalValidators:               uint64(len(headState.Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
 }
@@ -134,10 +132,8 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
-	s, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch beacon state")
-	}
+	var err error
+	s := vs.chainService.HeadState()
 
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
@@ -195,9 +191,12 @@ func (vs *ValidatorServer) assignment(
 		)
 	}
 
-	idx, err := vs.beaconDB.ValidatorIndex(pubkey)
+	idx, ok, err := vs.beaconDB.ValidatorIndex(context.Background(), bytesutil.ToBytes48(pubkey))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get active validator index")
+		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+	}
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubkey)
 	}
 
 	committee, shard, slot, isProposer, err :=
@@ -227,14 +226,12 @@ func (vs *ValidatorServer) assignment(
 func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
-	beaconState, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch beacon state")
-	}
+	headState := vs.chainService.HeadState()
+
 	chainStarted := vs.powChainService.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
-	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, beaconState), nil
+	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
+	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, headState), nil
 }
 
 // MultipleValidatorStatus returns the validator status response for the set of validators
@@ -242,21 +239,21 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
+	chainStarted := vs.powChainService.HasChainStarted()
+	if !chainStarted {
+		return false, nil, nil
+	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-	beaconState, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return false, nil, err
-	}
-	chainStarted := vs.powChainService.HasChainStarted()
+	headState := vs.chainService.HeadState()
 
 	chainStartKeys := vs.chainStartPubkeys()
-	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, beaconState)
+		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, headState)
 		if status == nil {
 			continue
 		}
@@ -307,7 +304,7 @@ func (vs *ValidatorServer) validatorStatus(
 	beaconState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	pk := bytesutil.ToBytes32(pubKey)
 	valIdx, ok := idxMap[pk]
-	_, eth1BlockNumBigInt := vs.beaconDB.DepositByPubkey(ctx, pubKey)
+	_, eth1BlockNumBigInt := vs.depositCache.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -461,11 +458,8 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	state, err := vs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
-	}
-	dv := helpers.Domain(state, request.Epoch, request.Domain)
+	headState := vs.chainService.HeadState()
+	dv := helpers.Domain(headState, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

@@ -7,7 +7,10 @@ go_library(
         "transition.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//tools/genesis-state-gen:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",

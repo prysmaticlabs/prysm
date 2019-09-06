@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = ["mock.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/event:go_default_library",
+    ],
+)

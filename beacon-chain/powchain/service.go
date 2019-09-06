@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -37,6 +38,10 @@ var (
 	blockNumberGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "powchain_block_number",
 		Help: "The current block number in the proof-of-work chain",
+	})
+	missedDepositLogsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_missed_deposit_logs",
+		Help: "The number of times a missed deposit log is detected",
 	})
 )
 
@@ -89,7 +94,8 @@ type Web3Service struct {
 	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
 	chainStartBlockNumber   *big.Int
-	beaconDB                *db.BeaconDB
+	beaconDB                db.Database
+	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
@@ -111,7 +117,8 @@ type Web3ServiceConfig struct {
 	HTTPLogger      bind.ContractFilterer
 	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
-	BeaconDB        *db.BeaconDB
+	BeaconDB        db.Database
+	DepositCache    *depositcache.DepositCache
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -154,6 +161,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
+		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
@@ -262,7 +270,7 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.beaconDB.AllDeposits(w.ctx, nil)
+	deposits := w.depositCache.AllDeposits(context.TODO(), nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -319,7 +327,7 @@ func (w *Web3Service) handleDelayTicker() {
 	if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 		return
 	}
-	if err := w.requestBatchedLogs(); err != nil {
+	if err := w.requestBatchedLogs(context.Background()); err != nil {
 		w.runError = err
 		log.Error(err)
 	}
@@ -341,7 +349,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	header, err := w.blockFetcher.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 		w.runError = err
@@ -351,7 +359,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
-	if err := w.processPastLogs(); err != nil {
+	if err := w.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
 		w.runError = err
 		return

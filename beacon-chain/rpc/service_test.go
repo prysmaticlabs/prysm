@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,56 +77,6 @@ func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot 
 	}, nil
 }
 
-type mockChainService struct {
-	blockFeed            *event.Feed
-	stateFeed            *event.Feed
-	attestationFeed      *event.Feed
-	stateInitializedFeed *event.Feed
-	canonicalBlocks      map[uint64][]byte
-	targets              map[uint64]*pb.AttestationTarget
-}
-
-func (m *mockChainService) StateInitializedFeed() *event.Feed {
-	return m.stateInitializedFeed
-}
-
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
-}
-
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *ethpb.BeaconBlock, computedState *pb.BeaconState) error {
-	return nil
-}
-
-func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (m *mockChainService) UpdateCanonicalRoots(block *ethpb.BeaconBlock, root [32]byte) {
-
-}
-
-func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	return nil
-}
-
-func (m mockChainService) IsCanonical(slot uint64, hash []byte) bool {
-	return bytes.Equal(m.canonicalBlocks[slot], hash)
-}
-
-func (m *mockChainService) AttestationTargets(justifiedState *pb.BeaconState) (map[uint64]*pb.AttestationTarget, error) {
-	return m.targets, nil
-}
-
-func newMockChainService() *mockChainService {
-	return &mockChainService{
-		blockFeed:            new(event.Feed),
-		stateFeed:            new(event.Feed),
-		attestationFeed:      new(event.Feed),
-		stateInitializedFeed: new(event.Feed),
-	}
-}
-
 type mockSyncService struct {
 }
 
@@ -142,10 +91,11 @@ func (ms *mockSyncService) Syncing() bool {
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "7348",
-		CertFlag:    "alice.crt",
-		KeyFlag:     "alice.key",
-		SyncService: &mockSyncService{},
+		Port:         "7348",
+		CertFlag:     "alice.crt",
+		KeyFlag:      "alice.key",
+		SyncService:  &mockSyncService{},
+		ChainService: &mock.ChainService{},
 	})
 
 	rpcService.Start()
@@ -162,8 +112,9 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "ralph merkle!!!",
-		SyncService: &mockSyncService{},
+		Port:         "ralph merkle!!!",
+		SyncService:  &mockSyncService{},
+		ChainService: &mock.ChainService{},
 	})
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
@@ -190,8 +141,9 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "7777",
-		SyncService: &mockSyncService{},
+		Port:         "7777",
+		SyncService:  &mockSyncService{},
+		ChainService: &mock.ChainService{},
 	})
 
 	rpcService.Start()
