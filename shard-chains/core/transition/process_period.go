@@ -15,7 +15,7 @@ import (
 func ProcessShardPeriod(shardState *ethpb.ShardState) *ethpb.ShardState {
 
 	shardState.OlderCommitteeDeltas = shardState.NewerCommitteeDeltas
-	shardState.NewerCommitteeDeltas = make([]uint64, params.BeaconConfig().MaxPeriodCommitteeSize)
+	shardState.NewerCommitteeDeltas = make([]uint64, params.ShardConfig().MaxPeriodCommitteeSize)
 
 	return shardState
 }

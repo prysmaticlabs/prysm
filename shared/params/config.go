@@ -26,14 +26,6 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
-	ShardGenesisEpoch              uint64 // SHARD_GENESIS_EPOCH is the genesis shard epoch.
-	MinBlockSizePrices             uint64 // MinBlockSizePrices defines the min block size prices.
-	ShardHeaderSize                uint64 // ShardHeaderSize defines the header size of shard block.
-	ShardBlockSizeLimit            uint64 // ShardBlockSizeLimit defines the size limit of a shard block.
-	ShardBlockSizeTarget           uint64 // ShardBlockSizeTarget defines the block size target of a shard block.
-	BlockSizeQuotient              uint64 // BlockSizeQuotient defines the quotient to determine shard block fees.
-	MinBlockSizePrice              uint64 // MinBlockSizePrice defines the minimal price for a shard block.
-	HistoryAccumulatorVector       uint64 // HistoryAccumulatorVector defines the length of history accumulator.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -58,9 +50,6 @@ type BeaconChainConfig struct {
 	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	ShardSlotsPerEpoch               uint64 // ShardSlotsPerEpoch is the number of slots in a shard epoch.
-	EpochsPerShardPeriod             uint64 // EpochsPerShardPeriod defines how many epochs are in a shard period.
-	MaxPeriodCommitteeSize           uint64 // MaxPeriodCommitteeSize defines the committee size of a shard period.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -112,6 +101,21 @@ type BeaconChainConfig struct {
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 }
 
+// ShardChainConfig contains constant configs for node to participate in shard chains.
+type ShardChainConfig struct {
+	ShardSlotsPerEpoch       uint64 // ShardSlotsPerEpoch is the number of slots in a shard epoch.
+	EpochsPerShardPeriod     uint64 // EpochsPerShardPeriod defines how many epochs are in a shard period.
+	MaxPeriodCommitteeSize   uint64 // MaxPeriodCommitteeSize defines the committee size of a shard period.
+	ShardGenesisEpoch        uint64 // ShardGenesisEpoch is the genesis shard epoch.
+	MinBlockSizePrices       uint64 // MinBlockSizePrices defines the min block size prices.
+	ShardHeaderSize          uint64 // ShardHeaderSize defines the header size of shard block.
+	ShardBlockSizeLimit      uint64 // ShardBlockSizeLimit defines the size limit of a shard block.
+	ShardBlockSizeTarget     uint64 // ShardBlockSizeTarget defines the block size target of a shard block.
+	BlockSizeQuotient        uint64 // BlockSizeQuotient defines the quotient to determine shard block fees.
+	MinBlockSizePrice        uint64 // MinBlockSizePrice defines the minimal price for a shard block.
+	HistoryAccumulatorVector uint64 // HistoryAccumulatorVector defines the length of history accumulator.
+}
+
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
 	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
@@ -135,14 +139,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 65536,
 	MinGenesisTime:                 1578009600,
-	ShardGenesisEpoch:              0,
-	MinBlockSizePrices:             0,
-	ShardHeaderSize:                512,
-	ShardBlockSizeLimit:            65536,
-	ShardBlockSizeTarget:           16384,
-	BlockSizeQuotient:              8,
-	MinBlockSizePrice:              1,
-	HistoryAccumulatorVector:       64,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
@@ -167,9 +163,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxEpochsPerCrosslink:            64,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
-	ShardSlotsPerEpoch:               128,
-	EpochsPerShardPeriod:             256,
-	MaxPeriodCommitteeSize:           128,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -222,6 +215,20 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
+var defaultShardChainConfig = &ShardChainConfig{
+	ShardGenesisEpoch:        0,
+	MinBlockSizePrices:       0,
+	ShardHeaderSize:          512,
+	ShardBlockSizeLimit:      65536,
+	ShardBlockSizeTarget:     16384,
+	BlockSizeQuotient:        8,
+	MinBlockSizePrice:        1,
+	HistoryAccumulatorVector: 64,
+	ShardSlotsPerEpoch:       128,
+	EpochsPerShardPeriod:     256,
+	MaxPeriodCommitteeSize:   128,
+}
+
 var defaultDepositContractConfig = &DepositContractConfig{
 	MinGenesisActiveValidatorCount: big.NewInt(16384),
 	MinDepositAmount:               big.NewInt(1e9),
@@ -229,11 +236,17 @@ var defaultDepositContractConfig = &DepositContractConfig{
 }
 
 var beaconConfig = defaultBeaconConfig
+var shardConfig = defaultShardChainConfig
 var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
 	return beaconConfig
+}
+
+// ShardConfig retrieves shard chain config.
+func ShardConfig() *ShardChainConfig {
+	return shardConfig
 }
 
 // MainnetConfig returns the default config to

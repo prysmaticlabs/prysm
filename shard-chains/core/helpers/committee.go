@@ -31,7 +31,7 @@ func PeriodCommittee(state *pb.BeaconState, shard uint64, epoch uint64) ([]uint6
 		return nil, errors.Wrap(err, "could not get committee")
 	}
 
-	return committee[:params.BeaconConfig().MaxPeriodCommitteeSize], nil
+	return committee[:params.ShardConfig().MaxPeriodCommitteeSize], nil
 }
 
 // ShardCommittee returns the shard committee of a given period.
@@ -61,12 +61,12 @@ func ShardCommittee(state *pb.BeaconState, shard uint64, epoch uint64) ([]uint64
 	newerSubCommittee := make([]uint64, 0, len(newerCommittee))
 
 	for _, index := range olderCommittee {
-		if index%params.BeaconConfig().EpochsPerShardPeriod > epoch%params.BeaconConfig().EpochsPerShardPeriod {
+		if index%params.ShardConfig().EpochsPerShardPeriod > epoch%params.ShardConfig().EpochsPerShardPeriod {
 			olderSubCommittee = append(olderSubCommittee, index)
 		}
 	}
 	for _, index := range newerCommittee {
-		if index%params.BeaconConfig().EpochsPerShardPeriod > epoch%params.BeaconConfig().EpochsPerShardPeriod {
+		if index%params.ShardConfig().EpochsPerShardPeriod > epoch%params.ShardConfig().EpochsPerShardPeriod {
 			newerSubCommittee = append(newerSubCommittee, index)
 		}
 	}

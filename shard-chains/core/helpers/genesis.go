@@ -19,9 +19,9 @@ import (
 //    )
 func GenesisShardState(state *pb.BeaconState, shard uint64) (*ethpb.ShardState, error) {
 	return &ethpb.ShardState{
-		Shard:                 shard,
-		Slot:                  params.BeaconConfig().ShardGenesisEpoch * params.BeaconConfig().ShardSlotsPerEpoch,
-		BlockSizePrice:        params.BeaconConfig().MinBlockSizePrices,
+		Shard:          shard,
+		Slot:           params.ShardConfig().ShardGenesisEpoch * params.ShardConfig().ShardSlotsPerEpoch,
+		BlockSizePrice: params.ShardConfig().MinBlockSizePrices,
 	}, nil
 }
 
@@ -44,8 +44,8 @@ func GenesisShardBlock(state *pb.BeaconState, shard uint64) (*ethpb.ShardBlock, 
 		return nil, errors.Wrap(err, "could not tree hash shard genesis state")
 	}
 	return &ethpb.ShardBlock{
-		Shard: shard,
-			Slot:      params.BeaconConfig().ShardGenesisEpoch * params.BeaconConfig().ShardSlotsPerEpoch,
-			StateRoot: stateRoot[:],
+		Shard:     shard,
+		Slot:      params.ShardConfig().ShardGenesisEpoch * params.ShardConfig().ShardSlotsPerEpoch,
+		StateRoot: stateRoot[:],
 	}, nil
 }

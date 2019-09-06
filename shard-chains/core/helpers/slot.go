@@ -10,7 +10,7 @@ import (
 //  def compute_epoch_of_shard_slot(slot: ShardSlot) -> Epoch:
 //    return compute_epoch_of_slot(slot // SHARD_SLOTS_PER_EPOCH)
 func ShardSlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().ShardSlotsPerEpoch
+	return slot / params.ShardConfig().ShardSlotsPerEpoch
 }
 
 // ShardPeriodStartEpoch returns the start epoch number of the a
@@ -20,6 +20,6 @@ func ShardSlotToEpoch(slot uint64) uint64 {
 //  def compute_shard_period_start_epoch(epoch: Epoch, lookback: uint64) -> Epoch:
 //    return Epoch(epoch - (epoch % EPOCHS_PER_SHARD_PERIOD) - lookback * EPOCHS_PER_SHARD_PERIOD)
 func ShardPeriodStartEpoch(epoch uint64, lookback uint64) uint64 {
-	epochsPerShardPeriod := params.BeaconConfig().EpochsPerShardPeriod
+	epochsPerShardPeriod := params.ShardConfig().EpochsPerShardPeriod
 	return epoch - (epoch % epochsPerShardPeriod) - lookback*epochsPerShardPeriod
 }

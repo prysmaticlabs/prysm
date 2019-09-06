@@ -33,11 +33,8 @@ func ProcessShardSlots(beaconState *pb.BeaconState, shardState *ethpb.ShardState
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		// Process period on the next slot of the next period
-		if (shardState.Slot+1)%(params.BeaconConfig().ShardSlotsPerEpoch*params.BeaconConfig().EpochsPerShardPeriod) == 0 {
-			shardState, err = ProcessShardPeriod(beaconState, shardState)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process period")
-			}
+		if (shardState.Slot+1)%(params.ShardConfig().ShardSlotsPerEpoch*params.ShardConfig().EpochsPerShardPeriod) == 0 {
+			shardState = ProcessShardPeriod(shardState)
 		}
 		shardState.Slot++
 	}
@@ -64,14 +61,14 @@ func ProcessShardSlot(beaconState *pb.BeaconState, shardState *ethpb.ShardState)
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
 	zeroHash := params.BeaconConfig().ZeroHash
-	if bytes.Equal(shardState.LatestBlockHeaderData.StateRoot, zeroHash[:]) {
-		shardState.LatestBlockHeaderData.StateRoot = prevStateRoot[:]
+	if bytes.Equal(shardState.LatestBlockHeader.StateRoot, zeroHash[:]) {
+		shardState.LatestBlockHeader.StateRoot = prevStateRoot[:]
 	}
 
 	// Cache shard state root in history accumulator
 	depth := uint64(0)
 	twoTotheDepth := uint64(1 << depth)
-	for shardState.Slot%twoTotheDepth == 0 && depth < params.BeaconConfig().HistoryAccumulatorVector {
+	for shardState.Slot%twoTotheDepth == 0 && depth < params.ShardConfig().HistoryAccumulatorVector {
 		shardState.HistoryAccumulator[depth] = prevStateRoot[:]
 		depth++
 	}

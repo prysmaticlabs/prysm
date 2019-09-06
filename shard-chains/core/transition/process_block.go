@@ -78,7 +78,7 @@ func ProcessShardBlockHeader(beaconState *pb.BeaconState, shardState *ethpb.Shar
 	if shardState.Shard != shardBlock.Shard {
 		return nil, fmt.Errorf("shard in state: %d is different then shard in block: %d", shardState.Shard, shardBlock.Shard)
 	}
-	
+
 	// Verify slots match
 	if shardState.Slot != shardBlock.Slot {
 		return nil, fmt.Errorf("shard state slot: %d is different then shard block slot: %d", shardState.Slot, shardBlock.Slot)
@@ -113,18 +113,18 @@ func ProcessShardBlockHeader(beaconState *pb.BeaconState, shardState *ethpb.Shar
 		return nil, errors.Wrap(err, "could not tree hash shard block body")
 	}
 	shardState.LatestBlockHeader = &ethpb.ShardBlockHeader{
-		Shard: shardBlock.Shard,
-		Slot:            shardBlock.Slot,
-		BeaconBlockRoot: shardBlock.BeaconBlockRoot,
-		ParentRoot:      shardBlock.ParentRoot,
-		AggregationBits: shardBlock.AggregationBits,
-		BlockSizeSum:    shardBlock.BlockSizeSum,
-		BodyRoot:        bodyRoot[:],
+		Shard:                 shardBlock.Shard,
+		Slot:                  shardBlock.Slot,
+		BeaconBlockRoot:       shardBlock.BeaconBlockRoot,
+		ParentRoot:            shardBlock.ParentRoot,
+		AggregationBits:       shardBlock.AggregationBits,
+		BlockSizeSum:          shardBlock.BlockSizeSum,
+		BodyRoot:              bodyRoot[:],
 		AttestationsSignature: shardBlock.AttestationsSignature,
 	}
 
 	// Verify sum of block sizes since genesis
-	sum := shardState.BlockSizeSum + uint64(len(shardBlock.Body)) + params.BeaconConfig().ShardHeaderSize
+	sum := shardState.BlockSizeSum + uint64(len(shardBlock.Body)) + params.ShardConfig().ShardHeaderSize
 	if shardBlock.BlockSizeSum != sum {
 		return nil, fmt.Errorf("body size %d is not equal to block size in state %d",
 			shardBlock.BlockSizeSum, sum)
@@ -181,7 +181,7 @@ func ProcessShardAttestations(beaconState *pb.BeaconState, shardState *ethpb.Sha
 	}
 	// Verify there are no extraneous bits set beyond the shard committee
 	start := uint64(len(shardCommittee))
-	end := 2 * params.BeaconConfig().MaxPeriodCommitteeSize
+	end := 2 * params.ShardConfig().MaxPeriodCommitteeSize
 	for i := start; i < end; i++ {
 		if shardBlock.AggregationBits.BitAt(i) {
 			return nil, fmt.Errorf("aggregation bit at index %d should not have been set", i)
@@ -235,19 +235,19 @@ func ProcessShardBlockSizeFee(beaconState *pb.BeaconState, shardState *ethpb.Sha
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get proposer index")
 	}
-	blockSize := uint64(len(shardBlock.Body)) + params.BeaconConfig().ShardHeaderSize
-	fee := shardState.BlockSizePrice * blockSize / params.BeaconConfig().ShardBlockSizeLimit
+	blockSize := uint64(len(shardBlock.Body)) + params.ShardConfig().ShardHeaderSize
+	fee := shardState.BlockSizePrice * blockSize / params.ShardConfig().ShardBlockSizeLimit
 	shardState, err = shardHelper.AddFee(beaconState, shardState, proposerIdx, fee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add fee to proposer")
 	}
 
 	// Calculate and change new block size pricing
-	if blockSize > params.BeaconConfig().ShardBlockSizeTarget {
-		sizeDelta := blockSize - params.BeaconConfig().ShardBlockSizeTarget
-		priceDelta := shardState.BlockSizePrice * sizeDelta / params.BeaconConfig().ShardBlockSizeLimit / params.BeaconConfig().BlockSizeQuotient
+	if blockSize > params.ShardConfig().ShardBlockSizeTarget {
+		sizeDelta := blockSize - params.ShardConfig().ShardBlockSizeTarget
+		priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().ShardBlockSizeLimit / params.ShardConfig().BlockSizeQuotient
 		// Max gas price caps the amount burnt on gas fees within a period to 32ETH
-		maxBlockSizePrice := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EpochsPerShardPeriod / params.BeaconConfig().ShardSlotsPerEpoch
+		maxBlockSizePrice := params.BeaconConfig().MaxEffectiveBalance / params.ShardConfig().EpochsPerShardPeriod / params.ShardConfig().ShardSlotsPerEpoch
 		if shardState.BlockSizePrice+priceDelta < maxBlockSizePrice {
 			shardState.BlockSizePrice = shardState.BlockSizePrice + priceDelta
 		} else {
@@ -256,12 +256,12 @@ func ProcessShardBlockSizeFee(beaconState *pb.BeaconState, shardState *ethpb.Sha
 		return shardState, nil
 	}
 
-	sizeDelta := params.BeaconConfig().ShardBlockSizeTarget - blockSize
-	priceDelta := shardState.BlockSizePrice * sizeDelta / params.BeaconConfig().ShardBlockSizeLimit / params.BeaconConfig().BlockSizeQuotient
-	if shardState.BlockSizePrice-priceDelta > params.BeaconConfig().MinBlockSizePrice {
+	sizeDelta := params.ShardConfig().ShardBlockSizeTarget - blockSize
+	priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().ShardBlockSizeLimit / params.ShardConfig().BlockSizeQuotient
+	if shardState.BlockSizePrice-priceDelta > params.ShardConfig().MinBlockSizePrice {
 		shardState.BlockSizePrice = shardState.BlockSizePrice - priceDelta
 	} else {
-		shardState.BlockSizePrice = params.BeaconConfig().MinBlockSizePrice
+		shardState.BlockSizePrice = params.ShardConfig().MinBlockSizePrice
 	}
 
 	return shardState, nil
