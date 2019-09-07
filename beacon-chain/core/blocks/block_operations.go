@@ -612,7 +612,7 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 	}
 
 	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
-		return nil, fmt.Errorf("could not verify attestation bitfields: %v", err)
+		return nil, errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
