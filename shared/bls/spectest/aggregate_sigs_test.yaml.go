@@ -4,15 +4,6 @@
 package spectest
 
 type AggregateSigsTest struct {
-	Title         string   `json:"title"`
-	Summary       string   `json:"summary"`
-	ForksTimeline string   `json:"forks_timeline"`
-	Forks         []string `json:"forks"`
-	Config        string   `json:"config"`
-	Runner        string   `json:"runner"`
-	Handler       string   `json:"handler"`
-	TestCases     []struct {
-		Input  [][]byte `json:"input"`
-		Output []byte   `json:"output" ssz:"size=96"`
-	} `json:"test_cases"`
+	Input  []string `json:"input"`
+	Output string   `json:"output" ssz:"size=96"`
 }

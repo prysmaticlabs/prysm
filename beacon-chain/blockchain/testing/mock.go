@@ -5,6 +5,7 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // ChainService defines the mock interface for testing
@@ -64,4 +65,9 @@ func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
 func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
+}
+
+// StateInitializedFeed mocks StateInitializedFeed method in chain service.
+func (ms *ChainService) StateInitializedFeed() *event.Feed {
+	return new(event.Feed)
 }

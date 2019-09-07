@@ -146,18 +146,36 @@ http_archive(
 )
 
 http_archive(
+    name = "eth2_spec_tests_general",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.ssz",
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "386335fc3b055fad37088bd821929ff684bc00bb1a74e044e4b377ebd6e88fce",
+    # File names are normally too long, see: https://github.com/ethereum/eth2.0-spec-tests/issues/15
+    url = "https://prysmaticlabs.com/uploads/v0.8.3_general_spectests.tar.gz",
+)
+
+http_archive(
     name = "eth2_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
+        "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "faa499c82d9831ed6d421b4eb2f7b54a87084b7499e02d24e1f55184f5f8f88d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.2/minimal.tar.gz",
+    sha256 = "7ab89a364796e3f8a9af84750c241e9c9e2170a34c1a4e160fdfa2cee5b03fb7",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.3/minimal.tar.gz",
 )
 
 http_archive(
@@ -167,12 +185,13 @@ filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz",
+        "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0f36728b130892b403377fa71377b4cc75a939c64b10f3cb81fceb3729cfa9e3",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.2/mainnet.tar.gz",
+    sha256 = "6274e3b77f393faf7b17cef10e93244c16316d3b7ae9c6b844501b12f432a7c3",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.3/mainnet.tar.gz",
 )
 
 http_archive(
@@ -207,7 +226,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "981f27aaf9bdce45391d0cd8bb522df514e0b566",
+    commit = "8839d2f3b900530fbab26154740e8bded3932a86",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and

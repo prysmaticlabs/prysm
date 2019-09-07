@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,14 +33,14 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 		BlockFetcher:    &goodFetcher{},
 	})
@@ -95,14 +95,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
@@ -164,7 +164,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -242,14 +242,14 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 		BlockFetcher:    &goodFetcher{},
 	})
@@ -311,14 +311,14 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 		BlockFetcher:    &goodFetcher{},
 	})
@@ -391,14 +391,14 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		HTTPLogger:      testAcc.Backend,
 		ContractBackend: testAcc.Backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 		BlockFetcher:    &goodFetcher{},
 	})

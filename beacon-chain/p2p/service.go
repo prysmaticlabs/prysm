@@ -6,8 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/gogo/protobuf/proto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/karlseguin/ccache"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -19,8 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
-	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
-	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var _ = shared.Service(&Service{})
@@ -95,7 +92,6 @@ func (s *Service) Start() {
 
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		ipAddr := ipAddr(s.cfg)
-
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
@@ -187,13 +183,12 @@ func (s *Service) Disconnect(pid peer.ID) error {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	nodes := make([]*discv5.Node, 10)
 	ticker := time.NewTicker(pollingPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			num := s.dv5Listener.ReadRandomNodes(nodes)
-			multiAddresses := convertToMultiAddr(nodes[:num])
+			nodes := s.dv5Listener.LookupRandom()
+			multiAddresses := convertToMultiAddr(nodes)
 			s.connectWithAllPeers(multiAddresses)
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
@@ -224,7 +219,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 }
 
 func (s *Service) addBootNodeToExclusionList() error {
-	bootNode, err := discv5.ParseNode(s.cfg.BootstrapNodeAddr)
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr)
 	if err != nil {
 		return err
 	}
@@ -251,11 +246,4 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 		}
 	}
 	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
-}
-
-// Subscribe to some topic.
-// TODO(3147): Remove
-// DEPRECATED: Do not use.
-func (s *Service) Subscribe(_ proto.Message, _ chan deprecatedp2p.Message) event.Subscription {
-	return nil
 }

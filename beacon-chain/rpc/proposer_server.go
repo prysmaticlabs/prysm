@@ -7,14 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	newBlockchain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	blockchain "github.com/prysmaticlabs/prysm/beacon-chain/deprecated-blockchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -30,7 +27,7 @@ import (
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
 	beaconDB           db.Database
-	chainService       interface{}
+	chainService       chainService
 	powChainService    powChainService
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
@@ -45,20 +42,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	// Retrieve the parent block as the current head of the canonical chain
-	var parent *ethpb.BeaconBlock
-	var err error
-	if d, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-		parent, err = d.ChainHead()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get canonical head block")
-		}
-	} else {
-		parent, err = ps.beaconDB.(*kv.Store).HeadBlock(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get canonical head block")
-		}
-		parent = ps.chainService.(newBlockchain.HeadRetriever).HeadBlock()
-	}
+	parent := ps.chainService.HeadBlock()
 
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
@@ -131,20 +115,8 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 
-	db, isLegacyDB := ps.beaconDB.(*db.BeaconDB)
-	if srv, isLegacyService := ps.chainService.(*blockchain.ChainService); isLegacyService && isLegacyDB {
-		beaconState, err := srv.ReceiveBlockDeprecated(ctx, blk)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process beacon block")
-		}
-		if err := db.UpdateChainHead(ctx, blk, beaconState); err != nil {
-			return nil, errors.Wrap(err, "failed to update chain")
-		}
-		ps.chainService.(*blockchain.ChainService).UpdateCanonicalRoots(blk, root)
-	} else {
-		if err := ps.chainService.(*newBlockchain.ChainService).ReceiveBlock(ctx, blk); err != nil {
-			return nil, errors.Wrap(err, "could not process beacon block")
-		}
+	if err := ps.chainService.ReceiveBlock(ctx, blk); err != nil {
+		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
@@ -156,25 +128,15 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	var beaconState *pbp2p.BeaconState
-	var err error
-	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-		beaconState, err = ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
-	} else {
-		beaconState = ps.chainService.(newBlockchain.HeadRetriever).HeadState()
-	}
-
+	headState := ps.chainService.HeadState()
 	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
 	}
 
 	// advance slot, if it is behind
-	if beaconState.Slot < expectedSlot {
-		beaconState, err = state.ProcessSlots(ctx, beaconState, expectedSlot)
+	if headState.Slot < expectedSlot {
+		headState, err = state.ProcessSlots(ctx, headState, expectedSlot)
 		if err != nil {
 			return nil, err
 		}
@@ -182,24 +144,24 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 
 	var attsReadyForInclusion []*ethpb.Attestation
 	for _, att := range atts {
-		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		slot, err := helpers.AttestationDataSlot(headState, att.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attestation slot")
 		}
-		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot &&
-			beaconState.Slot <= slot+params.BeaconConfig().SlotsPerEpoch {
+		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= headState.Slot &&
+			headState.Slot <= slot+params.BeaconConfig().SlotsPerEpoch {
 			attsReadyForInclusion = append(attsReadyForInclusion, att)
 		}
 	}
 
 	validAtts := make([]*ethpb.Attestation, 0, len(attsReadyForInclusion))
 	for _, att := range attsReadyForInclusion {
-		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
+		slot, err := helpers.AttestationDataSlot(headState, att.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attestation slot")
 		}
 
-		if _, err := blocks.ProcessAttestationNoVerify(beaconState, att); err != nil {
+		if _, err := blocks.ProcessAttestationNoVerify(headState, att); err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
@@ -209,19 +171,12 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
 				"Deleting failed pending attestation from DB")
 
-			var hash [32]byte
-			if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-				hash, err = ssz.HashTreeRoot(att)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				hash, err = ssz.HashTreeRoot(att.Data)
-				if err != nil {
-					return nil, err
-				}
+			root, err := ssz.HashTreeRoot(att.Data)
+			if err != nil {
+				return nil, err
 			}
-			if err := ps.beaconDB.DeleteAttestation(ctx, hash); err != nil {
+
+			if err := ps.beaconDB.DeleteAttestation(ctx, root); err != nil {
 				return nil, errors.Wrap(err, "could not delete failed attestation")
 			}
 			continue
@@ -284,18 +239,9 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	var beaconState *pbp2p.BeaconState
-	var err error
-	if _, isLegacyDB := ps.beaconDB.(*db.BeaconDB); isLegacyDB {
-		beaconState, err = ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
-	} else {
-		beaconState = ps.chainService.(newBlockchain.HeadRetriever).HeadState()
-	}
+	headState := ps.chainService.HeadState()
 
-	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
+	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, headState, currentVote)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +272,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*depositcache.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+		if uint64(dep.Index) >= headState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -36,6 +37,13 @@ var log logrus.FieldLogger
 
 func init() {
 	log = logrus.WithField("prefix", "rpc")
+}
+
+type chainService interface {
+	blockchain.HeadRetriever
+	blockchain.AttestationReceiver
+	blockchain.BlockReceiver
+	StateInitializedFeed() *event.Feed
 }
 
 type operationService interface {
@@ -65,7 +73,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
-	chainService        interface{}
+	chainService        chainService
 	powChainService     powChainService
 	operationService    operationService
 	syncService         sync.Checker
@@ -87,7 +95,7 @@ type Config struct {
 	CertFlag         string
 	KeyFlag          string
 	BeaconDB         db.Database
-	ChainService     interface{}
+	ChainService     chainService
 	POWChainService  powChainService
 	OperationService operationService
 	SyncService      sync.Checker
@@ -95,9 +103,9 @@ type Config struct {
 	DepositCache     *depositcache.DepositCache
 }
 
-// NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
-// interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
+// NewService instantiates a new RPC service instance that will
+// be registered into a running beacon node.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                 ctx,
@@ -156,7 +164,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
-		chainService:        s.chainService.(stateFeedListener),
+		chainService:        s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -191,9 +199,9 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB: s.beaconDB,
-		pool:     s.operationService,
-		head:     s.chainService,
+		beaconDB:     s.beaconDB,
+		pool:         s.operationService,
+		chainService: s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

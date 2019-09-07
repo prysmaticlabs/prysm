@@ -426,8 +426,8 @@ func ProcessAttesterSlashings(
 			if helpers.IsSlashableValidator(beaconState.Validators[validatorIndex], currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 				if err != nil {
-					return nil, fmt.Errorf("could not slash validator index %d: %v",
-						validatorIndex, err)
+					return nil, errors.Wrapf(err, "could not slash validator index %d",
+						validatorIndex)
 				}
 				slashedAny = true
 			}
@@ -526,9 +526,13 @@ func ProcessAttestationsNoVerify(
 //    """
 //    data = attestation.data
 //    assert data.crosslink.shard < SHARD_COUNT
-//    assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//
 //    attestation_slot = get_attestation_data_slot(state, data)
 //    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+//
+//    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
+//    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
@@ -575,9 +579,9 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		)
 	}
 
-	if !(data.Target.Epoch == helpers.PrevEpoch(beaconState) || data.Target.Epoch == helpers.CurrentEpoch(beaconState)) {
+	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
 		return nil, fmt.Errorf(
-			"expected target epoch %d == %d or %d",
+			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 			data.Target.Epoch,
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
@@ -606,6 +610,11 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
+
+	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
+		return nil, errors.Wrap(err, "could not verify attestation bitfields")
+	}
+
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
