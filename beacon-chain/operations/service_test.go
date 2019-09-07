@@ -37,7 +37,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opsService := NewOpsPoolService(context.Background(), &Config{})
+	opsService := NewService(context.Background(), &Config{})
 
 	if err := opsService.Stop(); err != nil {
 		t.Fatalf("Unable to stop operation service: %v", err)
@@ -57,7 +57,7 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestServiceStatus_Error(t *testing.T) {
-	service := NewOpsPoolService(context.Background(), &Config{})
+	service := NewService(context.Background(), &Config{})
 	if service.Status() != nil {
 		t.Errorf("service status should be nil to begin with, got: %v", service.error)
 	}
@@ -73,7 +73,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exit := &ethpb.VoluntaryExit{Epoch: 100}
 	if err := service.HandleValidatorExits(context.Background(), exit); err != nil {
@@ -88,7 +88,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	broadcaster := &mockBroadcaster{}
-	service := NewOpsPoolService(context.Background(), &Config{
+	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 		P2P:      broadcaster,
 	})
@@ -175,7 +175,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 	broadcaster := &mockBroadcaster{}
-	opsSrv := NewOpsPoolService(ctx, &Config{
+	opsSrv := NewService(ctx, &Config{
 		BeaconDB: beaconDB,
 		P2P:      broadcaster,
 	})
@@ -292,7 +292,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 	broadcaster := &mockBroadcaster{}
-	service := NewOpsPoolService(context.Background(), &Config{
+	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 		P2P:      broadcaster,
 	})
@@ -475,7 +475,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:1 - slot:61 attestations.
 	// The 1st retrieval is set at slot 64.
@@ -522,7 +522,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for slots 0 to 139.
 	origAttestations := make([]*ethpb.Attestation, 140)
@@ -576,7 +576,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	s := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
@@ -626,7 +626,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	s := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
