@@ -86,7 +86,7 @@ var (
 	P2PTCPPort = cli.IntFlag{
 		Name:  "p2p-tcp-port",
 		Usage: "The port used by libp2p.",
-		Value: 12000,
+		Value: 13000,
 	}
 	// P2PHost defines the host IP to be used by libp2p.
 	P2PHost = cli.StringFlag{
