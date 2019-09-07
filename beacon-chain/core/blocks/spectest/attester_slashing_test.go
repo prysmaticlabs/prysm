@@ -17,10 +17,10 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 	}
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/attester_slashing/pyspec_tests")
-
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			attSlashingFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "attester_slashing.ssz")
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			attSlashingFile, err := testutil.BazelFileBytes(folderPath, "attester_slashing.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -29,10 +29,8 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preStatePath := path.Join(testsFolderPath, folder.Name(), "pre.ssz")
-			postStatePath := path.Join(testsFolderPath, folder.Name(), "post.ssz")
 			body := &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing}}
-			testutil.RunBlockOperationTest(t, preStatePath, body, postStatePath, blocks.ProcessAttesterSlashings)
+			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttesterSlashings)
 		})
 	}
 }

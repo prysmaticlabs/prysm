@@ -17,8 +17,8 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/justification_and_finalization/pyspec_tests")
-
+	testPath := "epoch_processing/justification_and_finalization/pyspec_tests"
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())

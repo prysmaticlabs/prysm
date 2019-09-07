@@ -29,7 +29,6 @@ func runShuffleTests(t *testing.T, config string) {
 	}
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "shuffling/core/shuffle")
-
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			testCaseFile, err := testutil.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))

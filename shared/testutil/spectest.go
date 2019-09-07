@@ -55,14 +55,13 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 // passed in block operation function and checks the post state with the expected post state.
 func RunBlockOperationTest(
 	t *testing.T,
-	preStatePath string,
+	folderPath string,
 	body *ethpb.BeaconBlockBody,
-	postStatePath string,
 	operationFn blockOperation,
 ) {
 	helpers.ClearAllCaches()
 
-	preBeaconStateFile, err := BazelFileBytes(preStatePath)
+	preBeaconStateFile, err := BazelFileBytes(path.Join(folderPath, "pre.ssz"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,7 @@ func RunBlockOperationTest(
 	}
 
 	// If the post.ssz is not present, it means the test should fail on our end.
-	postSSZFilepath, err := bazel.Runfile(postStatePath)
+	postSSZFilepath, err := bazel.Runfile(path.Join(folderPath, "post.ssz"))
 	postSSZExists := true
 	if err != nil && strings.Contains(err.Error(), "could not locate file") {
 		postSSZExists = false
