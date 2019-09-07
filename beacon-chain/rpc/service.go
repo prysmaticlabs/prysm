@@ -103,9 +103,9 @@ type Config struct {
 	DepositCache     *depositcache.DepositCache
 }
 
-// NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
-// interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
+// NewService instantiates a new RPC service instance that will
+// be registered into a running beacon node.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                 ctx,

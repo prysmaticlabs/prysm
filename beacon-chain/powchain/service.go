@@ -66,13 +66,13 @@ type Client interface {
 	bind.ContractCaller
 }
 
-// Web3Service fetches important information about the canonical
+// Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
 // blockhash, block number, and access to logs within the
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
-type Web3Service struct {
+type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	client                  Client
@@ -121,9 +121,9 @@ type Web3ServiceConfig struct {
 	DepositCache    *depositcache.DepositCache
 }
 
-// NewWeb3Service sets up a new instance with an ethclient when
+// NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
+func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf(
 			"powchain service requires either an IPC or WebSocket endpoint, provided %s",
@@ -142,7 +142,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
-	return &Web3Service{
+	return &Service{
 		ctx:                     ctx,
 		cancel:                  cancel,
 		headerChan:              make(chan *gethTypes.Header),
@@ -170,20 +170,20 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 }
 
 // Start a web3 service's main event loop.
-func (w *Web3Service) Start() {
+func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
-		"endpoint": w.endpoint,
+		"endpoint": s.endpoint,
 	}).Info("Starting service")
-	go w.run(w.ctx.Done())
+	go s.run(s.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
-func (w *Web3Service) Stop() error {
-	if w.cancel != nil {
-		defer w.cancel()
+func (s *Service) Stop() error {
+	if s.cancel != nil {
+		defer s.cancel()
 	}
-	if w.headerChan != nil {
-		defer close(w.headerChan)
+	if s.headerChan != nil {
+		defer close(s.headerChan)
 	}
 	log.Info("Stopping service")
 	return nil
@@ -191,43 +191,43 @@ func (w *Web3Service) Stop() error {
 
 // ChainStartFeed returns a feed that is written to
 // whenever the deposit contract fires a ChainStart log.
-func (w *Web3Service) ChainStartFeed() *event.Feed {
-	return w.chainStartFeed
+func (s *Service) ChainStartFeed() *event.Feed {
+	return s.chainStartFeed
 }
 
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
-func (w *Web3Service) ChainStartDeposits() []*ethpb.Deposit {
-	return w.chainStartDeposits
+func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
+	return s.chainStartDeposits
 }
 
 // ChainStartETH1Data returns the eth1 data at chainstart.
-func (w *Web3Service) ChainStartETH1Data() *ethpb.Eth1Data {
-	return w.chainStartETH1Data
+func (s *Service) ChainStartETH1Data() *ethpb.Eth1Data {
+	return s.chainStartETH1Data
 }
 
 // HasChainStarted returns whether the deposits from
 // the deposit contract received so far are valid enough
 // to kick start the beacon chain.
-func (w *Web3Service) HasChainStarted() bool {
-	return w.chainStarted
+func (s *Service) HasChainStarted() bool {
+	return s.chainStarted
 }
 
 // Status is service health checks. Return nil or error.
-func (w *Web3Service) Status() error {
-	// Web3Service don't start
-	if !w.isRunning {
+func (s *Service) Status() error {
+	// Service don't start
+	if !s.isRunning {
 		return nil
 	}
 	// get error from run function
-	if w.runError != nil {
-		return w.runError
+	if s.runError != nil {
+		return s.runError
 	}
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if w.blockTime.Before(fiveMinutesTimeout) {
+	if s.blockTime.Before(fiveMinutesTimeout) {
 		return errors.New("eth1 client is not syncing")
 	}
 	return nil
@@ -235,42 +235,42 @@ func (w *Web3Service) Status() error {
 
 // DepositRoot returns the Merkle root of the latest deposit trie
 // from the ETH1.0 deposit contract.
-func (w *Web3Service) DepositRoot() [32]byte {
-	return w.depositTrie.Root()
+func (s *Service) DepositRoot() [32]byte {
+	return s.depositTrie.Root()
 }
 
 // DepositTrie returns the sparse Merkle trie used for storing
 // deposits from the ETH1.0 deposit contract.
-func (w *Web3Service) DepositTrie() *trieutil.MerkleTrie {
-	return w.depositTrie
+func (s *Service) DepositTrie() *trieutil.MerkleTrie {
+	return s.depositTrie
 }
 
 // LatestBlockHeight in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockHeight() *big.Int {
-	return w.blockHeight
+func (s *Service) LatestBlockHeight() *big.Int {
+	return s.blockHeight
 }
 
 // LatestBlockHash in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockHash() common.Hash {
-	return w.blockHash
+func (s *Service) LatestBlockHash() common.Hash {
+	return s.blockHash
 }
 
 // Client for interacting with the ETH1.0 chain.
-func (w *Web3Service) Client() Client {
-	return w.client
+func (s *Service) Client() Client {
+	return s.client
 }
 
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
 // are processed.
-func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
-	w.processingLock.RLock()
-	defer w.processingLock.RUnlock()
-	countByte, err := w.depositContractCaller.GetDepositCount(&bind.CallOpts{})
+func (s *Service) AreAllDepositsProcessed() (bool, error) {
+	s.processingLock.RLock()
+	defer s.processingLock.RUnlock()
+	countByte, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := w.depositCache.AllDeposits(context.TODO(), nil)
+	deposits := s.depositCache.AllDeposits(context.TODO(), nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -279,30 +279,30 @@ func (w *Web3Service) AreAllDepositsProcessed() (bool, error) {
 
 // initDataFromContract calls the deposit contract and finds the deposit count
 // and deposit root.
-func (w *Web3Service) initDataFromContract() error {
-	root, err := w.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
+func (s *Service) initDataFromContract() error {
+	root, err := s.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve deposit root")
 	}
-	w.depositRoot = root[:]
+	s.depositRoot = root[:]
 	return nil
 }
 
 // processSubscribedHeaders adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
-func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
+func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
-	w.blockHeight = header.Number
-	w.blockHash = header.Hash()
-	w.blockTime = time.Unix(int64(header.Time), 0)
+	s.blockHeight = header.Number
+	s.blockHash = header.Hash()
+	s.blockTime = time.Unix(int64(header.Time), 0)
 	log.WithFields(logrus.Fields{
-		"blockNumber": w.blockHeight,
-		"blockHash":   w.blockHash.Hex(),
+		"blockNumber": s.blockHeight,
+		"blockHash":   s.blockHash.Hex(),
 	}).Debug("Latest eth1 chain event")
 
-	if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-		w.runError = err
+	if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+		s.runError = err
 		log.Errorf("Unable to add block data to cache %v", err)
 	}
 }
@@ -319,49 +319,49 @@ func safelyHandlePanic() {
 	}
 }
 
-func (w *Web3Service) handleDelayTicker() {
+func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
 	// logs for the powchain service to process.
-	if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
+	if s.lastRequestedBlock.Cmp(s.blockHeight) == 0 {
 		return
 	}
-	if err := w.requestBatchedLogs(context.Background()); err != nil {
-		w.runError = err
+	if err := s.requestBatchedLogs(context.Background()); err != nil {
+		s.runError = err
 		log.Error(err)
 	}
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
-func (w *Web3Service) run(done <-chan struct{}) {
-	w.isRunning = true
-	w.runError = nil
-	if err := w.initDataFromContract(); err != nil {
+func (s *Service) run(done <-chan struct{}) {
+	s.isRunning = true
+	s.runError = nil
+	if err := s.initDataFromContract(); err != nil {
 		log.Errorf("Unable to retrieve data from deposit contract %v", err)
 		return
 	}
 
-	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
+	headSub, err := s.reader.SubscribeNewHead(s.ctx, s.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
-		w.runError = err
+		s.runError = err
 		return
 	}
 
-	header, err := w.blockFetcher.HeaderByNumber(context.Background(), nil)
+	header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-		w.runError = err
+		s.runError = err
 		return
 	}
 
-	w.blockHeight = header.Number
-	w.blockHash = header.Hash()
+	s.blockHeight = header.Number
+	s.blockHash = header.Hash()
 
-	if err := w.processPastLogs(context.Background()); err != nil {
+	if err := s.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
-		w.runError = err
+		s.runError = err
 		return
 	}
 
@@ -372,19 +372,19 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
-			w.isRunning = false
-			w.runError = nil
+			s.isRunning = false
+			s.runError = nil
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
-		case w.runError = <-headSub.Err():
-			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
+		case s.runError = <-headSub.Err():
+			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", s.runError)
 			return
-		case header, ok := <-w.headerChan:
+		case header, ok := <-s.headerChan:
 			if ok {
-				w.processSubscribedHeaders(header)
+				s.processSubscribedHeaders(header)
 			}
 		case <-ticker.C:
-			w.handleDelayTicker()
+			s.handleDelayTicker()
 		}
 	}
 }

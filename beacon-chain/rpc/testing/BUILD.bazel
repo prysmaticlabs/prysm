@@ -1,14 +1,13 @@
-package(default_testonly = True)
-
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "beacon_service_mock.go",
         "validator_service_mock.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/internal",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",

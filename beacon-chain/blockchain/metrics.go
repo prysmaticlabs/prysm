@@ -49,8 +49,8 @@ var (
 	})
 )
 
-func (c *ChainService) reportSlotMetrics(currentSlot uint64) {
+func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
-	beaconHeadSlot.Set(float64(c.HeadSlot()))
-	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(c.HeadRoot())))
+	beaconHeadSlot.Set(float64(s.HeadSlot()))
+	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(s.HeadRoot())))
 }

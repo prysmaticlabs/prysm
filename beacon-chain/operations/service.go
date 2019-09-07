@@ -66,9 +66,9 @@ type Config struct {
 	P2P      p2p.Broadcaster
 }
 
-// NewOpsPoolService instantiates a new service instance that will
+// NewService instantiates a new operation service instance that will
 // be registered into a running beacon node.
-func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                        ctx,
