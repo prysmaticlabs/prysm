@@ -30,7 +30,7 @@ func (s *Service) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 	slots := s.latestHeadSlots()
 	for _, slot := range slots {
 		r := hex.EncodeToString(bytesutil.Trunc(s.canonicalRoots[uint64(slot)]))
-		if _, err := fmt.Fprintf(w, "\n %d\t\t%s\t", s, r); err != nil {
+		if _, err := fmt.Fprintf(w, "\n %d\t\t%s\t", slot, r); err != nil {
 			logrus.WithError(err).Error("Failed to render chain heads page")
 			return
 		}
