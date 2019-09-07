@@ -22,9 +22,6 @@ type epochOperation func(*pb.BeaconState) (*pb.BeaconState, error)
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
 func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
-	if config == "minimal" {
-		t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //... See https://github.com/prysmaticlabs/prysm/issues/3066")
-	}
 	testsFolderPath := path.Join("tests", config, "phase0", folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
@@ -55,14 +52,13 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 // passed in block operation function and checks the post state with the expected post state.
 func RunBlockOperationTest(
 	t *testing.T,
-	preStatePath string,
+	folderPath string,
 	body *ethpb.BeaconBlockBody,
-	postStatePath string,
 	operationFn blockOperation,
 ) {
 	helpers.ClearAllCaches()
 
-	preBeaconStateFile, err := BazelFileBytes(preStatePath)
+	preBeaconStateFile, err := BazelFileBytes(path.Join(folderPath, "pre.ssz"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +68,7 @@ func RunBlockOperationTest(
 	}
 
 	// If the post.ssz is not present, it means the test should fail on our end.
-	postSSZFilepath, err := bazel.Runfile(postStatePath)
+	postSSZFilepath, err := bazel.Runfile(path.Join(folderPath, "post.ssz"))
 	postSSZExists := true
 	if err != nil && strings.Contains(err.Error(), "could not locate file") {
 		postSSZExists = false

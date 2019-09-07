@@ -17,10 +17,10 @@ func runVoluntaryExitTest(t *testing.T, config string) {
 	}
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/voluntary_exit/pyspec_tests")
-
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			exitFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "voluntary_exit.ssz")
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			exitFile, err := testutil.BazelFileBytes(folderPath, "voluntary_exit.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -29,10 +29,8 @@ func runVoluntaryExitTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preStatePath := path.Join(testsFolderPath, folder.Name(), "pre.ssz")
-			postStatePath := path.Join(testsFolderPath, folder.Name(), "post.ssz")
 			body := &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.VoluntaryExit{voluntaryExit}}
-			testutil.RunBlockOperationTest(t, preStatePath, body, postStatePath, blocks.ProcessVoluntaryExits)
+			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessVoluntaryExits)
 		})
 	}
 }

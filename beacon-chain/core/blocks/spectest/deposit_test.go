@@ -17,10 +17,10 @@ func runDepositTest(t *testing.T, config string) {
 	}
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/deposit/pyspec_tests")
-
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			depositFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "deposit.ssz")
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			depositFile, err := testutil.BazelFileBytes(folderPath, "deposit.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -29,10 +29,8 @@ func runDepositTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preStatePath := path.Join(testsFolderPath, folder.Name(), "pre.ssz")
-			postStatePath := path.Join(testsFolderPath, folder.Name(), "post.ssz")
 			body := &ethpb.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
-			testutil.RunBlockOperationTest(t, preStatePath, body, postStatePath, blocks.ProcessDeposits)
+			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessDeposits)
 		})
 	}
 }

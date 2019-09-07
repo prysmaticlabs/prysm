@@ -19,7 +19,8 @@ func runAttestationTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/attestation/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			attestationFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "attestation.ssz")
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			attestationFile, err := testutil.BazelFileBytes(folderPath, "attestation.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -28,10 +29,8 @@ func runAttestationTest(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			preStatePath := path.Join(testsFolderPath, folder.Name(), "pre.ssz")
-			postStatePath := path.Join(testsFolderPath, folder.Name(), "post.ssz")
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
-			testutil.RunBlockOperationTest(t, preStatePath, body, postStatePath, blocks.ProcessAttestations)
+			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
 		})
 	}
 }
