@@ -46,7 +46,7 @@ type MatchedAttestations struct {
 //  def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
-//        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+//        if a.data.beacon_block_root == get_block_root_at_slot(state, get_attestation_data_slot(state, a.data))
 //    ]
 func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestations, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
