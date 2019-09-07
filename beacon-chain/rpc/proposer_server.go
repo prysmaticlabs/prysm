@@ -271,7 +271,7 @@ func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64)
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	eth1VotingPeriodStartTime, _ := ps.eth1InfoRetriever.Eth2GenesisPowchainInfo()
+	eth1VotingPeriodStartTime := uint64(ps.chainService.(newBlockchain.GenesisRetriever).GenesisTime().Unix())
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp

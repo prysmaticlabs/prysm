@@ -11,6 +11,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -36,6 +37,13 @@ func init() {
 	log = logrus.WithField("prefix", "rpc")
 }
 
+type chainService interface {
+	blockchain.HeadRetriever
+	blockchain.AttestationReceiver
+	blockchain.BlockReceiver
+	StateInitializedFeed() *event.Feed
+}
+
 type operationService interface {
 	operations.Pool
 	HandleAttestation(context.Context, proto.Message) error
@@ -47,7 +55,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	beaconDB            db.Database
-	chainService        interface{}
+	chainService        chainService
 	powChainService     powchain.Chain
 	mockEth1Votes       bool
 	operationService    operationService
@@ -70,7 +78,7 @@ type Config struct {
 	CertFlag         string
 	KeyFlag          string
 	BeaconDB         db.Database
-	ChainService     interface{}
+	ChainService     chainService
 	POWChainService  powchain.Chain
 	MockEth1Votes    bool
 	OperationService operationService
@@ -141,7 +149,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		chainStartFetcher:   s.powChainService,
-		chainService:        s.chainService.(stateFeedListener),
+		chainService:        s.chainService,
 		eth1InfoRetriever:   s.powChainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
@@ -181,9 +189,9 @@ func (s *Service) Start() {
 		syncChecker: s.syncService,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB: s.beaconDB,
-		pool:     s.operationService,
-		head:     s.chainService,
+		beaconDB:     s.beaconDB,
+		pool:         s.operationService,
+		chainService: s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)

@@ -10,12 +10,8 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -244,60 +240,4 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
 	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
-}
-
-func TestReceiveBlockNoPubsubForkchoice_CanUpdateValidatorDB(t *testing.T) {
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	ctx := context.Background()
-
-	chainService := setupBeaconChain(t, db)
-
-	b := &ethpb.BeaconBlock{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
-		Body: &ethpb.BeaconBlockBody{}}
-	bRoot, err := ssz.SigningRoot(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, &pb.BeaconState{
-		Validators: []*ethpb.Validator{
-			{PublicKey: []byte{'X'}},
-			{PublicKey: []byte{'Y'}},
-			{PublicKey: []byte{'Z'}},
-		},
-	}, bRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	headBlk := &ethpb.BeaconBlock{Slot: 100}
-	if err := db.SaveBlock(ctx, headBlk); err != nil {
-		t.Fatal(err)
-	}
-	r, err := ssz.SigningRoot(headBlk)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chainService.forkChoiceStore = &store{headRoot: r[:]}
-
-	v.DeleteActivatedVal(1)
-	v.InsertActivatedIndices(1, []uint64{0})
-
-	if err := chainService.ReceiveBlockNoPubsub(ctx, b); err != nil {
-		t.Fatal(err)
-	}
-
-	index, _, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'X'}))
-	if index != 0 {
-		t.Errorf("Wanted: %d, got: %d", 1, index)
-	}
-	_, e, _ := db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'Y'}))
-	if e == true {
-		t.Error("Index should not exist in DB")
-	}
-	_, e, _ = db.ValidatorIndex(ctx, bytesutil.ToBytes48([]byte{'Z'}))
-	if e == true {
-		t.Error("Index should not exist in DB")
-	}
 }

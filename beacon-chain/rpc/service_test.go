@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -94,7 +95,7 @@ func TestLifecycle_OK(t *testing.T) {
 		CertFlag:     "alice.crt",
 		KeyFlag:      "alice.key",
 		SyncService:  &mockSyncService{},
-		ChainService: &mockStateFeedListener{},
+		ChainService: &mock.ChainService{},
 	})
 
 	rpcService.Start()
@@ -113,7 +114,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "ralph merkle!!!",
 		SyncService:  &mockSyncService{},
-		ChainService: &mockStateFeedListener{},
+		ChainService: &mock.ChainService{},
 	})
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
@@ -142,7 +143,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "7777",
 		SyncService:  &mockSyncService{},
-		ChainService: &mockStateFeedListener{},
+		ChainService: &mock.ChainService{},
 	})
 
 	rpcService.Start()

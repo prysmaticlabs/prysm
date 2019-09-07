@@ -31,31 +31,6 @@ var (
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 	}
-	// UseNewP2PFlag to start the beacon chain with the new p2p library.
-	UseNewP2PFlag = cli.BoolFlag{
-		Name:  "experimental-p2p",
-		Usage: "Use the new experimental p2p library. See issue #3147.",
-	}
-	// UseNewSyncFlag to start the beacon chain using the new sync library.
-	UseNewSyncFlag = cli.BoolFlag{
-		Name:  "experimental-sync",
-		Usage: "Use the new experimental sync libraries. See issue #3147.",
-	}
-	// UseNewDatabaseFlag to start the beacon chain using new database library.
-	UseNewDatabaseFlag = cli.BoolFlag{
-		Name:  "experimental-db",
-		Usage: "Use the new experimental database library.",
-	}
-	// UseNewBlockChainFlag to start the beacon chain using new blockchain library.
-	UseNewBlockChainFlag = cli.BoolFlag{
-		Name:  "experimental-blockchain",
-		Usage: "Use the new experimental blockchain library.",
-	}
-	// NextFlag to enable all experimental features.
-	NextFlag = cli.BoolFlag{
-		Name:  "next",
-		Usage: "Use next version experimental features.",
-	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-balance-cache",
@@ -103,10 +78,6 @@ var BeaconChainFlags = []cli.Flag{
 	DisableGossipSubFlag,
 	EnableExcessDepositsFlag,
 	NoGenesisDelayFlag,
-	UseNewP2PFlag,
-	UseNewSyncFlag,
-	UseNewDatabaseFlag,
-	NextFlag,
 	EnableActiveBalanceCacheFlag,
 	EnableAttestationCacheFlag,
 	EnableAncestorBlockCacheFlag,
