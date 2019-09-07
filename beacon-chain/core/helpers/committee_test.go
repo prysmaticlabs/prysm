@@ -319,17 +319,16 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 }
 
-func TestVerifyBitfield_OK(t *testing.T) {
+func TestVerifyBitfieldLength_OK(t *testing.T) {
 	bf := bitfield.Bitlist{0xFF, 0x01}
 	committeeSize := uint64(8)
-
-	if err := VerifyBitfield(bf, committeeSize); err != nil {
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
 		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
 	}
 
 	bf = bitfield.Bitlist{0xFF, 0x07}
 	committeeSize = 10
-	if err := VerifyBitfield(bf, committeeSize); err != nil {
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
 		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
 	}
 }
@@ -588,7 +587,7 @@ func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	}
 }
 
-func TestVerifyAttestationBitfields_OK(t *testing.T) {
+func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -702,7 +701,7 @@ func TestVerifyAttestationBitfields_OK(t *testing.T) {
 	for i, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
-		err := VerifyAttestationBitfields(state, tt.attestation)
+		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
 			if tt.invalidCustodyBits {
 				if !strings.Contains(err.Error(), "custody bitfield") {

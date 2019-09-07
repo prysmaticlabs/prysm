@@ -579,9 +579,9 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		)
 	}
 
-	if !(data.Target.Epoch == helpers.PrevEpoch(beaconState) || data.Target.Epoch == helpers.CurrentEpoch(beaconState)) {
+	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
 		return nil, fmt.Errorf(
-			"expected target epoch %d == %d or %d",
+			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 			data.Target.Epoch,
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
@@ -611,7 +611,7 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		)
 	}
 
-	if err := helpers.VerifyAttestationBitfields(beaconState, att); err != nil {
+	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
 		return nil, fmt.Errorf("could not verify attestation bitfields: %v", err)
 	}
 

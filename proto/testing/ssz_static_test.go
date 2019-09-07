@@ -3,6 +3,7 @@ package testing
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 
@@ -90,51 +91,54 @@ func runSSZStaticTests(t *testing.T, config string) {
 
 func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
-	if folderName == "Attestation" {
+	switch folderName {
+	case "Attestation":
 		obj = &ethpb.Attestation{}
-	} else if folderName == "AttestationData" {
+	case "AttestationData":
 		obj = &ethpb.AttestationData{}
-	} else if folderName == "AttestationDataAndCustodyBit" {
+	case "AttestationDataAndCustodyBit":
 		obj = &pb.AttestationDataAndCustodyBit{}
-	} else if folderName == "AttesterSlashing" {
+	case "AttesterSlashing":
 		obj = &ethpb.AttesterSlashing{}
-	} else if folderName == "BeaconBlock" {
+	case "BeaconBlock":
 		obj = &ethpb.BeaconBlock{}
-	} else if folderName == "BeaconBlockBody" {
+	case "BeaconBlockBody":
 		obj = &ethpb.BeaconBlockBody{}
-	} else if folderName == "BeaconBlockHeader" {
+	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
-	} else if folderName == "BeaconState" {
+	case "BeaconState":
 		obj = &pb.BeaconState{}
-	} else if folderName == "Checkpoint" {
+	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
-	} else if folderName == "CompactCommittee" {
+	case "CompactCommittee":
 		obj = &pb.CompactCommittee{}
-	} else if folderName == "Crosslink" {
+	case "Crosslink":
 		obj = &ethpb.Crosslink{}
-	} else if folderName == "Deposit" {
+	case "Deposit":
 		obj = &ethpb.Deposit{}
-	} else if folderName == "DepositData" {
+	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
-	} else if folderName == "Eth1Data" {
+	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
-	} else if folderName == "Fork" {
+	case "Fork":
 		obj = &pb.Fork{}
-	} else if folderName == "HistoricalBatch" {
+	case "HistoricalBatch":
 		obj = &pb.HistoricalBatch{}
-	} else if folderName == "IndexedAttestation" {
+	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
-	} else if folderName == "PendingAttestation" {
+	case "PendingAttestation":
 		obj = &pb.PendingAttestation{}
-	} else if folderName == "ProposerSlashing" {
+	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
-	} else if folderName == "Transfer" {
+	case "Transfer":
 		obj = &ethpb.Transfer{}
-	} else if folderName == "Validator" {
+	case "Validator":
 		obj = &ethpb.Validator{}
-	} else if folderName == "VoluntaryExit" {
+	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
+	default:
+		return nil, errors.New("type not found")
 	}
-	var err = ssz.Unmarshal(serializedBytes, obj)
+	err := ssz.Unmarshal(serializedBytes, obj)
 	return obj, err
 }
