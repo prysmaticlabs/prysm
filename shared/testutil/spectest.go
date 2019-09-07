@@ -16,7 +16,6 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-// operation types take an int and return a string value.
 type blockOperation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
 type epochOperation func(*pb.BeaconState) (*pb.BeaconState, error)
 
@@ -56,12 +55,21 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 // passed in block operation function and checks the post state with the expected post state.
 func RunBlockOperationTest(
 	t *testing.T,
-	preState *pb.BeaconState,
+	preStatePath string,
 	body *ethpb.BeaconBlockBody,
 	postStatePath string,
 	operationFn blockOperation,
 ) {
 	helpers.ClearAllCaches()
+
+	preBeaconStateFile, err := BazelFileBytes(preStatePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preState := &pb.BeaconState{}
+	if err := ssz.Unmarshal(preBeaconStateFile, preState); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
 
 	// If the post.ssz is not present, it means the test should fail on our end.
 	postSSZFilepath, err := bazel.Runfile(postStatePath)

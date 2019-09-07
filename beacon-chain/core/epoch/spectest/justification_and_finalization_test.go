@@ -5,7 +5,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -31,11 +30,6 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 // This is a subset of state.ProcessEpoch. The spec test defines input data for
 // `justification_and_finalization` only.
 func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
-	helpers.ClearAllCaches()
-
-	// This process mutates the state, so we'll make a copy in order to print debug before/after.
-	state = proto.Clone(state).(*pb.BeaconState)
-
 	prevEpochAtts, err := epoch.MatchAttestations(state, helpers.PrevEpoch(state))
 	if err != nil {
 		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
