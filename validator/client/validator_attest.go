@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -70,11 +69,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 			slot, err)
 		return
 	}
-	committeeLength := mathutil.CeilDiv8(len(assignment.Committee))
 
-	// We set the custody bitfield to an slice of zero values as a stub for phase 0
-	// of length len(committee)+7 // 8.
-	custodyBitfield := make([]byte, committeeLength)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
