@@ -186,7 +186,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		chainService:      &mockStateFeedListener{},
+		stateFeedListener: &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -209,7 +209,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		chainService:      &mockStateFeedListener{},
+		stateFeedListener: &mockStateFeedListener{},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -234,7 +234,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		chainService:      &mockStateFeedListener{},
+		stateFeedListener: &mockStateFeedListener{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

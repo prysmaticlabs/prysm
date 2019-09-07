@@ -31,7 +31,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		chainService:     &mock.ChainService{},
+		headRetriever:    &mock.ChainService{},
+		attReceiver:      &mock.ChainService{},
 		operationService: mockOperationService,
 		p2p:              &mockBroadcaster{},
 		beaconDB:         db,
@@ -132,9 +133,10 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:          &mockBroadcaster{},
-		cache:        cache.NewAttestationCache(),
-		chainService: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:           &mockBroadcaster{},
+		cache:         cache.NewAttestationCache(),
+		headRetriever: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:   &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -232,9 +234,10 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:          &mockBroadcaster{},
-		cache:        cache.NewAttestationCache(),
-		chainService: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:           &mockBroadcaster{},
+		cache:         cache.NewAttestationCache(),
+		headRetriever: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:   &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{

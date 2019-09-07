@@ -171,7 +171,8 @@ func (s *Service) Start() {
 		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 		p2p:              s.p2p,
-		chainService:     s.chainService,
+		attReceiver:      s.chainService,
+		headRetriever:    s.chainService,
 		cache:            cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{

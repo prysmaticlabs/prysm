@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -22,7 +23,8 @@ type AttesterServer struct {
 	p2p              p2p.Broadcaster
 	beaconDB         db.Database
 	operationService operationService
-	chainService     chainService
+	attReceiver      blockchain.AttestationReceiver
+	headRetriever    blockchain.HeadRetriever
 	cache            *cache.AttestationCache
 }
 
@@ -39,7 +41,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	}
 
 	go func() {
-		if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {
+		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
 		}
 	}()
@@ -85,8 +87,8 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}()
 
-	headState := as.chainService.HeadState()
-	headRoot := as.chainService.HeadRoot()
+	headState := as.headRetriever.HeadState()
+	headRoot := as.headRetriever.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
