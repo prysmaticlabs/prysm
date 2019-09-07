@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	mockClient "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -186,12 +187,12 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		stateFeedListener: &mockStateFeedListener{},
+		stateFeedListener: &mockClient.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
 		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), closedContext) {
 			tt.Errorf("Could not call RPC method: %v", err)
@@ -208,12 +209,16 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		chainStartFetcher: &mockPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
+<<<<<<< HEAD
 		eth1InfoRetriever: &mockGenesisRetriever{},
 		stateFeedListener: &mockStateFeedListener{},
+=======
+		chainService: &mockClient.ChainService{},
+>>>>>>> master
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&pb.ChainStartResponse{
 			Started:     true,
@@ -234,12 +239,12 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		stateFeedListener: &mockStateFeedListener{},
+		stateFeedListener: &mockClient.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&pb.ChainStartResponse{
 			Started:     true,

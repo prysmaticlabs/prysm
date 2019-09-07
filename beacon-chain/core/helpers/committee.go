@@ -175,17 +175,6 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 	return indices, nil
 }
 
-// VerifyBitfield validates a bitfield with a given committee size.
-func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
-	if bf.Len() != committeeSize {
-		return false, fmt.Errorf(
-			"wanted participants bitfield length %d, got: %d",
-			committeeSize,
-			bf.Len())
-	}
-	return true, nil
-}
-
 // CommitteeAssignment is used to query committee assignment from
 // current and previous epoch.
 //
@@ -355,20 +344,6 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	}
 
 	return startShard, nil
-}
-
-// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
-// to the committees at that slot.
-func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
-	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
-	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve crosslink committees at slot")
-	}
-
-	if committee == nil {
-		return false, fmt.Errorf("no committee exist for shard in the attestation")
-	}
-	return VerifyBitfield(att.AggregationBits, uint64(len(committee)))
 }
 
 // CompactCommitteesRoot returns the index root of a given epoch.
