@@ -97,38 +97,6 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	}
 }
 
-func TestExitValidator_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:      100, // epoch 2
-		Slashings: []uint64{0},
-		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: []byte{'B'}},
-		},
-	}
-	newState := ExitValidator(state, 0)
-
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ExitEpoch != wantedEpoch {
-		t.Errorf("Wanted exit slot %d, got %d",
-			wantedEpoch,
-			newState.Validators[0].ExitEpoch)
-	}
-}
-
-func TestExitValidator_AlreadyExited(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 1000,
-		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-		},
-	}
-	state = ExitValidator(state, 0)
-	if state.Validators[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-		t.Error("Expected exited validator to stay exited")
-	}
-}
-
 func TestSlashValidator_OK(t *testing.T) {
 	registry := make([]*ethpb.Validator, 0)
 	balances := make([]uint64, 0)

@@ -375,7 +375,6 @@ func VerifyAttestationBitfields(bState *pb.BeaconState, att *ethpb.Attestation) 
 	if err := VerifyBitfield(att.CustodyBits, uint64(len(committee))); err != nil {
 		return fmt.Errorf("failed to verify custody bitfield: %v", err)
 	}
-
 	return nil
 }
 

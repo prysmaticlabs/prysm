@@ -40,8 +40,8 @@ type FinalizationRetriever interface {
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
-func (c *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := c.forkChoiceStore.FinalizedCheckpt()
+func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
+	cp := s.forkChoiceStore.FinalizedCheckpt()
 	if cp != nil {
 		return cp
 	}
@@ -50,16 +50,16 @@ func (c *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 }
 
 // HeadSlot returns the slot of the head of the chain.
-func (c *ChainService) HeadSlot() uint64 {
-	return c.headSlot
+func (s *Service) HeadSlot() uint64 {
+	return s.headSlot
 }
 
 // HeadRoot returns the root of the head of the chain.
-func (c *ChainService) HeadRoot() []byte {
-	c.canonicalRootsLock.RLock()
-	defer c.canonicalRootsLock.RUnlock()
+func (s *Service) HeadRoot() []byte {
+	s.canonicalRootsLock.RLock()
+	defer s.canonicalRootsLock.RUnlock()
 
-	root := c.canonicalRoots[c.headSlot]
+	root := s.canonicalRoots[s.headSlot]
 	if len(root) != 0 {
 		return root
 	}
@@ -68,24 +68,24 @@ func (c *ChainService) HeadRoot() []byte {
 }
 
 // HeadBlock returns the head block of the chain.
-func (c *ChainService) HeadBlock() *ethpb.BeaconBlock {
-	return proto.Clone(c.headBlock).(*ethpb.BeaconBlock)
+func (s *Service) HeadBlock() *ethpb.BeaconBlock {
+	return proto.Clone(s.headBlock).(*ethpb.BeaconBlock)
 }
 
 // HeadState returns the head state of the chain.
-func (c *ChainService) HeadState() *pb.BeaconState {
-	return proto.Clone(c.headState).(*pb.BeaconState)
+func (s *Service) HeadState() *pb.BeaconState {
+	return proto.Clone(s.headState).(*pb.BeaconState)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
-func (c *ChainService) CanonicalRoot(slot uint64) []byte {
-	c.canonicalRootsLock.RLock()
-	defer c.canonicalRootsLock.RUnlock()
+func (s *Service) CanonicalRoot(slot uint64) []byte {
+	s.canonicalRootsLock.RLock()
+	defer s.canonicalRootsLock.RUnlock()
 
-	return c.canonicalRoots[slot]
+	return s.canonicalRoots[slot]
 }
 
 // GenesisTime returns the genesis time of beacon chain.
-func (c *ChainService) GenesisTime() time.Time {
-	return c.genesisTime
+func (s *Service) GenesisTime() time.Time {
+	return s.genesisTime
 }

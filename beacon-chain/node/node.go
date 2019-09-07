@@ -227,7 +227,7 @@ func (b *BeaconNode) fetchP2P(ctx *cli.Context) p2p.P2P {
 }
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
-	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
+	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
 		DepositCache:   b.depositCache,
 		Web3Service:    web3Service,
@@ -253,7 +253,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
-	operationService := operations.NewOpsPoolService(context.Background(), &operations.Config{
+	operationService := operations.NewService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
 		P2P:      b.fetchP2P(ctx),
 	})
@@ -263,7 +263,7 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if cliCtx.GlobalBool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Web3Service{})
+		return b.services.RegisterService(&powchain.Service{})
 	}
 
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
@@ -305,7 +305,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}
-	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
+	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -326,12 +326,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
 
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -369,7 +369,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
-	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
+	rpcService := rpc.NewService(context.Background(), &rpc.Config{
 		Port:             port,
 		CertFlag:         cert,
 		KeyFlag:          key,
@@ -416,7 +416,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/p2p", Handler: p.InfoHandler})
 
-	var c *blockchain.ChainService
+	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
 	}

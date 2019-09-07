@@ -20,7 +20,7 @@ import (
 const pubKeyErr = "could not deserialize validator public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -61,7 +61,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 }
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -108,7 +108,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 }
 
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -152,7 +152,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 }
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -199,7 +199,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	helpers.ClearAllCaches()
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -231,7 +231,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 }
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
@@ -285,7 +285,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 }
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
 		Logger:       &goodLogger{},
