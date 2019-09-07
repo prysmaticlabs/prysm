@@ -416,7 +416,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/p2p", Handler: p.InfoHandler})
 
-	var c *blockchain.ChainService
+	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
 	}
