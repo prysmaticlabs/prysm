@@ -938,7 +938,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
 	want := fmt.Sprintf(
-		"expected target epoch %d == %d or %d",
+		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 		att.Data.Target.Epoch,
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
