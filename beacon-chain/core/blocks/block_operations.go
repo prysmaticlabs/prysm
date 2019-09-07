@@ -426,8 +426,8 @@ func ProcessAttesterSlashings(
 			if helpers.IsSlashableValidator(beaconState.Validators[validatorIndex], currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 				if err != nil {
-					return nil, fmt.Errorf("could not slash validator index %d: %v",
-						validatorIndex, err)
+					return nil, errors.Wrapf(err, "could not slash validator index %d",
+						validatorIndex)
 				}
 				slashedAny = true
 			}

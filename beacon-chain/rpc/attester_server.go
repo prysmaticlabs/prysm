@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -113,8 +112,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	}
 	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash crosslink for shard %d: %v",
-			req.Shard, err)
+		return nil, errors.Wrapf(err, "could not tree hash crosslink for shard %d", req.Shard)
 	}
 	res = &ethpb.AttestationData{
 		BeaconBlockRoot: headRoot[:],

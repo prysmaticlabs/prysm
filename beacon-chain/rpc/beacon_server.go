@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -90,11 +89,7 @@ func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockS
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"could not generate merkle proof for deposit at index %d: %v",
-			index,
-			err,
-		)
+		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)
 	}
 	// For every deposit, we construct a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
