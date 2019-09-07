@@ -157,8 +157,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "15e031fbf0994798e47d9ba0fb676f0359d0d8e5f6f27b8876101926f7db7ebb",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.3/general.tar.gz",
+    sha256 = "386335fc3b055fad37088bd821929ff684bc00bb1a74e044e4b377ebd6e88fce",
+    # File names are normally too long, see: https://github.com/ethereum/eth2.0-spec-tests/issues/15
+    url = "https://prysmaticlabs.com/uploads/v0.8.3_general_spectests.tar.gz",
 )
 
 http_archive(
