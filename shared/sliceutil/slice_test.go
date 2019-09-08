@@ -352,3 +352,29 @@ func TestIntersectionByteSlices(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitCommaSeparated(t *testing.T) {
+	tests := []struct {
+		input  []string
+		output []string
+	}{
+		{
+			input:  []string{"a,b", "c,d"},
+			output: []string{"a", "b", "c", "d"},
+		},
+		{
+			input:  []string{"a", "b,c,d"},
+			output: []string{"a", "b", "c", "d"},
+		},
+		{
+			input:  []string{"a", "b", "c"},
+			output: []string{"a", "b", "c"},
+		},
+	}
+
+	for _, tt := range tests {
+		if result := SplitCommaSeparated(tt.input); !reflect.DeepEqual(result, tt.output) {
+			t.Errorf("SplitCommaSeparated(%v) = %v; wanted %v", tt.input, result, tt.output)
+		}
+	}
+}
