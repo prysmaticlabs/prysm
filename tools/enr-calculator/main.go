@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"flag"
+	"io/ioutil"
 	"net"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -20,6 +21,7 @@ var (
 	udpPort    = flag.Int("port", 0, "UDP Port to use for calculation of ENR")
 	tcpPort    = flag.Int("port", 0, "TCP Port to use for calculation of ENR")
 	ipAddr     = flag.String("ipAddress", "", "IP to use in calculation of ENR")
+	outfile    = flag.String("out", "", "Filepath to write ENR")
 )
 
 func main() {
@@ -66,4 +68,12 @@ func main() {
 		localNode.Set(tcpEntry)
 	}
 	log.Info(localNode.Node().String())
+
+	if *outfile != "" {
+		err := ioutil.WriteFile(*outfile, []byte(localNode.Node().String()), 0644)
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("Wrote to %s", *outfile)
+	}
 }
