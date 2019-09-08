@@ -18,8 +18,8 @@ COPY --from=builder /workspace/bazel-bin/beacon-chain/linux_amd64_stripped/beaco
 COPY --from=builder /workspace/bazel-bin/validator/linux_amd64_stripped/validator .
 COPY --from=builder /workspace/bazel-bin/tools/interop/convert-keys/linux_amd64_stripped/convert-keys .
 
-COPY scripts/interop_start.sh start.sh
-
 RUN mkdir /launch
+
+COPY scripts/interop_start.sh /launch/start.sh
 
 ENTRYPOINT ["start.sh"]
