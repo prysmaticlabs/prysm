@@ -2,12 +2,6 @@ FROM gcr.io/prysmaticlabs/build-agent AS builder
 
 WORKDIR /workspace
 
-# Copy WORKSPACE and install golang. WORKSPACE doesn't change very often.
-COPY WORKSPACE /workspace/.
-COPY BUILD.bazel /workspace/.
-RUN bazel build --jobs=auto --remote_cache= @io_bazel_rules_go//:go_info
-
-# Copy everything else.
 COPY . /workspace/.
 
 # Build binaries for minimal configuration.
