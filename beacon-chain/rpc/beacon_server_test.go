@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -166,12 +167,6 @@ func (m *mockPOWChainService) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.eth1Data
 }
 
-type mockStateFeedListener struct{}
-
-func (m *mockStateFeedListener) StateInitializedFeed() *event.Feed {
-	return new(event.Feed)
-}
-
 type mockGenesisRetriever struct{}
 
 func (m *mockGenesisRetriever) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
@@ -186,7 +181,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		stateFeedListener: &mockStateFeedListener{},
+		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -209,7 +204,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		stateFeedListener: &mockStateFeedListener{},
+		stateFeedListener: &mockChain.ChainService{},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -234,7 +229,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 			chainStartFeed: new(event.Feed),
 		},
 		eth1InfoRetriever: &mockGenesisRetriever{},
-		stateFeedListener: &mockStateFeedListener{},
+		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
