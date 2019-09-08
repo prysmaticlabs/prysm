@@ -80,6 +80,7 @@ BEACON_FLAGS="--bootstrap-node= \
   --p2p-port=$PORT \
   --peer=$PEERS \
   --interop-load-genesis-state=$GEN_STATE \
+  --p2p-priv-key=$IDENTITY \
   --log-file=$BEACON_LOG_FILE"
 
 bazel run $BUILD_FLAG //beacon-chain -- $BEACON_FLAGS &
