@@ -18,10 +18,12 @@ var (
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
 
+// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
 type UnencryptedKeysContainer struct {
 	Keys []*UnencryptedKeys `json:"keys"`
 }
 
+// UnencryptedKeys is the inner struct of the JSON file.
 type UnencryptedKeys struct {
 	ValidatorKey  []byte `json:"validator_key"`
 	WithdrawalKey []byte `json:"withdrawal_key"`
@@ -79,6 +81,7 @@ func generateUnencryptedKeys(r io.Reader) *UnencryptedKeysContainer {
 	return ctnr
 }
 
+// SaveUnencryptedKeysToFile JSON encodes the container and writes to the writer.
 func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) error {
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
