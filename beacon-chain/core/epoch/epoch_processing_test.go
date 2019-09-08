@@ -379,6 +379,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		crosslinks[i] = &ethpb.Crosslink{
 			StartEpoch: ge,
 			Shard:      1,
+			ParentRoot: params.BeaconConfig().ZeroHash[:],
 			DataRoot:   []byte{'B'},
 		}
 	}
@@ -398,9 +399,9 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	if len(indices) != 0 {
 		t.Errorf("genesis crosslink indices is not 0, got: %d", len(indices))
 	}
-	want := &ethpb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}}
+	want := &ethpb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}, ParentRoot: params.BeaconConfig().ZeroHash[:]}
 	if !reflect.DeepEqual(winner, want) {
-		t.Errorf("Did not get wanted crosslink, got: %v", winner)
+		t.Errorf("Did not get wanted crosslink, got: %v, want %v", winner, want)
 	}
 }
 
