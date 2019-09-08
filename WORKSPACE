@@ -205,7 +205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "08d8bd12e2c7e789461e41e2f6e29710007f5677",
+    commit = "3f67fd0b29d8b9c7ad35926564c80f9e599c724a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
