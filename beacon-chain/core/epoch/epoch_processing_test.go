@@ -400,7 +400,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 	}
 	want := &ethpb.Crosslink{StartEpoch: ge, Shard: 1, DataRoot: []byte{'B'}}
 	if !reflect.DeepEqual(winner, want) {
-		t.Errorf("Did not get wanted crosslink, got: %v", winner)
+		t.Errorf("Did not get wanted crosslink, got: %v, want %v", winner, want)
 	}
 }
 

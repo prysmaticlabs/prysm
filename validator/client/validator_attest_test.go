@@ -141,6 +141,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
+	aggregationBitfield.SetBitAt(4, true)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -148,12 +151,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 			Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		},
-		CustodyBits: make([]byte, (len(committee)+7)/8),
+		AggregationBits: aggregationBitfield,
+		CustodyBits:     custodyBitfield,
 	}
-	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(4, true)
-
-	expectedAttestation.AggregationBits = aggregationBitfield
 
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
 		Data:       expectedAttestation.Data,
