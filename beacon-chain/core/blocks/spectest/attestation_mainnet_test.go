@@ -5,5 +5,5 @@ import (
 )
 
 func TestAttestationMainnet(t *testing.T) {
-	runAttestationTest(t, "attestation_mainnet.yaml")
+	runAttestationTest(t, "mainnet")
 }
