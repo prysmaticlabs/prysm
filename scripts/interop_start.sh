@@ -5,6 +5,11 @@
 This script is intended for dockerfile deployment for interop testing.
 This script is fragile and subject to break as flags change.
 Use at your own risk!
+
+
+Use with interop.Dockerfile from the workspace root:
+
+docker build -f interop.Dockerfile .
 """
 
 # Flags
@@ -13,7 +18,7 @@ PEERS="" # Comma separated list of peers
 NUM_VALIDATORS="3" # Positive number of validators to operate.
 GEN_STATE="" # filepath to ssz encoded state.
 PORT="8000" # port to serve p2p traffic
-YAML_KEY_FILE="/launch/keys.yaml" # Path to yaml keyfile as defined here: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
+YAML_KEY_FILE="" # Path to yaml keyfile as defined here: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
 
 # Constants
 BEACON_LOG_FILE="/tmp/beacon.log"
@@ -65,16 +70,7 @@ done
 echo "Converting hex yaml keys to a format that Prysm understands"
 
 # Expect YAML keys in hex encoded format. Convert this into the format the the validator already understands.
-bazel run //tools/interop/convert-keys -- $YAML_KEY_FILE /tmp/keys.json
-
-echo "Building beacon chain and validator binaries."
-
-# Build both binaries prior to launching. The binary must be built using the build defined variable ssz=minimal
-# to template protobuf constants.
-
-BUILD_FLAGS="--define ssz=minimal"
-
-bazel build $BUILD_FLAGS //beacon-chain //validator
+./convert-keys $YAML_KEY_FILE /tmp/keys.json
 
 echo "Starting beacon chain and logging to $BEACON_LOG_FILE"
 
@@ -86,7 +82,7 @@ BEACON_FLAGS="--bootstrap-node= \
   --p2p-priv-key=$IDENTITY \
   --log-file=$BEACON_LOG_FILE"
 
-bazel run $BUILD_FLAG //beacon-chain -- $BEACON_FLAGS &
+./beacon-chain $BEACON_FLAGS &
 
 echo "Starting validator client and logging to $BEACON_LOG_FILE"
 
@@ -94,4 +90,4 @@ VALIDATOR_FLAGS="--monitoring-port=9091 \
   --unencrypted-keys /tmp/keys.json \
   --log-file=$BEACON_LOG_FILE"
 
-bazel run $BUILD_FLAG //validator -- $VALIDATOR_FLAGS &
+./validator- $VALIDATOR_FLAGS &
