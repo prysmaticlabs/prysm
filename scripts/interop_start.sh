@@ -2,8 +2,9 @@
 
 """
 2019/09/08 -- Interop start script.
-This file is intended for dockerfile deployment for interop testing.
-Note: This script is fragile and subject to break as flags change.
+This script is intended for dockerfile deployment for interop testing.
+This script is fragile and subject to break as flags change.
+Use at your own risk!
 """
 
 # Flags
