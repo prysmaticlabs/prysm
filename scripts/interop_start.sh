@@ -1,7 +1,9 @@
 #!/bin/bash
 
 """
-This file is intended for dockerfile deployment.
+2019/09/08 -- Interop start script.
+This file is intended for dockerfile deployment for interop testing.
+Note: This script is fragile and subject to break as flags change.
 """
 
 # Flags
@@ -79,7 +81,7 @@ BEACON_FLAGS="--bootstrap-node= \
   --deposit-contract=0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
   --p2p-port=$PORT \
   --peer=$PEERS \
-  --interop-load-genesis-state=$GEN_STATE \
+  --interop-genesis-state=$GEN_STATE \
   --p2p-priv-key=$IDENTITY \
   --log-file=$BEACON_LOG_FILE"
 

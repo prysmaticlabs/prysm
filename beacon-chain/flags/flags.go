@@ -55,7 +55,7 @@ var (
 	}
 	// GenesisState defines a flag for the beacon node to load genesis state via file.
 	GenesisState = cli.StringFlag{
-		Name:  "interop-load-genesis-state",
-		Usage: "The genesis state file (.SSZ) to load from. Not for production use! Interop testing only!",
+		Name:  "interop-genesis-state",
+		Usage: "The genesis state file (.SSZ) to load from",
 	}
 )
