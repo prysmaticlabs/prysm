@@ -42,6 +42,7 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
+	fmt.Printf("Root %#x\n", root)
 	if !sig.Verify(root[:], publicKey, domain) {
 		return fmt.Errorf("signature did not verify")
 	}
@@ -949,7 +950,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
-
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
