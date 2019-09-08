@@ -949,7 +949,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
-
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {

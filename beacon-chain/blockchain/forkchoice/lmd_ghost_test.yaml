@@ -44,7 +44,7 @@ test_cases:
       b1: 5
       b2: 6
       b3: 6
-    head: 'b2'
+    head: 'b3'
   # Equal weights children, GHOST chooses b2 because it is higher lexicographically than b1
   - blocks:
       - id: 'b0'
