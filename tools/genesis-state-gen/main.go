@@ -186,7 +186,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 	}
-	sr, err := ssz.HashTreeRoot(di)
+	sr, err := ssz.SigningRoot(di)
 	if err != nil {
 		return nil, err
 	}
