@@ -21,10 +21,10 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = ChainStartFetcher(&Web3Service{})
-var _ = ChainInfoFetcher(&Web3Service{})
-var _ = POWBlockFetcher(&Web3Service{})
-var _ = Chain(&Web3Service{})
+var _ = ChainStartFetcher(&Service{})
+var _ = ChainInfoFetcher(&Service{})
+var _ = POWBlockFetcher(&Service{})
+var _ = Chain(&Service{})
 
 type badReader struct{}
 

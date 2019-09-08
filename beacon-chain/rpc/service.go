@@ -159,7 +159,8 @@ func (s *Service) Start() {
 	}
 	proposerServer := &ProposerServer{
 		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
+		headRetriever:      s.chainService,
+		blockReceiver:      s.chainService,
 		chainStartFetcher:  s.powChainService,
 		eth1InfoRetriever:  s.powChainService,
 		eth1BlockFetcher:   s.powChainService,

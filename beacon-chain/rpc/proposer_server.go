@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -29,7 +30,8 @@ import (
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
 	beaconDB           db.Database
-	chainService       chainService
+	headRetriever      blockchain.HeadRetriever
+	blockReceiver      blockchain.BlockReceiver
 	mockEth1Votes      bool
 	chainStartFetcher  powchain.ChainStartFetcher
 	eth1InfoRetriever  powchain.ChainInfoFetcher
@@ -47,7 +49,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	// Retrieve the parent block as the current head of the canonical chain
-	parent := ps.chainService.HeadBlock()
+	parent := ps.headRetriever.HeadBlock()
 
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
@@ -146,7 +148,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
-	if err := ps.chainService.ReceiveBlock(ctx, blk); err != nil {
+	if err := ps.blockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
 
@@ -159,7 +161,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	beaconState := ps.chainService.HeadState()
+	beaconState := ps.headRetriever.HeadState()
 	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
@@ -269,7 +271,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState := ps.chainService.HeadState()
+	beaconState := ps.headRetriever.HeadState()
 	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
