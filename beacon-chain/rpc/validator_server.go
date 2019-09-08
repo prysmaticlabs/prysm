@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -30,7 +31,7 @@ import (
 type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
-	chainService       chainService
+	headFetcher        blockchain.HeadRetriever
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
@@ -105,7 +106,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "could not find  validator index for public key  %#x not found", req.PublicKey)
 	}
-	headState := vs.chainService.HeadState()
+	headState := vs.headFetcher.HeadState()
 
 	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
@@ -135,7 +136,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	var err error
-	s := vs.chainService.HeadState()
+	s := vs.headFetcher.HeadState()
 
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
@@ -228,7 +229,7 @@ func (vs *ValidatorServer) assignment(
 func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
-	headState := vs.chainService.HeadState()
+	headState := vs.headFetcher.HeadState()
 
 	chainStarted := vs.chainStartFetcher.HasChainStarted()
 	chainStartKeys := vs.chainStartPubkeys()
@@ -247,7 +248,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-	headState := vs.chainService.HeadState()
+	headState := vs.headFetcher.HeadState()
 
 	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
@@ -460,7 +461,7 @@ func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	headState := vs.chainService.HeadState()
+	headState := vs.headFetcher.HeadState()
 	dv := helpers.Domain(headState, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,

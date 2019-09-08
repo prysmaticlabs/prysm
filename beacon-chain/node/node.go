@@ -239,12 +239,12 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		BeaconDB:       b.db,
-		DepositCache:   b.depositCache,
-		ChainStartFetcher:    web3Service,
-		OpsPoolService: opsService,
-		P2p:            b.fetchP2P(ctx),
-		MaxRoutines:    maxRoutines,
+		BeaconDB:          b.db,
+		DepositCache:      b.depositCache,
+		ChainStartFetcher: web3Service,
+		OpsPoolService:    opsService,
+		P2p:               b.fetchP2P(ctx),
+		MaxRoutines:       maxRoutines,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -391,12 +391,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
-<<<<<<< HEAD
 	mockEth1DataVotes := ctx.GlobalBool(flags.MockEth1DataVotesFlag.Name)
-	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
-=======
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
->>>>>>> master
 		Port:             port,
 		CertFlag:         cert,
 		KeyFlag:          key,

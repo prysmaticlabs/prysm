@@ -149,8 +149,9 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		chainStartFetcher:   s.powChainService,
-		chainService:        s.chainService,
 		eth1InfoRetriever:   s.powChainService,
+		headRetriever:       s.chainService,
+		stateFeedListener:   s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -178,7 +179,6 @@ func (s *Service) Start() {
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.powChainService,
 		canonicalStateChan: s.canonicalStateChan,
