@@ -42,7 +42,6 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	fmt.Printf("Root %#x\n", root)
 	if !sig.Verify(root[:], publicKey, domain) {
 		return fmt.Errorf("signature did not verify")
 	}
