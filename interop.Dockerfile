@@ -6,7 +6,7 @@ COPY . /workspace/.
 RUN bazel version
 
 # Build binaries for minimal configuration.
-RUN bazel build --define ssz=minimal \
+RUN bazel build --define ssz=minimal --jobs=auto \
   //beacon-chain \
   //validator \
   //tools/interop/convert-keys
