@@ -12,12 +12,12 @@ IDENTITY="" # P2P private key
 PEERS="" # Comma separated list of peers
 NUM_VALIDATORS="3" # Positive number of validators to operate.
 GEN_STATE="" # filepath to ssz encoded state.
-PORT="8000"
+PORT="8000" # port to serve p2p traffic
+YAML_KEY_FILE="/launch/keys.yaml" # Path to yaml keyfile as defined here: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
 
 # Constants
 BEACON_LOG_FILE="/tmp/beacon.log"
 VALIDATOR_LOG_FILE="/tmp/validator.log"
-YAML_KEY_FILE="/launch/keys.yaml"
 
 usage() {
     echo "--identity=<identity>"
@@ -37,10 +37,10 @@ do
             IDENTITY=$VALUE
             ;;
         --peers)
-            PEERS+=" $VALUE"
+            PEERS+=",$VALUE"
             ;;
-        --num-validators)
-            NUM_VALIDATORS=$VALUE
+        --validator-keys)
+            YAML_KEY_FILE=$VALUE
             ;;
         --gen-state)
             GEN_STATE=$VALUE
@@ -88,7 +88,7 @@ BEACON_FLAGS="--bootstrap-node= \
 
 bazel run $BUILD_FLAG //beacon-chain -- $BEACON_FLAGS &
 
-echo "Starting validator client with $NUM_VALIDATORS keys and logging to $BEACON_LOG_FILE"
+echo "Starting validator client and logging to $BEACON_LOG_FILE"
 
 VALIDATOR_FLAGS="--monitoring-port=9091 \
   --unencrypted-keys /tmp/keys.json \
