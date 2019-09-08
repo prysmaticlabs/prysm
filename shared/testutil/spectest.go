@@ -17,7 +17,7 @@ import (
 )
 
 type blockOperation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
-type epochOperation func(*pb.BeaconState) (*pb.BeaconState, error)
+type epochOperation func(*testing.T, *pb.BeaconState) (*pb.BeaconState, error)
 
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
@@ -138,7 +138,7 @@ func RunEpochOperationTest(
 		t.Fatal(err)
 	}
 
-	beaconState, err := operationFn(preBeaconState)
+	beaconState, err := operationFn(t, preBeaconState)
 	if postSSZExists {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)

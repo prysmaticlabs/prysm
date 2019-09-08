@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"fmt"
 	"path"
 	"testing"
 
@@ -29,29 +28,27 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 
 // This is a subset of state.ProcessEpoch. The spec test defines input data for
 // `justification_and_finalization` only.
-func processJustificationAndFinalizationWrapper(state *pb.BeaconState) (*pb.BeaconState, error) {
+func processJustificationAndFinalizationWrapper(t *testing.T, state *pb.BeaconState) (*pb.BeaconState, error) {
 	prevEpochAtts, err := epoch.MatchAttestations(state, helpers.PrevEpoch(state))
 	if err != nil {
-		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
-			helpers.PrevEpoch(state), err)
+		t.Fatalf("could not get target atts prev epoch %d: %v", helpers.PrevEpoch(state), err)
 	}
 	currentEpochAtts, err := epoch.MatchAttestations(state, helpers.CurrentEpoch(state))
 	if err != nil {
-		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
-			helpers.CurrentEpoch(state), err)
+		t.Fatalf("could not get target atts current epoch %d: %v", helpers.CurrentEpoch(state), err)
 	}
 	prevEpochAttestedBalance, err := epoch.AttestingBalance(state, prevEpochAtts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attesting balance prev epoch: %v", err)
+		t.Fatalf("could not get attesting balance prev epoch: %v", err)
 	}
 	currentEpochAttestedBalance, err := epoch.AttestingBalance(state, currentEpochAtts.Target)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attesting balance current epoch: %v", err)
+		t.Fatalf("could not get attesting balance current epoch: %v", err)
 	}
 
 	state, err = epoch.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
 	if err != nil {
-		return nil, fmt.Errorf("could not process justification: %v", err)
+		t.Fatalf("could not process justification: %v", err)
 	}
 
 	return state, nil
