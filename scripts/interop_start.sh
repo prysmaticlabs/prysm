@@ -15,7 +15,6 @@ docker build -f interop.Dockerfile .
 # Flags
 IDENTITY="" # P2P private key
 PEERS="" # Comma separated list of peers
-NUM_VALIDATORS="3" # Positive number of validators to operate.
 GEN_STATE="" # filepath to ssz encoded state.
 PORT="8000" # port to serve p2p traffic
 YAML_KEY_FILE="" # Path to yaml keyfile as defined here: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
