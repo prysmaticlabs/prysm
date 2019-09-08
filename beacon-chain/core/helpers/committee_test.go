@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -318,6 +319,20 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 }
 
+func TestVerifyBitfieldLength_OK(t *testing.T) {
+	bf := bitfield.Bitlist{0xFF, 0x01}
+	committeeSize := uint64(8)
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
+		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
+	}
+
+	bf = bitfield.Bitlist{0xFF, 0x07}
+	committeeSize = 10
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
+		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
+	}
+}
+
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -569,6 +584,139 @@ func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
 		}
 
+	}
+}
+
+func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
+
+	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		activeRoots[i] = []byte{'A'}
+	}
+
+	state := &pb.BeaconState{
+		Validators:       validators,
+		ActiveIndexRoots: activeRoots,
+		RandaoMixes:      activeRoots,
+	}
+
+	tests := []struct {
+		attestation         *ethpb.Attestation
+		stateSlot           uint64
+		invalidCustodyBits  bool
+		verificationFailure bool
+	}{
+		{
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0x05},
+				CustodyBits:     bitfield.Bitlist{0x05},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 5,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot: 5,
+		},
+		{
+
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x06},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 10,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot: 10,
+		},
+		{
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x06},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 20,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot: 20,
+		},
+		{
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x10},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 20,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+			invalidCustodyBits:  true,
+		},
+		{
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
+				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 5,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot:           5,
+			verificationFailure: true,
+		},
+		{
+			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
+				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 20,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+		},
+	}
+
+	for i, tt := range tests {
+		ClearAllCaches()
+		state.Slot = tt.stateSlot
+		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
+		if tt.verificationFailure {
+			if tt.invalidCustodyBits {
+				if !strings.Contains(err.Error(), "custody bitfield") {
+					t.Errorf("%d expected custody bits to fail: %v", i, err)
+				}
+			}
+			if err == nil {
+				t.Error("verification succeeded when it was supposed to fail")
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%d Failed to verify bitfield: %v", i, err)
+			continue
+		}
 	}
 }
 

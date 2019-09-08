@@ -5,5 +5,5 @@ import (
 )
 
 func TestAttestationMinimal(t *testing.T) {
-	runAttestationTest(t, "attestation_minimal.yaml")
+	runAttestationTest(t, "minimal")
 }
