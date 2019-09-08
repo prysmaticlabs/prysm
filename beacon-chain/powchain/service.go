@@ -232,8 +232,8 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
-func (w *Service) ChainStartEth1Data() *ethpb.Eth1Data {
-	return w.chainStartETH1Data
+func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
+	return s.chainStartETH1Data
 }
 
 // HasChainStarted returns whether the deposits from

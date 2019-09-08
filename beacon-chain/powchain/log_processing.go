@@ -29,8 +29,8 @@ var (
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
-func (w *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
-	return w.eth2GenesisTime, w.chainStartBlockNumber
+func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
+	return s.eth2GenesisTime, s.chainStartBlockNumber
 }
 
 // ProcessLog is the main method which handles the processing of all
