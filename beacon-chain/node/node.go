@@ -288,17 +288,21 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	httpClient := ethclient.NewClient(httpRPCClient)
+	var httpClient *ethclient.Client
+	var powClient *ethclient.Client
+	if !cliCtx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name) {
+		httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
+		if err != nil {
+			log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		}
+		httpClient = ethclient.NewClient(httpRPCClient)
 
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
+		if err != nil {
+			log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		}
+		powClient = ethclient.NewClient(rpcClient)
 	}
-	powClient := ethclient.NewClient(rpcClient)
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
