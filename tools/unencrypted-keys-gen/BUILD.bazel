@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen",
     visibility = ["//visibility:private"],
     deps = [
-        "//shared/bls:go_default_library",
+        "//shared/interop:go_default_library",
     ],
 )
 

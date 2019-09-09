@@ -1,18 +1,17 @@
-package main
+package interop
 
 import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interop"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestGenerateGenesisState(t *testing.T) {
 	numValidators := 64
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0/*startIndex*/, numValidators)
+	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0/*startIndex*/, numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +31,7 @@ func TestGenerateGenesisState(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := trie.Root()
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
@@ -51,3 +50,4 @@ func TestGenerateGenesisState(t *testing.T) {
 		t.Errorf("Wanted genesis time 0, received %d", genesisState.GenesisTime)
 	}
 }
+

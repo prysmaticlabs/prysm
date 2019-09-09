@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
 var (
@@ -52,28 +51,27 @@ func main() {
 		}
 	}()
 
-	ctnr := generateUnencryptedKeys(rand.Reader)
+	ctnr := generateUnencryptedKeys()
 	if err := saveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys(r io.Reader) *unencryptedKeysContainer {
+func generateUnencryptedKeys() *unencryptedKeysContainer {
 	ctnr := &unencryptedKeysContainer{
 		Keys: make([]*unencryptedKeys, *numKeys),
 	}
-	for i := 0; i < *numKeys; i++ {
-		signingKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		withdrawalKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
+
+	sks, _, err := interop.DeterministicallyGenerateKeys(0/*startIndex*/, uint64(*numKeys))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for i, sk := range sks {
 		ctnr.Keys[i] = &unencryptedKeys{
-			ValidatorKey:  signingKey.Marshal(),
-			WithdrawalKey: withdrawalKey.Marshal(),
+			ValidatorKey:  sk.Marshal(),
+			WithdrawalKey: sk.Marshal(),
 		}
 	}
 	return ctnr
