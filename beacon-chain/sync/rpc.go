@@ -72,7 +72,7 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHa
 		// Clone the base message type so we have a newly initialized message as the decoding
 		// destination.
 		msg := proto.Clone(base)
-		if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
+		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 			log.WithError(err).Error("Failed to decode stream message")
 			return
 		}

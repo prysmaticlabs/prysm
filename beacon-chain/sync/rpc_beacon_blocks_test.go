@@ -47,7 +47,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		res := &pb.BeaconBlocksResponse{}
-		if err := r.p2p.Encoding().Decode(stream, res); err != nil {
+		if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
 			t.Error(err)
 		}
 		if uint64(len(res.Blocks)) != req.Count {
