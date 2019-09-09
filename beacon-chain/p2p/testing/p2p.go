@@ -81,7 +81,7 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	}
 	defer s.Close()
 
-	n, err := p.Encoding().Encode(s, msg)
+	n, err := p.Encoding().EncodeWithLength(s, msg)
 	if err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
@@ -185,7 +185,7 @@ func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (net
 		return nil, err
 	}
 
-	if _, err := p.Encoding().Encode(stream, msg); err != nil {
+	if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
 		return nil, err
 	}
 

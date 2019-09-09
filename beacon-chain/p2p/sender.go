@@ -25,7 +25,7 @@ func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) 
 		return nil, err
 	}
 
-	if _, err := s.Encoding().Encode(stream, message); err != nil {
+	if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
 		return nil, err
 	}
 

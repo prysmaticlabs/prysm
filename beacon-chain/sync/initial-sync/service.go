@@ -128,7 +128,7 @@ func (s *InitialSync) Start() {
 		}
 
 		resp := &pb.BeaconBlocksResponse{}
-		if err := s.p2p.Encoding().Decode(strm, resp); err != nil {
+		if err := s.p2p.Encoding().DecodeWithLength(strm, resp); err != nil {
 			panic(err)
 		}
 
