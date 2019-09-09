@@ -7,46 +7,43 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 )
 
 var _ = shared.Service(&Service{})
 
 type Service struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
+	ctx           context.Context
+	cancel        context.CancelFunc
 	genesisTime   uint64
 	numValidators uint64
-	beaconDB             db.Database
+	beaconDB      db.Database
+	powchain powchain.Service
 }
 
 type Config struct {
 	GenesisTime   uint64
 	NumValidators uint64
-	BeaconDB             db.Database
+	BeaconDB      db.Database
 }
 
 // NewColdStartService is an interoperability testing service to inject a deterministically generated genesis state
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
 func NewColdStartService(ctx context.Context, cfg *Config) *Service {
+	log.Warn("Saving generated genesis state in database for interop testing.")
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
-		ctx: ctx,
-		cancel: cancel,
-		genesisTime: cfg.GenesisTime,
-		numValidators: cfg.NumValidators,
-		beaconDB:         cfg.BeaconDB,
-	}
-}
 
-// Start initializes the genesis state from configured flags.
-func (s *Service) Start() {
-	ctx := context.TODO()
-	log.Warn("Injecting generated genesis state for interop testing.")
+	s := &Service{
+		ctx:           ctx,
+		cancel:        cancel,
+		genesisTime:   cfg.GenesisTime,
+		numValidators: cfg.NumValidators,
+		beaconDB:      cfg.BeaconDB,
+	}
 
 	// Save genesis state in db
 	genesisState, err := interop.GenerateGenesisState(s.genesisTime, s.numValidators)
@@ -56,6 +53,13 @@ func (s *Service) Start() {
 	if err := s.saveGenesisState(ctx, genesisState); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}
+
+	return s
+}
+
+// Start initializes the genesis state from configured flags.
+func (s *Service) Start() {
+	// TODO: Does this need to be a service?
 }
 
 // Stop does nothing.

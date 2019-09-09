@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -38,7 +39,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -206,7 +206,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file. 
+	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
 	if filepath.Ext(bootnodeENR) == ".enr" {
 		b, err := ioutil.ReadFile(bootnodeENR)
@@ -311,16 +311,17 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		Client:          httpClient,
-		Reader:          powClient,
-		Logger:          powClient,
-		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
-		ContractBackend: httpClient,
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
+		Endpoint:                   cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		DepositContract:            common.HexToAddress(depAddress),
+		Client:                     httpClient,
+		Reader:                     powClient,
+		Logger:                     powClient,
+		HTTPLogger:                 httpClient,
+		BlockFetcher:               httpClient,
+		ContractBackend:            httpClient,
+		BeaconDB:                   b.db,
+		DepositCache:               b.depositCache,
+		InteropGenesisTimeOverride: cliCtx.GlobalUint64(flags.InteropGenesisTime.Name),
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
@@ -465,13 +466,13 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 
 	if genesisTime > 0 && genesisValidators > 0 {
 		svc := interop_cold_start.NewColdStartService(context.Background(), &interop_cold_start.Config{
-			GenesisTime: genesisTime,
+			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
-			BeaconDB: b.db,
+			BeaconDB:      b.db,
 		})
 
 		return b.services.RegisterService(svc)
-	} else if genesisTime + genesisValidators > 0 {
+	} else if genesisTime+genesisValidators > 0 {
 		log.Errorf("%s and %s must be used together", flags.InteropNumValidators.Name, flags.InteropGenesisTime.Name)
 	}
 	return nil
