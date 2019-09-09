@@ -7,7 +7,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -22,7 +21,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -37,12 +35,6 @@ func init() {
 	log = logrus.WithField("prefix", "rpc")
 }
 
-type operationService interface {
-	operations.Pool
-	HandleAttestation(context.Context, proto.Message) error
-	IncomingAttFeed() *event.Feed
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                 context.Context
@@ -54,7 +46,8 @@ type Service struct {
 	blockReceiver       blockchain.BlockReceiver
 	powChainService     powchain.Chain
 	mockEth1Votes       bool
-	operationService    operationService
+	attestationsPool    operations.Pool
+	operationsHandler   operations.Handler
 	syncService         sync.Checker
 	port                string
 	listener            net.Listener
@@ -80,7 +73,8 @@ type Config struct {
 	BlockReceiver       blockchain.BlockReceiver
 	POWChainService     powchain.Chain
 	MockEth1Votes       bool
-	OperationService    operationService
+	OperationsHandler   operations.Handler
+	AttestationsPool    operations.Pool
 	SyncService         sync.Checker
 	Broadcaster         p2p.Broadcaster
 	DepositCache        *depositcache.DepositCache
@@ -101,7 +95,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		p2p:                 cfg.Broadcaster,
 		powChainService:     cfg.POWChainService,
 		mockEth1Votes:       cfg.MockEth1Votes,
-		operationService:    cfg.OperationService,
+		attestationsPool:    cfg.AttestationsPool,
+		operationsHandler:   cfg.OperationsHandler,
 		syncService:         cfg.SyncService,
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
@@ -154,7 +149,6 @@ func (s *Service) Start() {
 		eth1InfoFetcher:     s.powChainService,
 		headFetcher:         s.headFetcher,
 		stateFeedListener:   s.stateFeedListener,
-		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
 		chainStartChan:      make(chan time.Time, 1),
@@ -167,17 +161,17 @@ func (s *Service) Start() {
 		eth1InfoFetcher:    s.powChainService,
 		eth1BlockFetcher:   s.powChainService,
 		mockEth1Votes:      s.mockEth1Votes,
-		operationService:   s.operationService,
+		pool:               s.attestationsPool,
 		canonicalStateChan: s.canonicalStateChan,
 		depositCache:       s.depositCache,
 	}
 	attesterServer := &AttesterServer{
-		p2p:              s.p2p,
-		beaconDB:         s.beaconDB,
-		operationService: s.operationService,
-		attReceiver:      s.attestationReceiver,
-		headFetcher:      s.headFetcher,
-		depositCache:     cache.NewAttestationCache(),
+		p2p:               s.p2p,
+		beaconDB:          s.beaconDB,
+		operationsHandler: s.operationsHandler,
+		attReceiver:       s.attestationReceiver,
+		headFetcher:       s.headFetcher,
+		depositCache:      cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
@@ -195,7 +189,7 @@ func (s *Service) Start() {
 	}
 	beaconChainServer := &BeaconChainServer{
 		beaconDB:    s.beaconDB,
-		pool:        s.operationService,
+		pool:        s.attestationsPool,
 		headFetcher: s.headFetcher,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)

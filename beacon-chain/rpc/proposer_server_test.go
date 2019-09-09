@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -263,8 +264,8 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		operationService: &mockOperationService{
-			pendingAttestations: []*ethpb.Attestation{att},
+		pool: &mockOps.Operations{
+			Attestations: []*ethpb.Attestation{att},
 		},
 		blockReceiver: &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		headFetcher:   &mock.ChainService{State: beaconState, Root: blkRoot[:]},
@@ -383,8 +384,8 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	att2 := proto.Clone(att).(*ethpb.Attestation)
 	att3 := proto.Clone(att).(*ethpb.Attestation)
 
-	opService := &mockOperationService{
-		pendingAttestations: []*ethpb.Attestation{
+	opService := &mockOps.Operations{
+		Attestations: []*ethpb.Attestation{
 			//Expired attestations
 			{
 				Data: &ethpb.AttestationData{
@@ -456,10 +457,10 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 
 	expectedNumberOfAttestations := 3
 	proposerServer := &ProposerServer{
-		beaconDB:         db,
-		operationService: opService,
-		blockReceiver:    &mock.ChainService{State: beaconState, Root: blkRoot[:]},
-		headFetcher:      &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+		beaconDB:      db,
+		pool:          opService,
+		blockReceiver: &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+		headFetcher:   &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
 	atts, err := proposerServer.attestations(context.Background(), currentSlot+params.BeaconConfig().MinAttestationInclusionDelay+1)

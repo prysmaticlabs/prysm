@@ -35,6 +35,11 @@ type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 }
 
+// Handler defines an interface for a struct equipped for receiving block operations.
+type Handler interface {
+	HandleAttestation(context.Context, proto.Message) error
+}
+
 // OperationFeeds inteface defines the informational feeds from the operations
 // service.
 type OperationFeeds interface {

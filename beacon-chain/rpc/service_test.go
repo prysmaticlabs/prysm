@@ -7,11 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -20,61 +16,6 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-type mockOperationService struct {
-	pendingAttestations []*ethpb.Attestation
-}
-
-func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockOperationService) HandleAttestation(_ context.Context, _ proto.Message) error {
-	return nil
-}
-
-func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *ethpb.Attestation) (bool, error) {
-	return true, nil
-}
-
-func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	if ms.pendingAttestations != nil {
-		return ms.pendingAttestations, nil
-	}
-	return []*ethpb.Attestation{
-		{
-			AggregationBits: []byte{0xC0},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-		{
-			AggregationBits: []byte{0xC1},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-		{
-			AggregationBits: []byte{0xC2},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-	}, nil
 }
 
 type mockSyncService struct {

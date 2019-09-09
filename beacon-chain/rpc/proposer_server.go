@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -36,7 +37,7 @@ type ProposerServer struct {
 	chainStartFetcher  powchain.ChainStartFetcher
 	eth1InfoFetcher    powchain.ChainInfoFetcher
 	eth1BlockFetcher   powchain.POWBlockFetcher
-	operationService   operationService
+	pool               operations.Pool
 	canonicalStateChan chan *pbp2p.BeaconState
 	depositCache       *depositcache.DepositCache
 }
@@ -133,7 +134,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
 	beaconState := ps.headFetcher.HeadState()
-	atts, err := ps.operationService.AttestationPool(ctx, expectedSlot)
+	atts, err := ps.pool.AttestationPool(ctx, expectedSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
 	}

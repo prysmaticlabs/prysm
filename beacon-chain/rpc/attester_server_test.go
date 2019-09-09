@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -24,14 +25,13 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		headFetcher:      &mock.ChainService{},
-		attReceiver:      &mock.ChainService{},
-		operationService: mockOperationService,
-		p2p:              &mockp2p.MockBroadcaster{},
-		beaconDB:         db,
-		depositCache:     cache.NewAttestationCache(),
+		headFetcher:       &mock.ChainService{},
+		attReceiver:       &mock.ChainService{},
+		operationsHandler: &mockOps.Operations{},
+		p2p:               &mockp2p.MockBroadcaster{},
+		beaconDB:          db,
+		depositCache:      cache.NewAttestationCache(),
 	}
 	head := &ethpb.BeaconBlock{
 		Slot:       999,

@@ -27,7 +27,6 @@ type BeaconServer struct {
 	eth1InfoFetcher     powchain.ChainInfoFetcher
 	headFetcher         blockchain.HeadFetcher
 	stateFeedListener   blockchain.ChainFeeds
-	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
 	chainStartChan      chan time.Time

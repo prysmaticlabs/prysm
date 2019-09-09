@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -20,12 +21,12 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p              p2p.Broadcaster
-	beaconDB         db.Database
-	operationService operationService
-	attReceiver      blockchain.AttestationReceiver
-	headFetcher      blockchain.HeadFetcher
-	depositCache     *cache.AttestationCache
+	p2p               p2p.Broadcaster
+	beaconDB          db.Database
+	operationsHandler operations.Handler
+	attReceiver       blockchain.AttestationReceiver
+	headFetcher       blockchain.HeadFetcher
+	depositCache      *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -36,7 +37,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
 
-	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
+	if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
 
