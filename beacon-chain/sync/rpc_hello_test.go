@@ -112,7 +112,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Hello{}
-		if err := r.p2p.Encoding().Decode(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		expected := &pb.Hello{
@@ -187,7 +187,7 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Hello{}
-		if err := r.p2p.Encoding().Decode(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		expected := &pb.Hello{
