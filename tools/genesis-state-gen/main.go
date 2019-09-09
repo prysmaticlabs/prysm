@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
-	"math/big"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -17,11 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
 const (
 	blsWithdrawalPrefixByte = byte(0)
-	blsCurveOrder           = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 )
 
 var (
@@ -53,7 +51,7 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	privKeys, pubKeys, err := deterministicallyGenerateKeys(*numValidators)
+	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/,*numValidators)
 	if err != nil {
 		log.Fatalf("Could not deterministically generate keys for %d validators: %v", *numValidators, err)
 	}
@@ -113,36 +111,7 @@ func main() {
 	}
 }
 
-// Deterministically creates BLS private keys using a fixed curve order according to
-// the algorithm specified in the Eth2.0-Specs interop mock start section found here:
-// https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
-func deterministicallyGenerateKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
-	privKeys := make([]*bls.SecretKey, n)
-	pubKeys := make([]*bls.PublicKey, n)
-	for i := 0; i < n; i++ {
-		enc := make([]byte, 32)
-		binary.LittleEndian.PutUint32(enc, uint32(i))
-		hash := hashutil.Hash(enc)
-		// Reverse byte order to big endian for use with big ints.
-		b := reverseByteOrder(hash[:])
-		num := new(big.Int)
-		num = num.SetBytes(b)
-		order := new(big.Int)
-		var ok bool
-		order, ok = order.SetString(blsCurveOrder, 10)
-		if !ok {
-			return nil, nil, errors.New("could not set bls curve order as big int")
-		}
-		num = num.Mod(num, order)
-		priv, err := bls.SecretKeyFromBytes(num.Bytes())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")
-		}
-		privKeys[i] = priv
-		pubKeys[i] = priv.PublicKey()
-	}
-	return privKeys, pubKeys, nil
-}
+
 
 // Generates a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
@@ -207,11 +176,3 @@ func withdrawalCredentialsHash(pubKey []byte) []byte {
 	return append([]byte{blsWithdrawalPrefixByte}, h[0:]...)[:32]
 }
 
-// Switch the endianness of a byte slice by reversing its order.
-func reverseByteOrder(input []byte) []byte {
-	b := input
-	for i := 0; i < len(b)/2; i++ {
-		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
-	}
-	return b
-}

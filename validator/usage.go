@@ -80,6 +80,13 @@ var appHelpFlagGroups = []flagGroup{
 		Name:  "features",
 		Flags: featureconfig.ValidatorFlags,
 	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropNumValidators,
+			flags.InteropStartIndex,
+		},
+	},
 }
 
 func init() {

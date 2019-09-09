@@ -5,13 +5,14 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestGenerateGenesisState(t *testing.T) {
 	numValidators := 64
-	privKeys, pubKeys, err := deterministicallyGenerateKeys(numValidators)
+	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0/*startIndex*/, numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
