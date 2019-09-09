@@ -31,7 +31,7 @@ import (
 type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
-	headFetcher        blockchain.HeadRetriever
+	headFetcher        blockchain.HeadFetcher
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
 	chainStartFetcher  powchain.ChainStartFetcher

@@ -180,7 +180,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		eth1InfoRetriever: &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockGenesisRetriever{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)
@@ -203,7 +203,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		chainStartFetcher: &mockPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		eth1InfoRetriever: &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockGenesisRetriever{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	ctrl := gomock.NewController(t)
@@ -228,7 +228,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		eth1InfoRetriever: &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockGenesisRetriever{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)

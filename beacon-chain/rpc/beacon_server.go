@@ -24,8 +24,8 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
-	eth1InfoRetriever   powchain.ChainInfoFetcher
-	headRetriever       blockchain.HeadRetriever
+	eth1InfoFetcher     powchain.ChainInfoFetcher
+	headFetcher         blockchain.HeadFetcher
 	stateFeedListener   blockchain.ChainFeeds
 	operationService    operationService
 	incomingAttestation chan *ethpb.Attestation
@@ -40,7 +40,7 @@ type BeaconServer struct {
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
 	ok := bs.chainStartFetcher.HasChainStarted()
 	if ok {
-		genesisTime, _ := bs.eth1InfoRetriever.Eth2GenesisPowchainInfo()
+		genesisTime, _ := bs.eth1InfoFetcher.Eth2GenesisPowchainInfo()
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
@@ -70,7 +70,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
-	return bs.headRetriever.HeadBlock(), nil
+	return bs.headFetcher.HeadBlock(), nil
 }
 
 // BlockTree returns the current tree of saved blocks and their votes starting from the justified state.

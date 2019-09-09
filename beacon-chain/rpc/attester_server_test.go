@@ -11,18 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-type mockBroadcaster struct{}
-
-func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) error {
-	return nil
-}
 
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
@@ -31,12 +26,12 @@ func TestSubmitAttestation_OK(t *testing.T) {
 
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		headRetriever:    &mock.ChainService{},
+		headFetcher:      &mock.ChainService{},
 		attReceiver:      &mock.ChainService{},
 		operationService: mockOperationService,
-		p2p:              &mockBroadcaster{},
+		p2p:              &mockp2p.MockBroadcaster{},
 		beaconDB:         db,
-		cache:            cache.NewAttestationCache(),
+		depositCache:     cache.NewAttestationCache(),
 	}
 	head := &ethpb.BeaconBlock{
 		Slot:       999,
@@ -133,10 +128,10 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:           &mockBroadcaster{},
-		cache:         cache.NewAttestationCache(),
-		headRetriever: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:   &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:          &mockp2p.MockBroadcaster{},
+		depositCache: cache.NewAttestationCache(),
+		headFetcher:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -234,10 +229,10 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:           &mockBroadcaster{},
-		cache:         cache.NewAttestationCache(),
-		headRetriever: &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:   &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:          &mockp2p.MockBroadcaster{},
+		depositCache: cache.NewAttestationCache(),
+		headFetcher:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -286,7 +281,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 
 	ctx := context.Background()
 	server := &AttesterServer{
-		cache: cache.NewAttestationCache(),
+		depositCache: cache.NewAttestationCache(),
 	}
 
 	req := &pb.AttestationRequest{
@@ -298,7 +293,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
-	if err := server.cache.MarkInProgress(req); err != nil {
+	if err := server.depositCache.MarkInProgress(req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -320,10 +315,10 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		if err := server.cache.Put(ctx, req, res); err != nil {
+		if err := server.depositCache.Put(ctx, req, res); err != nil {
 			t.Error(err)
 		}
-		if err := server.cache.MarkNotInProgress(req); err != nil {
+		if err := server.depositCache.MarkNotInProgress(req); err != nil {
 			t.Error(err)
 		}
 	}()

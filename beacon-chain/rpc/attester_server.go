@@ -24,8 +24,8 @@ type AttesterServer struct {
 	beaconDB         db.Database
 	operationService operationService
 	attReceiver      blockchain.AttestationReceiver
-	headRetriever    blockchain.HeadRetriever
-	cache            *cache.AttestationCache
+	headFetcher      blockchain.HeadFetcher
+	depositCache     *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -58,7 +58,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("shard", int64(req.Shard)),
 	)
-	res, err := as.cache.Get(ctx, req)
+	res, err := as.depositCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -67,9 +67,9 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return res, nil
 	}
 
-	if err := as.cache.MarkInProgress(req); err != nil {
+	if err := as.depositCache.MarkInProgress(req); err != nil {
 		if err == cache.ErrAlreadyInProgress {
-			res, err := as.cache.Get(ctx, req)
+			res, err := as.depositCache.Get(ctx, req)
 			if err != nil {
 				return nil, err
 			}
@@ -82,13 +82,13 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, err
 	}
 	defer func() {
-		if err := as.cache.MarkNotInProgress(req); err != nil {
+		if err := as.depositCache.MarkNotInProgress(req); err != nil {
 			log.WithError(err).Error("Failed to mark cache not in progress")
 		}
 	}()
 
-	headState := as.headRetriever.HeadState()
-	headRoot := as.headRetriever.HeadRoot()
+	headState := as.headFetcher.HeadState()
+	headRoot := as.headFetcher.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
@@ -132,7 +132,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		},
 	}
 
-	if err := as.cache.Put(ctx, req, res); err != nil {
+	if err := as.depositCache.Put(ctx, req, res); err != nil {
 		return nil, err
 	}
 

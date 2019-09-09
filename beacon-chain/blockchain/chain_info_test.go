@@ -13,7 +13,7 @@ import (
 )
 
 // Ensure Service implements chain info interface.
-var _ = ChainInfoRetriever(&Service{})
+var _ = ChainInfoFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	c := setupBeaconChain(t, nil)
