@@ -50,7 +50,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	}
 
 	msg := &pb.Hello{}
-	if err := r.p2p.Encoding().Decode(stream, msg); err != nil {
+	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
 	r.helloTrackerLock.Lock()

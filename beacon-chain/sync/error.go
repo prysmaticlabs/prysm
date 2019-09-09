@@ -39,7 +39,7 @@ func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, 
 	}
 
 	msg := &pb.ErrorMessage{}
-	if err := encoding.Decode(stream, msg); err != nil {
+	if err := encoding.DecodeWithLength(stream, msg); err != nil {
 		return 0, nil, err
 	}
 
