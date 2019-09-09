@@ -16,7 +16,7 @@ const (
 // Deterministically creates BLS private keys using a fixed curve order according to
 // the algorithm specified in the Eth2.0-Specs interop mock start section found here:
 // https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
-func DeterministicallyGenerateKeys(startIndex, numKeys int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
+func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
 	privKeys := make([]*bls.SecretKey, numKeys)
 	pubKeys := make([]*bls.PublicKey, numKeys)
 	for i := startIndex; i < startIndex+numKeys; i++ {

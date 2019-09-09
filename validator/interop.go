@@ -43,7 +43,7 @@ func loadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
 
 func interopValidatorKeys(idx, count uint64) (map[string]*keystore.Key, error) {
 	log.Warn("Using interop deterministic generated validator keys.")
-	sks, _, err := interop.DeterministicallyGenerateKeys(int(idx), int(count))
+	sks, _, err := interop.DeterministicallyGenerateKeys(idx, count)
 	if err != nil {
 		return nil, err
 	}

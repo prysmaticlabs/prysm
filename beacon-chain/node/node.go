@@ -464,7 +464,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidators.Name)
 
 	if genesisTime > 0 && genesisValidators > 0 {
-		svc := interop_cold_start.NewColdStartService()
+		svc := interop_cold_start.NewColdStartService(genesisTime, genesisValidators)
 
 		return b.services.RegisterService(svc)
 	} else if genesisTime + genesisValidators > 0 {
