@@ -50,20 +50,50 @@ type Reader interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
 }
 
+// ChainStartFetcher retrieves information pertaining to the chain start event
+// of the beacon chain for usage across various services.
+type ChainStartFetcher interface {
+	ChainStartDeposits() []*ethpb.Deposit
+	ChainStartEth1Data() *ethpb.Eth1Data
+	ChainStartFeed() *event.Feed
+	HasChainStarted() bool
+}
+
+// ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
+type ChainInfoFetcher interface {
+	Eth2GenesisPowchainInfo() (uint64, *big.Int)
+}
+
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
-	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
+	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
+	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
+	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+}
+
+// Chain defines a standard interface for the powchain service in Prysm.
+type Chain interface {
+	ChainStartFetcher
+	ChainInfoFetcher
+	POWBlockFetcher
 }
 
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
 // by the beacon chain node.
 type Client interface {
 	Reader
-	POWBlockFetcher
+	RPCBlockFetcher
 	bind.ContractFilterer
 	bind.ContractCaller
+}
+
+// RPCBlockFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
+// fetching block information.
+type RPCBlockFetcher interface {
+	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
 // Service fetches important information about the canonical
@@ -83,7 +113,7 @@ type Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
-	blockFetcher            POWBlockFetcher
+	blockFetcher            RPCBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
@@ -115,7 +145,7 @@ type Web3ServiceConfig struct {
 	Reader          Reader
 	Logger          bind.ContractFilterer
 	HTTPLogger      bind.ContractFilterer
-	BlockFetcher    POWBlockFetcher
+	BlockFetcher    RPCBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
@@ -201,8 +231,8 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 	return s.chainStartDeposits
 }
 
-// ChainStartETH1Data returns the eth1 data at chainstart.
-func (s *Service) ChainStartETH1Data() *ethpb.Eth1Data {
+// ChainStartEth1Data returns the eth1 data at chainstart.
+func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return s.chainStartETH1Data
 }
 

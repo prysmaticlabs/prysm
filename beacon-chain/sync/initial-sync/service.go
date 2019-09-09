@@ -23,7 +23,7 @@ var _ = shared.Service(&InitialSync{})
 
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadRetriever
+	blockchain.HeadFetcher
 	blockchain.ChainFeeds
 }
 

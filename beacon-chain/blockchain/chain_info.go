@@ -9,33 +9,32 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ChainInfoRetriever defines a common interface for methods in blockchain service which
+// ChainInfoFetcher defines a common interface for methods in blockchain service which
 // directly retrieves chain info related data.
-type ChainInfoRetriever interface {
-	HeadRetriever
-	CanonicalRetriever
-	FinalizationRetriever
-	GenesisTime() time.Time
+type ChainInfoFetcher interface {
+	HeadFetcher
+	CanonicalRootFetcher
+	FinalizationFetcher
 }
 
-// HeadRetriever defines a common interface for methods in blockchain service which
+// HeadFetcher defines a common interface for methods in blockchain service which
 // directly retrieves head related data.
-type HeadRetriever interface {
+type HeadFetcher interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
 	HeadState() *pb.BeaconState
 }
 
-// CanonicalRetriever defines a common interface for methods in blockchain service which
+// CanonicalRootFetcher defines a common interface for methods in blockchain service which
 // directly retrieves canonical roots related data.
-type CanonicalRetriever interface {
+type CanonicalRootFetcher interface {
 	CanonicalRoot(slot uint64) []byte
 }
 
-// FinalizationRetriever defines a common interface for methods in blockchain service which
+// FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieves finalization related data.
-type FinalizationRetriever interface {
+type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
 
