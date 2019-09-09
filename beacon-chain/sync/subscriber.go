@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -105,7 +104,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		}
 
 		msg := proto.Clone(base)
-		if err := r.p2p.Encoding().Decode(bytes.NewBuffer(data), msg); err != nil {
+		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}

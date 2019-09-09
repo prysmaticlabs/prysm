@@ -54,6 +54,6 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err := r.p2p.Encoding().Encode(stream, ret)
+	_, err := r.p2p.Encoding().EncodeWithLength(stream, ret)
 	return err
 }
