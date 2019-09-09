@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -18,24 +19,13 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockSyncService struct {
-}
-
-func (ms *mockSyncService) Status() error {
-	return nil
-}
-
-func (ms *mockSyncService) Syncing() bool {
-	return false
-}
-
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
 		CertFlag:            "alice.crt",
 		KeyFlag:             "alice.key",
-		SyncService:         &mockSyncService{},
+		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &mock.ChainService{},
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
@@ -57,7 +47,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "ralph merkle!!!",
-		SyncService:         &mockSyncService{},
+		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &mock.ChainService{},
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
@@ -89,7 +79,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
-		SyncService:         &mockSyncService{},
+		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &mock.ChainService{},
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
