@@ -12,6 +12,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,6 +41,18 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	ok := bs.chainStartFetcher.HasChainStarted()
 	if ok {
 		genesisTime, _ := bs.eth1InfoFetcher.Eth2GenesisPowchainInfo()
+
+		// Wait until genesis time or the peer disconnects.
+		select {
+		case <-time.After(roughtime.Until(time.Unix(int64(genesisTime), 0))):
+			break
+		case <-stream.Context().Done():
+			if stream.Context().Err() != nil {
+				return stream.Context().Err()
+			}
+			break
+		}
+
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
