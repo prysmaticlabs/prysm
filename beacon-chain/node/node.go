@@ -405,17 +405,20 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	key := ctx.GlobalString(flags.KeyFlag.Name)
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		BeaconDB:         b.db,
-		Broadcaster:      b.fetchP2P(ctx),
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
-		MockEth1Votes:    mockEth1DataVotes,
-		SyncService:      syncService,
-		DepositCache:     b.depositCache,
+		Port:                port,
+		CertFlag:            cert,
+		KeyFlag:             key,
+		BeaconDB:            b.db,
+		Broadcaster:         b.fetchP2P(ctx),
+		HeadFetcher:         chainService,
+		BlockReceiver:       chainService,
+		AttestationReceiver: chainService,
+		StateFeedListener:   chainService,
+		OperationService:    operationService,
+		POWChainService:     web3Service,
+		MockEth1Votes:       mockEth1DataVotes,
+		SyncService:         syncService,
+		DepositCache:        b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)

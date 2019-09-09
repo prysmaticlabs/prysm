@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -13,10 +12,10 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -86,93 +85,6 @@ func (f *faultyPOWChainService) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
-type mockPOWChainService struct {
-	chainStartFeed      *event.Feed
-	latestBlockNumber   *big.Int
-	hashesByHeight      map[int][]byte
-	blockTimeByHeight   map[int]uint64
-	blockNumberByHeight map[uint64]*big.Int
-	eth1Data            *ethpb.Eth1Data
-	genesisEth1Block    *big.Int
-}
-
-func (m *mockPOWChainService) HasChainStarted() bool {
-	return true
-}
-
-func (m *mockPOWChainService) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
-	blk := m.genesisEth1Block
-	if blk == nil {
-		blk = big.NewInt(0)
-	}
-	return uint64(time.Unix(0, 0).Unix()), blk
-}
-func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
-	return m.chainStartFeed
-}
-func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
-	return m.latestBlockNumber
-}
-
-func (m *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
-	return &trieutil.MerkleTrie{}
-}
-
-func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
-	// Reverse the map of heights by hash.
-	heightsByHash := make(map[[32]byte]int)
-	for k, v := range m.hashesByHeight {
-		h := bytesutil.ToBytes32(v)
-		heightsByHash[h] = k
-	}
-	val, ok := heightsByHash[hash]
-	if !ok {
-		return false, nil, fmt.Errorf("could not fetch height for hash: %#x", hash)
-	}
-	return true, big.NewInt(int64(val)), nil
-}
-
-func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
-	k := int(height.Int64())
-	val, ok := m.hashesByHeight[k]
-	if !ok {
-		return [32]byte{}, fmt.Errorf("could not fetch hash for height: %v", height)
-	}
-	return bytesutil.ToBytes32(val), nil
-}
-
-func (m *mockPOWChainService) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
-	h := int(height.Int64())
-	return m.blockTimeByHeight[h], nil
-}
-
-func (m *mockPOWChainService) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
-	return m.blockNumberByHeight[time], nil
-}
-
-func (m *mockPOWChainService) DepositRoot() [32]byte {
-	root := []byte("depositroot")
-	return bytesutil.ToBytes32(root)
-}
-
-func (m *mockPOWChainService) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
-}
-
-func (m *mockPOWChainService) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, nil
-}
-
-func (m *mockPOWChainService) ChainStartEth1Data() *ethpb.Eth1Data {
-	return m.eth1Data
-}
-
-type mockGenesisRetriever struct{}
-
-func (m *mockGenesisRetriever) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
-	return 0, nil
-}
-
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
@@ -180,7 +92,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockPOW.MockPOWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)
@@ -200,10 +112,10 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),
-		chainStartFetcher: &mockPOWChainService{
-			chainStartFeed: new(event.Feed),
+		chainStartFetcher: &mockPOW.MockPOWChain{
+			ChainFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockPOW.MockPOWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	ctrl := gomock.NewController(t)
@@ -228,7 +140,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		chainStartFetcher: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockGenesisRetriever{},
+		eth1InfoFetcher:   &mockPOW.MockPOWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 	}
 	exitRoutine := make(chan bool)
