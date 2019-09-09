@@ -83,10 +83,11 @@ BEACON_FLAGS="--bootstrap-node= \
 
 ./beacon-chain $BEACON_FLAGS &
 
-echo "Starting validator client and logging to $BEACON_LOG_FILE"
+echo "Starting validator client and logging to $VALIDATOR_LOG_FILE"
 
 VALIDATOR_FLAGS="--monitoring-port=9091 \
   --unencrypted-keys /tmp/keys.json \
-  --log-file=$BEACON_LOG_FILE"
+  --log-file=$VALIDATOR_LOG_FILE
 
 ./validator- $VALIDATOR_FLAGS &
+
