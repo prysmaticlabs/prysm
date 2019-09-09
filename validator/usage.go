@@ -52,6 +52,9 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.BootstrapNode,
 			cmd.MonitoringPortFlag,
+			cmd.LogFormat,
+			cmd.LogFileName,
+			cmd.EnableUPnPFlag,
 		},
 	},
 	{
@@ -74,6 +77,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeystorePathFlag,
 			flags.PasswordFlag,
 			flags.DisablePenaltyRewardLogFlag,
+			flags.UnencryptedKeysFlag,
 		},
 	},
 	{
