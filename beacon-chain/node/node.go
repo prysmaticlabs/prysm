@@ -201,7 +201,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file. 
+	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
 	if filepath.Ext(bootnodeENR) == ".enr" {
 		b, err := ioutil.ReadFile(bootnodeENR)
@@ -249,14 +249,15 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	}
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
-
+	interopLoadGenesisFlag := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		BeaconDB:       b.db,
-		DepositCache:   b.depositCache,
-		Web3Service:    web3Service,
-		OpsPoolService: opsService,
-		P2p:            b.fetchP2P(ctx),
-		MaxRoutines:    maxRoutines,
+		BeaconDB:          b.db,
+		DepositCache:      b.depositCache,
+		ChainStartFetcher: web3Service,
+		OpsPoolService:    opsService,
+		P2p:               b.fetchP2P(ctx),
+		MaxRoutines:       maxRoutines,
+		PreloadStatePath:  interopLoadGenesisFlag,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -277,9 +278,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if cliCtx.GlobalBool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
-
 	if depAddress == "" {
 		var err error
 		depAddress, err = fetchDepositContract()
@@ -404,17 +403,23 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		BeaconDB:         b.db,
-		Broadcaster:      b.fetchP2P(ctx),
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
-		SyncService:      syncService,
-		DepositCache:     b.depositCache,
+		Port:                port,
+		CertFlag:            cert,
+		KeyFlag:             key,
+		BeaconDB:            b.db,
+		Broadcaster:         b.fetchP2P(ctx),
+		HeadFetcher:         chainService,
+		BlockReceiver:       chainService,
+		AttestationReceiver: chainService,
+		StateFeedListener:   chainService,
+		AttestationsPool:    operationService,
+		OperationsHandler:   operationService,
+		POWChainService:     web3Service,
+		MockEth1Votes:       mockEth1DataVotes,
+		SyncService:         syncService,
+		DepositCache:        b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)

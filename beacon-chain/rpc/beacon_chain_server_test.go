@@ -17,27 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-type mockPool struct{}
-
-func (m *mockPool) AttestationPool(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	return []*ethpb.Attestation{
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("1"),
-			},
-		},
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("2"),
-			},
-		},
-	}, nil
-}
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	db := testutil.SetupDB(t)
@@ -259,7 +243,20 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
 	bs := &BeaconChainServer{
-		pool:     &mockPool{},
+		pool: &mockOps.Operations{
+			Attestations: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: []byte("1"),
+					},
+				},
+				{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: []byte("2"),
+					},
+				},
+			},
+		},
 		beaconDB: db,
 	}
 	block := &ethpb.BeaconBlock{
@@ -806,8 +803,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB:     db,
-		chainService: &mock.ChainService{State: s},
+		beaconDB:    db,
+		headFetcher: &mock.ChainService{State: s},
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
@@ -1000,7 +997,7 @@ func TestBeaconChainServer_GetChainHead(t *testing.T) {
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	}
 
-	bs := &BeaconChainServer{chainService: &mock.ChainService{State: s}}
+	bs := &BeaconChainServer{headFetcher: &mock.ChainService{State: s}}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	if err != nil {

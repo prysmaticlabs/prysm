@@ -5,10 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -19,11 +21,12 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p              p2p.Broadcaster
-	beaconDB         db.Database
-	operationService operationService
-	chainService     chainService
-	cache            *cache.AttestationCache
+	p2p               p2p.Broadcaster
+	beaconDB          db.Database
+	operationsHandler operations.Handler
+	attReceiver       blockchain.AttestationReceiver
+	headFetcher       blockchain.HeadFetcher
+	depositCache      *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -34,12 +37,12 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
 
-	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
+	if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
 		return nil, err
 	}
 
 	go func() {
-		if err := as.chainService.ReceiveAttestation(ctx, att); err != nil {
+		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
 		}
 	}()
@@ -56,7 +59,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("shard", int64(req.Shard)),
 	)
-	res, err := as.cache.Get(ctx, req)
+	res, err := as.depositCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +68,9 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return res, nil
 	}
 
-	if err := as.cache.MarkInProgress(req); err != nil {
+	if err := as.depositCache.MarkInProgress(req); err != nil {
 		if err == cache.ErrAlreadyInProgress {
-			res, err := as.cache.Get(ctx, req)
+			res, err := as.depositCache.Get(ctx, req)
 			if err != nil {
 				return nil, err
 			}
@@ -80,13 +83,13 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, err
 	}
 	defer func() {
-		if err := as.cache.MarkNotInProgress(req); err != nil {
+		if err := as.depositCache.MarkNotInProgress(req); err != nil {
 			log.WithError(err).Error("Failed to mark cache not in progress")
 		}
 	}()
 
-	headState := as.chainService.HeadState()
-	headRoot := as.chainService.HeadRoot()
+	headState := as.headFetcher.HeadState()
+	headRoot := as.headFetcher.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
@@ -130,7 +133,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		},
 	}
 
-	if err := as.cache.Put(ctx, req, res); err != nil {
+	if err := as.depositCache.Put(ctx, req, res); err != nil {
 		return nil, err
 	}
 

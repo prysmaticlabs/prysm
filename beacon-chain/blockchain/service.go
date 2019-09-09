@@ -43,7 +43,7 @@ type Service struct {
 	cancel               context.CancelFunc
 	beaconDB             db.Database
 	depositCache         *depositcache.DepositCache
-	web3Service          *powchain.Service
+	chainStartFetcher    powchain.ChainStartFetcher
 	opsPoolService       operations.OperationFeeds
 	forkChoiceStore      forkchoice.ForkChoicer
 	chainStartChan       chan time.Time
@@ -61,14 +61,14 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf   int
-	Web3Service      *powchain.Service
-	BeaconDB         db.Database
-	DepositCache     *depositcache.DepositCache
-	OpsPoolService   operations.OperationFeeds
-	P2p              p2p.Broadcaster
-	MaxRoutines      int64
-	PreloadStatePath string
+	BeaconBlockBuf    int
+	ChainStartFetcher powchain.ChainStartFetcher
+	BeaconDB          db.Database
+	DepositCache      *depositcache.DepositCache
+	OpsPoolService    operations.OperationFeeds
+	P2p               p2p.Broadcaster
+	MaxRoutines       int64
+	PreloadStatePath  string
 }
 
 // NewService instantiates a new block service instance that will
@@ -81,7 +81,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
 		depositCache:         cfg.DepositCache,
-		web3Service:          cfg.Web3Service,
+		chainStartFetcher:    cfg.ChainStartFetcher,
 		opsPoolService:       cfg.OpsPoolService,
 		forkChoiceStore:      store,
 		chainStartChan:       make(chan time.Time),
@@ -136,11 +136,11 @@ func (s *Service) Start() {
 		s.stateInitializedFeed.Send(s.genesisTime)
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
-		if s.web3Service == nil {
+		if s.chainStartFetcher == nil {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
 		}
-		subChainStart := s.web3Service.ChainStartFeed().Subscribe(s.chainStartChan)
+		subChainStart := s.chainStartFetcher.ChainStartFeed().Subscribe(s.chainStartChan)
 		go func() {
 			genesisTime := <-s.chainStartChan
 			s.processChainStartTime(ctx, genesisTime, subChainStart)
@@ -152,8 +152,8 @@ func (s *Service) Start() {
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
-	initialDeposits := s.web3Service.ChainStartDeposits()
-	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.web3Service.ChainStartETH1Data()); err != nil {
+	initialDeposits := s.chainStartFetcher.ChainStartDeposits()
+	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	s.stateInitializedFeed.Send(genesisTime)

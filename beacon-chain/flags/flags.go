@@ -53,8 +53,13 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
-	// GenesisState defines a flag for the beacon node to load genesis state via file.
-	GenesisState = cli.StringFlag{
+	// InteropMockEth1DataVotesFlag enables mocking the eth1 proof-of-work chain data put into blocks by proposers.
+	InteropMockEth1DataVotesFlag = cli.BoolFlag{
+		Name:  "interop-eth1data-votes",
+		Usage: "Enable mocking of eth1 data votes for proposers to package into blocks",
+	}
+	// InteropGenesisStateFlag defines a flag for the beacon node to load genesis state via file.
+	InteropGenesisStateFlag = cli.StringFlag{
 		Name:  "interop-genesis-state",
 		Usage: "The genesis state file (.SSZ) to load from",
 	}
