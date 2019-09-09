@@ -5,7 +5,6 @@ import (
 	"context"
 	"reflect"
 	"testing"
-	"time"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -86,13 +85,5 @@ func TestCanonicalRoot_CanRetrieve(t *testing.T) {
 	c.canonicalRoots[slot] = r
 	if !bytes.Equal(r, c.CanonicalRoot(slot)) {
 		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.CanonicalRoot(slot))
-	}
-}
-
-func TestGenesisTime_CanRetrieve(t *testing.T) {
-	c := &Service{}
-	c.genesisTime = time.Unix(100, 0)
-	if c.GenesisTime() != time.Unix(100, 0) {
-		t.Error("incorrect genesis time received")
 	}
 }

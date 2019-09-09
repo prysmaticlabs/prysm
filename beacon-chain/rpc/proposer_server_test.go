@@ -20,6 +20,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -1317,6 +1318,57 @@ func TestEth1Data(t *testing.T) {
 
 	if eth1Data.DepositCount != 55 {
 		t.Error("Expected deposit count to be 55")
+	}
+}
+
+func TestEth1Data_MockEnabled(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	// If a mock eth1 data votes is specified, we use the following for the
+	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
+	//
+	// slot_in_voting_period = current_slot % SLOTS_PER_ETH1_VOTING_PERIOD
+	// Eth1Data(
+	//   DepositRoot = hash(current_epoch + slot_in_voting_period),
+	//   DepositCount = state.eth1_deposit_index,
+	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
+	// )
+	ctx := context.Background()
+	ps := &ProposerServer{
+		headRetriever: &mock.ChainService{},
+		beaconDB:      db,
+		mockEth1Votes: true,
+	}
+	headBlockRoot := [32]byte{1, 2, 3}
+	headState := &pbp2p.BeaconState{
+		Eth1DepositIndex: 64,
+	}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	eth1Data, err := ps.eth1Data(ctx, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedSlot := 100 % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	currentEpoch := helpers.SlotToEpoch(100)
+	enc, err := ssz.Marshal(currentEpoch + wantedSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	depRoot := hashutil.Hash(enc)
+	blockHash := hashutil.Hash(depRoot[:])
+	want := &ethpb.Eth1Data{
+		DepositRoot:  depRoot[:],
+		DepositCount: 64,
+		BlockHash:    blockHash[:],
+	}
+	if !proto.Equal(eth1Data, want) {
+		t.Errorf("Wanted %v, received %v", want, eth1Data)
 	}
 }
 
