@@ -89,6 +89,9 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
 	}
+	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
+	}
 
 	return nil
 }
