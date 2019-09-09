@@ -135,6 +135,7 @@ type Service struct {
 	depositedPubkeys        map[[48]byte]uint64
 	eth2GenesisTime         uint64
 	processingLock          sync.RWMutex
+	disableService          bool
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -149,6 +150,7 @@ type Web3ServiceConfig struct {
 	ContractBackend bind.ContractBackend
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
+	DisableService  bool
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -196,6 +198,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
 		depositedPubkeys:        make(map[[48]byte]uint64),
+		disableService:          config.DisableService,
 	}, nil
 }
 
@@ -204,11 +207,17 @@ func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": s.endpoint,
 	}).Info("Starting service")
+	if s.disableService {
+		return
+	}
 	go s.run(s.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
+	if s.disableService {
+		return nil
+	}
 	if s.cancel != nil {
 		defer s.cancel()
 	}

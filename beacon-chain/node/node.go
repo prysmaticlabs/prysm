@@ -43,7 +43,6 @@ import (
 var log = logrus.WithField("prefix", "node")
 
 const beaconChainDBName = "beaconchaindata"
-const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -201,7 +200,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file. 
+	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
 	if filepath.Ext(bootnodeENR) == ".enr" {
 		b, err := ioutil.ReadFile(bootnodeENR)
@@ -275,12 +274,8 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
-	if cliCtx.GlobalBool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Service{})
-	}
 
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
-
 	if depAddress == "" {
 		var err error
 		depAddress, err = fetchDepositContract()
@@ -314,6 +309,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
 		ContractBackend: httpClient,
+		DisableService:  cliCtx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}
