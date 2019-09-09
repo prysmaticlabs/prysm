@@ -27,8 +27,7 @@ func (e SszNetworkEncoder) doEncode(msg proto.Message) ([]byte, error) {
 	return b, nil
 }
 
-// Encode the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
-// to indicate the size of the message.
+// Encode the proto message to the io.Writer.
 func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 	if msg == nil {
 		return 0, nil
@@ -41,6 +40,8 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 	return w.Write(b)
 }
 
+// EncodeWithLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
+// to indicate the size of the message.
 func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int, error) {
 	if msg == nil {
 		return 0, nil
@@ -53,7 +54,7 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int
 	return w.Write(b)
 }
 
-// Decode the bytes from io.Reader to the protobuf message provided.
+// Decode the bytes to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
 	if e.UseSnappyCompression {
 		var err error
@@ -66,6 +67,7 @@ func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
 	return ssz.Unmarshal(b, to)
 }
 
+// DecodeWithLength the bytes from io.Reader to the protobuf message provided.
 func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
