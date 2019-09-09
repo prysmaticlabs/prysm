@@ -50,7 +50,6 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*ethereum_beacon_p
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
 	})
-
 }
 
 // Generates a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
