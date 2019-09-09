@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -367,8 +368,8 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -442,8 +443,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 		}}
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},
 	}
@@ -521,8 +522,8 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -590,8 +591,8 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -659,8 +660,8 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -729,8 +730,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -794,8 +795,8 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOWChainService{
-		blockTimeByHeight: map[int]uint64{
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
 	}
@@ -840,8 +841,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                ctx,
-		chainStartFetcher:  &mockPOWChainService{},
-		blockFetcher:       &mockPOWChainService{},
+		chainStartFetcher:  &mockPOW.POWChain{},
+		blockFetcher:       &mockPOW.POWChain{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		depositCache:       depositcache.NewDepositCache(),
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
@@ -944,8 +945,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		beaconDB:           db,
 		ctx:                context.Background(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		chainStartFetcher:  &mockPOWChainService{},
-		blockFetcher:       &mockPOWChainService{},
+		chainStartFetcher:  &mockPOW.POWChain{},
+		blockFetcher:       &mockPOW.POWChain{},
 		depositCache:       depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
@@ -1058,8 +1059,8 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		beaconDB:           db,
 		ctx:                context.Background(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		chainStartFetcher:  &mockPOWChainService{},
-		blockFetcher:       &mockPOWChainService{},
+		chainStartFetcher:  &mockPOW.POWChain{},
+		blockFetcher:       &mockPOW.POWChain{},
 		depositCache:       depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}

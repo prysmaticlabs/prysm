@@ -32,7 +32,7 @@ type CanonicalRootFetcher interface {
 	CanonicalRoot(slot uint64) []byte
 }
 
-// FinalizationRetriever defines a common interface for methods in blockchain service which
+// FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieves finalization related data.
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint

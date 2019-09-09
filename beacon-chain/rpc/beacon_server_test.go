@@ -44,7 +44,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),
-		chainStartFetcher: &mockPOW.MockPOWChain{
+		chainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},

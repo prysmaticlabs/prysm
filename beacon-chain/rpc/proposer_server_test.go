@@ -516,7 +516,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()):    []byte("0x0"),
@@ -608,7 +608,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -739,7 +739,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()):    []byte("0x0"),
@@ -881,7 +881,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -990,7 +990,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -1096,7 +1096,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -1256,7 +1256,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			0:   []byte("hash0"),
@@ -1293,7 +1293,7 @@ func TestEth1Data(t *testing.T) {
 
 	slot := uint64(10000)
 
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
 			60000: big.NewInt(4096),
 		},
@@ -1434,7 +1434,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: big.NewInt(int64(currentHeight)),
 		HashesByHeight:    hashesByHeight,
 	}
@@ -1459,7 +1459,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.MockPOWChain{
+	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
