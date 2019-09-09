@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
@@ -213,7 +214,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
-		StaticPeers:       ctx.GlobalStringSlice(cmd.StaticPeers.Name),
+		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeENR,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),

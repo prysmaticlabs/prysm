@@ -4,7 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = ["main.go"],
     importpath = "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen",
-    visibility = ["//visibility:private"],
+    visibility = [
+        "//tools/interop/convert-keys:__pkg__",
+    ],
     deps = [
         "//shared/bls:go_default_library",
     ],
