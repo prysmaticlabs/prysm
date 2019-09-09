@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
@@ -91,6 +92,11 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 	}
 	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
+	}
+	for i, v := range genesisState.Validators {
+		if err := s.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
 	}
 
 	return nil
