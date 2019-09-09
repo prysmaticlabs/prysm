@@ -164,7 +164,7 @@ func (s *Service) Start() {
 		headFetcher:        s.headFetcher,
 		blockReceiver:      s.blockReceiver,
 		chainStartFetcher:  s.powChainService,
-		eth1InfoRetriever:  s.powChainService,
+		eth1InfoFetcher:    s.powChainService,
 		eth1BlockFetcher:   s.powChainService,
 		mockEth1Votes:      s.mockEth1Votes,
 		operationService:   s.operationService,

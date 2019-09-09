@@ -34,7 +34,7 @@ type ProposerServer struct {
 	blockReceiver      blockchain.BlockReceiver
 	mockEth1Votes      bool
 	chainStartFetcher  powchain.ChainStartFetcher
-	eth1InfoRetriever  powchain.ChainInfoFetcher
+	eth1InfoFetcher    powchain.ChainInfoFetcher
 	eth1BlockFetcher   powchain.POWBlockFetcher
 	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
@@ -225,7 +225,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 		}, nil
 	}
 
-	eth1VotingPeriodStartTime, _ := ps.eth1InfoRetriever.Eth2GenesisPowchainInfo()
+	eth1VotingPeriodStartTime, _ := ps.eth1InfoFetcher.Eth2GenesisPowchainInfo()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
@@ -276,7 +276,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, err
 	}
 
-	_, genesisEth1Block := ps.eth1InfoRetriever.Eth2GenesisPowchainInfo()
+	_, genesisEth1Block := ps.eth1InfoFetcher.Eth2GenesisPowchainInfo()
 	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
