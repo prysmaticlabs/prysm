@@ -27,9 +27,9 @@ var (
 	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
 )
 
-// ETH2GenesisTime retrieves the genesis time and eth1 block number of the beacon chain
+// Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
-func (s *Service) ETH2GenesisTime() (uint64, *big.Int) {
+func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return s.eth2GenesisTime, s.chainStartBlockNumber
 }
 

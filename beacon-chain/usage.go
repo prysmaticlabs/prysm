@@ -75,6 +75,8 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.NoCustomConfigFlag,
+			flags.InteropMockEth1DataVotesFlag,
+			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.Web3ProviderFlag,
 			flags.RPCPort,
@@ -111,9 +113,9 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "interop",
 		Flags: []cli.Flag{
-			flags.InteropGenesisState,
-			flags.InteropGenesisTime,
-			flags.InteropNumValidators,
+			flags.InteropGenesisStateFlag,
+			flags.InteropGenesisTimeFlag,
+			flags.InteropNumValidatorsFlag,
 		},
 	},
 }

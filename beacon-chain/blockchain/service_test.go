@@ -206,12 +206,12 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	}
 
 	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       beaconDB,
-		DepositCache:   depositcache.NewDepositCache(),
-		Web3Service:    web3Service,
-		OpsPoolService: &mockOperationService{},
-		P2p:            &mockBroadcaster{},
+		BeaconBlockBuf:    0,
+		BeaconDB:          beaconDB,
+		DepositCache:      depositcache.NewDepositCache(),
+		ChainStartFetcher: web3Service,
+		OpsPoolService:    &mockOperationService{},
+		P2p:               &mockBroadcaster{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
