@@ -26,7 +26,7 @@ func TestRegularSync_generateErrorResponse(t *testing.T) {
 		t.Errorf("The first byte was not the status code. Got %#x wanted %#x", b, responseCodeServerError)
 	}
 	msg := &pb.ErrorMessage{}
-	if err := r.p2p.Encoding().Decode(buf, msg); err != nil {
+	if err := r.p2p.Encoding().DecodeWithLength(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	if msg.ErrorMessage != "something bad happened" {

@@ -121,7 +121,7 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, st
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err := r.p2p.Encoding().Encode(stream, resp)
+	_, err := r.p2p.Encoding().EncodeWithLength(stream, resp)
 
 	return err
 }
