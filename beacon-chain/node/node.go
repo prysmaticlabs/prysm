@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -118,6 +119,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerGRPCGateway(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
 
@@ -450,6 +455,20 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+	}
+	return nil
+}
+
+func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
+	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTime.Name)
+	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidators.Name)
+
+	if genesisTime > 0 && genesisValidators > 0 {
+		svc := interop_cold_start.NewColdStartService()
+
+		return b.services.RegisterService(svc)
+	} else if genesisTime + genesisValidators > 0 {
+		log.Errorf("%s and %s must be used together", flags.InteropNumValidators.Name, flags.InteropGenesisTime.Name)
 	}
 	return nil
 }

@@ -57,7 +57,7 @@ func startNode(ctx *cli.Context) error {
 
 	// Interop start from generated keys.
 	if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-		keys, err := interopValidatorKeys(ctx.GlobalUint64(flags.InteropNumValidators.Name), numValidatorKeys)
+		keys, err := interopValidatorKeys(ctx.GlobalUint64(flags.InteropStartIndex.Name), numValidatorKeys)
 		if err != nil {
 			return err
 		}
@@ -169,6 +169,39 @@ func parseUnencryptedKeysFile(r io.Reader) ([][]byte, [][]byte, error) {
 	return validatorKeys, withdrawalKeys, nil
 }
 
+var appFlags = []cli.Flag{
+	flags.NoCustomConfigFlag,
+	flags.BeaconRPCProviderFlag,
+	flags.CertFlag,
+	flags.KeystorePathFlag,
+	flags.PasswordFlag,
+	flags.DisablePenaltyRewardLogFlag,
+	flags.UnencryptedKeysFlag,
+	flags.InteropStartIndex,
+	flags.InteropNumValidators,
+	cmd.VerbosityFlag,
+	cmd.DataDirFlag,
+	cmd.EnableTracingFlag,
+	cmd.TracingProcessNameFlag,
+	cmd.TracingEndpointFlag,
+	cmd.TraceSampleFractionFlag,
+	cmd.BootstrapNode,
+	cmd.MonitoringPortFlag,
+	cmd.LogFormat,
+	debug.PProfFlag,
+	debug.PProfAddrFlag,
+	debug.PProfPortFlag,
+	debug.MemProfileRateFlag,
+	debug.CPUProfileFlag,
+	debug.TraceFlag,
+	cmd.LogFileName,
+	cmd.EnableUPnPFlag,
+}
+
+func init() {
+	appFlags = append(appFlags, featureconfig.ValidatorFlags...)
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "validator"
@@ -200,34 +233,7 @@ contract in order to activate the validator client`,
 			},
 		},
 	}
-	app.Flags = []cli.Flag{
-		flags.NoCustomConfigFlag,
-		flags.BeaconRPCProviderFlag,
-		flags.CertFlag,
-		flags.KeystorePathFlag,
-		flags.PasswordFlag,
-		flags.DisablePenaltyRewardLogFlag,
-		flags.UnencryptedKeysFlag,
-		cmd.VerbosityFlag,
-		cmd.DataDirFlag,
-		cmd.EnableTracingFlag,
-		cmd.TracingProcessNameFlag,
-		cmd.TracingEndpointFlag,
-		cmd.TraceSampleFractionFlag,
-		cmd.BootstrapNode,
-		cmd.MonitoringPortFlag,
-		cmd.LogFormat,
-		debug.PProfFlag,
-		debug.PProfAddrFlag,
-		debug.PProfPortFlag,
-		debug.MemProfileRateFlag,
-		debug.CPUProfileFlag,
-		debug.TraceFlag,
-		cmd.LogFileName,
-		cmd.EnableUPnPFlag,
-	}
-
-	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
+	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.GlobalString(cmd.LogFormat.Name)

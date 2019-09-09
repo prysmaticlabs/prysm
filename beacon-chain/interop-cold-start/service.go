@@ -19,6 +19,7 @@ func NewColdStartService() *Service {
 
 // Start initializes the genesis state from configured flags.
 func (s *Service) Start() {
+	log.Warn("Injecting generated genesis state for interop testing.")
 
 }
 
