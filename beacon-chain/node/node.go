@@ -43,6 +43,7 @@ import (
 var log = logrus.WithField("prefix", "node")
 
 const beaconChainDBName = "beaconchaindata"
+const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -274,7 +275,9 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
-
+	if cliCtx.GlobalBool(testSkipPowFlag) {
+		return b.services.RegisterService(&powchain.Service{})
+	}
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
 	if depAddress == "" {
 		var err error
@@ -288,21 +291,17 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	var httpClient *ethclient.Client
-	var powClient *ethclient.Client
-	if !cliCtx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name) {
-		httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
-		if err != nil {
-			log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-		}
-		httpClient = ethclient.NewClient(httpRPCClient)
-
-		rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
-		if err != nil {
-			log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-		}
-		powClient = ethclient.NewClient(rpcClient)
+	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
+	if err != nil {
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
+	httpClient := ethclient.NewClient(httpRPCClient)
+
+	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
+	if err != nil {
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+	}
+	powClient := ethclient.NewClient(rpcClient)
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
@@ -312,8 +311,8 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		Reader:          powClient,
 		Logger:          powClient,
 		HTTPLogger:      httpClient,
+		BlockFetcher:    httpClient,
 		ContractBackend: httpClient,
-		DisableService:  cliCtx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}
