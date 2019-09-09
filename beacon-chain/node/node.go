@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -202,7 +203,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file. 
 	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
-	if _, err := os.Stat(bootnodeENR); !os.IsNotExist(err) {
+	if filepath.Ext(bootnodeENR) == ".enr" {
 		b, err := ioutil.ReadFile(bootnodeENR)
 		if err != nil {
 			return err
