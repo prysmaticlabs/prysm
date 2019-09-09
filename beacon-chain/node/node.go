@@ -102,6 +102,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerInteropServices(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerBlockchainService(ctx); err != nil {
 		return nil, err
 	}
@@ -119,10 +123,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerGRPCGateway(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
 
@@ -464,7 +464,11 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidators.Name)
 
 	if genesisTime > 0 && genesisValidators > 0 {
-		svc := interop_cold_start.NewColdStartService(genesisTime, genesisValidators)
+		svc := interop_cold_start.NewColdStartService(context.Background(), &interop_cold_start.Config{
+			GenesisTime: genesisTime,
+			NumValidators: genesisValidators,
+			BeaconDB: b.db,
+		})
 
 		return b.services.RegisterService(svc)
 	} else if genesisTime + genesisValidators > 0 {
