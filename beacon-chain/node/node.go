@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
@@ -199,10 +200,20 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
+	// Bootnode ENR may be a filepath to an ENR file. 
+	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
+	if _, err := os.Stat(bootnodeENR); !os.IsNotExist(err) {
+		b, err := ioutil.ReadFile(bootnodeENR)
+		if err != nil {
+			return err
+		}
+		bootnodeENR = string(b)
+	}
+
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
 		StaticPeers:       ctx.GlobalStringSlice(cmd.StaticPeers.Name),
-		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
+		BootstrapNodeAddr: bootnodeENR,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
