@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+// MockPOWChain defines a properly functioning mock for the powchain service.
 type MockPOWChain struct {
 	ChainFeed           *event.Feed
 	LatestBlockNumber   *big.Int
@@ -23,14 +24,17 @@ type MockPOWChain struct {
 	GenesisEth1Block    *big.Int
 }
 
+// ChainStartFeed --
 func (m *MockPOWChain) ChainStartFeed() *event.Feed {
 	return m.ChainFeed
 }
 
+// HasChainStarted --
 func (m *MockPOWChain) HasChainStarted() bool {
 	return true
 }
 
+// Eth2GenesisPowchainInfo --
 func (m *MockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.GenesisEth1Block
 	if blk == nil {
@@ -39,10 +43,12 @@ func (m *MockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return uint64(time.Unix(0, 0).Unix()), blk
 }
 
+// DepositTrie --
 func (m *MockPOWChain) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
 
+// BlockExists --
 func (m *MockPOWChain) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
 	// Reverse the map of heights by hash.
 	heightsByHash := make(map[[32]byte]int)
@@ -57,6 +63,7 @@ func (m *MockPOWChain) BlockExists(_ context.Context, hash common.Hash) (bool, *
 	return true, big.NewInt(int64(val)), nil
 }
 
+// BlockHashByHeight --
 func (m *MockPOWChain) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	k := int(height.Int64())
 	val, ok := m.HashesByHeight[k]
@@ -66,28 +73,34 @@ func (m *MockPOWChain) BlockHashByHeight(_ context.Context, height *big.Int) (co
 	return bytesutil.ToBytes32(val), nil
 }
 
+// BlockTimeByHeight --
 func (m *MockPOWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
 	h := int(height.Int64())
 	return m.TimesByHeight[h], nil
 }
 
+// BlockNumberByTimestamp --
 func (m *MockPOWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
 	return m.BlockNumberByHeight[time], nil
 }
 
+// DepositRoot --
 func (m *MockPOWChain) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
 }
 
+// ChainStartDeposits --
 func (m *MockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
+// ChainStartDepositHashes --
 func (m *MockPOWChain) ChainStartDepositHashes() ([][]byte, error) {
 	return [][]byte{}, nil
 }
 
+// ChainStartEth1Data --
 func (m *MockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
 }
