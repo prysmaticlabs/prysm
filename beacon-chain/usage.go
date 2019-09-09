@@ -83,7 +83,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDBCleanup,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
-			flags.GenesisState,
 		},
 	},
 	{
@@ -108,6 +107,14 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name:  "features",
 		Flags: featureconfig.BeaconChainFlags,
+	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropGenesisState,
+			flags.InteropGenesisTime,
+			flags.InteropNumValidators,
+		},
 	},
 }
 
