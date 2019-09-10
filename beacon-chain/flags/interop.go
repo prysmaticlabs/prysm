@@ -15,7 +15,6 @@ var (
 		Name:  "interop-eth1data-votes",
 		Usage: "Enable mocking of eth1 data votes for proposers to package into blocks",
 	}
-	// "Cold start" flags to use a deterministic genesis state generation.
 	// InteropGenesisTimeFlag specifies genesis time for state generation.
 	InteropGenesisTimeFlag = cli.Uint64Flag{
 		Name: "interop-genesis-time",

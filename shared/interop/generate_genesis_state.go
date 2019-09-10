@@ -21,6 +21,7 @@ var (
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
 
+// GenerateGenesisState deterministically given a genesis time and number of validators.
 func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {

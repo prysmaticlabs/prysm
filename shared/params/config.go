@@ -318,6 +318,7 @@ func UseDemoBeaconConfig() {
 	beaconConfig = DemoBeaconConfig()
 }
 
+// UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
 	beaconConfig = MinimalSpecConfig()
 }
