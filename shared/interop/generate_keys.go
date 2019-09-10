@@ -38,8 +38,8 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")
 		}
-		privKeys[i] = priv
-		pubKeys[i] = priv.PublicKey()
+		privKeys[i-startIndex] = priv
+		pubKeys[i-startIndex] = priv.PublicKey()
 	}
 	return privKeys, pubKeys, nil
 }
