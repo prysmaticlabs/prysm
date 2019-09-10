@@ -579,7 +579,7 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 		blockRoots[i] = []byte{byte(i)}
 	}
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch * 2,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 3,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
