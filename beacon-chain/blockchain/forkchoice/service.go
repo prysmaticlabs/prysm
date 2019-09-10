@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -195,7 +196,8 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.head")
 	defer span.End()
 
-	head := s.justifiedCheckpt.Root
+	head := make([]byte, 32)
+	copy(head, s.justifiedCheckpt.Root)
 
 	for {
 		startSlot := s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch
@@ -235,5 +237,5 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 // FinalizedCheckpt returns the latest finalized check point from fork choice store.
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
-	return s.finalizedCheckpt
+	return proto.Clone(s.finalizedCheckpt).(*ethpb.Checkpoint)
 }

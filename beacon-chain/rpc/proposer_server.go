@@ -209,10 +209,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 		//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 		// )
 		slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-		headState, err := ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get head state")
-		}
+		headState := ps.headFetcher.HeadState()
 		enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
 		if err != nil {
 			return nil, err
