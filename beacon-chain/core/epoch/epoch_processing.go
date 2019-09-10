@@ -790,7 +790,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 	// Cache the validators who voted correctly for source in a map
 	// to calculate earliest attestation rewards later.
-	attestersVotedSoruce := make(map[uint64]*pb.PendingAttestation)
+	attestersVotedSource := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for i, matchAtt := range attsPackage {
@@ -803,7 +803,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
 			if i == 0 {
-				attestersVotedSoruce[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+				attestersVotedSource[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
 			}
 			attested[index] = true
 		}
@@ -831,15 +831,15 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			return nil, nil, errors.Wrap(err, "could not get attester indices")
 		}
 		for _, i := range indices {
-			if _, ok := attestersVotedSoruce[i]; ok {
-				if attestersVotedSoruce[i].InclusionDelay > att.InclusionDelay {
-					attestersVotedSoruce[i] = att
+			if _, ok := attestersVotedSource[i]; ok {
+				if attestersVotedSource[i].InclusionDelay > att.InclusionDelay {
+					attestersVotedSource[i] = att
 				}
 			}
 		}
 	}
 
-	for i, a := range attestersVotedSoruce {
+	for i, a := range attestersVotedSource {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
 		baseReward, err := baseReward(state, i)
