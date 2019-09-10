@@ -55,6 +55,27 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int
 	return w.Write(b)
 }
 
+// EncodeBeaconBlockSlice the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
+// to indicate the size of the message.
+func (e SszNetworkEncoder) EncodeBeaconBlockSlice(w io.Writer, msg *[]*ethpb.BeaconBlock) (int, error) {
+	if msg == nil {
+		return 0, nil
+	}
+	b, err := ssz.Marshal(msg)
+	if err != nil {
+		return 0, err
+	}
+	if e.UseSnappyCompression {
+		b = snappy.Encode(nil /*dst*/, b)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+	b = append(proto.EncodeVarint(uint64(len(b))), b...)
+	return w.Write(b)
+}
+
 // Decode the bytes to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
 	if e.UseSnappyCompression {
