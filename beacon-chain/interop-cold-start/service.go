@@ -1,4 +1,4 @@
-package interop_cold_start
+package interopcoldstart
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 
 var _ = shared.Service(&Service{})
 
+// Service spins up an client interoperability service that handles responsibilities such
+// as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
 type Service struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -33,6 +35,7 @@ type Service struct {
 	genesisPath   string
 }
 
+// Config options for the interop service.
 type Config struct {
 	GenesisTime   uint64
 	NumValidators uint64

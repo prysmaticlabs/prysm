@@ -1,4 +1,4 @@
-package interop_cold_start
+package interopcoldstart
 
 import (
 	"github.com/sirupsen/logrus"
