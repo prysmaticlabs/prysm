@@ -12,6 +12,7 @@ import (
 	dbt "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -51,6 +52,14 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	db := dbt.SetupDB(t)
 	defer dbt.TeardownDB(t, db)
+	ctx := context.Background()
+	headBlockRoot := [32]byte{0x01, 0x02}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &ethereum_beacon_p2p_v1.BeaconState{Slot: 3}, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),

@@ -1337,7 +1337,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	// )
 	ctx := context.Background()
 	ps := &ProposerServer{
-		headFetcher:   &mock.ChainService{},
+		headFetcher:   &mock.ChainService{State: &pbp2p.BeaconState{}},
 		beaconDB:      db,
 		mockEth1Votes: true,
 	}
