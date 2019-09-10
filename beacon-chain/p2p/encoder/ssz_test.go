@@ -2,12 +2,11 @@ package encoder_test
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/go-ssz"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	//pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )

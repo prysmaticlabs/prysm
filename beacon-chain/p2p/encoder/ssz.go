@@ -1,13 +1,11 @@
 package encoder
 
 import (
-	"github.com/sirupsen/logrus"
 	"io"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/go-ssz"
-	//pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -88,14 +86,11 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error
 			return err
 		}
 	}
-	//if _, ok := to.(*pb.BeaconBlockResponse); ok {
-	logrus.Infof("BeaconBlockResponse bytes to decode: %v ", b)
-	//}
 	return ssz.Unmarshal(b, to)
 }
 
-// DecodeSliceWithLength the bytes from io.Reader to the protobuf message provided.
-func (e SszNetworkEncoder) DecodeSliceWithLength(r io.Reader, to *[]*ethpb.BeaconBlock) error {
+// DecodeBeaconBlockSlice the bytes from io.Reader to the slice of beacon blocks provided.
+func (e SszNetworkEncoder) DecodeBeaconBlockSlice(r io.Reader, to *[]*ethpb.BeaconBlock) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
@@ -112,12 +107,7 @@ func (e SszNetworkEncoder) DecodeSliceWithLength(r io.Reader, to *[]*ethpb.Beaco
 			return err
 		}
 	}
-	//if _, ok := to.(*pb.BeaconBlockResponse); ok {
-	logrus.Infof("b: %v ", b)
-
-	//}
 	err = ssz.Unmarshal(b, to)
-	logrus.Infof("to: %v ", to)
 	return err
 }
 

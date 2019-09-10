@@ -128,12 +128,10 @@ func (s *InitialSync) Start() {
 		}
 
 		resp := &[]*eth.BeaconBlock{}
-		if err := s.p2p.Encoding().DecodeSliceWithLength(strm, resp); err != nil {
+		if err := s.p2p.Encoding().DecodeBeaconBlockSlice(strm, resp); err != nil {
 			log.Error(err)
 			continue
 		}
-		log.Infof("blocks received: %v", resp)
-		log.Infof("Received %d blocks", len(*resp))
 
 		for _, blk := range *resp {
 			if blk.Slot <= headSlot {

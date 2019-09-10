@@ -19,8 +19,8 @@ type NetworkEncoding interface {
 	Decode([]byte, proto.Message) error
 	// DecodeWithLength a bytes from a reader with a varint length prefix.
 	DecodeWithLength(io.Reader, proto.Message) error
-	// DecodeSliceWithLength a bytes from a reader with a varint length prefix.
-	DecodeSliceWithLength(io.Reader, *[]*ethpb.BeaconBlock) error
+	// DecodeBeaconBlockSlice decodes a slice of beacon blocks with varint length prefix.
+	DecodeBeaconBlockSlice(io.Reader, *[]*ethpb.BeaconBlock) error
 	// Encode an arbitrary message to the provided writer.
 	Encode(io.Writer, proto.Message) (int, error)
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix.
