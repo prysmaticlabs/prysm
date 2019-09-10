@@ -849,8 +849,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		attesterRewardFactor := (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
-		rewards[i] += attesterReward * attesterRewardFactor
+		rewards[i] += attesterReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
 	}
 
 	// Apply penalties for quadratic leaks.
