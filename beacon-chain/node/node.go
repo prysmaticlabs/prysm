@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
-	"github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
+	interop_cold_start "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -475,6 +475,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,
+			DepositCache:  b.depositCache,
 		})
 
 		return b.services.RegisterService(svc)

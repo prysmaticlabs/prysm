@@ -1,13 +1,10 @@
 package interop
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -24,33 +21,36 @@ var (
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
 
-func GenerateGenesisState(genesisTime, numValidators uint64) (*ethereum_beacon_p2p_v1.BeaconState, error) {
+func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
-		return nil, fmt.Errorf("could not deterministically generate keys for %d validators: %v", numValidators, err)
+		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
 	}
 	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
-		log.Fatalf("Could not generate deposit data from keys: %v", err)
+		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
 	trie, err := trieutil.GenerateTrieFromItems(
 		depositDataRoots,
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
-		log.Fatalf("Could not generate Merkle trie for deposit proofs: %v", err)
+		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
 	deposits, err := generateDepositsFromData(depositDataItems, trie)
 	if err != nil {
-		log.Fatalf("Could not generate deposits from the deposit data provided: %v", err)
+		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
 	root := trie.Root()
-	return state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
 	})
-
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate genesis state")
+	}
+	return beaconState, deposits, nil
 }
 
 // Generates a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
