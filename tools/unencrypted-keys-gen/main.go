@@ -28,7 +28,6 @@ type UnencryptedKeys struct {
 	WithdrawalKey []byte `json:"withdrawal_key"`
 }
 
-
 func main() {
 	flag.Parse()
 	if *numKeys == 0 {
@@ -72,7 +71,7 @@ func generateUnencryptedKeys() *UnencryptedKeysContainer {
 	}
 
 	for i, sk := range sks {
-		ctnr.Keys[i] = &unencryptedKeys{
+		ctnr.Keys[i] = &UnencryptedKeys{
 			ValidatorKey:  sk.Marshal(),
 			WithdrawalKey: sk.Marshal(),
 		}
