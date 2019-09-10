@@ -2,10 +2,13 @@ package encoder_test
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/go-ssz"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	//pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
@@ -59,4 +62,13 @@ func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
 	}
+}
+
+func TestLighthouseBeaconBlockResponse(t *testing.T) {
+	buf := []byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 71, 156, 79, 199, 27, 222, 126, 43, 250, 217, 225, 182, 66, 10, 239, 42, 82, 185, 124, 196, 228, 234, 124, 248, 85, 153, 182, 92, 139, 53, 220, 172, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 0, 0, 0, 224, 0, 0, 0, 224, 0, 0, 0, 224, 0, 0, 0, 224, 0, 0, 0, 224, 0, 0, 0}
+	decoded := &[]ethpb.BeaconBlock{}
+	if err := ssz.Unmarshal(buf, decoded); err != nil {
+		t.Fatal(err)
+	}
+
 }

@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Defines the different encoding formats
@@ -18,6 +19,8 @@ type NetworkEncoding interface {
 	Decode([]byte, proto.Message) error
 	// DecodeWithLength a bytes from a reader with a varint length prefix.
 	DecodeWithLength(io.Reader, proto.Message) error
+	// DecodeSliceWithLength a bytes from a reader with a varint length prefix.
+	DecodeSliceWithLength(io.Reader, *[]*ethpb.BeaconBlock) error
 	// Encode an arbitrary message to the provided writer.
 	Encode(io.Writer, proto.Message) (int, error)
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix.
