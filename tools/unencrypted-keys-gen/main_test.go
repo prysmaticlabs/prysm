@@ -10,11 +10,11 @@ import (
 func TestSavesUnencryptedKeys(t *testing.T) {
 	ctnr := generateUnencryptedKeys()
 	buf := new(bytes.Buffer)
-	if err := SaveUnencryptedKeysToFile(buf, ctnr); err != nil {
+	if err := saveUnencryptedKeysToFile(buf, ctnr); err != nil {
 		t.Fatal(err)
 	}
 	enc := buf.Bytes()
-	dec := &UnencryptedKeysContainer{}
+	dec := &unencryptedKeysContainer{}
 	if err := json.Unmarshal(enc, dec); err != nil {
 		t.Fatal(err)
 	}

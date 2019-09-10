@@ -69,7 +69,7 @@ func generateUnencryptedKeys() *unencryptedKeysContainer {
 	}
 
 	for i, sk := range sks {
-		ctnr.Keys[i] = &UnencryptedKeys{
+		ctnr.Keys[i] = &unencryptedKeys{
 			ValidatorKey:  sk.Marshal(),
 			WithdrawalKey: sk.Marshal(),
 		}
