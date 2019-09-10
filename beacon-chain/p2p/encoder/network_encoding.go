@@ -2,9 +2,6 @@ package encoder
 
 import (
 	"io"
-
-	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Defines the different encoding formats
@@ -16,17 +13,13 @@ const (
 // NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
 type NetworkEncoding interface {
 	// Decodes to the provided message.
-	Decode([]byte, proto.Message) error
+	Decode([]byte, interface{}) error
 	// DecodeWithLength a bytes from a reader with a varint length prefix.
-	DecodeWithLength(io.Reader, proto.Message) error
-	// DecodeBeaconBlockSlice decodes a slice of beacon blocks with varint length prefix.
-	DecodeBeaconBlockSlice(io.Reader, *[]*ethpb.BeaconBlock) error
+	DecodeWithLength(io.Reader, interface{}) error
 	// Encode an arbitrary message to the provided writer.
-	Encode(io.Writer, proto.Message) (int, error)
+	Encode(io.Writer, interface{}) (int, error)
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix.
-	EncodeWithLength(io.Writer, proto.Message) (int, error)
-	// EncodeBeaconBlockSlice encodes a slice of beacon blocks with varint length prefix.
-	EncodeBeaconBlockSlice(io.Writer, []*ethpb.BeaconBlock) (int, error)
+	EncodeWithLength(io.Writer, interface{}) (int, error)
 	// ProtocolSuffix returns the last part of the protocol ID to indicate the encoding scheme.
 	ProtocolSuffix() string
 }

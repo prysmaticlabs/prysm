@@ -6,7 +6,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
@@ -17,7 +16,7 @@ type SszNetworkEncoder struct {
 	UseSnappyCompression bool
 }
 
-func (e SszNetworkEncoder) doEncode(msg proto.Message) ([]byte, error) {
+func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	b, err := ssz.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -29,7 +28,7 @@ func (e SszNetworkEncoder) doEncode(msg proto.Message) ([]byte, error) {
 }
 
 // Encode the proto message to the io.Writer.
-func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
+func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -43,7 +42,7 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 
 // EncodeWithLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message.
-func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int, error) {
+func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -55,26 +54,8 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int
 	return w.Write(b)
 }
 
-// EncodeBeaconBlockSlice the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
-// to indicate the size of the message.
-func (e SszNetworkEncoder) EncodeBeaconBlockSlice(w io.Writer, msg []*ethpb.BeaconBlock) (int, error) {
-	if msg == nil {
-		return 0, nil
-	}
-	b, err := ssz.Marshal(msg)
-	if err != nil {
-		return 0, err
-	}
-	if e.UseSnappyCompression {
-		b = snappy.Encode(nil /*dst*/, b)
-	}
-
-	b = append(proto.EncodeVarint(uint64(len(b))), b...)
-	return w.Write(b)
-}
-
 // Decode the bytes to the protobuf message provided.
-func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
+func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 	if e.UseSnappyCompression {
 		var err error
 		b, err = snappy.Decode(nil /*dst*/, b)
@@ -87,7 +68,7 @@ func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
 }
 
 // DecodeWithLength the bytes from io.Reader to the protobuf message provided.
-func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error {
+func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
@@ -105,28 +86,6 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error
 		}
 	}
 	return ssz.Unmarshal(b, to)
-}
-
-// DecodeBeaconBlockSlice the bytes from io.Reader to the slice of beacon blocks provided.
-func (e SszNetworkEncoder) DecodeBeaconBlockSlice(r io.Reader, to *[]*ethpb.BeaconBlock) error {
-	msgLen, err := readVarint(r)
-	if err != nil {
-		return err
-	}
-	b := make([]byte, msgLen)
-	_, err = r.Read(b)
-	if err != nil {
-		return err
-	}
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
-	}
-	err = ssz.Unmarshal(b, to)
-	return err
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.

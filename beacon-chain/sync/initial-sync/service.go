@@ -127,13 +127,13 @@ func (s *InitialSync) Start() {
 			panic(errMsg.ErrorMessage)
 		}
 
-		resp := &[]*eth.BeaconBlock{}
-		if err := s.p2p.Encoding().DecodeBeaconBlockSlice(strm, resp); err != nil {
+		resp := make([]*eth.BeaconBlock, 0)
+		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
 			log.Error(err)
 			continue
 		}
 
-		for _, blk := range *resp {
+		for _, blk := range resp {
 			if blk.Slot <= headSlot {
 				continue
 			}
