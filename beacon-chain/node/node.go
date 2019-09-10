@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -99,6 +100,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerOperationService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
 
@@ -306,16 +311,17 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		Client:          httpClient,
-		Reader:          powClient,
-		Logger:          powClient,
-		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
-		ContractBackend: httpClient,
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
+		Endpoint:                   cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		DepositContract:            common.HexToAddress(depAddress),
+		Client:                     httpClient,
+		Reader:                     powClient,
+		Logger:                     powClient,
+		HTTPLogger:                 httpClient,
+		BlockFetcher:               httpClient,
+		ContractBackend:            httpClient,
+		BeaconDB:                   b.db,
+		DepositCache:               b.depositCache,
+		InteropGenesisTimeOverride: cliCtx.GlobalUint64(flags.InteropGenesisTimeFlag.Name),
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
@@ -456,6 +462,24 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+	}
+	return nil
+}
+
+func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
+	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
+	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
+
+	if genesisTime > 0 && genesisValidators > 0 {
+		svc := interop_cold_start.NewColdStartService(context.Background(), &interop_cold_start.Config{
+			GenesisTime:   genesisTime,
+			NumValidators: genesisValidators,
+			BeaconDB:      b.db,
+		})
+
+		return b.services.RegisterService(svc)
+	} else if genesisTime+genesisValidators > 0 {
+		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
 }

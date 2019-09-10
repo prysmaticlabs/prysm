@@ -110,6 +110,14 @@ var appHelpFlagGroups = []flagGroup{
 		Name:  "features",
 		Flags: featureconfig.BeaconChainFlags,
 	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropGenesisStateFlag,
+			flags.InteropGenesisTimeFlag,
+			flags.InteropNumValidatorsFlag,
+		},
+	},
 }
 
 func init() {

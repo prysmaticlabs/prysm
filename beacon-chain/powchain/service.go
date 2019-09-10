@@ -149,6 +149,9 @@ type Web3ServiceConfig struct {
 	ContractBackend bind.ContractBackend
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
+
+	// Interop configuration.
+	InteropGenesisTimeOverride uint64
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -196,6 +199,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
 		depositedPubkeys:        make(map[[48]byte]uint64),
+		eth2GenesisTime:         config.InteropGenesisTimeOverride,
 	}, nil
 }
 
@@ -204,8 +208,21 @@ func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": s.endpoint,
 	}).Info("Starting service")
+
+	// Interop code START
+	if s.eth2GenesisTime > 0 {
+		s.chainStartDeposits = []*ethpb.Deposit{&ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				Amount: 32,
+			},
+		}}
+		s.ProcessChainStart(s.eth2GenesisTime, [32]byte{}, new(big.Int))
+	}
+	// Interop code STOP
+
 	go s.run(s.ctx.Done())
 }
+
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (s *Service) Stop() error {

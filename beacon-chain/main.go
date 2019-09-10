@@ -32,6 +32,8 @@ var appFlags = []cli.Flag{
 	flags.GRPCGatewayPort,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
+	flags.InteropNumValidatorsFlag,
+	flags.InteropGenesisTimeFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
