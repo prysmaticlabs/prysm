@@ -255,7 +255,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	}
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
-	interopLoadGenesisFlag := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
@@ -263,7 +262,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
-		PreloadStatePath:  interopLoadGenesisFlag,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
