@@ -19,6 +19,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Allow for blocks "from the future" within a certain tolerance.
+const timeShiftTolerance = 10 // ms
+
 // OnBlock is called whenever a block is received. It runs state transition on the block and
 // update fork choice store struct.
 //
@@ -191,7 +194,7 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 func verifyBlkSlotTime(gensisTime uint64, blkSlot uint64) error {
 	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(roughtime.Now().Unix())
-	if slotTime > currentTime {
+	if slotTime > currentTime+timeShiftTolerance {
 		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, currentTime)
 	}
 	return nil
