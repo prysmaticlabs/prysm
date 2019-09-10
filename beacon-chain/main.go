@@ -18,6 +18,8 @@ import (
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
+	golog "github.com/ipfs/go-log"
+	gologging "github.com/whyrusleeping/go-logging"
 )
 
 var appFlags = []cli.Flag{
@@ -125,6 +127,9 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
+	if level == logrus.DebugLevel {
+		golog.SetAllLoggers(gologging.DEBUG)
+	}
 
 	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {
