@@ -17,13 +17,11 @@ var (
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
 
-// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
-type UnencryptedKeysContainer struct {
-	Keys []*UnencryptedKeys `json:"keys"`
+type unencryptedKeysContainer struct {
+	Keys []*unencryptedKeys `json:"keys"`
 }
 
-// UnencryptedKeys is the inner struct of the JSON file.
-type UnencryptedKeys struct {
+type unencryptedKeys struct {
 	ValidatorKey  []byte `json:"validator_key"`
 	WithdrawalKey []byte `json:"withdrawal_key"`
 }
@@ -53,35 +51,33 @@ func main() {
 		}
 	}()
 
-	ctnr := generateUnencryptedKeys(rand.Reader)
-	if err := SaveUnencryptedKeysToFile(file, ctnr); err != nil {
+	ctnr := generateUnencryptedKeys()
+	if err := saveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys(r io.Reader) *UnencryptedKeysContainer {
-	ctnr := &UnencryptedKeysContainer{
-		Keys: make([]*UnencryptedKeys, *numKeys),
+func generateUnencryptedKeys() *unencryptedKeysContainer {
+	ctnr := &unencryptedKeysContainer{
+		Keys: make([]*unencryptedKeys, *numKeys),
 	}
-	for i := 0; i < *numKeys; i++ {
-		signingKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		withdrawalKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ctnr.Keys[i] = &UnencryptedKeys{
-			ValidatorKey:  signingKey.Marshal(),
-			WithdrawalKey: withdrawalKey.Marshal(),
+
+	sks, _, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, uint64(*numKeys))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for i, sk := range sks {
+		ctnr.Keys[i] = &unencryptedKeys{
+			ValidatorKey:  sk.Marshal(),
+			WithdrawalKey: sk.Marshal(),
 		}
 	}
 	return ctnr
 }
 
-// SaveUnencryptedKeysToFile JSON encodes the container and writes to the writer.
-func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) error {
+func saveUnencryptedKeysToFile(w io.Writer, ctnr *unencryptedKeysContainer) error {
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
 		log.Fatal(err)
