@@ -8,17 +8,14 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	dbt "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	dbt "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 )
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
@@ -34,21 +31,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
-		beaconDB: db,
-	}
-	b := blocks.NewGenesisBlock([]byte{'A'})
-	r, _ := ssz.SigningRoot(b)
-	if err := beaconServer.beaconDB.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconServer.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconServer.beaconDB.SaveGenesisBlockRoot(ctx, r); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconServer.beaconDB.SaveState(ctx, &pbp2p.BeaconState{}, r); err != nil {
-		t.Fatal(err)
+		beaconDB:          db,
 	}
 
 	exitRoutine := make(chan bool)
@@ -66,6 +49,9 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
+	db := dbt.SetupDB(t)
+	defer dbt.TeardownDB(t, db)
+
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),
 		chainStartFetcher: &mockPOW.POWChain{
@@ -73,6 +59,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -89,6 +76,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
+	db := dbt.SetupDB(t)
+	defer dbt.TeardownDB(t, db)
+
 	hook := logTest.NewGlobal()
 	beaconServer := &BeaconServer{
 		ctx:            context.Background(),
@@ -98,6 +88,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
