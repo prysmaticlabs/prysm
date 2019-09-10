@@ -16,7 +16,7 @@ type SszNetworkEncoder struct {
 	UseSnappyCompression bool
 }
 
-func (e SszNetworkEncoder) doEncode(msg proto.Message) ([]byte, error) {
+func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	b, err := ssz.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (e SszNetworkEncoder) doEncode(msg proto.Message) ([]byte, error) {
 }
 
 // Encode the proto message to the io.Writer.
-func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
+func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -42,7 +42,7 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg proto.Message) (int, error) {
 
 // EncodeWithLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message.
-func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int, error) {
+func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -55,7 +55,7 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg proto.Message) (int
 }
 
 // Decode the bytes to the protobuf message provided.
-func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
+func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 	if e.UseSnappyCompression {
 		var err error
 		b, err = snappy.Decode(nil /*dst*/, b)
@@ -68,7 +68,7 @@ func (e SszNetworkEncoder) Decode(b []byte, to proto.Message) error {
 }
 
 // DecodeWithLength the bytes from io.Reader to the protobuf message provided.
-func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error {
+func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
@@ -85,7 +85,6 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to proto.Message) error
 			return err
 		}
 	}
-
 	return ssz.Unmarshal(b, to)
 }
 
