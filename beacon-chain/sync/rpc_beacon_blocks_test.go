@@ -46,14 +46,14 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
-		res := &pb.BeaconBlocksResponse{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+		res := make([]ethpb.BeaconBlock, 0)
+		if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
 			t.Error(err)
 		}
-		if uint64(len(res.Blocks)) != req.Count {
-			t.Errorf("Received only %d blocks, expected %d", len(res.Blocks), req.Count)
+		if uint64(len(res)) != req.Count {
+			t.Errorf("Received only %d blocks, expected %d", len(res), req.Count)
 		}
-		for _, blk := range res.Blocks {
+		for _, blk := range res {
 			if (blk.Slot-req.HeadSlot)%req.Step != 0 {
 				t.Errorf("Received unexpected block slot %d", blk.Slot)
 			}
