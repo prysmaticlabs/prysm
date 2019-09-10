@@ -119,7 +119,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	logStateTransitionData(block, root[:])
 
 	// Save new block as head.
 	if err := s.saveHead(ctx, block, root); err != nil {

@@ -118,12 +118,12 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash block")
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Infof(
 		"Block proposal received via RPC")
 	if err := ps.blockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
-
+	log.Info("Correctly received block")
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 

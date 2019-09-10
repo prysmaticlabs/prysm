@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -68,11 +70,25 @@ func (s *Service) HeadRoot() []byte {
 
 // HeadBlock returns the head block of the chain.
 func (s *Service) HeadBlock() *ethpb.BeaconBlock {
+	if s.headBlock == nil {
+		head, err := s.beaconDB.HeadBlock(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not get head block: %v", err)
+		}
+		s.headBlock = head
+	}
 	return proto.Clone(s.headBlock).(*ethpb.BeaconBlock)
 }
 
 // HeadState returns the head state of the chain.
 func (s *Service) HeadState() *pb.BeaconState {
+	if s.headState == nil {
+		headState, err := s.beaconDB.HeadState(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not get head state: %v", err)
+		}
+		s.headState = headState
+	}
 	return proto.Clone(s.headState).(*pb.BeaconState)
 }
 
@@ -80,7 +96,17 @@ func (s *Service) HeadState() *pb.BeaconState {
 func (s *Service) CanonicalRoot(slot uint64) []byte {
 	s.canonicalRootsLock.RLock()
 	defer s.canonicalRootsLock.RUnlock()
-
+	if s.canonicalRoots[slot] == nil || len(s.canonicalRoots[slot]) == 0 {
+		head, err := s.beaconDB.HeadBlock(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not get head block: %v", err)
+		}
+		root, err := ssz.SigningRoot(head)
+		if err != nil {
+			log.Fatalf("Could not get hash tree root: %v", err)
+		}
+		s.canonicalRoots[slot] = root[:]
+	}
 	return s.canonicalRoots[slot]
 }
 
