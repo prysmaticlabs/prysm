@@ -309,17 +309,16 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:                   cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
-		DepositContract:            common.HexToAddress(depAddress),
-		Client:                     httpClient,
-		Reader:                     powClient,
-		Logger:                     powClient,
-		HTTPLogger:                 httpClient,
-		BlockFetcher:               httpClient,
-		ContractBackend:            httpClient,
-		BeaconDB:                   b.db,
-		DepositCache:               b.depositCache,
-		InteropGenesisTimeOverride: cliCtx.GlobalUint64(flags.InteropGenesisTimeFlag.Name),
+		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		DepositContract: common.HexToAddress(depAddress),
+		Client:          httpClient,
+		Reader:          powClient,
+		Logger:          powClient,
+		HTTPLogger:      httpClient,
+		BlockFetcher:    httpClient,
+		ContractBackend: httpClient,
+		BeaconDB:        b.db,
+		DepositCache:    b.depositCache,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {

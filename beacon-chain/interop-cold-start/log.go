@@ -4,4 +4,4 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "cold start")
+var log = logrus.WithField("prefix", "interop-cold-start")
