@@ -26,7 +26,7 @@ type NetworkEncoding interface {
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix.
 	EncodeWithLength(io.Writer, proto.Message) (int, error)
 	// EncodeBeaconBlockSlice encodes a slice of beacon blocks with varint length prefix.
-	EncodeBeaconBlockSlice(io.Writer, *[]*ethpb.BeaconBlock) (int, error)
+	EncodeBeaconBlockSlice(io.Writer, []*ethpb.BeaconBlock) (int, error)
 	// ProtocolSuffix returns the last part of the protocol ID to indicate the encoding scheme.
 	ProtocolSuffix() string
 }
