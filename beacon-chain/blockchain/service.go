@@ -107,8 +107,15 @@ func (s *Service) Start() {
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
-		genesisCheckpoint := &ethpb.Checkpoint{Root: s.HeadRoot()}
-		if err := s.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
+		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
+		if err != nil {
+			log.Fatalf("Could not get justified checkpoint: %v", err)
+		}
+		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(ctx)
+		if err != nil {
+			log.Fatalf("Could not get finalized checkpoint: %v", err)
+		}
+		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
 		s.stateInitializedFeed.Send(s.genesisTime)

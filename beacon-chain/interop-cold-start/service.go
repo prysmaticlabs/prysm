@@ -143,6 +143,14 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
+	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := s.beaconDB.SaveJustifiedCheckpoint(ctx, genesisCheckpoint); err != nil {
+		return errors.Wrap(err, "could save justified checkpoint")
+	}
+	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, genesisCheckpoint); err != nil {
+		return errors.Wrap(err, "could save finalized checkpoint")
+	}
+
 	for i, v := range genesisState.Validators {
 		if err := s.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
 			return errors.Wrapf(err, "could not save validator index: %d", i)

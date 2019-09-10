@@ -211,7 +211,7 @@ func (s *Service) Start() {
 
 	// Interop code START
 	if s.eth2GenesisTime > 0 {
-		s.chainStartDeposits = []*ethpb.Deposit{&ethpb.Deposit{
+		s.chainStartDeposits = []*ethpb.Deposit{{
 			Data: &ethpb.Deposit_Data{
 				Amount: 32,
 			},

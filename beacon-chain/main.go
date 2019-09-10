@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -16,10 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
-	golog "github.com/ipfs/go-log"
-	gologging "github.com/whyrusleeping/go-logging"
 )
 
 var appFlags = []cli.Flag{
