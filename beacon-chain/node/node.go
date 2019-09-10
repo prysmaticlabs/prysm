@@ -82,7 +82,9 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		params.UseDemoBeaconConfig()
+		// TODO(3439): Conditionally use demo config?
+		// params.UseDemoBeaconConfig()
+		params.UseMinimalConfig()
 	}
 
 	featureconfig.ConfigureBeaconFeatures(ctx)
@@ -309,17 +311,16 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:                   cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
-		DepositContract:            common.HexToAddress(depAddress),
-		Client:                     httpClient,
-		Reader:                     powClient,
-		Logger:                     powClient,
-		HTTPLogger:                 httpClient,
-		BlockFetcher:               httpClient,
-		ContractBackend:            httpClient,
-		BeaconDB:                   b.db,
-		DepositCache:               b.depositCache,
-		InteropGenesisTimeOverride: cliCtx.GlobalUint64(flags.InteropGenesisTimeFlag.Name),
+		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		DepositContract: common.HexToAddress(depAddress),
+		Client:          httpClient,
+		Reader:          powClient,
+		Logger:          powClient,
+		HTTPLogger:      httpClient,
+		BlockFetcher:    httpClient,
+		ContractBackend: httpClient,
+		BeaconDB:        b.db,
+		DepositCache:    b.depositCache,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {

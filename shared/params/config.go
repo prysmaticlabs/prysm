@@ -318,6 +318,11 @@ func UseDemoBeaconConfig() {
 	beaconConfig = DemoBeaconConfig()
 }
 
+// UseMinimalConfig for beacon chain services.
+func UseMinimalConfig() {
+	beaconConfig = MinimalSpecConfig()
+}
+
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
 // call BeaconConfig(), change the specific parameters, and then call
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will

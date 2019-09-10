@@ -98,14 +98,14 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 	return false
 }
 
-// ChainStartDeposits returns the chain start deposits from deposit cache.
+// ChainStartDeposits retrieves the deposits present at chainstart.
 func (dc *DepositCache) ChainStartDeposits(ctx context.Context) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ChainStartDeposits")
 	defer span.End()
 	return dc.chainStartDeposits
 }
 
-// InsertChainStartDeposit inserts chain start deposit.
+// InsertChainStartDeposit into the cache.
 func (dc *DepositCache) InsertChainStartDeposit(ctx context.Context, dep *ethpb.Deposit) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertChainStartDeposit")
 	defer span.End()
