@@ -17,12 +17,12 @@ const (
 )
 
 var (
-	numValidators      = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
-	useMainnetConfig   = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
-	genesisTime        = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
-	sszOutputFile      = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
-	yamlOutputFile     = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
-	jsonOutputFile     = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
+	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
+	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
+	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
+	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
+	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
+	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
 )
 
 func main() {
@@ -41,7 +41,7 @@ func main() {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
 
-	genesisState, err := interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
+	genesisState, _, err := interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
 	if err != nil {
 		log.Fatalf("Could not generate genesis beacon state: %v", err)
 	}
@@ -76,5 +76,3 @@ func main() {
 		log.Printf("Done writing to %s", *jsonOutputFile)
 	}
 }
-
-

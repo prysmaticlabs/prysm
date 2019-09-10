@@ -256,6 +256,7 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	headState := vs.headFetcher.HeadState()
 
 	chainStartKeys := vs.chainStartPubkeys()
+	log.Info(chainStartKeys)
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
@@ -308,7 +309,7 @@ func (vs *ValidatorServer) ExitedValidators(
 
 func (vs *ValidatorServer) validatorStatus(
 	ctx context.Context, pubKey []byte, chainStarted bool,
-	chainStartKeys map[[96]byte]bool, idxMap map[[32]byte]int,
+	chainStartKeys map[[48]byte]bool, idxMap map[[32]byte]int,
 	beaconState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	pk := bytesutil.ToBytes32(pubKey)
 	valIdx, ok := idxMap[pk]
@@ -337,7 +338,7 @@ func (vs *ValidatorServer) validatorStatus(
 		}
 	}
 
-	if exists := chainStartKeys[bytesutil.ToBytes96(pubKey)]; exists {
+	if exists := chainStartKeys[bytesutil.ToBytes48(pubKey)]; exists {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_ACTIVE,
 			ActivationEpoch:        0,
@@ -455,11 +456,11 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	return depositBlockSlot, nil
 }
 
-func (vs *ValidatorServer) chainStartPubkeys() map[[96]byte]bool {
-	pubkeys := make(map[[96]byte]bool)
+func (vs *ValidatorServer) chainStartPubkeys() map[[48]byte]bool {
+	pubkeys := make(map[[48]byte]bool)
 	deposits := vs.depositCache.ChainStartDeposits(context.Background())
 	for _, dep := range deposits {
-		pubkeys[bytesutil.ToBytes96(dep.Data.PublicKey)] = true
+		pubkeys[bytesutil.ToBytes48(dep.Data.PublicKey)] = true
 	}
 	return pubkeys
 }

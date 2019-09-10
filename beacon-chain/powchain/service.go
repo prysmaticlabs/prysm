@@ -223,7 +223,6 @@ func (s *Service) Start() {
 	go s.run(s.ctx.Done())
 }
 
-
 // Stop the web3 service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	if s.cancel != nil {

@@ -26,7 +26,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
 	}
-	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
@@ -37,7 +37,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := generateDepositsFromData(depositDataItems, trie)
+	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
@@ -53,8 +53,8 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	return beaconState, deposits, nil
 }
 
-// Generates a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+// GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
+func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	for i, item := range depositDataItems {
 		proof, err := trie.MerkleProof(i)
@@ -69,8 +69,8 @@ func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trie
 	return deposits, nil
 }
 
-// Generates a list of deposit data items from a set of BLS validator keys.
-func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
+// DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
+func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
 	dataRoots := make([][]byte, len(privKeys))
 	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
 	for i := 0; i < len(privKeys); i++ {

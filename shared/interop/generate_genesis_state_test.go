@@ -11,7 +11,7 @@ import (
 
 func TestGenerateGenesisState(t *testing.T) {
 	numValidators := uint64(64)
-	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0/*startIndex*/, numValidators)
+	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,4 +50,3 @@ func TestGenerateGenesisState(t *testing.T) {
 		t.Errorf("Wanted genesis time 0, received %d", genesisState.GenesisTime)
 	}
 }
-

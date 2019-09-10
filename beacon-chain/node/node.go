@@ -469,13 +469,15 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
-	if genesisTime > 0 && genesisValidators > 0 {
+	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
 		svc := interop_cold_start.NewColdStartService(context.Background(), &interop_cold_start.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,
 			DepositCache:  b.depositCache,
+			GenesisPath:   genesisStatePath,
 		})
 
 		return b.services.RegisterService(svc)

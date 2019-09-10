@@ -25,7 +25,7 @@ var (
 	}
 	// InteropNumValidatorsFlag specifies number of genesis validators for state generation.
 	InteropNumValidatorsFlag = cli.Uint64Flag{
-		Name: "interop-num-validators",
+		Name:  "interop-num-validators",
 		Usage: "Specify number of genesis validators to generate for interop. Must be used with --interop-genesis-time",
 	}
 )

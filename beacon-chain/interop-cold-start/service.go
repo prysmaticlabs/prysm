@@ -2,6 +2,7 @@ package interop_cold_start
 
 import (
 	"context"
+	"io/ioutil"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -15,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -27,6 +30,7 @@ type Service struct {
 	beaconDB      db.Database
 	powchain      powchain.Service
 	depositCache  *depositcache.DepositCache
+	genesisPath   string
 }
 
 type Config struct {
@@ -34,6 +38,7 @@ type Config struct {
 	NumValidators uint64
 	BeaconDB      db.Database
 	DepositCache  *depositcache.DepositCache
+	GenesisPath   string
 }
 
 // NewColdStartService is an interoperability testing service to inject a deterministically generated genesis state
@@ -50,6 +55,42 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 		numValidators: cfg.NumValidators,
 		beaconDB:      cfg.BeaconDB,
 		depositCache:  cfg.DepositCache,
+		genesisPath:   cfg.GenesisPath,
+	}
+
+	if s.genesisPath != "" {
+		data, err := ioutil.ReadFile(s.genesisPath)
+		if err != nil {
+			log.Fatalf("Could not read pre-loaded state: %v", err)
+		}
+		genesisState := &pb.BeaconState{}
+		if err := ssz.Unmarshal(data, genesisState); err != nil {
+			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
+		}
+		//s.genesisTime = time.Unix(int64(genesisState.GenesisTime), 0)
+		privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, uint64(len(genesisState.Validators)))
+		if err != nil {
+			log.WithError(err).Fatalf("could not deterministically generate keys for %d validators", uint64(len(genesisState.Validators)))
+		}
+		depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+		if err != nil {
+			log.WithError(err).Fatal("could not generate deposit data from keys")
+		}
+		trie, err := trieutil.GenerateTrieFromItems(
+			depositDataRoots,
+			int(params.BeaconConfig().DepositContractTreeDepth),
+		)
+		if err != nil {
+			log.WithError(err).Fatal("could not generate Merkle trie for deposit proofs")
+		}
+		deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
+		if err != nil {
+			log.WithError(err).Fatal(err, "could not generate deposits from the deposit data provided")
+		}
+		if err := s.saveGenesisState(ctx, genesisState, deposits); err != nil {
+			log.Fatalf("Could not save interop genesis state %v", err)
+		}
+		return s
 	}
 
 	// Save genesis state in db
