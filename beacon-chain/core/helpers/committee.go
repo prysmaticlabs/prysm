@@ -454,7 +454,6 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
-
 			}
 		}
 		return ssz.HashTreeRoot(compactCommArray)
@@ -480,6 +479,6 @@ func compressValidator(validator *ethpb.Validator, idx uint64) uint64 {
 	}
 	// Clear all bits except last 15.
 	compactBalance &= 0x7FFF // 0b01111111 0b11111111
-	compactValidator := compactIndex | uint64(slashedBit|compactBalance)
+	compactValidator := compactIndex | slashedBit | compactBalance
 	return compactValidator
 }
