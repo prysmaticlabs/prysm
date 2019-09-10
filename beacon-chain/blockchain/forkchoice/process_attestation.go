@@ -104,7 +104,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
-	return 0, nil
+	return tgtSlot, nil
 }
 
 // verifyAttPreState validates input attested check point has a valid pre-state.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -81,6 +82,9 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
+	}
+	if headBlk == nil {
+		return fmt.Errorf("head doesnt exist in db with root %#x", headRoot)
 	}
 	log.WithFields(logrus.Fields{
 		"headSlot": headBlk.Slot,
