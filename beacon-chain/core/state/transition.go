@@ -17,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -61,6 +62,8 @@ func ExecuteStateTransition(
 			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
+
+	interop.WriteStateToDisk(state)
 
 	postStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
