@@ -152,6 +152,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		CurrentCrosslinks:          crosslinks,
 		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
