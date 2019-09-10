@@ -123,7 +123,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	if err := ps.blockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, errors.Wrap(err, "could not process beacon block")
 	}
-	log.Info("Correctly received block")
+
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 
