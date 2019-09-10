@@ -256,7 +256,6 @@ func (vs *ValidatorServer) MultipleValidatorStatus(
 	headState := vs.headFetcher.HeadState()
 
 	chainStartKeys := vs.chainStartPubkeys()
-	log.Info(chainStartKeys)
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
