@@ -17,14 +17,17 @@ var (
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
 
-type unencryptedKeysContainer struct {
-	Keys []*unencryptedKeys `json:"keys"`
+// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
+type UnencryptedKeysContainer struct {
+	Keys []*UnencryptedKeys `json:"keys"`
 }
 
-type unencryptedKeys struct {
+// UnencryptedKeys is the inner struct of the JSON file.
+type UnencryptedKeys struct {
 	ValidatorKey  []byte `json:"validator_key"`
 	WithdrawalKey []byte `json:"withdrawal_key"`
 }
+
 
 func main() {
 	flag.Parse()
@@ -52,14 +55,14 @@ func main() {
 	}()
 
 	ctnr := generateUnencryptedKeys()
-	if err := saveUnencryptedKeysToFile(file, ctnr); err != nil {
+	if err := SaveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys() *unencryptedKeysContainer {
-	ctnr := &unencryptedKeysContainer{
-		Keys: make([]*unencryptedKeys, *numKeys),
+func generateUnencryptedKeys() *UnencryptedKeysContainer {
+	ctnr := &UnencryptedKeysContainer{
+		Keys: make([]*UnencryptedKeys, *numKeys),
 	}
 
 	sks, _, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, uint64(*numKeys))
@@ -77,7 +80,8 @@ func generateUnencryptedKeys() *unencryptedKeysContainer {
 	return ctnr
 }
 
-func saveUnencryptedKeysToFile(w io.Writer, ctnr *unencryptedKeysContainer) error {
+// SaveUnencryptedKeysToFile JSON encodes the container and writes to the writer.
+func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) error {
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
 		log.Fatal(err)

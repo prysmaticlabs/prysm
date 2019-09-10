@@ -15,7 +15,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	depositDataItems, depositDataRoots, err := depositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, err := generateDepositsFromData(depositDataItems, trie)
+	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
 	if err != nil {
 		t.Fatal(err)
 	}
