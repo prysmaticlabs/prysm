@@ -107,7 +107,6 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 
 // Start initializes the genesis state from configured flags.
 func (s *Service) Start() {
-	// TODO: Does this need to be a service?
 }
 
 // Stop does nothing.

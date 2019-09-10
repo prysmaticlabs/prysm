@@ -28,7 +28,6 @@ type UnencryptedKeys struct {
 	WithdrawalKey []byte `json:"withdrawal_key"`
 }
 
-
 func main() {
 	flag.Parse()
 	if *numKeys == 0 {
