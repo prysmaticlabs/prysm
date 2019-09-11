@@ -124,7 +124,7 @@ func (s *InitialSync) Start() {
 		}
 		if code != 0 {
 			log.Errorf("Request failed. Request was %+v", req)
-			panic(errMsg.ErrorMessage)
+			panic(errMsg)
 		}
 
 		resp := make([]*eth.BeaconBlock, 0)

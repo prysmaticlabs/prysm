@@ -25,7 +25,7 @@ func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
 	if code != 0 {
 		t.Fatalf("Received non-zero response code: %d", code)
 	}
-	if errMsg != nil {
+	if errMsg != "" {
 		t.Fatalf("Received error message from stream: %+v", errMsg)
 	}
 }
