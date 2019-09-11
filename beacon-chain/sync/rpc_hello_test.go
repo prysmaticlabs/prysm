@@ -42,8 +42,10 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}
-		if errMsg.ErrorMessage != errWrongForkVersion.Error() {
-			t.Errorf("Received unexpected message response in the stream: %+v", err)
+		if errMsg != errWrongForkVersion.Error() {
+			t.Log(len(errMsg))
+			t.Log(len(errWrongForkVersion.Error()))
+			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
 		}
 	})
 

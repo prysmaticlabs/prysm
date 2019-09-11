@@ -46,7 +46,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	}
 
 	if code != 0 {
-		return errors.New(errMsg.ErrorMessage)
+		return errors.New(errMsg)
 	}
 
 	msg := &pb.Hello{}
