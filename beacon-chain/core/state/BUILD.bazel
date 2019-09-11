@@ -37,7 +37,6 @@ go_test(
         "state_test.go",
         "transition_test.go",
     ],
-    data = glob(["testdata/*.ssz"]),
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
