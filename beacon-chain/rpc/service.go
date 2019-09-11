@@ -58,7 +58,7 @@ type Service struct {
 	incomingAttestation chan *ethpb.Attestation
 	credentialError     error
 	p2p                 p2p.Broadcaster
-	depositCache        *depositcache.DepositCache
+	depositFetcher      depositcache.DepositFetcher
 }
 
 // Config options for the beacon node RPC server.
@@ -77,7 +77,7 @@ type Config struct {
 	AttestationsPool    operations.Pool
 	SyncService         sync.Checker
 	Broadcaster         p2p.Broadcaster
-	DepositCache        *depositcache.DepositCache
+	DepositFetcher      depositcache.DepositFetcher
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -101,7 +101,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,
-		depositCache:        cfg.DepositCache,
+		depositFetcher:      cfg.DepositFetcher,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
@@ -162,7 +162,7 @@ func (s *Service) Start() {
 		mockEth1Votes:      s.mockEth1Votes,
 		pool:               s.attestationsPool,
 		canonicalStateChan: s.canonicalStateChan,
-		depositCache:       s.depositCache,
+		depositFetcher:     s.depositFetcher,
 	}
 	attesterServer := &AttesterServer{
 		p2p:               s.p2p,
@@ -179,7 +179,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.powChainService,
-		depositCache:       s.depositCache,
+		depositFetcher:     s.depositFetcher,
 	}
 	nodeServer := &NodeServer{
 		beaconDB:    s.beaconDB,
