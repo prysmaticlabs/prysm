@@ -407,7 +407,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	}
 
 	var interopService *interopcoldstart.Service
-	if err := b.services.FetchService(&syncService); err != nil {
+	if err := b.services.FetchService(&interopService); err != nil {
 		return err
 	}
 	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
