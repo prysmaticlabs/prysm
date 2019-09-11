@@ -176,7 +176,7 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 	}
 	slotTime := baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(time.Now().Unix())
-	if slotTime > currentTime {
+	if slotTime > currentTime+timeShiftTolerance {
 		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, currentTime)
 	}
 	return nil
