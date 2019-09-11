@@ -27,21 +27,21 @@ func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, e
 }
 
 // ReadStatusCode response from a RPC stream.
-func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, *pb.ErrorMessage, error) {
+func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, string, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", err
 	}
 
 	if b[0] == responseCodeSuccess {
-		return 0, nil, nil
+		return 0, "", nil
 	}
 
-	msg := &pb.ErrorMessage{}
-	if err := encoding.DecodeWithLength(stream, msg); err != nil {
-		return 0, nil, err
+	msg := make([]byte, 0)
+	if err := encoding.DecodeWithLength(stream, &msg); err != nil {
+		return 0, "", err
 	}
 
-	return uint8(b[0]), msg, nil
+	return uint8(b[0]), string(msg), nil
 }

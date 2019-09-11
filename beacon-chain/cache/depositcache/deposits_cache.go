@@ -29,6 +29,7 @@ type DepositCache struct {
 	pendingDeposits       []*DepositContainer
 	deposits              []*DepositContainer
 	depositsLock          sync.RWMutex
+	chainStartDeposits    []*ethpb.Deposit
 	chainstartPubkeys     map[string]bool
 	chainstartPubkeysLock sync.RWMutex
 }
@@ -45,9 +46,10 @@ type DepositContainer struct {
 // NewDepositCache instantiates a new deposit cache
 func NewDepositCache() *DepositCache {
 	return &DepositCache{
-		pendingDeposits:   []*DepositContainer{},
-		deposits:          []*DepositContainer{},
-		chainstartPubkeys: make(map[string]bool),
+		pendingDeposits:    []*DepositContainer{},
+		deposits:           []*DepositContainer{},
+		chainstartPubkeys:  make(map[string]bool),
+		chainStartDeposits: make([]*ethpb.Deposit, 0),
 	}
 }
 
@@ -94,6 +96,20 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 	}
 	dc.chainstartPubkeys = make(map[string]bool)
 	return false
+}
+
+// ChainStartDeposits retrieves the deposits present at chainstart.
+func (dc *DepositCache) ChainStartDeposits(ctx context.Context) []*ethpb.Deposit {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ChainStartDeposits")
+	defer span.End()
+	return dc.chainStartDeposits
+}
+
+// InsertChainStartDeposit into the cache.
+func (dc *DepositCache) InsertChainStartDeposit(ctx context.Context, dep *ethpb.Deposit) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertChainStartDeposit")
+	defer span.End()
+	dc.chainStartDeposits = append(dc.chainStartDeposits, dep)
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number

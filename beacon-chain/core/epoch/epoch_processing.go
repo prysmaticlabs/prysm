@@ -162,6 +162,10 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //      if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //          state.finalized_checkpoint = old_current_justified_checkpoint
 func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (*pb.BeaconState, error) {
+	if state.Slot <= helpers.StartSlot(2) {
+		return state, nil
+	}
+
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
@@ -779,7 +783,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 	// Cache the validators who voted correctly for source in a map
 	// to calculate earliest attestation rewards later.
-	attestersVotedSoruce := make(map[uint64]*pb.PendingAttestation)
+	attestersVotedSource := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for i, matchAtt := range attsPackage {
@@ -792,7 +796,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
 			if i == 0 {
-				attestersVotedSoruce[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+				attestersVotedSource[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
 			}
 			attested[index] = true
 		}
@@ -820,15 +824,15 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			return nil, nil, errors.Wrap(err, "could not get attester indices")
 		}
 		for _, i := range indices {
-			if _, ok := attestersVotedSoruce[i]; ok {
-				if attestersVotedSoruce[i].InclusionDelay > att.InclusionDelay {
-					attestersVotedSoruce[i] = att
+			if _, ok := attestersVotedSource[i]; ok {
+				if attestersVotedSource[i].InclusionDelay > att.InclusionDelay {
+					attestersVotedSource[i] = att
 				}
 			}
 		}
 	}
 
-	for i, a := range attestersVotedSoruce {
+	for i, a := range attestersVotedSource {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
 		baseReward, err := baseReward(state, i)
@@ -838,8 +842,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		attesterRewardFactor := (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
-		rewards[i] += attesterReward * attesterRewardFactor
+		rewards[i] += attesterReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
 	}
 
 	// Apply penalties for quadratic leaks.

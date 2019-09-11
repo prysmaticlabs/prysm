@@ -209,10 +209,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 		//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 		// )
 		slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-		headState, err := ps.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get head state")
-		}
+		headState := ps.headFetcher.HeadState()
 		enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
 		if err != nil {
 			return nil, err
@@ -269,6 +266,9 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
+	if ps.mockEth1Votes {
+		return []*ethpb.Deposit{}, nil
+	}
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	beaconState := ps.headFetcher.HeadState()

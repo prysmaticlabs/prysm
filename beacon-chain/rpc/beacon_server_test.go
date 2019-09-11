@@ -9,8 +9,10 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbt "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -18,6 +20,10 @@ import (
 )
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
+	db := dbt.SetupDB(t)
+	defer dbt.TeardownDB(t, db)
+	ctx := context.Background()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx: ctx,
@@ -26,7 +32,9 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
 	}
+
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -42,6 +50,17 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
+	db := dbt.SetupDB(t)
+	defer dbt.TeardownDB(t, db)
+	ctx := context.Background()
+	headBlockRoot := [32]byte{0x01, 0x02}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &ethereum_beacon_p2p_v1.BeaconState{Slot: 3}, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	beaconServer := &BeaconServer{
 		ctx: context.Background(),
 		chainStartFetcher: &mockPOW.POWChain{
@@ -49,6 +68,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -65,6 +85,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
+	db := dbt.SetupDB(t)
+	defer dbt.TeardownDB(t, db)
+
 	hook := logTest.NewGlobal()
 	beaconServer := &BeaconServer{
 		ctx:            context.Background(),
@@ -74,6 +97,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

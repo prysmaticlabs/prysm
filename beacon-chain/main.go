@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
 )
@@ -32,6 +34,8 @@ var appFlags = []cli.Flag{
 	flags.GRPCGatewayPort,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
+	flags.InteropNumValidatorsFlag,
+	flags.InteropGenesisTimeFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
@@ -123,6 +127,9 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
+	if level == logrus.DebugLevel {
+		golog.SetAllLoggers(gologging.DEBUG)
+	}
 
 	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {

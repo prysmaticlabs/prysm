@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"runtime"
 	"sync"
 	"time"
@@ -56,7 +55,6 @@ type Service struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	canonicalRootsLock   sync.RWMutex
-	preloadStatePath     string
 }
 
 // Config options for the service.
@@ -68,7 +66,6 @@ type Config struct {
 	OpsPoolService    operations.OperationFeeds
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
-	PreloadStatePath  string
 }
 
 // NewService instantiates a new block service instance that will
@@ -89,7 +86,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
-		preloadStatePath:     cfg.PreloadStatePath,
 	}, nil
 }
 
@@ -117,21 +113,6 @@ func (s *Service) Start() {
 		}
 		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
-		}
-		s.stateInitializedFeed.Send(s.genesisTime)
-	} else if s.preloadStatePath != "" {
-		log.Infof("Loading generated genesis state from %v", s.preloadStatePath)
-		data, err := ioutil.ReadFile(s.preloadStatePath)
-		if err != nil {
-			log.Fatalf("Could not read pre-loaded state: %v", err)
-		}
-		genesisState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(data, genesisState); err != nil {
-			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
-		}
-		s.genesisTime = time.Unix(int64(genesisState.GenesisTime), 0)
-		if err := s.saveGenesisData(ctx, genesisState); err != nil {
-			log.Fatalf("Could not save genesis data: %v", err)
 		}
 		s.stateInitializedFeed.Send(s.genesisTime)
 	} else {

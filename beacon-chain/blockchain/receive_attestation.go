@@ -69,8 +69,8 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	}
 
 	log.WithFields(logrus.Fields{
-		"attSlot":     attSlot,
-		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attTargetSlot": attSlot,
+		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Finished updating fork choice store for attestation")
 
 	// Run fork choice for head block after updating fork choice store.

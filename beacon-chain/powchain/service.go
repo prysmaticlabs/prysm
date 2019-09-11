@@ -133,8 +133,8 @@ type Service struct {
 	chainStartETH1Data      *ethpb.Eth1Data
 	activeValidatorCount    uint64
 	depositedPubkeys        map[[48]byte]uint64
-	eth2GenesisTime         uint64
 	processingLock          sync.RWMutex
+	eth2GenesisTime         uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -204,6 +204,7 @@ func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": s.endpoint,
 	}).Info("Starting service")
+
 	go s.run(s.ctx.Done())
 }
 

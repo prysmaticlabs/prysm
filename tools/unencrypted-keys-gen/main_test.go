@@ -2,14 +2,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
 	"reflect"
 	"testing"
 )
 
 func TestSavesUnencryptedKeys(t *testing.T) {
-	ctnr := generateUnencryptedKeys(rand.Reader)
+	ctnr := generateUnencryptedKeys()
 	buf := new(bytes.Buffer)
 	if err := SaveUnencryptedKeysToFile(buf, ctnr); err != nil {
 		t.Fatal(err)

@@ -1337,7 +1337,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	// )
 	ctx := context.Background()
 	ps := &ProposerServer{
-		headFetcher:   &mock.ChainService{},
+		headFetcher:   &mock.ChainService{State: &pbp2p.BeaconState{}},
 		beaconDB:      db,
 		mockEth1Votes: true,
 	}
@@ -1366,7 +1366,6 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
-		DepositCount: 64,
 		BlockHash:    blockHash[:],
 	}
 	if !proto.Equal(eth1Data, want) {

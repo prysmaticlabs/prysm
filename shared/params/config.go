@@ -228,7 +228,7 @@ func MainnetConfig() *BeaconChainConfig {
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
+	demoConfig.MaxEffectiveBalance = 32 * 1e9
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
@@ -249,7 +249,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
-	minimalConfig.MinGenesisTime = 1578009600
+	minimalConfig.MinGenesisTime = 0
 
 	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
@@ -316,6 +316,11 @@ func ContractConfig() *DepositContractConfig {
 // UseDemoBeaconConfig for beacon chain services.
 func UseDemoBeaconConfig() {
 	beaconConfig = DemoBeaconConfig()
+}
+
+// UseMinimalConfig for beacon chain services.
+func UseMinimalConfig() {
+	beaconConfig = MinimalSpecConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

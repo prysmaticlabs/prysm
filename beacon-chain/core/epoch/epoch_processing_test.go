@@ -579,7 +579,7 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 		blockRoots[i] = []byte{byte(i)}
 	}
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch * 2,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 3,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
@@ -588,6 +588,7 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 		JustificationBits: []byte{0x03}, // 0b0011
 		Validators:        []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -596,7 +597,7 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 	attestedBalance := 4 * e * 3 / 2
 	_, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
 	want := "could not get block root for current epoch"
-	if !strings.Contains(err.Error(), want) {
+	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatal("Did not receive correct error")
 	}
 }
