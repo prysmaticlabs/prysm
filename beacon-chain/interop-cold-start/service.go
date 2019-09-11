@@ -111,7 +111,7 @@ func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.De
 	return &ethpb.Deposit{}, big.NewInt(1)
 }
 
-// DepositNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
+// DepositsNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
 func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
 	return 0, [32]byte{}
 }
