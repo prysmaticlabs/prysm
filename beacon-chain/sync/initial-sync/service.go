@@ -131,7 +131,6 @@ func (s *InitialSync) Start() {
 		if err := s.p2p.Encoding().DecodeWithLength(strm, resp); err != nil {
 			panic(err)
 		}
-		strm.Close()
 
 		log.Infof("Received %d blocks", len(resp.Blocks))
 
