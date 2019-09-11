@@ -20,6 +20,8 @@ var (
 	})
 )
 
+// PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
+// which have not yet been included in the chain.
 type PendingDepositsFetcher interface {
 	PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer
 }
