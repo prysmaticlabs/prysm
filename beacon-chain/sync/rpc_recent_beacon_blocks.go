@@ -8,6 +8,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -32,7 +33,7 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 		}
 		return errors.New("no block roots provided")
 	}
-	ret := &pb.BeaconBlocksResponse{}
+	ret := make([]*eth.BeaconBlock, 0)
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
@@ -48,7 +49,7 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg prot
 			return err
 		}
 		// if block returned is nil, it appends nil to the slice
-		ret.Blocks = append(ret.Blocks, blk)
+		ret = append(ret, blk)
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {

@@ -104,7 +104,7 @@ func (s *InitialSync) Start() {
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
 		req := &pb.BeaconBlocksRequest{
-			HeadSlot:      headSlot,
+			HeadSlot:      headSlot + 1,
 			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
@@ -127,14 +127,13 @@ func (s *InitialSync) Start() {
 			panic(errMsg.ErrorMessage)
 		}
 
-		resp := &pb.BeaconBlocksResponse{}
-		if err := s.p2p.Encoding().DecodeWithLength(strm, resp); err != nil {
-			panic(err)
+		resp := make([]*eth.BeaconBlock, 0)
+		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
+			log.Error(err)
+			continue
 		}
 
-		log.Infof("Received %d blocks", len(resp.Blocks))
-
-		for _, blk := range resp.Blocks {
+		for _, blk := range resp {
 			if blk.Slot <= headSlot {
 				continue
 			}

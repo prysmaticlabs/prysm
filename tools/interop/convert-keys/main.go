@@ -11,8 +11,8 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/yaml.v2"
 	keygen "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen"
+	"gopkg.in/yaml.v2"
 )
 
 // KeyPair with hex encoded data.
@@ -48,7 +48,7 @@ func main() {
 		}
 
 		out.Keys = append(out.Keys, &keygen.UnencryptedKeys{
-			ValidatorKey: pk,
+			ValidatorKey:  pk,
 			WithdrawalKey: pk,
 		})
 	}

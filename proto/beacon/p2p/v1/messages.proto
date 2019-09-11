@@ -36,10 +36,6 @@ message BeaconBlocksRequest {
   uint64 step = 4;
 }
 
-message BeaconBlocksResponse {
-  repeated ethereum.eth.v1alpha1.BeaconBlock blocks = 1;
-}
-
 message RecentBeaconBlocksRequest {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\""];
 }
