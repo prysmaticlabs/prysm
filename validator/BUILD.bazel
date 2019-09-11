@@ -38,6 +38,7 @@ go_library(
 go_image(
     name = "image",
     srcs = [
+        "interop.go",
         "main.go",
         "usage.go",
     ],
