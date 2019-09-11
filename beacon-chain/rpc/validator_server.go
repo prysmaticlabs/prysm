@@ -29,13 +29,13 @@ import (
 // and shards in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
-	ctx                    context.Context
-	beaconDB               db.Database
-	headFetcher            blockchain.HeadFetcher
-	canonicalStateChan     chan *pbp2p.BeaconState
-	blockFetcher           powchain.POWBlockFetcher
-	chainStartFetcher      powchain.ChainStartFetcher
-	depositMetadataFetcher depositcache.DepositFetcher
+	ctx                context.Context
+	beaconDB           db.Database
+	headFetcher        blockchain.HeadFetcher
+	canonicalStateChan chan *pbp2p.BeaconState
+	blockFetcher       powchain.POWBlockFetcher
+	chainStartFetcher  powchain.ChainStartFetcher
+	depositFetcher     depositcache.DepositFetcher
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -314,7 +314,7 @@ func (vs *ValidatorServer) validatorStatus(
 	beaconState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	pk := bytesutil.ToBytes32(pubKey)
 	valIdx, ok := idxMap[pk]
-	_, eth1BlockNumBigInt := vs.depositMetadataFetcher.DepositByPubkey(ctx, pubKey)
+	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,

@@ -13,6 +13,8 @@ import (
 
 const nilDepositErr = "Ignoring nil deposit insertion"
 
+var _ = DepositFetcher(&DepositCache{})
+
 func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
 	dc := DepositCache{}
