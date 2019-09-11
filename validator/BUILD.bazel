@@ -55,6 +55,7 @@ go_image(
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/interop:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
