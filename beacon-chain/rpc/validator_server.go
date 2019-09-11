@@ -244,10 +244,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	chainStarted, err := vs.hasChainStarted()
-	if err != nil {
-		return false, nil, nil
-	}
+	chainStarted := vs.hasChainStarted()
 	if !chainStarted {
 		return false, nil, nil
 	}
@@ -473,10 +470,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	}, nil
 }
 
-func (vs *ValidatorServer) hasChainStarted() (bool, error) {
-	headState, err := vs.beaconDB.HeadState(context.Background())
-	if err != nil {
-		return false, err
-	}
-	return headState != nil, nil
+func (vs *ValidatorServer) hasChainStarted() bool {
+	s := vs.headFetcher.HeadState()
+	return s != nil
 }

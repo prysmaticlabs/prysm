@@ -1366,7 +1366,6 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
-		DepositCount: 64,
 		BlockHash:    blockHash[:],
 	}
 	if !proto.Equal(eth1Data, want) {
