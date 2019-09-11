@@ -56,7 +56,6 @@ type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	ChainStartFeed() *event.Feed
-	HasChainStarted() bool
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -235,13 +234,6 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ChainStartEth1Data returns the eth1 data at chainstart.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return s.chainStartETH1Data
-}
-
-// HasChainStarted returns whether the deposits from
-// the deposit contract received so far are valid enough
-// to kick start the beacon chain.
-func (s *Service) HasChainStarted() bool {
-	return s.chainStarted
 }
 
 // Status is service health checks. Return nil or error.
