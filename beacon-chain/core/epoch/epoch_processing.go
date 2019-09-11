@@ -18,7 +18,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 // MatchedAttestations is an object that contains the correctly
@@ -183,10 +182,6 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 
 	// Note: the spec refers to the bit index position starting at 1 instead of starting at zero.
 	// We will use that paradigm here for consistency with the godoc spec definition.
-	logrus.WithField("3*prevAttestedBal", 3*prevAttestedBal).
-		WithField("2*totalBal", 2*totalBal).
-		WithField("3*currAttestedBal", 3*currAttestedBal).
-		Debug("Determining justification")
 
 	// If 2/3 or more of total balance attested in the previous epoch.
 	if 3*prevAttestedBal >= 2*totalBal {
@@ -210,8 +205,6 @@ func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal 
 
 	// Process finalization according to ETH2.0 specifications.
 	justification := state.JustificationBits.Bytes()[0]
-
-	logrus.Debugf("justification = %#x", justification)
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
