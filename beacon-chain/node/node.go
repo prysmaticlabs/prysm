@@ -406,16 +406,16 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var interopService *interopcoldstart.Service
-	if err := b.services.FetchService(&interopService); err != nil {
-		return err
-	}
 	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher powchain.ChainStartFetcher
 	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+		var interopService *interopcoldstart.Service
+		if err := b.services.FetchService(&interopService); err != nil {
+			return err
+		}
 		depositFetcher = interopService
 		chainStartFetcher = interopService
 	} else {
