@@ -55,6 +55,7 @@ func TestService_Send(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	stream.Close()
 
 	testutil.WaitTimeout(&wg, 1*time.Second)
 

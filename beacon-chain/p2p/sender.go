@@ -29,10 +29,11 @@ func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) 
 		return nil, err
 	}
 
-	// Close stream for writing.
-	if err := stream.Close(); err != nil {
-		return nil, err
-	}
+	/*
+		// Close stream for writing.
+		if err := stream.Close(); err != nil {
+			return nil, err
+		} */
 
 	return stream, nil
 }
