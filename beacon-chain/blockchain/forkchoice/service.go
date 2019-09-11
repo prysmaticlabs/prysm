@@ -196,8 +196,7 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.head")
 	defer span.End()
 
-	head := make([]byte, 32)
-	copy(head, s.justifiedCheckpt.Root)
+	head := s.justifiedCheckpt.Root
 
 	for {
 		startSlot := s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch
