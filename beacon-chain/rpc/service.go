@@ -45,6 +45,7 @@ type Service struct {
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
 	powChainService       powchain.Chain
+	chainStartFetcher     powchain.ChainStartFetcher
 	mockEth1Votes         bool
 	attestationsPool      operations.Pool
 	operationsHandler     operations.Handler
@@ -73,6 +74,7 @@ type Config struct {
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
+	ChainStartFetcher     powchain.ChainStartFetcher
 	MockEth1Votes         bool
 	OperationsHandler     operations.Handler
 	AttestationsPool      operations.Pool
@@ -96,6 +98,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
 		powChainService:       cfg.POWChainService,
+		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
 		operationsHandler:     cfg.OperationsHandler,
@@ -148,7 +151,7 @@ func (s *Service) Start() {
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
-		chainStartFetcher:   s.powChainService,
+		chainStartFetcher:   s.chainStartFetcher,
 		headFetcher:         s.headFetcher,
 		stateFeedListener:   s.stateFeedListener,
 		incomingAttestation: s.incomingAttestation,
@@ -159,7 +162,7 @@ func (s *Service) Start() {
 		beaconDB:               s.beaconDB,
 		headFetcher:            s.headFetcher,
 		blockReceiver:          s.blockReceiver,
-		chainStartFetcher:      s.powChainService,
+		chainStartFetcher:      s.chainStartFetcher,
 		eth1InfoFetcher:        s.powChainService,
 		eth1BlockFetcher:       s.powChainService,
 		mockEth1Votes:          s.mockEth1Votes,
@@ -182,7 +185,7 @@ func (s *Service) Start() {
 		headFetcher:        s.headFetcher,
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
-		chainStartFetcher:  s.powChainService,
+		chainStartFetcher:  s.chainStartFetcher,
 		depositFetcher:     s.depositFetcher,
 	}
 	nodeServer := &NodeServer{

@@ -15,23 +15,26 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
 var _ = shared.Service(&Service{})
 var _ = depositcache.DepositFetcher(&Service{})
+var _ = powchain.ChainStartFetcher(&Service{})
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	genesisTime   uint64
-	numValidators uint64
-	beaconDB      db.Database
-	powchain      powchain.Service
-	depositCache  *depositcache.DepositCache
-	genesisPath   string
+	ctx                context.Context
+	cancel             context.CancelFunc
+	genesisTime        uint64
+	numValidators      uint64
+	beaconDB           db.Database
+	powchain           powchain.Service
+	depositCache       *depositcache.DepositCache
+	genesisPath        string
+	chainStartDeposits []*ethpb.Deposit
 }
 
 // Config options for the interop service.
@@ -51,13 +54,14 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 
 	s := &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		genesisTime:   cfg.GenesisTime,
-		numValidators: cfg.NumValidators,
-		beaconDB:      cfg.BeaconDB,
-		depositCache:  cfg.DepositCache,
-		genesisPath:   cfg.GenesisPath,
+		ctx:                ctx,
+		cancel:             cancel,
+		genesisTime:        cfg.GenesisTime,
+		numValidators:      cfg.NumValidators,
+		beaconDB:           cfg.BeaconDB,
+		depositCache:       cfg.DepositCache,
+		genesisPath:        cfg.GenesisPath,
+		chainStartDeposits: make([]*ethpb.Deposit, cfg.NumValidators),
 	}
 
 	if s.genesisPath != "" {
@@ -106,6 +110,21 @@ func (s *Service) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.
 	return []*ethpb.Deposit{}
 }
 
+// ChainStartDeposits mocks out the powchain functionality for interop.
+func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
+	return s.chainStartDeposits
+}
+
+// ChainStartEth1Data mocks out the powchain functionality for interop.
+func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
+	return &ethpb.Eth1Data{}
+}
+
+// ChainStartFeed mocks out the powchain functionality for interop.
+func (s *Service) ChainStartFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 // DepositByPubkey mocks out the deposit cache functionality for interop.
 func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, big.NewInt(1)
@@ -150,6 +169,11 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 	for i, v := range genesisState.Validators {
 		if err := s.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
 			return errors.Wrapf(err, "could not save validator index: %d", i)
+		}
+		s.chainStartDeposits[i] = &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey: v.PublicKey,
+			},
 		}
 	}
 	return nil

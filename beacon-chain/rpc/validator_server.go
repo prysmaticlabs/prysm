@@ -34,8 +34,8 @@ type ValidatorServer struct {
 	headFetcher        blockchain.HeadFetcher
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
-	chainStartFetcher  powchain.ChainStartFetcher
 	depositFetcher     depositcache.DepositFetcher
+	chainStartFetcher  powchain.ChainStartFetcher
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

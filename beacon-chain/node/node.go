@@ -414,10 +414,13 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
+	var chainStartFetcher powchain.ChainStartFetcher
 	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
 		depositFetcher = interopService
+		chainStartFetcher = interopService
 	} else {
 		depositFetcher = b.depositCache
+		chainStartFetcher = web3Service
 	}
 
 	port := ctx.GlobalString(flags.RPCPort.Name)
@@ -437,6 +440,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
 		POWChainService:       web3Service,
+		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
