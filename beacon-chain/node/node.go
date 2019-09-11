@@ -486,7 +486,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
 	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
-		svc := interopcoldstart.NewColdStartService(context.Background(), &interop_cold_start.Config{
+		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,
