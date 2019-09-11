@@ -3,11 +3,10 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"io/ioutil"
 	"net"
-	"os"
 
 	"github.com/btcsuite/btcd/btcec"
-	curve "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
@@ -41,15 +40,20 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		convertedKey := convertFromInterfacePrivKey(priv)
 		return convertedKey, nil
 	}
-	if _, err := os.Stat(cfg.PrivateKey); os.IsNotExist(err) {
-		log.WithField("private key file", cfg.PrivateKey).Warn("Could not read private key, file is missing or unreadable")
-		return nil, err
-	}
-	priv, err := curve.LoadECDSA(cfg.PrivateKey)
+	privateKey, err := ioutil.ReadFile(cfg.PrivateKey)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
 	}
+	b, err := crypto.ConfigDecodeKey(string(privateKey))
+	if err != nil {
+		panic(err)
+	}
+	unmarshalledKey, err := crypto.UnmarshalPrivateKey(b)
+	if err != nil {
+		panic(err)
+	}
+	priv := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 	return priv, nil
 }
 
