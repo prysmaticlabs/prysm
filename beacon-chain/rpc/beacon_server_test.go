@@ -30,7 +30,6 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 		beaconDB:          db,
 	}
@@ -66,7 +65,6 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		chainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 		beaconDB:          db,
 	}
@@ -95,7 +93,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		eth1InfoFetcher:   &mockPOW.POWChain{},
 		stateFeedListener: &mockChain.ChainService{},
 		beaconDB:          db,
 	}
