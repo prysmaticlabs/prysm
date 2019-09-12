@@ -173,13 +173,15 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 // data, such as (shard indices bucket -> shard 5).
 func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.Tx) map[string][]byte {
 	indicesByBucket := make(map[string][]byte)
-	buckets := [][]byte{
-		attestationSourceEpochIndicesBucket,
-		attestationTargetEpochIndicesBucket,
+	buckets := make([][]byte, 0)
+	indices := make([][]byte, 0)
+	if attData.Source != nil {
+		buckets = append(buckets, attestationSourceEpochIndicesBucket)
+		indices = append(indices, uint64ToBytes(attData.Source.Epoch))
 	}
-	indices := [][]byte{
-		uint64ToBytes(attData.Source.Epoch),
-		uint64ToBytes(attData.Target.Epoch),
+	if attData.Target != nil {
+		buckets = append(buckets, attestationTargetEpochIndicesBucket)
+		indices = append(indices, uint64ToBytes(attData.Target.Epoch))
 	}
 	if attData.BeaconBlockRoot != nil && len(attData.BeaconBlockRoot) > 0 {
 		buckets = append(buckets, attestationHeadBlockRootBucket)
