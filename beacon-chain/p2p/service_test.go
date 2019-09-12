@@ -55,7 +55,7 @@ func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	h, pkey, ipAddr := createHost(t, port)
 	cfg.UDPPort = uint(port)
-	cfg.Port = uint(port)
+	cfg.TCPPort = uint(port)
 	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 	if err != nil {
 		t.Errorf("Could not start discovery for node: %v", err)
@@ -97,7 +97,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
-		Port:     2000,
+		TCPPort:  2000,
 		UDPPort:  2000,
 		Encoding: "ssz",
 	}
@@ -124,7 +124,7 @@ func TestListenForNewNodes(t *testing.T) {
 	// setup bootnode
 	cfg := &Config{}
 	port := 2000
-	cfg.Port = uint(port)
+	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
 	bootListener := createListener(ipAddr, pkey, cfg)
@@ -152,7 +152,7 @@ func TestListenForNewNodes(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 14000
+	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 
 	s, err := NewService(cfg)

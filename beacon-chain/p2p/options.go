@@ -12,7 +12,7 @@ import (
 
 // buildOptions for the libp2p host.
 func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.Port))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.TCPPort))
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
