@@ -41,7 +41,8 @@ do
             IDENTITY=$VALUE
             ;;
         --peers)
-            PEERS+=",$VALUE"
+            [ ! -z "$PEERS"] && PEERS+=","
+           PEERS+="$VALUE"
             ;;
         --validator-keys)
             YAML_KEY_FILE=$VALUE
@@ -73,12 +74,16 @@ echo "Converting hex yaml keys to a format that Prysm understands"
 
 echo "Starting beacon chain and logging to $BEACON_LOG_FILE"
 
+echo -n "$IDENTITY" > /tmp/id.key
+
+
+
 BEACON_FLAGS="--bootstrap-node= \
   --deposit-contract=0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
   --p2p-port=$PORT \
   --peer=$PEERS \
   --interop-genesis-state=$GEN_STATE \
-  --p2p-priv-key=$IDENTITY \
+  --p2p-priv-key=/tmp/id.key \
   --log-file=$BEACON_LOG_FILE"
 
 ./beacon-chain $BEACON_FLAGS &
