@@ -55,7 +55,7 @@ func (bs *BeaconChainServer) ListAttestations(
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetBeaconBlockRoot(q.HeadBlockRoot))
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
