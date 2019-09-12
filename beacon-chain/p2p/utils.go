@@ -3,11 +3,13 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"io/ioutil"
 	"net"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
@@ -40,18 +42,19 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		convertedKey := convertFromInterfacePrivKey(priv)
 		return convertedKey, nil
 	}
-	privateKey, err := ioutil.ReadFile(cfg.PrivateKey)
+	src, err := ioutil.ReadFile(cfg.PrivateKey)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
 	}
-	b, err := crypto.ConfigDecodeKey(string(privateKey))
+	dst := make([]byte, hex.DecodedLen(len(src)))
+	_, err = hex.Decode(dst, src)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to decode hex string")
 	}
-	unmarshalledKey, err := crypto.UnmarshalPrivateKey(b)
+	unmarshalledKey, err := crypto.UnmarshalSecp256k1PrivateKey(dst)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	priv := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 	return priv, nil
