@@ -31,7 +31,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		operationsHandler: &mockOps.Operations{},
 		p2p:               &mockp2p.MockBroadcaster{},
 		beaconDB:          db,
-		depositCache:      cache.NewAttestationCache(),
+		attestationCache:  cache.NewAttestationCache(),
 	}
 	head := &ethpb.BeaconBlock{
 		Slot:       999,
@@ -128,10 +128,10 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:          &mockp2p.MockBroadcaster{},
-		depositCache: cache.NewAttestationCache(),
-		headFetcher:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:              &mockp2p.MockBroadcaster{},
+		attestationCache: cache.NewAttestationCache(),
+		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -229,10 +229,10 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
-		p2p:          &mockp2p.MockBroadcaster{},
-		depositCache: cache.NewAttestationCache(),
-		headFetcher:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:  &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		p2p:              &mockp2p.MockBroadcaster{},
+		attestationCache: cache.NewAttestationCache(),
+		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -281,7 +281,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 
 	ctx := context.Background()
 	server := &AttesterServer{
-		depositCache: cache.NewAttestationCache(),
+		attestationCache: cache.NewAttestationCache(),
 	}
 
 	req := &pb.AttestationRequest{
@@ -293,7 +293,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
-	if err := server.depositCache.MarkInProgress(req); err != nil {
+	if err := server.attestationCache.MarkInProgress(req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -315,10 +315,10 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		if err := server.depositCache.Put(ctx, req, res); err != nil {
+		if err := server.attestationCache.Put(ctx, req, res); err != nil {
 			t.Error(err)
 		}
-		if err := server.depositCache.MarkNotInProgress(req); err != nil {
+		if err := server.attestationCache.MarkNotInProgress(req); err != nil {
 			t.Error(err)
 		}
 	}()

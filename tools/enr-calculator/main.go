@@ -18,7 +18,8 @@ import (
 
 var (
 	privateKey = flag.String("private", "", "Base-64 encoded Private key to use for calculation of ENR")
-	port       = flag.Int("port", 0, "Port to use for calculation of ENR")
+	udpPort    = flag.Int("port", 0, "UDP Port to use for calculation of ENR")
+	tcpPort    = flag.Int("port", 0, "TCP Port to use for calculation of ENR")
 	ipAddr     = flag.String("ipAddress", "", "IP to use in calculation of ENR")
 	outfile    = flag.String("out", "", "Filepath to write ENR")
 )
@@ -45,7 +46,7 @@ func main() {
 		log.Fatalf("Invalid ipv4 address given: %v\n", err)
 	}
 
-	if *port == 0 {
+	if *udpPort == 0 {
 		log.Fatalf("Invalid udp port given: %v\n", err)
 		return
 	}
@@ -59,9 +60,13 @@ func main() {
 
 	localNode := enode.NewLocalNode(db, ecdsaPrivKey)
 	ipEntry := enr.IP(net.ParseIP(*ipAddr))
-	udpEntry := enr.UDP(*port)
+	udpEntry := enr.UDP(*udpPort)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
+	if *tcpPort != 0 {
+		tcpEntry := enr.TCP(*tcpPort)
+		localNode.Set(tcpEntry)
+	}
 	log.Info(localNode.Node().String())
 
 	if *outfile != "" {

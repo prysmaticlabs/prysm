@@ -33,7 +33,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{Port: uint(port)})
+	listener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
 	defer listener.Close()
 
 	if !listener.Self().IP().Equal(ipAddr) {
@@ -55,7 +55,7 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, pkey, &Config{Port: uint(port)})
+	bootListener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -67,7 +67,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
-		cfg.Port = uint(port)
+		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
 		if err != nil {
@@ -96,7 +96,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ipAddr := net.IPv6zero
 	_, pkey := createAddrAndPrivKey(t)
-	node, err := createLocalNode(pkey, ipAddr, 0)
+	node, err := createLocalNode(pkey, ipAddr, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	cfg.Port = 14000
+	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
 

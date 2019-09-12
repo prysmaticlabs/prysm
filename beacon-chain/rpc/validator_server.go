@@ -34,8 +34,8 @@ type ValidatorServer struct {
 	headFetcher        blockchain.HeadFetcher
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
+	depositFetcher     depositcache.DepositFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
-	depositCache       *depositcache.DepositCache
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -230,13 +230,14 @@ func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
 	headState := vs.headFetcher.HeadState()
-	chainStarted := false
-	if headState != nil {
-		chainStarted = true
+	chainStarted := headState != nil
+	chainStartDeposits := vs.chainStartFetcher.ChainStartDeposits()
+	chainStartPubKeys := make(map[[48]byte]bool)
+	for _, dep := range chainStartDeposits {
+		chainStartPubKeys[bytesutil.ToBytes48(dep.Data.PublicKey)] = true
 	}
-	chainStartKeys := vs.chainStartPubkeys()
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
-	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartKeys, validatorIndexMap, headState), nil
+	return vs.validatorStatus(ctx, req.PublicKey, chainStarted, chainStartPubKeys, validatorIndexMap, headState), nil
 }
 
 // MultipleValidatorStatus returns the validator status response for the set of validators
@@ -244,21 +245,25 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) MultipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	chainStarted := vs.hasChainStarted()
-	if !chainStarted {
+	hasChainStarted := vs.headFetcher.HeadState() != nil
+	if !hasChainStarted {
 		return false, nil, nil
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 	headState := vs.headFetcher.HeadState()
 
-	chainStartKeys := vs.chainStartPubkeys()
+	chainStartDeposits := vs.chainStartFetcher.ChainStartDeposits()
+	chainStartPubKeys := make(map[[48]byte]bool)
+	for _, dep := range chainStartDeposits {
+		chainStartPubKeys[bytesutil.ToBytes48(dep.Data.PublicKey)] = true
+	}
 	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		status := vs.validatorStatus(ctx, key, chainStarted, chainStartKeys, validatorIndexMap, headState)
+		status := vs.validatorStatus(ctx, key, hasChainStarted, chainStartPubKeys, validatorIndexMap, headState)
 		if status == nil {
 			continue
 		}
@@ -309,7 +314,7 @@ func (vs *ValidatorServer) validatorStatus(
 	beaconState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	pk := bytesutil.ToBytes32(pubKey)
 	valIdx, ok := idxMap[pk]
-	_, eth1BlockNumBigInt := vs.depositCache.DepositByPubkey(ctx, pubKey)
+	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -452,15 +457,6 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	return depositBlockSlot, nil
 }
 
-func (vs *ValidatorServer) chainStartPubkeys() map[[48]byte]bool {
-	pubkeys := make(map[[48]byte]bool)
-	deposits := vs.depositCache.ChainStartDeposits(context.Background())
-	for _, dep := range deposits {
-		pubkeys[bytesutil.ToBytes48(dep.Data.PublicKey)] = true
-	}
-	return pubkeys
-}
-
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
 	headState := vs.headFetcher.HeadState()
@@ -468,9 +464,4 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
-}
-
-func (vs *ValidatorServer) hasChainStarted() bool {
-	s := vs.headFetcher.HeadState()
-	return s != nil
 }

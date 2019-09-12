@@ -29,11 +29,6 @@ func (m *POWChain) ChainStartFeed() *event.Feed {
 	return m.ChainFeed
 }
 
-// HasChainStarted --
-func (m *POWChain) HasChainStarted() bool {
-	return true
-}
-
 // Eth2GenesisPowchainInfo --
 func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.GenesisEth1Block

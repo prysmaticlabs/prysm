@@ -30,13 +30,13 @@ type Listener interface {
 func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
-		Port: int(cfg.Port),
+		Port: int(cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.Port))
+	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,16 +58,18 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
+func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
 	ipEntry := enr.IP(ipAddr)
-	udpEntry := enr.UDP(port)
+	udpEntry := enr.UDP(udpPort)
+	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
+	localNode.Set(tcpEntry)
 
 	return localNode, nil
 }
@@ -103,10 +105,7 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	// we use the udp port for now, since all udp and tcp connections occur from the same
-	// port. This will be changed to the node's TCP port in the future, when we allow a
-	// beacon node to provide separate TCP and UDP ports.
-	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.UDP(), id)
+	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP(), id)
 	multiAddr, err := ma.NewMultiaddr(multiAddrString)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get multiaddr")

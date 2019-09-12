@@ -17,11 +17,6 @@ type FaultyMockPOWChain struct {
 	HashesByHeight map[int][]byte
 }
 
-// HasChainStarted --
-func (f *FaultyMockPOWChain) HasChainStarted() bool {
-	return false
-}
-
 // Eth2GenesisPowchainInfo --
 func (f *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
