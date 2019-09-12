@@ -90,3 +90,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	}
 	InitFeatureConfig(cfg)
 }
+
+// ConfigureValidatorFeatures sets the global config based
+// on what flags are enabled for the validator client.
+func ConfigureValidatorFeatures(ctx *cli.Context) {
+	cfg := &FeatureFlagConfig{}
+	InitFeatureConfig(cfg)
+}
