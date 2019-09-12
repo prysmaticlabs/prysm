@@ -60,13 +60,25 @@ func (bs *BeaconChainServer) ListAttestations(
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_SourceEpoch:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	case *ethpb.ListAttestationsRequest_SourceRoot:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	case *ethpb.ListAttestationsRequest_TargetEpoch:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	case *ethpb.ListAttestationsRequest_TargetRoot:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	default:
 		atts, err = bs.beaconDB.Attestations(ctx, nil)
 		if err != nil {
