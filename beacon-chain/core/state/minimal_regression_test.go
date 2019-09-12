@@ -18,6 +18,7 @@ func loadSszOrDie(t *testing.T, filepath string, dst interface{}) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := ssz.Unmarshal(b, dst); err != nil {
 		t.Fatal(err)
 	}
@@ -29,20 +30,84 @@ func loadSszOrDie(t *testing.T, filepath string, dst interface{}) {
 //
 // Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
 //
-// More context/data: https://gist.github.com/lithp/382d4051fc91ef494c6bf772f0fd21c5
-func TestConsensusIssue0(t *testing.T) {
+// More context/data: https://github.com/djrtwo/interop-test-cases/tree/master/tests/prysm_16_duplicate_attestation_rewards
+func TestConsensusIssueDuplicateRewards(t *testing.T) {
 	pre := &ob.BeaconState{}
 	block := &eth.BeaconBlock{}
 	post := &ob.BeaconState{}
 
 	params.UseMinimalConfig()
 
-	loadSszOrDie(t, "testdata/minimal/0_block.ssz", block)
-	loadSszOrDie(t, "testdata/minimal/0_prestate.ssz", pre)
-	loadSszOrDie(t, "testdata/minimal/0_poststate.ssz", post)
+	loadSszOrDie(t, "testdata/minimal/duplicate_rewards/block.ssz", block)
+	loadSszOrDie(t, "testdata/minimal/duplicate_rewards/pre.ssz", pre)
+	loadSszOrDie(t, "testdata/minimal/duplicate_rewards/post.ssz", post)
 
 	result, err := ExecuteStateTransition(context.Background(), pre, block)
 	if err != nil {
+		t.Fatalf("Could not process state transition %v", err)
+	}
+	if !proto.Equal(result, post) {
+		diff, _ := messagediff.PrettyDiff(result, post)
+		t.Log(diff)
+		t.Fail()
+	}
+}
+
+// This scenario produced a consensus issue between Trinity, ZCLI, and Lighthouse.
+// The test expects that running a state transition with 0_block 0_prestate would
+// output 0_poststate.
+//
+// Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
+//
+// More context/data: https://github.com/djrtwo/interop-test-cases/tree/master/tests/night_one_16_crosslinks
+func TestConsensusIssueCrosslinkMismatch(t *testing.T) {
+	pre := &ob.BeaconState{}
+	block := &eth.BeaconBlock{}
+	post := &ob.BeaconState{}
+
+	params.UseMinimalConfig()
+
+	loadSszOrDie(t, "testdata/minimal/crosslink_mismatch/block.ssz", block)
+	loadSszOrDie(t, "testdata/minimal/crosslink_mismatch/pre.ssz", pre)
+	loadSszOrDie(t, "testdata/minimal/crosslink_mismatch/post.ssz", post)
+
+	result, err := ExecuteStateTransition(context.Background(), pre, block)
+	if err != nil {
+		if !ssz.DeepEqual(result, post) {
+			diff, _ := messagediff.PrettyDiff(result, post)
+			t.Log(diff)
+		}
+		t.Fatalf("Could not process state transition %v", err)
+	}
+	if !proto.Equal(result, post) {
+		diff, _ := messagediff.PrettyDiff(result, post)
+		t.Log(diff)
+		t.Fail()
+	}
+}
+
+// This scenario produced a consensus issue between ZCLI, and Artemis.
+// The test expects that running a state transition with 0_block 0_prestate would
+// output 0_poststate.
+//
+// Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
+//
+// More context/data: https://github.com/djrtwo/interop-test-cases/tree/master/tests/artemis_16_crosslinks_and_balances
+func TestConsensusIssueArtemisCrosslink(t *testing.T) {
+	pre := &ob.BeaconState{}
+	block := &eth.BeaconBlock{}
+	post := &ob.BeaconState{}
+
+	params.UseMinimalConfig()
+
+	loadSszOrDie(t, "testdata/minimal/artemis_crosslink/block.ssz", block)
+	loadSszOrDie(t, "testdata/minimal/artemis_crosslink/pre.ssz", pre)
+	loadSszOrDie(t, "testdata/minimal/artemis_crosslink/post.ssz", post)
+
+	result, err := ExecuteStateTransition(context.Background(), pre, block)
+	if err != nil {
+		diff, _ := messagediff.PrettyDiff(result, post)
+		t.Log(diff)
 		t.Fatalf("Could not process state transition %v", err)
 	}
 	if !proto.Equal(result, post) {
