@@ -12,6 +12,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"net"
@@ -98,11 +99,11 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 func extractPrivateKey() *ecdsa.PrivateKey {
 	var privKey *ecdsa.PrivateKey
 	if *privateKey != "" {
-		b, err := crypto.ConfigDecodeKey(*privateKey)
+		dst, err := hex.DecodeString(*privateKey)
 		if err != nil {
 			panic(err)
 		}
-		unmarshalledKey, err := crypto.UnmarshalPrivateKey(b)
+		unmarshalledKey, err := crypto.UnmarshalSecp256k1PrivateKey(dst)
 		if err != nil {
 			panic(err)
 		}
@@ -115,12 +116,11 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
 		log.Warning("No private key was provided. Using default/random private key")
-
-		b, err := privInterfaceKey.Bytes()
+		b, err := privInterfaceKey.Raw()
 		if err != nil {
 			panic(err)
 		}
-		log.Debugf("Private key %s", crypto.ConfigEncodeKey(b))
+		log.Debugf("Private key %x", b)
 	}
 
 	return privKey

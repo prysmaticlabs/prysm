@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -67,7 +68,12 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 	return nil
 }
 
-// StateInitializedFeed mocks StateInitializedFeed method in chain service.
+// GenesisTime mocks the same method in the chain service.
+func (ms *ChainService) GenesisTime() time.Time {
+	return time.Now()
+}
+
+// StateInitializedFeed mocks the same method in the chain service.
 func (ms *ChainService) StateInitializedFeed() *event.Feed {
 	return new(event.Feed)
 }

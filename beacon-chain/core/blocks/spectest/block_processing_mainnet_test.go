@@ -5,5 +5,5 @@ import (
 )
 
 func TestBlockProcessingMainnetYaml(t *testing.T) {
-	runBlockProcessingTest(t, "sanity_blocks_mainnet.yaml")
+	runBlockProcessingTest(t, "mainnet")
 }

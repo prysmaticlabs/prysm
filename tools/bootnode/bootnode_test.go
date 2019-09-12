@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"fmt"
 	"testing"
 	"time"
 
@@ -64,12 +65,12 @@ func TestPrivateKey_ParsesCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	marshalledKey, err := crypto.MarshalPrivateKey(privKey)
+
+	pk, err := privKey.Raw()
 	if err != nil {
 		t.Fatal(err)
 	}
-	encodedKey := crypto.ConfigEncodeKey(marshalledKey)
-	*privateKey = encodedKey
+	*privateKey = fmt.Sprintf("%x", pk)
 
 	extractedKey := extractPrivateKey()
 

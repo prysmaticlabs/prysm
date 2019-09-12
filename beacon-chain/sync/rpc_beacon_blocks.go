@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // beaconBlocksRPCHandler looks up the request blocks from the database from a given start block.
@@ -49,17 +50,17 @@ func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg proto.Mess
 		}
 		return err
 	}
-	ret := &pb.BeaconBlocksResponse{}
+	ret := []*ethpb.BeaconBlock{}
 
 	for _, blk := range blks {
 		if (blk.Slot-startSlot)%m.Step == 0 {
-			ret.Blocks = append(ret.Blocks, blk)
+			ret = append(ret, blk)
 		}
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err = r.p2p.Encoding().Encode(stream, ret)
+	_, err = r.p2p.Encoding().EncodeWithLength(stream, ret)
 	return err
 }

@@ -26,8 +26,8 @@ type Config struct {
 // This defines the interface for interacting with block chain service
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadRetriever
-	blockchain.FinalizationRetriever
+	blockchain.HeadFetcher
+	blockchain.FinalizationFetcher
 	blockchain.AttestationReceiver
 }
 

@@ -21,6 +21,11 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var _ = ChainStartFetcher(&Service{})
+var _ = ChainInfoFetcher(&Service{})
+var _ = POWBlockFetcher(&Service{})
+var _ = Chain(&Service{})
+
 type badReader struct{}
 
 func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {

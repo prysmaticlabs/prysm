@@ -1,63 +1,36 @@
 package spectest
 
 import (
-	"io/ioutil"
+	"path"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-const attesterSlashingPrefix = "tests/operations/attester_slashing/"
-
-func runAttesterSlashingTest(t *testing.T, filename string) {
-	file, err := ioutil.ReadFile(filename)
-	if err != nil {
-		t.Fatalf("Could not load file %v", err)
-	}
-
-	test := &BlockOperationTest{}
-	if err := testutil.UnmarshalYaml(file, test); err != nil {
-		t.Fatalf("Failed to Unmarshal: %v", err)
-	}
-
-	if err := spectest.SetConfig(test.Config); err != nil {
+func runAttesterSlashingTest(t *testing.T, config string) {
+	if err := spectest.SetConfig(config); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(test.TestCases) == 0 {
-		t.Fatal("No tests!")
-	}
-
-	for _, tt := range test.TestCases {
-		t.Run(tt.Description, func(t *testing.T) {
-			helpers.ClearAllCaches()
-
-			body := &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{tt.AttesterSlashing}}
-
-			postState, err := blocks.ProcessAttesterSlashings(tt.Pre, body)
-			// Note: This doesn't test anything worthwhile. It essentially tests
-			// that *any* error has occurred, not any specific error.
-			if tt.Post == nil {
-				if err == nil {
-					t.Fatal("Did not fail when expected")
-				}
-				return
-			}
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/attester_slashing/pyspec_tests")
+	for _, folder := range testFolders {
+		t.Run(folder.Name(), func(t *testing.T) {
+			folderPath := path.Join(testsFolderPath, folder.Name())
+			attSlashingFile, err := testutil.BazelFileBytes(folderPath, "attester_slashing.ssz")
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if !proto.Equal(postState, tt.Post) {
-				diff, _ := messagediff.PrettyDiff(postState, tt.Post)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
+			attSlashing := &ethpb.AttesterSlashing{}
+			if err := ssz.Unmarshal(attSlashingFile, attSlashing); err != nil {
+				t.Fatalf("Failed to unmarshal: %v", err)
 			}
+
+			body := &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing}}
+			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttesterSlashings)
 		})
 	}
 }
