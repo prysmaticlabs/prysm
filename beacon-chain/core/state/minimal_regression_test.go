@@ -6,13 +6,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	ob "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
-
 
 func loadSszOrDie(t *testing.T, filepath string, dst interface{}) {
 	b, err := ioutil.ReadFile(filepath)
