@@ -1,5 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+# gazelle:exclude testdata
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -55,12 +57,17 @@ go_test(
 )
 
 # Requires ssz=minimal
+# gazelle:exclude minimal_regression_test.go
 go_test(
     name = "go_minimal_test",
     size = "small",
     srcs = ["minimal_regression_test.go"],
     data = glob(["testdata/minimal/*.ssz"]),
     embed = [":go_default_library"],
+    tags = [
+        "manual",
+        "minimal",
+    ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
