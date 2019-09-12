@@ -21,6 +21,7 @@ var (
 	blockParentRootIndicesBucket       = []byte("block-parent-root-indices")
 	blockSlotIndicesBucket             = []byte("block-slot-indices")
 	attestationParentRootIndicesBucket = []byte("attestation-parent-root-indices")
+	attestationBeaconBlockRootBucket   = []byte("attestation-beacon-block-root-indices")
 	attestationShardIndicesBucket      = []byte("attestation-shard-indices")
 	attestationStartEpochIndicesBucket = []byte("attestation-start-epoch-indices")
 	attestationEndEpochIndicesBucket   = []byte("attestation-end-epoch-indices")

@@ -187,6 +187,10 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.T
 		buckets = append(buckets, attestationParentRootIndicesBucket)
 		indices = append(indices, attData.Crosslink.ParentRoot)
 	}
+	if attData.BeaconBlockRoot != nil && len(attData.BeaconBlockRoot) > 0 {
+		buckets = append(buckets, attestationBeaconBlockRootBucket)
+		indices = append(indices, attData.BeaconBlockRoot)
+	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
 	}
@@ -207,6 +211,9 @@ func createAttestationIndicesFromFilters(f *filters.QueryFilter) (map[string][]b
 		case filters.Shard:
 			shard := v.(uint64)
 			indicesByBucket[string(attestationShardIndicesBucket)] = uint64ToBytes(shard)
+		case filters.BeaconBlockRoot:
+			beaconBlockRoot := v.([]byte)
+			indicesByBucket[string(attestationBeaconBlockRootBucket)] = beaconBlockRoot
 		case filters.ParentRoot:
 			parentRoot := v.([]byte)
 			indicesByBucket[string(attestationParentRootIndicesBucket)] = parentRoot

@@ -33,6 +33,8 @@ const (
 	EndEpoch FilterType = 4
 	// Shard is used for filtering data by shard index.
 	Shard FilterType = 5
+	// BeaconBlockRoot defines a filter for the beacon block root attribute of objects.
+	BeaconBlockRoot FilterType = 6
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -59,6 +61,12 @@ func (q *QueryFilter) Filters() map[FilterType]interface{} {
 // SetParentRoot allows for filtering by the parent root data attribute of an object.
 func (q *QueryFilter) SetParentRoot(val []byte) *QueryFilter {
 	q.queries[ParentRoot] = val
+	return q
+}
+
+// SetBeaconBlockRoot allows for filtering by the beacon block root data attribute of an object.
+func (q *QueryFilter) SetBeaconBlockRoot(val []byte) *QueryFilter {
+	q.queries[BeaconBlockRoot] = val
 	return q
 }
 
