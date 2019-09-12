@@ -571,7 +571,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		}
 		// Create a set for attesting indices
 		for i, index := range attestingIndices {
-			if seen[index] {
+			if seen[index] { // Remove duplicate
 				attestingIndices = append(attestingIndices[:i], attestingIndices[i+1:]...)
 			}
 			seen[index] = true
