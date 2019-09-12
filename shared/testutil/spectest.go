@@ -22,9 +22,6 @@ type epochOperation func(*testing.T, *pb.BeaconState) (*pb.BeaconState, error)
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
 func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
-	if config == "minimal" {
-		t.Skip("This test suite requires --define ssz=minimal to be provided and there isn't a great way to do that without breaking //... See https://github.com/prysmaticlabs/prysm/issues/3066")
-	}
 	testsFolderPath := path.Join("tests", config, "phase0", folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	if err != nil {
