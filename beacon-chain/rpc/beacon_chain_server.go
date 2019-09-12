@@ -62,7 +62,6 @@ func (bs *BeaconChainServer) ListAttestations(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
-		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Epoch:
