@@ -54,14 +54,13 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 
 	s := &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		genesisTime:        cfg.GenesisTime,
-		numValidators:      cfg.NumValidators,
-		beaconDB:           cfg.BeaconDB,
-		depositCache:       cfg.DepositCache,
-		genesisPath:        cfg.GenesisPath,
-		chainStartDeposits: make([]*ethpb.Deposit, cfg.NumValidators),
+		ctx:           ctx,
+		cancel:        cancel,
+		genesisTime:   cfg.GenesisTime,
+		numValidators: cfg.NumValidators,
+		beaconDB:      cfg.BeaconDB,
+		depositCache:  cfg.DepositCache,
+		genesisPath:   cfg.GenesisPath,
 	}
 
 	if s.genesisPath != "" {
@@ -136,6 +135,7 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 }
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconState) error {
+	s.chainStartDeposits = make([]*ethpb.Deposit, len(genesisState.Validators))
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
