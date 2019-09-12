@@ -302,6 +302,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get crosslink delta")
 	}
+
 	for i := 0; i < len(state.Validators); i++ {
 		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
 		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
@@ -554,19 +555,28 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // it sorts the indices and filters out the slashed ones.
 //
 // Spec pseudocode definition:
-//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
-//    output = set()
+//  def get_unslashed_attesting_indices(state: BeaconState,
+//                                    attestations: Sequence[PendingAttestation]) -> Set[ValidatorIndex]:
+//    output = set()  # type: Set[ValidatorIndex]
 //    for a in attestations:
-//        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
-//    return sorted(filter(lambda index: not state.validator_registry[index].slashed, list(output)))
+//        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+//    return set(filter(lambda index: not state.validators[index].slashed, output))
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
+	seen := make(map[uint64]bool)
 	for _, att := range atts {
-		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+		attestingIndices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attester indices")
 		}
-		setIndices = append(setIndices, indices...)
+		// Create a set for attesting indices
+		for i, index := range attestingIndices {
+			if seen[index] { // Remove duplicate
+				attestingIndices = append(attestingIndices[:i], attestingIndices[i+1:]...)
+			}
+			seen[index] = true
+		}
+		setIndices = append(setIndices, attestingIndices...)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
@@ -576,6 +586,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
+
 	return setIndices, nil
 }
 
