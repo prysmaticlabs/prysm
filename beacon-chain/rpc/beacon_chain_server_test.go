@@ -58,6 +58,124 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
+	db := testutil.SetupDB(t)
+	defer testutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	someRoot := []byte{1, 2, 3}
+	sourceRoot := []byte{4, 5, 6}
+	sourceEpoch := uint64(5)
+	targetRoot := []byte{7, 8, 9}
+	targetEpoch := uint64(7)
+
+	unknownRoot := []byte{1, 1, 1}
+	atts := []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  sourceRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  targetRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 3,
+				},
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: unknownRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  sourceRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  targetRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  unknownRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  unknownRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 5,
+				},
+			},
+		},
+	}
+
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{HeadBlockRoot: someRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with root %#x, received %d", someRoot, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: sourceEpoch},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 3 {
+		t.Errorf("Wanted 3 matching attestations with source epoch %d, received %d", sourceEpoch, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_SourceRoot{SourceRoot: sourceRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with source root %#x, received %d", sourceRoot, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: targetEpoch},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 3 {
+		t.Errorf("Wanted 3 matching attestations with target epoch %d, received %d", targetEpoch, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetRoot{TargetRoot: targetRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with target root %#x, received %d", targetRoot, len(received.Attestations))
+	}
+}
+
 func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	db := testutil.SetupDB(t)
 	defer testutil.TeardownDB(t, db)
