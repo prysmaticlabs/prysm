@@ -62,7 +62,7 @@ go_test(
     name = "go_minimal_test",
     size = "small",
     srcs = ["minimal_regression_test.go"],
-    data = glob(["testdata/minimal/*.ssz"]),
+    data = glob(["testdata/minimal/**/*.ssz"]),
     embed = [":go_default_library"],
     tags = [
         "manual",
