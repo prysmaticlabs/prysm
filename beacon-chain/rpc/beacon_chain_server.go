@@ -44,9 +44,6 @@ func (s sortableAttestations) Less(i, j int) bool {
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
-//
-// TODO(#3064): Filtering blocked by DB refactor for easier access to
-// fetching data by attributes efficiently.
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
@@ -57,14 +54,18 @@ func (bs *BeaconChainServer) ListAttestations(
 	var atts []*ethpb.Attestation
 	var err error
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListAttestationsRequest_BlockRoot:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetBeaconBlockRoot(q.BlockRoot))
+	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetBeaconBlockRoot(q.HeadBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
-	case *ethpb.ListAttestationsRequest_Slot:
+	case *ethpb.ListAttestationsRequest_SourceEpoch:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
-	case *ethpb.ListAttestationsRequest_Epoch:
+	case *ethpb.ListAttestationsRequest_SourceRoot:
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	case *ethpb.ListAttestationsRequest_TargetEpoch:
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	case *ethpb.ListAttestationsRequest_TargetRoot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	default:
 		atts, err = bs.beaconDB.Attestations(ctx, nil)
