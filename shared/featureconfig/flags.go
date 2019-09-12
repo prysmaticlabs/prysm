@@ -47,6 +47,9 @@ var (
 	}
 )
 
+// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
+var ValidatorFlags = []cli.Flag{}
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,
