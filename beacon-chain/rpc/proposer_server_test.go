@@ -1365,8 +1365,8 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
-		DepositRoot:  depRoot[:],
-		BlockHash:    blockHash[:],
+		DepositRoot: depRoot[:],
+		BlockHash:   blockHash[:],
 	}
 	if !proto.Equal(eth1Data, want) {
 		t.Errorf("Wanted %v, received %v", want, eth1Data)
