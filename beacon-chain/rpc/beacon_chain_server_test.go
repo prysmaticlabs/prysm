@@ -358,8 +358,9 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	block := &ethpb.BeaconBlock{
+		Slot: 10,
+	}
 	bs := &BeaconChainServer{
 		pool: &mockOps.Operations{
 			Attestations: []*ethpb.Attestation{
@@ -375,23 +376,9 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 				},
 			},
 		},
-		beaconDB: db,
-	}
-	block := &ethpb.BeaconBlock{
-		Slot: 10,
-	}
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveState(ctx, &pbp2p.BeaconState{Slot: 10}, blockRoot); err != nil {
-		t.Fatal(err)
+		headFetcher: &mock.ChainService{
+			Block: block,
+		},
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
