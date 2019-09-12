@@ -3,6 +3,7 @@ package p2p
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -21,17 +22,17 @@ func TestPrivateKeyLoading(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate key: %v", err)
 	}
-	marshalledKey, err := crypto.MarshalPrivateKey(key)
+	raw, err := key.Raw()
 	if err != nil {
-		t.Fatalf("Could not marshal key %v", err)
+		panic(err)
 	}
-	encodedKey := crypto.ConfigEncodeKey(marshalledKey)
+	out := hex.EncodeToString(raw)
 
-	err = ioutil.WriteFile(file.Name(), []byte(encodedKey), 0600)
+	err = ioutil.WriteFile(file.Name(), []byte(out), 0600)
 	if err != nil {
 		t.Fatalf("Could not write key to file: %v", err)
 	}
-	log.WithField("file", file.Name()).WithField("key", encodedKey).Info("Wrote key to file")
+	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
 	cfg := &Config{
 		PrivateKey: file.Name(),
 		Encoding:   "ssz",
