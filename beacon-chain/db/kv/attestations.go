@@ -178,14 +178,18 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.T
 	if attData.Source != nil {
 		buckets = append(buckets, attestationSourceEpochIndicesBucket)
 		indices = append(indices, uint64ToBytes(attData.Source.Epoch))
-		buckets = append(buckets, attestationSourceRootIndicesBucket)
-		indices = append(indices, attData.Source.Root)
+		if attData.Source.Root != nil && len(attData.Source.Root) > 0 {
+			buckets = append(buckets, attestationSourceRootIndicesBucket)
+			indices = append(indices, attData.Source.Root)
+		}
 	}
 	if attData.Target != nil {
 		buckets = append(buckets, attestationTargetEpochIndicesBucket)
 		indices = append(indices, uint64ToBytes(attData.Target.Epoch))
-		buckets = append(buckets, attestationTargetRootIndicesBucket)
-		indices = append(indices, attData.Target.Root)
+		if attData.Target.Root != nil && len(attData.Target.Root) > 0 {
+			buckets = append(buckets, attestationTargetRootIndicesBucket)
+			indices = append(indices, attData.Target.Root)
+		}
 	}
 	if attData.BeaconBlockRoot != nil && len(attData.BeaconBlockRoot) > 0 {
 		buckets = append(buckets, attestationHeadBlockRootBucket)
