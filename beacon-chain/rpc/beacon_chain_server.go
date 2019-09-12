@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -55,17 +54,24 @@ func (bs *BeaconChainServer) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
-	switch req.QueryFilter.(type) {
+	var atts []*ethpb.Attestation
+	var err error
+	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_BlockRoot:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetParentRoot(q.BlockRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Slot:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	case *ethpb.ListAttestationsRequest_Epoch:
 		return nil, status.Error(codes.Unimplemented, "not implemented")
-	}
-	atts, err := bs.beaconDB.Attestations(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	default:
+		atts, err = bs.beaconDB.Attestations(ctx, nil)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -94,10 +100,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.(*kv.Store).HeadBlock(ctx)
-	if err != nil {
-		return nil, err
-	}
+	headBlock := bs.headFetcher.HeadBlock()
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "no head block found in db")
 	}
