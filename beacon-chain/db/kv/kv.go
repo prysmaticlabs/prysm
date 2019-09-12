@@ -61,10 +61,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 			chainMetadataBucket,
 			checkpointBucket,
 			// Indices buckets.
-			attestationShardIndicesBucket,
-			attestationParentRootIndicesBucket,
-			attestationStartEpochIndicesBucket,
-			attestationEndEpochIndicesBucket,
+			attestationHeadBlockRootBucket,
+			attestationSourceRootIndicesBucket,
+			attestationSourceEpochIndicesBucket,
+			attestationTargetRootIndicesBucket,
+			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 		)
