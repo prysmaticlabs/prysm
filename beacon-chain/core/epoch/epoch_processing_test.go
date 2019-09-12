@@ -589,10 +589,10 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
-		JustificationBits: []byte{0x03}, // 0b0011
-		Validators:        []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
-		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		BlockRoots:        blockRoots,
+		JustificationBits:   []byte{0x03}, // 0b0011
+		Validators:          []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		BlockRoots:          blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
 	_, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
