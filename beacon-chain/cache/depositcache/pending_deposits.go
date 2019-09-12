@@ -20,6 +20,12 @@ var (
 	})
 )
 
+// PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
+// which have not yet been included in the chain.
+type PendingDepositsFetcher interface {
+	PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer
+}
+
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {

@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
-	interop_cold_start "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
+	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -406,26 +406,45 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
+	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
+	var depositFetcher depositcache.DepositFetcher
+	var chainStartFetcher powchain.ChainStartFetcher
+	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+		var interopService *interopcoldstart.Service
+		if err := b.services.FetchService(&interopService); err != nil {
+			return err
+		}
+		depositFetcher = interopService
+		chainStartFetcher = interopService
+	} else {
+		depositFetcher = b.depositCache
+		chainStartFetcher = web3Service
+	}
+
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
-		Port:                port,
-		CertFlag:            cert,
-		KeyFlag:             key,
-		BeaconDB:            b.db,
-		Broadcaster:         b.fetchP2P(ctx),
-		HeadFetcher:         chainService,
-		BlockReceiver:       chainService,
-		AttestationReceiver: chainService,
-		StateFeedListener:   chainService,
-		AttestationsPool:    operationService,
-		OperationsHandler:   operationService,
-		POWChainService:     web3Service,
-		MockEth1Votes:       mockEth1DataVotes,
-		SyncService:         syncService,
-		DepositCache:        b.depositCache,
+		Port:                  port,
+		CertFlag:              cert,
+		KeyFlag:               key,
+		BeaconDB:              b.db,
+		Broadcaster:           b.fetchP2P(ctx),
+		HeadFetcher:           chainService,
+		BlockReceiver:         chainService,
+		AttestationReceiver:   chainService,
+		StateFeedListener:     chainService,
+		AttestationsPool:      operationService,
+		OperationsHandler:     operationService,
+		POWChainService:       web3Service,
+		ChainStartFetcher:     chainStartFetcher,
+		MockEth1Votes:         mockEth1DataVotes,
+		SyncService:           syncService,
+		DepositFetcher:        depositFetcher,
+		PendingDepositFetcher: b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -471,7 +490,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
 	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
-		svc := interop_cold_start.NewColdStartService(context.Background(), &interop_cold_start.Config{
+		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,

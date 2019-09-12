@@ -22,6 +22,13 @@ var (
 	})
 )
 
+// DepositFetcher defines a struct which can retrieve deposit information from a store.
+type DepositFetcher interface {
+	AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit
+	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
+	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
+}
+
 // DepositCache stores all in-memory deposit objects. This
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
@@ -96,20 +103,6 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 	}
 	dc.chainstartPubkeys = make(map[string]bool)
 	return false
-}
-
-// ChainStartDeposits retrieves the deposits present at chainstart.
-func (dc *DepositCache) ChainStartDeposits(ctx context.Context) []*ethpb.Deposit {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ChainStartDeposits")
-	defer span.End()
-	return dc.chainStartDeposits
-}
-
-// InsertChainStartDeposit into the cache.
-func (dc *DepositCache) InsertChainStartDeposit(ctx context.Context, dep *ethpb.Deposit) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertChainStartDeposit")
-	defer span.End()
-	dc.chainStartDeposits = append(dc.chainStartDeposits, dep)
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number

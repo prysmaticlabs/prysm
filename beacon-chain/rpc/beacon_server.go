@@ -24,7 +24,6 @@ type BeaconServer struct {
 	beaconDB            db.Database
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
-	eth1InfoFetcher     powchain.ChainInfoFetcher
 	headFetcher         blockchain.HeadFetcher
 	stateFeedListener   blockchain.ChainFeeds
 	incomingAttestation chan *ethpb.Attestation

@@ -37,47 +37,51 @@ func init() {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	beaconDB            db.Database
-	stateFeedListener   blockchain.ChainFeeds
-	headFetcher         blockchain.HeadFetcher
-	attestationReceiver blockchain.AttestationReceiver
-	blockReceiver       blockchain.BlockReceiver
-	powChainService     powchain.Chain
-	mockEth1Votes       bool
-	attestationsPool    operations.Pool
-	operationsHandler   operations.Handler
-	syncService         sync.Checker
-	port                string
-	listener            net.Listener
-	withCert            string
-	withKey             string
-	grpcServer          *grpc.Server
-	canonicalStateChan  chan *pbp2p.BeaconState
-	incomingAttestation chan *ethpb.Attestation
-	credentialError     error
-	p2p                 p2p.Broadcaster
-	depositCache        *depositcache.DepositCache
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	beaconDB              db.Database
+	stateFeedListener     blockchain.ChainFeeds
+	headFetcher           blockchain.HeadFetcher
+	attestationReceiver   blockchain.AttestationReceiver
+	blockReceiver         blockchain.BlockReceiver
+	powChainService       powchain.Chain
+	chainStartFetcher     powchain.ChainStartFetcher
+	mockEth1Votes         bool
+	attestationsPool      operations.Pool
+	operationsHandler     operations.Handler
+	syncService           sync.Checker
+	port                  string
+	listener              net.Listener
+	withCert              string
+	withKey               string
+	grpcServer            *grpc.Server
+	canonicalStateChan    chan *pbp2p.BeaconState
+	incomingAttestation   chan *ethpb.Attestation
+	credentialError       error
+	p2p                   p2p.Broadcaster
+	depositFetcher        depositcache.DepositFetcher
+	pendingDepositFetcher depositcache.PendingDepositsFetcher
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port                string
-	CertFlag            string
-	KeyFlag             string
-	BeaconDB            db.Database
-	StateFeedListener   blockchain.ChainFeeds
-	HeadFetcher         blockchain.HeadFetcher
-	AttestationReceiver blockchain.AttestationReceiver
-	BlockReceiver       blockchain.BlockReceiver
-	POWChainService     powchain.Chain
-	MockEth1Votes       bool
-	OperationsHandler   operations.Handler
-	AttestationsPool    operations.Pool
-	SyncService         sync.Checker
-	Broadcaster         p2p.Broadcaster
-	DepositCache        *depositcache.DepositCache
+	Port                  string
+	CertFlag              string
+	KeyFlag               string
+	BeaconDB              db.Database
+	StateFeedListener     blockchain.ChainFeeds
+	HeadFetcher           blockchain.HeadFetcher
+	AttestationReceiver   blockchain.AttestationReceiver
+	BlockReceiver         blockchain.BlockReceiver
+	POWChainService       powchain.Chain
+	ChainStartFetcher     powchain.ChainStartFetcher
+	MockEth1Votes         bool
+	OperationsHandler     operations.Handler
+	AttestationsPool      operations.Pool
+	SyncService           sync.Checker
+	Broadcaster           p2p.Broadcaster
+	DepositFetcher        depositcache.DepositFetcher
+	PendingDepositFetcher depositcache.PendingDepositsFetcher
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -85,25 +89,27 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		beaconDB:            cfg.BeaconDB,
-		stateFeedListener:   cfg.StateFeedListener,
-		headFetcher:         cfg.HeadFetcher,
-		attestationReceiver: cfg.AttestationReceiver,
-		blockReceiver:       cfg.BlockReceiver,
-		p2p:                 cfg.Broadcaster,
-		powChainService:     cfg.POWChainService,
-		mockEth1Votes:       cfg.MockEth1Votes,
-		attestationsPool:    cfg.AttestationsPool,
-		operationsHandler:   cfg.OperationsHandler,
-		syncService:         cfg.SyncService,
-		port:                cfg.Port,
-		withCert:            cfg.CertFlag,
-		withKey:             cfg.KeyFlag,
-		depositCache:        cfg.DepositCache,
-		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		ctx:                   ctx,
+		cancel:                cancel,
+		beaconDB:              cfg.BeaconDB,
+		stateFeedListener:     cfg.StateFeedListener,
+		headFetcher:           cfg.HeadFetcher,
+		attestationReceiver:   cfg.AttestationReceiver,
+		blockReceiver:         cfg.BlockReceiver,
+		p2p:                   cfg.Broadcaster,
+		powChainService:       cfg.POWChainService,
+		chainStartFetcher:     cfg.ChainStartFetcher,
+		mockEth1Votes:         cfg.MockEth1Votes,
+		attestationsPool:      cfg.AttestationsPool,
+		operationsHandler:     cfg.OperationsHandler,
+		syncService:           cfg.SyncService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		depositFetcher:        cfg.DepositFetcher,
+		pendingDepositFetcher: cfg.PendingDepositFetcher,
+		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 
@@ -145,8 +151,7 @@ func (s *Service) Start() {
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
-		chainStartFetcher:   s.powChainService,
-		eth1InfoFetcher:     s.powChainService,
+		chainStartFetcher:   s.chainStartFetcher,
 		headFetcher:         s.headFetcher,
 		stateFeedListener:   s.stateFeedListener,
 		incomingAttestation: s.incomingAttestation,
@@ -154,16 +159,17 @@ func (s *Service) Start() {
 		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{
-		beaconDB:           s.beaconDB,
-		headFetcher:        s.headFetcher,
-		blockReceiver:      s.blockReceiver,
-		chainStartFetcher:  s.powChainService,
-		eth1InfoFetcher:    s.powChainService,
-		eth1BlockFetcher:   s.powChainService,
-		mockEth1Votes:      s.mockEth1Votes,
-		pool:               s.attestationsPool,
-		canonicalStateChan: s.canonicalStateChan,
-		depositCache:       s.depositCache,
+		beaconDB:               s.beaconDB,
+		headFetcher:            s.headFetcher,
+		blockReceiver:          s.blockReceiver,
+		chainStartFetcher:      s.chainStartFetcher,
+		eth1InfoFetcher:        s.powChainService,
+		eth1BlockFetcher:       s.powChainService,
+		mockEth1Votes:          s.mockEth1Votes,
+		pool:                   s.attestationsPool,
+		canonicalStateChan:     s.canonicalStateChan,
+		depositFetcher:         s.depositFetcher,
+		pendingDepositsFetcher: s.pendingDepositFetcher,
 	}
 	attesterServer := &AttesterServer{
 		p2p:               s.p2p,
@@ -171,7 +177,7 @@ func (s *Service) Start() {
 		operationsHandler: s.operationsHandler,
 		attReceiver:       s.attestationReceiver,
 		headFetcher:       s.headFetcher,
-		depositCache:      cache.NewAttestationCache(),
+		attestationCache:  cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
@@ -179,8 +185,8 @@ func (s *Service) Start() {
 		headFetcher:        s.headFetcher,
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
-		chainStartFetcher:  s.powChainService,
-		depositCache:       s.depositCache,
+		chainStartFetcher:  s.chainStartFetcher,
+		depositFetcher:     s.depositFetcher,
 	}
 	nodeServer := &NodeServer{
 		beaconDB:    s.beaconDB,

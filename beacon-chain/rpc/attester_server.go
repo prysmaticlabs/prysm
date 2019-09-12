@@ -26,7 +26,7 @@ type AttesterServer struct {
 	operationsHandler operations.Handler
 	attReceiver       blockchain.AttestationReceiver
 	headFetcher       blockchain.HeadFetcher
-	depositCache      *cache.AttestationCache
+	attestationCache  *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -59,7 +59,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("shard", int64(req.Shard)),
 	)
-	res, err := as.depositCache.Get(ctx, req)
+	res, err := as.attestationCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +68,9 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return res, nil
 	}
 
-	if err := as.depositCache.MarkInProgress(req); err != nil {
+	if err := as.attestationCache.MarkInProgress(req); err != nil {
 		if err == cache.ErrAlreadyInProgress {
-			res, err := as.depositCache.Get(ctx, req)
+			res, err := as.attestationCache.Get(ctx, req)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +83,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, err
 	}
 	defer func() {
-		if err := as.depositCache.MarkNotInProgress(req); err != nil {
+		if err := as.attestationCache.MarkNotInProgress(req); err != nil {
 			log.WithError(err).Error("Failed to mark cache not in progress")
 		}
 	}()
@@ -133,7 +133,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		},
 	}
 
-	if err := as.depositCache.Put(ctx, req, res); err != nil {
+	if err := as.attestationCache.Put(ctx, req, res); err != nil {
 		return nil, err
 	}
 
