@@ -103,7 +103,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("block-root"),
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Crosslink: &ethpb.Crosslink{
 				Shard:      0,
 				StartEpoch: 0,
