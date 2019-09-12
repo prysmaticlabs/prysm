@@ -24,9 +24,9 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB     db.Database
-	chainService blockchain.HeadRetriever
-	pool         operations.Pool
+	beaconDB    db.Database
+	headFetcher blockchain.HeadFetcher
+	pool        operations.Pool
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -197,13 +197,13 @@ func (bs *BeaconChainServer) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.chainService.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.chainService.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.chainService.HeadState().PreviousJustifiedCheckpoint
+	finalizedCheckpoint := bs.headFetcher.HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.headFetcher.HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.headFetcher.HeadState().PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.chainService.HeadRoot(),
-		BlockSlot:                  bs.chainService.HeadSlot(),
+		BlockRoot:                  bs.headFetcher.HeadRoot(),
+		BlockSlot:                  bs.headFetcher.HeadSlot(),
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
@@ -460,7 +460,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 
-	headState := bs.chainService.HeadState()
+	headState := bs.headFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
 

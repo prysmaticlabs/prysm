@@ -34,15 +34,19 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
 				ctx := context.Background()
-				log.WithField("peer", conn.RemotePeer()).Debug(
-					"Performing handshake with peer",
-				)
+				log := log.WithField("peer", conn.RemotePeer())
+				if conn.Stat().Direction == network.DirInbound {
+					log.Debug("Not sending hello for inbound connection")
+					return
+				}
+				log.Debug("Performing handshake with peer")
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Error("Could not send successful hello rpc request")
-					if err := s.Disconnect(conn.RemotePeer()); err != nil {
-						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-						return
-					}
+					log.Error("Not disconnecting for interop testing :)")
+					//if err := s.Disconnect(conn.RemotePeer()); err != nil {
+					//	log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+					//	return
+					//}
 					return
 				}
 				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")

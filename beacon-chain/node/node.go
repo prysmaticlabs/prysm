@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -32,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
@@ -78,7 +82,9 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		params.UseDemoBeaconConfig()
+		// TODO(3439): Conditionally use demo config?
+		// params.UseDemoBeaconConfig()
+		params.UseMinimalConfig()
 	}
 
 	featureconfig.ConfigureBeaconFeatures(ctx)
@@ -96,6 +102,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerOperationService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
 
@@ -199,14 +209,25 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
+	// Bootnode ENR may be a filepath to an ENR file.
+	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
+	if filepath.Ext(bootnodeENR) == ".enr" {
+		b, err := ioutil.ReadFile(bootnodeENR)
+		if err != nil {
+			return err
+		}
+		bootnodeENR = string(b)
+	}
+
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
-		StaticPeers:       ctx.GlobalStringSlice(cmd.StaticPeers.Name),
-		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
+		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
+		BootstrapNodeAddr: bootnodeENR,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
-		Port:              ctx.GlobalUint(cmd.P2PPort.Name),
+		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
+		UDPPort:           ctx.GlobalUint(cmd.P2PUDPPort.Name),
 		MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
 		WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
 		EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
@@ -227,7 +248,7 @@ func (b *BeaconNode) fetchP2P(ctx *cli.Context) p2p.P2P {
 }
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -237,14 +258,13 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	}
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
-
-	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-		BeaconDB:       b.db,
-		DepositCache:   b.depositCache,
-		Web3Service:    web3Service,
-		OpsPoolService: opsService,
-		P2p:            b.fetchP2P(ctx),
-		MaxRoutines:    maxRoutines,
+	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
+		BeaconDB:          b.db,
+		DepositCache:      b.depositCache,
+		ChainStartFetcher: web3Service,
+		OpsPoolService:    opsService,
+		P2p:               b.fetchP2P(ctx),
+		MaxRoutines:       maxRoutines,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -253,7 +273,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
-	operationService := operations.NewOpsPoolService(context.Background(), &operations.Config{
+	operationService := operations.NewService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
 		P2P:      b.fetchP2P(ctx),
 	})
@@ -263,11 +283,9 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if cliCtx.GlobalBool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Web3Service{})
+		return b.services.RegisterService(&powchain.Service{})
 	}
-
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
-
 	if depAddress == "" {
 		var err error
 		depAddress, err = fetchDepositContract()
@@ -305,7 +323,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}
-	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
+	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -326,12 +344,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
 
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -348,7 +366,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -369,7 +387,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
-	var chainService *blockchain.ChainService
+	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
@@ -379,7 +397,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -389,20 +407,45 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
+	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
+	var depositFetcher depositcache.DepositFetcher
+	var chainStartFetcher powchain.ChainStartFetcher
+	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+		var interopService *interopcoldstart.Service
+		if err := b.services.FetchService(&interopService); err != nil {
+			return err
+		}
+		depositFetcher = interopService
+		chainStartFetcher = interopService
+	} else {
+		depositFetcher = b.depositCache
+		chainStartFetcher = web3Service
+	}
+
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
-	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		BeaconDB:         b.db,
-		Broadcaster:      b.fetchP2P(ctx),
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
-		SyncService:      syncService,
-		DepositCache:     b.depositCache,
+	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
+	rpcService := rpc.NewService(context.Background(), &rpc.Config{
+		Port:                  port,
+		CertFlag:              cert,
+		KeyFlag:               key,
+		BeaconDB:              b.db,
+		Broadcaster:           b.fetchP2P(ctx),
+		HeadFetcher:           chainService,
+		BlockReceiver:         chainService,
+		AttestationReceiver:   chainService,
+		StateFeedListener:     chainService,
+		AttestationsPool:      operationService,
+		OperationsHandler:     operationService,
+		POWChainService:       web3Service,
+		ChainStartFetcher:     chainStartFetcher,
+		MockEth1Votes:         mockEth1DataVotes,
+		SyncService:           syncService,
+		DepositFetcher:        depositFetcher,
+		PendingDepositFetcher: b.depositCache,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -416,7 +459,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/p2p", Handler: p.InfoHandler})
 
-	var c *blockchain.ChainService
+	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
 	}
@@ -438,6 +481,27 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+	}
+	return nil
+}
+
+func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
+	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
+	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
+
+	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
+			GenesisTime:   genesisTime,
+			NumValidators: genesisValidators,
+			BeaconDB:      b.db,
+			DepositCache:  b.depositCache,
+			GenesisPath:   genesisStatePath,
+		})
+
+		return b.services.RegisterService(svc)
+	} else if genesisTime+genesisValidators > 0 {
+		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
 }

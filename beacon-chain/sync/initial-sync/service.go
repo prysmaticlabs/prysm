@@ -23,7 +23,7 @@ var _ = shared.Service(&InitialSync{})
 
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadRetriever
+	blockchain.HeadFetcher
 	blockchain.ChainFeeds
 }
 
@@ -104,7 +104,7 @@ func (s *InitialSync) Start() {
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
 		req := &pb.BeaconBlocksRequest{
-			HeadSlot:      headSlot,
+			HeadSlot:      headSlot + 1,
 			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
@@ -124,17 +124,16 @@ func (s *InitialSync) Start() {
 		}
 		if code != 0 {
 			log.Errorf("Request failed. Request was %+v", req)
-			panic(errMsg.ErrorMessage)
+			panic(errMsg)
 		}
 
-		resp := &pb.BeaconBlocksResponse{}
-		if err := s.p2p.Encoding().Decode(strm, resp); err != nil {
-			panic(err)
+		resp := make([]*eth.BeaconBlock, 0)
+		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
+			log.Error(err)
+			continue
 		}
 
-		log.Infof("Received %d blocks", len(resp.Blocks))
-
-		for _, blk := range resp.Blocks {
+		for _, blk := range resp {
 			if blk.Slot <= headSlot {
 				continue
 			}

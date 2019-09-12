@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
 var (
@@ -18,11 +17,13 @@ var (
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
 
-type unencryptedKeysContainer struct {
-	Keys []*unencryptedKeys `json:"keys"`
+// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
+type UnencryptedKeysContainer struct {
+	Keys []*UnencryptedKeys `json:"keys"`
 }
 
-type unencryptedKeys struct {
+// UnencryptedKeys is the inner struct of the JSON file.
+type UnencryptedKeys struct {
 	ValidatorKey  []byte `json:"validator_key"`
 	WithdrawalKey []byte `json:"withdrawal_key"`
 }
@@ -52,34 +53,34 @@ func main() {
 		}
 	}()
 
-	ctnr := generateUnencryptedKeys(rand.Reader)
-	if err := saveUnencryptedKeysToFile(file, ctnr); err != nil {
+	ctnr := generateUnencryptedKeys()
+	if err := SaveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys(r io.Reader) *unencryptedKeysContainer {
-	ctnr := &unencryptedKeysContainer{
-		Keys: make([]*unencryptedKeys, *numKeys),
+func generateUnencryptedKeys() *UnencryptedKeysContainer {
+	ctnr := &UnencryptedKeysContainer{
+		Keys: make([]*UnencryptedKeys, *numKeys),
 	}
-	for i := 0; i < *numKeys; i++ {
-		signingKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		withdrawalKey, err := bls.RandKey(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ctnr.Keys[i] = &unencryptedKeys{
-			ValidatorKey:  signingKey.Marshal(),
-			WithdrawalKey: withdrawalKey.Marshal(),
+
+	sks, _, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, uint64(*numKeys))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for i, sk := range sks {
+		ctnr.Keys[i] = &UnencryptedKeys{
+			ValidatorKey:  sk.Marshal(),
+			WithdrawalKey: sk.Marshal(),
 		}
 	}
 	return ctnr
 }
 
-func saveUnencryptedKeysToFile(w io.Writer, ctnr *unencryptedKeysContainer) error {
+// SaveUnencryptedKeysToFile JSON encodes the container and writes to the writer.
+func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) error {
 	enc, err := json.Marshal(ctnr)
 	if err != nil {
 		log.Fatal(err)

@@ -14,6 +14,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -61,6 +62,8 @@ func ExecuteStateTransition(
 			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
+
+	interop.WriteStateToDisk(state)
 
 	postStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
