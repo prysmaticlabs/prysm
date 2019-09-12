@@ -30,7 +30,6 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.EnableDBCleanup,
 	flags.GRPCGatewayPort,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,

@@ -43,11 +43,6 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
-	// EnableDBCleanup tells the beacon node to automatically clean DB content such as block vote cache.
-	EnableDBCleanup = cli.BoolFlag{
-		Name:  "enable-db-cleanup",
-		Usage: "Enable automatic DB cleanup routine",
-	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
 	GRPCGatewayPort = cli.IntFlag{
 		Name:  "grpc-gateway-port",
