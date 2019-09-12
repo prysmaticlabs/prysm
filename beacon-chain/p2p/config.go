@@ -9,7 +9,7 @@ type Config struct {
 	RelayNodeAddr     string
 	HostAddress       string
 	PrivateKey        string
-	Port              uint
+	TCPPort           uint
 	UDPPort           uint
 	MaxPeers          uint
 	WhitelistCIDR     string
