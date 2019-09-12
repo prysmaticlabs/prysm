@@ -30,16 +30,17 @@ import (
 // providing RPC endpoints for computing state transitions and state roots, proposing
 // beacon blocks to a beacon node, and more.
 type ProposerServer struct {
-	beaconDB           db.Database
-	headFetcher        blockchain.HeadFetcher
-	blockReceiver      blockchain.BlockReceiver
-	mockEth1Votes      bool
-	chainStartFetcher  powchain.ChainStartFetcher
-	eth1InfoFetcher    powchain.ChainInfoFetcher
-	eth1BlockFetcher   powchain.POWBlockFetcher
-	pool               operations.Pool
-	canonicalStateChan chan *pbp2p.BeaconState
-	depositCache       *depositcache.DepositCache
+	beaconDB               db.Database
+	headFetcher            blockchain.HeadFetcher
+	blockReceiver          blockchain.BlockReceiver
+	mockEth1Votes          bool
+	chainStartFetcher      powchain.ChainStartFetcher
+	eth1InfoFetcher        powchain.ChainInfoFetcher
+	eth1BlockFetcher       powchain.POWBlockFetcher
+	pool                   operations.Pool
+	canonicalStateChan     chan *pbp2p.BeaconState
+	depositFetcher         depositcache.DepositFetcher
+	pendingDepositsFetcher depositcache.PendingDepositsFetcher
 }
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
@@ -282,7 +283,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := ps.depositCache.AllDeposits(ctx, latestEth1DataHeight)
+	upToEth1DataDeposits := ps.depositFetcher.AllDeposits(ctx, latestEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
@@ -297,7 +298,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}
 
-	allPendingContainers := ps.depositCache.PendingContainers(ctx, latestEth1DataHeight)
+	allPendingContainers := ps.pendingDepositsFetcher.PendingContainers(ctx, latestEth1DataHeight)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
@@ -363,7 +364,7 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
 	}
 	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.depositCache.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
+	depositsTillHeight, depositRoot := ps.depositFetcher.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
 	if depositsTillHeight == 0 {
 		return ps.chainStartFetcher.ChainStartEth1Data(), nil
 	}
