@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -32,12 +33,22 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
 		r.pendingBlocksLock.Lock()
+		r.seenPendingBlocksLock.Lock()
 		defer r.pendingBlocksLock.Unlock()
+		defer r.seenPendingBlocksLock.Unlock()
+		blockRoot, err := ssz.SigningRoot(block)
+		if err != nil {
+			log.Error("Could not sign root block: %v", err)
+			return nil
+		}
 		r.pendingBlocks[block.Slot] = block
+		r.seenPendingBlocks[blockRoot] = true
 
-		// TODO(3147): Request parent block from peers
-		log.Warnf("Received a block from slot %d which we do not have the parent block in the database. "+
-			"Requesting parent.", block.Slot)
+		if !r.seenPendingBlocks[bytesutil.ToBytes32(block.ParentRoot)] {
+			log.Warnf("Received a block from slot %d which we do not have the parent block in the database. "+
+				"Requesting parent.", block.Slot)
+		}
+
 		return nil
 	}
 
@@ -59,10 +70,12 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	return r.chain.ReceiveBlockNoPubsub(ctx, block)
 }
 
-func (r *RegularSync) processPendingBlocks(ctx context.Context) {
+func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	// Construct a sorted list of slots from outstanding pending blocks
 	r.pendingBlocksLock.Lock()
+	r.seenPendingBlocksLock.Lock()
 	defer r.pendingBlocksLock.Unlock()
+	defer r.seenPendingBlocksLock.Unlock()
 	slots := make([]int, 0, len(r.pendingBlocks))
 	for s := range r.pendingBlocks {
 		slots = append(slots, int(s))
@@ -77,6 +90,12 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) {
 		if err := r.chain.ReceiveBlockNoPubsub(ctx, b); err != nil {
 			log.Errorf("Could not process block from slot %d: %v", b.Slot, err)
 		}
+		bRoot, err := ssz.SigningRoot(b)
+		if err != nil {
+			return err
+		}
 		delete(r.pendingBlocks, uint64(s))
+		delete(r.seenPendingBlocks, bRoot)
 	}
+	return nil
 }

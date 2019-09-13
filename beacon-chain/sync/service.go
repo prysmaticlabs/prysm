@@ -35,13 +35,14 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:           context.Background(),
-		db:            cfg.DB,
-		p2p:           cfg.P2P,
-		operations:    cfg.Operations,
-		chain:         cfg.Chain,
-		helloTracker:  make(map[peer.ID]*pb.Hello),
-		pendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		ctx:               context.Background(),
+		db:                cfg.DB,
+		p2p:               cfg.P2P,
+		operations:        cfg.Operations,
+		chain:             cfg.Chain,
+		helloTracker:      make(map[peer.ID]*pb.Hello),
+		pendingBlocks:     make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks: make(map[[32]byte]bool),
 	}
 
 	r.registerRPCHandlers()
@@ -53,15 +54,17 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx               context.Context
-	p2p               p2p.P2P
-	db                db.Database
-	operations        *operations.Service
-	chain             blockchainService
-	helloTracker      map[peer.ID]*pb.Hello
-	helloTrackerLock  sync.RWMutex
-	pendingBlocks     map[uint64]*ethpb.BeaconBlock
-	pendingBlocksLock sync.RWMutex
+	ctx                   context.Context
+	p2p                   p2p.P2P
+	db                    db.Database
+	operations            *operations.Service
+	chain                 blockchainService
+	helloTracker          map[peer.ID]*pb.Hello
+	helloTrackerLock      sync.RWMutex
+	pendingBlocks         map[uint64]*ethpb.BeaconBlock
+	pendingBlocksLock     sync.RWMutex
+	seenPendingBlocks     map[[32]byte]bool
+	seenPendingBlocksLock sync.RWMutex
 }
 
 // Start the regular sync service.
@@ -96,6 +99,7 @@ func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
 // this should be called during new finalization.
 func (r *RegularSync) ClearPendingBlocks() {
 	r.pendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
+	r.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
 // Checker defines a struct which can verify whether a node is currently
