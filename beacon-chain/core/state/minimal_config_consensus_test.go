@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -76,9 +75,10 @@ func TestConsensusBugs(t *testing.T) {
 			if err != nil {
 				t.Logf("Could not process state transition %v", err)
 			}
-			if !proto.Equal(result, post) {
+			if !ssz.DeepEqual(result, post) {
 				diff, _ := messagediff.PrettyDiff(result, post)
 				t.Log(diff)
+				t.Fatal("Resulting state is not equal to expected post state")
 			}
 		})
 	}
