@@ -75,10 +75,10 @@ func TestConsensusBugs(t *testing.T) {
 			result, err := ExecuteStateTransition(context.Background(), pre, block)
 			if err != nil {
 				t.Logf("Could not process state transition %v", err)
-				if !proto.Equal(result, post) {
-					diff, _ := messagediff.PrettyDiff(result, post)
-					t.Log(diff)
-				}
+			}
+			if !proto.Equal(result, post) {
+				diff, _ := messagediff.PrettyDiff(result, post)
+				t.Log(diff)
 			}
 		})
 	}
