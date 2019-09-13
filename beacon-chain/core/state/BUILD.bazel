@@ -36,7 +36,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "minimal_config_consensus_test.go",
         "state_test.go",
         "transition_test.go",
     ],
@@ -60,7 +59,7 @@ go_test(
 )
 
 # Requires ssz=minimal
-# gazelle:exclude minimal_regression_test.go
+# gazelle:exclude minimal_config_consensus_test.go
 go_test(
     name = "go_minimal_test",
     size = "small",
