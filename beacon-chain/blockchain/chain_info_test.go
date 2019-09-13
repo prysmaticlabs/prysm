@@ -87,3 +87,63 @@ func TestCanonicalRoot_CanRetrieve(t *testing.T) {
 		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.CanonicalRoot(slot))
 	}
 }
+
+func TestHeadSlot_DataRace(t *testing.T) {
+	s := &Service{
+		beaconDB:       testDB.SetupDB(t),
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	go func() {
+		s.saveHead(
+			context.Background(),
+			&ethpb.BeaconBlock{Slot: 777},
+			[32]byte{},
+		)
+	}()
+	s.HeadSlot()
+}
+
+func TestHeadRoot_DataRace(t *testing.T) {
+	s := &Service{
+		beaconDB:       testDB.SetupDB(t),
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	go func() {
+		s.saveHead(
+			context.Background(),
+			&ethpb.BeaconBlock{Slot: 777},
+			[32]byte{},
+		)
+	}()
+	s.HeadRoot()
+}
+
+func TestHeadBlock_DataRace(t *testing.T) {
+	s := &Service{
+		beaconDB:       testDB.SetupDB(t),
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	go func() {
+		s.saveHead(
+			context.Background(),
+			&ethpb.BeaconBlock{Slot: 777},
+			[32]byte{},
+		)
+	}()
+	s.HeadBlock()
+}
+
+func TestHeadState_DataRace(t *testing.T) {
+	s := &Service{
+		beaconDB:       testDB.SetupDB(t),
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	go func() {
+		s.saveHead(
+			context.Background(),
+			&ethpb.BeaconBlock{Slot: 777},
+			[32]byte{},
+		)
+	}()
+	s.HeadState()
+}
