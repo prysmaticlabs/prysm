@@ -57,6 +57,7 @@ go_test(
     ],
 )
 
+# Requires --define ssz=minimal
 go_test(
     name = "go_minimal_test",
     size = "small",
@@ -67,7 +68,11 @@ go_test(
     data = [
         "@eth2_spec_tests_minimal//:test_data",
     ],
-    tags = ["spectest"],
+    tags = [
+        "manual",
+        "minimal",
+        "spectest",
+    ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
