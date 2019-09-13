@@ -48,6 +48,7 @@ go_test(
         "service_test.go",
     ],
     embed = [":go_default_library"],
+    race = "on",
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
@@ -72,5 +73,4 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@org_golang_x_net//context:go_default_library",
     ],
-    race="on",
 )
