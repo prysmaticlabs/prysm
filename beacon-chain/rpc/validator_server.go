@@ -80,15 +80,14 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	}
 }
 
-// ValidatorIndex is called by a validator to get its index location that corresponds
-// to the attestation bit fields.
+// ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
 	index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 	}
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.Internal, "could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
@@ -104,9 +103,17 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 	}
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "could not find  validator index for public key  %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
 	}
+
 	headState := vs.headFetcher.HeadState()
+	// Advance state with empty transitions up to the requested epoch start slot.
+	if req.Slot > headState.Slot {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
+		}
+	}
 
 	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
