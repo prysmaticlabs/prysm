@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
+
 func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	block := msg.(*ethpb.BeaconBlock)
 
@@ -26,22 +28,22 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	}
 
 	// Ignore block already in pending blocks cache
-	if _, ok := r.pendingBlocks[block.Slot]; ok {
+	if _, ok := r.slotToPendingBlocks[block.Slot]; ok {
 		return nil
 	}
 
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
-		r.pendingBlocksLock.Lock()
+		r.slotToPendingBlocksLock.Lock()
 		r.seenPendingBlocksLock.Lock()
-		defer r.pendingBlocksLock.Unlock()
+		defer r.slotToPendingBlocksLock.Unlock()
 		defer r.seenPendingBlocksLock.Unlock()
 		blockRoot, err := ssz.SigningRoot(block)
 		if err != nil {
 			log.Errorf("Could not sign root block: %v", err)
 			return nil
 		}
-		r.pendingBlocks[block.Slot] = block
+		r.slotToPendingBlocks[block.Slot] = block
 		r.seenPendingBlocks[blockRoot] = true
 
 		if !r.seenPendingBlocks[bytesutil.ToBytes32(block.ParentRoot)] {
@@ -52,38 +54,40 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		return nil
 	}
 
-	// Attempt to process blocks from the saved pending blocks
-	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot / 2))
-	quit := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				r.processPendingBlocks(ctx)
-			case <-quit:
-				ticker.Stop()
-				return
-			}
-		}
-	}()
+	go r.processPendingBlocksPoll(ctx)
 
 	return r.chain.ReceiveBlockNoPubsub(ctx, block)
 }
 
+// processes pending blocks every processPendingBlocksPeriod
+func (r *RegularSync) processPendingBlocksPoll(ctx context.Context) {
+	ticker := time.NewTicker(processPendingBlocksPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			r.processPendingBlocks(ctx)
+		case <-r.ctx.Done():
+			log.Debug("p2p context is closed, exiting routine")
+			break
+
+		}
+	}
+}
+
 func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	// Construct a sorted list of slots from outstanding pending blocks
-	r.pendingBlocksLock.Lock()
+	r.slotToPendingBlocksLock.Lock()
 	r.seenPendingBlocksLock.Lock()
-	defer r.pendingBlocksLock.Unlock()
+	defer r.slotToPendingBlocksLock.Unlock()
 	defer r.seenPendingBlocksLock.Unlock()
-	slots := make([]int, 0, len(r.pendingBlocks))
-	for s := range r.pendingBlocks {
+	slots := make([]int, 0, len(r.slotToPendingBlocks))
+	for s := range r.slotToPendingBlocks {
 		slots = append(slots, int(s))
 	}
 	sort.Ints(slots)
 	// For every pending block, process block if parent exists
 	for _, s := range slots {
-		b := r.pendingBlocks[uint64(s)]
+		b := r.slotToPendingBlocks[uint64(s)]
 		if !r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot)) {
 			continue
 		}
@@ -94,8 +98,9 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		delete(r.pendingBlocks, uint64(s))
+		delete(r.slotToPendingBlocks, uint64(s))
 		delete(r.seenPendingBlocks, bRoot)
+		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
 	}
 	return nil
 }
