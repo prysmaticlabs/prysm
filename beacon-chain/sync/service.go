@@ -70,6 +70,7 @@ type RegularSync struct {
 // Start the regular sync service.
 func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
+	go r.processPendingBlocksQueue(context.TODO())
 }
 
 // Stop the regular sync service.
