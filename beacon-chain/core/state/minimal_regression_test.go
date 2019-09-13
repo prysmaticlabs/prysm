@@ -89,7 +89,6 @@ func loadSszOrDie(t *testing.T, filepath string, dst interface{}) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if err := ssz.Unmarshal(b, dst); err != nil {
 		t.Fatal(err)
 	}
