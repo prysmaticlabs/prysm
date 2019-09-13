@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -34,12 +35,13 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:          context.Background(),
-		db:           cfg.DB,
-		p2p:          cfg.P2P,
-		operations:   cfg.Operations,
-		chain:        cfg.Chain,
-		helloTracker: make(map[peer.ID]*pb.Hello),
+		ctx:           context.Background(),
+		db:            cfg.DB,
+		p2p:           cfg.P2P,
+		operations:    cfg.Operations,
+		chain:         cfg.Chain,
+		helloTracker:  make(map[peer.ID]*pb.Hello),
+		pendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 	}
 
 	r.registerRPCHandlers()
@@ -51,13 +53,15 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx              context.Context
-	p2p              p2p.P2P
-	db               db.Database
-	operations       *operations.Service
-	chain            blockchainService
-	helloTracker     map[peer.ID]*pb.Hello
-	helloTrackerLock sync.RWMutex
+	ctx               context.Context
+	p2p               p2p.P2P
+	db                db.Database
+	operations        *operations.Service
+	chain             blockchainService
+	helloTracker      map[peer.ID]*pb.Hello
+	helloTrackerLock  sync.RWMutex
+	pendingBlocks     map[uint64]*ethpb.BeaconBlock
+	pendingBlocksLock sync.RWMutex
 }
 
 // Start the regular sync service.
@@ -86,6 +90,12 @@ func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
 	r.helloTrackerLock.RLock()
 	defer r.helloTrackerLock.RUnlock()
 	return r.helloTracker
+}
+
+// ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
+// this should be called during new finalization.
+func (r *RegularSync) ClearPendingBlocks() {
+	r.pendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
 }
 
 // Checker defines a struct which can verify whether a node is currently
