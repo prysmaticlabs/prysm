@@ -38,7 +38,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		defer r.seenPendingBlocksLock.Unlock()
 		blockRoot, err := ssz.SigningRoot(block)
 		if err != nil {
-			log.Error("Could not sign root block: %v", err)
+			log.Errorf("Could not sign root block: %v", err)
 			return nil
 		}
 		r.pendingBlocks[block.Slot] = block
