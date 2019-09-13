@@ -28,7 +28,7 @@ func TestConsensusBugs(t *testing.T) {
 			// Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
 			//
 			// https://github.com/djrtwo/interop-test-cases/tree/master/tests/artemis_16_crosslinks_and_balances
-			name:          "ArtemisCrosslinks",
+			name:          "ZcliArtemisCrosslinks",
 			blockPath:     "testdata/minimal/artemis_crosslink/block.ssz",
 			preStatePath:  "testdata/minimal/artemis_crosslink/pre.ssz",
 			postStatePath: "testdata/minimal/artemis_crosslink/post.ssz",
@@ -41,7 +41,7 @@ func TestConsensusBugs(t *testing.T) {
 			// Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
 			//
 			// https://github.com/djrtwo/interop-test-cases/tree/master/tests/prysm_16_duplicate_attestation_rewards
-			name:          "PrysmDuplicateRewards",
+			name:          "TrinityPrysmDuplicateRewards",
 			blockPath:     "testdata/minimal/duplicate_rewards/block.ssz",
 			preStatePath:  "testdata/minimal/duplicate_rewards/pre.ssz",
 			postStatePath: "testdata/minimal/duplicate_rewards/post.ssz",
@@ -54,7 +54,7 @@ func TestConsensusBugs(t *testing.T) {
 			// Assert ExecuteStateTransition(ctx, 0_block, 0_prestate) == 0_poststate
 			//
 			// https://github.com/djrtwo/interop-test-cases/tree/master/tests/night_one_16_crosslinks
-			name:          "TrinityLighthouseCrosslinks",
+			name:          "ZcliTrinityLighthouseCrosslinks",
 			blockPath:     "testdata/minimal/crosslink_mismatch/block.ssz",
 			preStatePath:  "testdata/minimal/crosslink_mismatch/pre.ssz",
 			postStatePath: "testdata/minimal/crosslink_mismatch/post.ssz",
