@@ -306,17 +306,20 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, i
 		return defaultUnknownResponse
 	}
 
+	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
+	if err != nil {
+		return defaultUnknownResponse
+	}
+
 	if helpers.IsActiveValidator(headState.Validators[idx], headState.Slot) {
 		return &pb.ValidatorStatusResponse{
 			Status:                 pb.ValidatorStatus_ACTIVE,
 			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+			ActivationEpoch:        headState.Validators[idx].ActivationEpoch,
+			DepositInclusionSlot:   depositBlockSlot,
 		}
 	}
 
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
-	if err != nil || depositBlockSlot == 0 {
-		return defaultUnknownResponse
-	}
 	var queuePosition uint64
 	var lastActivatedValidatorIdx uint64
 	for j := len(headState.Validators) - 1; j >= 0; j-- {
@@ -327,9 +330,9 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, i
 	}
 	// Our position in the activation queue is the above index - our validator index.
 	queuePosition = uint64(idx) - lastActivatedValidatorIdx
-
+	status := vs.assignmentStatus(uint64(idx), headState)
 	return &pb.ValidatorStatusResponse{
-		Status:                    pb.ValidatorStatus_PENDING_ACTIVE,
+		Status:                    status,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
 		PositionInActivationQueue: queuePosition,
 		DepositInclusionSlot:      depositBlockSlot,
