@@ -35,7 +35,7 @@ func TestStuff(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	// cross-check with the first 1000 keys generated from python
+	// cross-check with the first 1000 keys generated from the python spec
 	for i, key := range priv {
 		hexKey := testCases.TestCases[i].Privkey
 		nKey, err := hexutil.Decode("0x" + hexKey)
