@@ -957,10 +957,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			Statuses: []*pb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
 					Status: &pb.ValidatorStatusResponse{
-						Status:                    pb.ValidatorStatus_ACTIVE,
-						Eth1DepositBlockNumber:    10,
-						DepositInclusionSlot:      3413,
-						PositionInActivationQueue: params.BeaconConfig().FarFutureEpoch,
+						Status:                 pb.ValidatorStatus_ACTIVE,
+						Eth1DepositBlockNumber: 10,
+						DepositInclusionSlot:   3413,
 					},
 				},
 				{PublicKey: pubKey2,
