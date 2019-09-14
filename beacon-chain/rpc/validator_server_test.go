@@ -1064,7 +1064,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
-	activeExists, response, err := vs.MultipleValidatorStatus(context.Background(), pubKeys)
+	activeExists, response, err := vs.multipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
