@@ -23,12 +23,21 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["generate_genesis_state_test.go"],
+    srcs = [
+        "generate_genesis_state_test.go",
+        "generate_keys_test.go",
+    ],
+    data = [
+        "keygen_test_vector.yaml",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_go_yaml_yaml//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

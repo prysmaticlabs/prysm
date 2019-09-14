@@ -57,12 +57,12 @@ go_test(
 )
 
 # Requires ssz=minimal
-# gazelle:exclude minimal_regression_test.go
+# gazelle:exclude minimal_config_consensus_test.go
 go_test(
     name = "go_minimal_test",
     size = "small",
-    srcs = ["minimal_regression_test.go"],
-    data = glob(["testdata/minimal/*.ssz"]),
+    srcs = ["minimal_config_consensus_test.go"],
+    data = glob(["testdata/minimal/**/*.ssz"]),
     embed = [":go_default_library"],
     tags = [
         "manual",
@@ -71,7 +71,6 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
     ],
