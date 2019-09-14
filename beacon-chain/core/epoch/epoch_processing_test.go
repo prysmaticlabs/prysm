@@ -17,6 +17,11 @@ import (
 
 func init() {
 	helpers.ClearShuffledValidatorCache()
+
+	// TODO(2312): remove this and use the mainnet count.
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
 }
 
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
