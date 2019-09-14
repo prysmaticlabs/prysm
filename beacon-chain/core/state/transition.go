@@ -70,7 +70,7 @@ func ExecuteStateTransition(
 		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
 	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
-		return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], block.StateRoot)
 	}
 
