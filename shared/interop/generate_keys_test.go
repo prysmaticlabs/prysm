@@ -18,7 +18,7 @@ type KeyTest struct {
 	TestCases []*TestCase `yaml:"test_cases"`
 }
 
-func TestStuff(t *testing.T) {
+func TestKeyGenerator(t *testing.T) {
 	path, err := bazel.Runfile("keygen_test_vector.yaml")
 	if err != nil {
 		t.Fatal(err)
