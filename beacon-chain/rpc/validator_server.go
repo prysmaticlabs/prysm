@@ -215,7 +215,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 }
 
 // multipleValidatorStatus returns the validator status response for the set of validators
-// requested by their pubkeys.
+// requested by their pub keys.
 func (vs *ValidatorServer) multipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
@@ -275,6 +275,15 @@ func (vs *ValidatorServer) ExitedValidators(
 	}
 
 	return resp, nil
+}
+
+// DomainData fetches the current domain version information from the beacon state.
+func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
+	headState := vs.headFetcher.HeadState()
+	dv := helpers.Domain(headState, request.Epoch, request.Domain)
+	return &pb.DomainResponse{
+		SignatureDomain: dv,
+	}, nil
 }
 
 func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, idxMap map[[32]byte]int, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
@@ -375,13 +384,4 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	}
 
 	return depositBlockSlot, nil
-}
-
-// DomainData fetches the current domain version information from the beacon state.
-func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	headState := vs.headFetcher.HeadState()
-	dv := helpers.Domain(headState, request.Epoch, request.Domain)
-	return &pb.DomainResponse{
-		SignatureDomain: dv,
-	}, nil
 }
