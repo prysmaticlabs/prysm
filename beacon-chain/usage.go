@@ -83,7 +83,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCPort,
 			flags.CertFlag,
 			flags.KeyFlag,
-			flags.EnableDBCleanup,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 		},
