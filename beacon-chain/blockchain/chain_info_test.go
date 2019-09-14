@@ -89,8 +89,10 @@ func TestCanonicalRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadSlot_DataRace(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       testDB.SetupDB(t),
+		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
 	go func() {
@@ -104,8 +106,10 @@ func TestHeadSlot_DataRace(t *testing.T) {
 }
 
 func TestHeadRoot_DataRace(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       testDB.SetupDB(t),
+		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
 	go func() {
@@ -119,8 +123,10 @@ func TestHeadRoot_DataRace(t *testing.T) {
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       testDB.SetupDB(t),
+		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
 	go func() {
@@ -134,8 +140,10 @@ func TestHeadBlock_DataRace(t *testing.T) {
 }
 
 func TestHeadState_DataRace(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       testDB.SetupDB(t),
+		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
 	go func() {
