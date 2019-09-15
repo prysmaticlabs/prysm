@@ -59,7 +59,11 @@ func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*Valid
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		params.UseDemoBeaconConfig()
+		if featureconfig.FeatureConfig().DemoConfig {
+			params.UseDemoBeaconConfig()
+		} else {
+			params.UseMinimalConfig()
+		}
 	}
 
 	featureconfig.ConfigureBeaconFeatures(ctx)
