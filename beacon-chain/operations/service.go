@@ -48,6 +48,19 @@ type OperationFeeds interface {
 	IncomingProcessedBlockFeed() *event.Feed
 }
 
+type multiLock struct {
+	rootMap sync.Map
+}
+
+func (m *multiLock) RetrieveLock(key [32]byte) *sync.RWMutex {
+	mutex := &sync.RWMutex{}
+	retMutex, ok := m.rootMap.LoadOrStore(key, mutex)
+	if ok {
+		return retMutex.(*sync.RWMutex)
+	}
+	return mutex
+}
+
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
@@ -62,7 +75,7 @@ type Service struct {
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	p2p                        p2p.Broadcaster
 	error                      error
-	attestationLock            sync.Mutex
+	attestationLock            *multiLock
 }
 
 // Config options for the service.
@@ -86,6 +99,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		p2p:                        cfg.P2P,
+		attestationLock:            &multiLock{},
 	}
 }
 
@@ -231,10 +245,16 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
-	s.attestationLock.Lock()
-	defer s.attestationLock.Unlock()
 
 	attestation := message.(*ethpb.Attestation)
+	root, err := ssz.HashTreeRoot(attestation.Data)
+	if err != nil {
+		return err
+	}
+
+	lock := s.attestationLock.RetrieveLock(root)
+	lock.Lock()
+	defer lock.Unlock()
 
 	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -250,11 +270,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	}
 
 	if err := blocks.VerifyAttestation(bState, attestation); err != nil {
-		return err
-	}
-
-	root, err := ssz.HashTreeRoot(attestation.Data)
-	if err != nil {
 		return err
 	}
 
