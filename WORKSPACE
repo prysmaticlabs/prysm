@@ -43,13 +43,6 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.2/rules_nodejs-0.36.2.tar.gz"],
 )
 
-http_archive(
-    name = "io_bazel_rules_k8s",
-    sha256 = "34809abbed8aeb465873e13b1f8d0fdc7973291c1f3066309d35b5fe52ec7c23",
-    strip_prefix = "rules_k8s-b799dd0cd7140ed7b58f1fd4c9a14fc924239b0b",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/b799dd0cd7140ed7b58f1fd4c9a14fc924239b0b.tar.gz",
-)
-
 git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "bd93910450a0f041f5d34a4b97faffcabba21419",
@@ -78,31 +71,6 @@ load(
 )
 
 container_repositories()
-
-# This requires rules_docker to be fully instantiated before it is pulled in.
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
-
-k8s_repositories()
-
-[k8s_defaults(
-    name = "k8s_" + kind,
-    cluster = "minikube",  # DO NOT CHANGE THIS!
-    kind = kind,
-) for kind in [
-    "cluster_role",
-    "configmap",
-    "deploy",
-    "ingress",
-    "issuer",
-    "job",
-    "gateway",
-    "namespace",
-    "pod",
-    "priority_class",
-    "secret",
-    "service",
-    "service_account",
-]]
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
