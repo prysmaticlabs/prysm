@@ -26,6 +26,7 @@ var log = logrus.WithField("prefix", "flags")
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
 	NoGenesisDelay bool // NoGenesisDelay when processing a chain start genesis event.
+	DemoConfig     bool // DemoConfig with lower deposit thresholds.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
