@@ -35,12 +35,13 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
 		}
 	}
 
 	// Generate validators and state for the 2 attestations.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
+	validatorCount := 1000
+	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -85,12 +86,13 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 				Target:    &ethpb.Checkpoint{Epoch: 0},
 				Crosslink: &ethpb.Crosslink{},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
 		}
 	}
 
 	// Generate validators and state for the 5 attestations.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
+	validatorCount := 1000
+	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -106,6 +108,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for i := 0; i < len(indices)-1; i++ {
 		if indices[i] >= indices[i+1] {
 			t.Error("sorted indices not sorted or duplicated")
