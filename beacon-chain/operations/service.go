@@ -138,11 +138,13 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 	keyString := string(key[:])
 	mutex := &sync.Mutex{}
 	item := s.attestationLockCache.Get(keyString)
-	if item == nil || item.Expired() {
+	if item == nil {
 		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
-		if item.Expired() {
-			item.Release()
-		}
+		return mutex
+	}
+	if item.Expired() {
+		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
+		item.Release()
 		return mutex
 	}
 	return item.Value().(*sync.Mutex)
