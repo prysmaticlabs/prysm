@@ -227,7 +227,7 @@ func MainnetConfig() *BeaconChainConfig {
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 32 * 1e9
+	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
