@@ -115,9 +115,11 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		return nil, errors.New("could not retrieve attestations from DB")
 	}
 
-	bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
+	if bState.Slot < requestedSlot {
+		bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
+		}
 	}
 
 	sort.Slice(atts, func(i, j int) bool {
