@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -48,19 +50,6 @@ type OperationFeeds interface {
 	IncomingProcessedBlockFeed() *event.Feed
 }
 
-type multiLock struct {
-	rootMap sync.Map
-}
-
-func (m *multiLock) RetrieveLock(key [32]byte) *sync.RWMutex {
-	mutex := &sync.RWMutex{}
-	retMutex, ok := m.rootMap.LoadOrStore(key, mutex)
-	if ok {
-		return retMutex.(*sync.RWMutex)
-	}
-	return mutex
-}
-
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
@@ -75,7 +64,7 @@ type Service struct {
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	p2p                        p2p.Broadcaster
 	error                      error
-	attestationLock            *multiLock
+	attestationLockCache       *ccache.Cache
 }
 
 // Config options for the service.
@@ -99,7 +88,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		p2p:                        cfg.P2P,
-		attestationLock:            &multiLock{},
+		attestationLockCache:       ccache.New(ccache.Configure()),
 	}
 }
 
@@ -142,6 +131,21 @@ func (s *Service) IncomingAttFeed() *event.Feed {
 // The beacon block operation pool service will subscribe to this feed in order to receive incoming beacon blocks.
 func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 	return s.incomingProcessedBlockFeed
+}
+
+// retrieves a lock for the specific data root.
+func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
+	keyString := string(key[:])
+	mutex := &sync.Mutex{}
+	item := s.attestationLockCache.Get(keyString)
+	if item == nil || item.Expired() {
+		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
+		if item.Expired() {
+			item.Release()
+		}
+		return mutex
+	}
+	return item.Value().(*sync.Mutex)
 }
 
 // AttestationPool returns the attestations that have not seen on the beacon chain,
@@ -252,7 +256,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	lock := s.attestationLock.RetrieveLock(root)
+	lock := s.retrieveLock(root)
 	lock.Lock()
 	defer lock.Unlock()
 
