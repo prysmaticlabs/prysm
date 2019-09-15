@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -59,7 +58,6 @@ type Service struct {
 // Config options for the service.
 type Config struct {
 	BeaconDB db.Database
-	P2P      p2p.Broadcaster
 }
 
 // NewService instantiates a new operation service instance that will
@@ -127,17 +125,16 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	})
 
 	var validAttsCount uint64
-		for _, att := range atts {
-			bState, err = blocks.ProcessAttestation(bState, att)
+	for _, att := range atts {
+		if _, err = blocks.ProcessAttestation(bState, att); err != nil {
+			hash, err := ssz.HashTreeRoot(att)
 			if err != nil {
-				hash, err := ssz.HashTreeRoot(att)
-				if err != nil {
-					return nil, err
-				}
-				if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
-					return nil, err
-				}
+				return nil, err
 			}
+			if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
+				return nil, err
+			}
+		}
 
 		validAttsCount++
 		// Stop the max attestation number per beacon block is reached.
