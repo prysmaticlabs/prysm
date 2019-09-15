@@ -55,6 +55,9 @@ func startShardKeyFn(obj interface{}) (string, error) {
 
 // NewStartShardCache creates a new start shard cache for storing/accessing start shard.
 func NewStartShardCache() *StartShardCache {
+	lock := new(sync.RWMutex)
+	lock.Lock()
+	defer lock.Unlock()
 	return &StartShardCache{
 		startShardCache: cache.NewFIFO(startShardKeyFn),
 	}
