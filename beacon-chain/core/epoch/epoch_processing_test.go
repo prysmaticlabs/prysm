@@ -89,7 +89,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		}
 	}
 
-	// Generate validators and state for the 2 attestations.
+	// Generate validators and state for the 5 attestations.
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
