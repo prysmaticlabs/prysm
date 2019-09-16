@@ -570,13 +570,14 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 			return nil, errors.Wrap(err, "could not get attester indices")
 		}
 		// Create a set for attesting indices
-		for i, index := range attestingIndices {
-			if seen[index] { // Remove duplicate
-				attestingIndices = append(attestingIndices[:i], attestingIndices[i+1:]...)
+		set := make([]uint64, 0, len(attestingIndices))
+		for _, index := range attestingIndices {
+			if !seen[index] {
+				set = append(set, index)
 			}
 			seen[index] = true
 		}
-		setIndices = append(setIndices, attestingIndices...)
+		setIndices = append(setIndices, set...)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
