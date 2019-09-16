@@ -39,6 +39,18 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 
 // Register PubSub subscribers
 func (r *RegularSync) registerSubscribers() {
+	go func() {
+		ch := make(chan time.Time)
+		sub := r.chain.StateInitializedFeed().Subscribe(ch)
+		defer sub.Unsubscribe()
+
+		// Wait until chain start.
+		genesis := <-ch
+		if genesis.After(roughtime.Now()) {
+			time.Sleep(roughtime.Until(genesis))
+		}
+		r.chainStarted = true
+	}()
 	r.subscribe(
 		"/eth2/beacon_block",
 		r.validateBeaconBlockPubSub,
@@ -126,18 +138,6 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 	// The main message loop for receiving incoming messages from this subscription.
 	messageLoop := func() {
-		go func() {
-			ch := make(chan time.Time)
-			sub := r.chain.StateInitializedFeed().Subscribe(ch)
-			defer sub.Unsubscribe()
-
-			// Wait until chain start.
-			genesis := <-ch
-			if genesis.After(roughtime.Now()) {
-				time.Sleep(roughtime.Until(genesis))
-			}
-			r.chainStarted = true
-		}()
 		for {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
