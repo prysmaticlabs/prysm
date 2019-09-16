@@ -52,11 +52,11 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode hex string")
 	}
-	unmarshalledKey, err := crypto.UnmarshalSecp256k1PrivateKey(dst)
+	unmarshalledKey, err := crypto.UnmarshalPrivateKey(dst)
 	if err != nil {
 		return nil, err
 	}
-	priv := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
+	priv := convertFromInterfacePrivKey(unmarshalledKey)
 	return priv, nil
 }
 
