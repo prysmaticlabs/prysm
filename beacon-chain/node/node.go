@@ -82,7 +82,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		if ctx.GlobalBool(featureconfig.DemoConfigFlag.Name) {
+		if featureconfig.FeatureConfig().DemoConfig {
 			log.Info("Using demo config")
 			params.UseDemoBeaconConfig()
 		} else {
