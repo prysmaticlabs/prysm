@@ -83,8 +83,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		if featureconfig.FeatureConfig().DemoConfig {
+			log.Info("Using demo config")
 			params.UseDemoBeaconConfig()
 		} else {
+			log.Info("Using minimal config")
 			params.UseMinimalConfig()
 		}
 	}
@@ -278,7 +280,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	operationService := operations.NewService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
-		P2P:      b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(operationService)
