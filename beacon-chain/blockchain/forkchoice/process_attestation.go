@@ -98,15 +98,14 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	// Process aggregated attestation in the queue every `slot/2` duration,
 	// this allows the incoming attestation to aggregate and avoid
-	// process individual attestation.
+	// processing individual attestations.
 	if uint64(time.Now().Unix())%params.BeaconConfig().SecondsPerSlot/2 == 0 {
 		s.attsQueueLock.Lock()
-		defer s.attsQueueLock.Unlock()
 		for root, a := range s.attsQueue {
 			log.WithFields(logrus.Fields{
 				"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
 				"Root":               fmt.Sprintf("%#x", root),
-			}).Info("Updating latest votes")
+			}).Debug("Updating latest votes")
 
 			// Use the target state to to validate attestation and calculate the committees.
 			indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
@@ -120,6 +119,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			}
 			delete(s.attsQueue, root)
 		}
+		s.attsQueueLock.Unlock()
 	}
 
 	return tgtSlot, nil
