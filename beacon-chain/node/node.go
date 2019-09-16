@@ -441,6 +441,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		StateFeedListener:     chainService,
+		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
 		POWChainService:       web3Service,

@@ -94,6 +94,7 @@ go_test(
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "//shared/version:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
