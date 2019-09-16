@@ -99,7 +99,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	// Process aggregated attestation in the queue every `slot/2` duration,
 	// this allows the incoming attestation to aggregate and avoid
 	// excessively processing individual attestations.
-	if halfSlot() {
+	if halfSlot(baseState.GenesisTime) {
 		s.attsQueueLock.Lock()
 		for root, a := range s.attsQueue {
 			log.WithFields(logrus.Fields{
@@ -277,6 +277,7 @@ func (s *Store) updateAttVotes(
 }
 
 // returns true when time is divisible with slot duration / 2.
-func halfSlot() bool {
-	return uint64(time.Now().Unix())%params.BeaconConfig().SecondsPerSlot/2 == 0
+func halfSlot(genesisTime uint64) bool {
+	t := time.Unix(int64(genesisTime), 0)
+	return uint64(roughtime.Since(t).Seconds())%params.BeaconConfig().SecondsPerSlot/2 == 0
 }
