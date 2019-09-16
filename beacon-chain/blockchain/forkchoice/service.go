@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -35,6 +36,8 @@ type Store struct {
 	justifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt *ethpb.Checkpoint
 	checkpointState  *cache.CheckpointStateCache
+	attsQueue        map[[32]byte]*ethpb.Attestation
+	attsQueueLock    sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will

@@ -7,12 +7,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -88,20 +90,24 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
-	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
-		return 0, err
-	}
+	for root, a := range s.attsQueue {
+		// Verify attestations can only affect the fork choice of subsequent slots.
+		if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
+			return 0, err
+		}
 
-	// Use the target state to to validate attestation and calculate the committees.
-	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
-	if err != nil {
-		return 0, err
-	}
+		// Use the target state to to validate attestation and calculate the committees.
+		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+		if err != nil {
+			return 0, err
+		}
 
-	// Update every validator's latest vote.
-	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-		return 0, err
+		// Update every validator's latest vote.
+		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
+			return 0, err
+		}
+
+
 	}
 
 	return tgtSlot, nil
@@ -164,7 +170,46 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
+
+	if err := s.aggregateAttestation(ctx, a); err != nil {
+		return errors.Wrap(err, "could not aggregate attestation")
+	}
+
 	time.Sleep(time.Until(timeToInclude))
+	return nil
+}
+
+// aggregateAttestation aggregates the attestations in the
+func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	s.attsQueueLock.Lock()
+	defer s.attsQueueLock.Unlock()
+
+	root, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return err
+	}
+
+	incomingAttBits := att.AggregationBits
+	if a, ok := s.attsQueue[root]; ok {
+		if !a.AggregationBits.Contains(incomingAttBits) {
+			newBits := a.AggregationBits.Or(incomingAttBits)
+			incomingSig, err := bls.SignatureFromBytes(att.Signature)
+			if err != nil {
+				return err
+			}
+			currentSig, err := bls.SignatureFromBytes(a.Signature)
+			if err != nil {
+				return err
+			}
+			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{currentSig, incomingSig})
+			a.Signature = aggregatedSig.Marshal()
+			a.AggregationBits = newBits
+			s.attsQueue[root] = a
+		}
+		return nil
+	}
+
+	s.attsQueue[root] = att
 	return nil
 }
 
