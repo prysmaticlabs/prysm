@@ -67,7 +67,11 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(privateKeyPath)
+	return retrievePrivKeyFromFile(privateKeyPath)
+}
+
+func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
+	src, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -81,8 +85,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	priv := convertFromInterfacePrivKey(unmarshalledKey)
-	return priv, nil
+	return convertFromInterfacePrivKey(unmarshalledKey), nil
 }
 
 func ipAddr(cfg *Config) net.IP {
