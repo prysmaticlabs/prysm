@@ -1011,7 +1011,7 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
-    commit = "c250d6563d4d4c20252cd865923440e829844f4e",  # v1.0.0
+    commit = "dd15ed025b6054e5253963e355991f3070d4e593",  # v1.1.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )
 
