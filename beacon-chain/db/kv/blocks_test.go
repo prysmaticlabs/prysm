@@ -50,6 +50,50 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 }
 
+func TestStore_BlocksBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	blocks := []*ethpb.BeaconBlock{
+		{
+			Slot:       1,
+			ParentRoot: []byte("parent"),
+		},
+		{
+			Slot:       2,
+			ParentRoot: []byte("parent"),
+		},
+	}
+	if err := db.SaveBlocks(ctx, blocks); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 2 {
+		t.Errorf("Received %d blocks, wanted 2", len(retrieved))
+	}
+	roots := make([][32]byte, len(blocks))
+	for i := 0; i < len(roots); i++ {
+		r, err := ssz.SigningRoot(blocks[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		roots[i] = r
+	}
+	if err := db.DeleteBlocks(ctx, roots); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) > 0 {
+		t.Errorf("Received %d blocks, wanted none", len(retrieved))
+	}
+}
+
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

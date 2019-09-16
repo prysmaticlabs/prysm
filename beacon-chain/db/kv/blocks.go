@@ -164,7 +164,6 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteBlock by block root.
-// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
