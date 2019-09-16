@@ -18,11 +18,11 @@ type Database interface {
 	DatabasePath() string
 	ClearDB() error
 	// Attestation related methods.
-	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
-	HasAttestation(ctx context.Context, attRoot [32]byte) bool
-	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
-	DeleteAttestations(ctx context.Context, attRoots [][32]byte) error
+	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
+	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
+	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	// Block related methods.
