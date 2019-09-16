@@ -30,14 +30,15 @@ type ForkChoicer interface {
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	db               db.Database
-	justifiedCheckpt *ethpb.Checkpoint
-	finalizedCheckpt *ethpb.Checkpoint
-	checkpointState  *cache.CheckpointStateCache
-	attsQueue        map[[32]byte]*ethpb.Attestation
-	attsQueueLock    sync.Mutex
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	db                  db.Database
+	justifiedCheckpt    *ethpb.Checkpoint
+	finalizedCheckpt    *ethpb.Checkpoint
+	checkpointState     *cache.CheckpointStateCache
+	checkpointStateLock sync.Mutex
+	attsQueue           map[[32]byte]*ethpb.Attestation
+	attsQueueLock       sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
