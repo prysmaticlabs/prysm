@@ -91,7 +91,6 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 }
 
 // DeleteAttestation by attestation data root.
-// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
@@ -110,6 +109,33 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(attDataRoot[:])
+	})
+}
+
+// DeleteAttestations by attestation data roots.
+func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
+	defer span.End()
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
+		for _, r := range attDataRoots {
+			enc := bkt.Get(r[:])
+			if enc == nil {
+				return nil
+			}
+			att := &ethpb.Attestation{}
+			if err := proto.Unmarshal(enc, att); err != nil {
+				return err
+			}
+			indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+			if err := deleteValueForIndices(indicesByBucket, r[:], tx); err != nil {
+				return errors.Wrap(err, "could not delete root for DB indices")
+			}
+			if err := bkt.Delete(r[:]); err != nil {
+				return errors.Wrapf(err, "could not delete root %#x", r)
+			}
+		}
+		return nil
 	})
 }
 

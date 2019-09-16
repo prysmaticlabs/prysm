@@ -187,6 +187,33 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
+// DeleteBlocks by roots.
+func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
+	defer span.End()
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		for _, r := range blockRoots {
+			enc := bkt.Get(r[:])
+			if enc == nil {
+				return nil
+			}
+			b := &ethpb.BeaconBlock{}
+			if err := proto.Unmarshal(enc, b); err != nil {
+				return err
+			}
+			indicesByBucket := createBlockIndicesFromBlock(b, tx)
+			if err := deleteValueForIndices(indicesByBucket, r[:], tx); err != nil {
+				return errors.Wrap(err, "could not delete root for DB indices")
+			}
+			if err := bkt.Delete(r[:]); err != nil {
+				return errors.Wrapf(err, "could not delete root %#x", r)
+			}
+		}
+		return nil
+	})
+}
+
 // SaveBlock to the db.
 func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")

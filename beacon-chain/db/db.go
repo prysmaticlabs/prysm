@@ -22,6 +22,7 @@ type Database interface {
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(ctx context.Context, attRoot [32]byte) bool
 	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
+	DeleteAttestations(ctx context.Context, attRoots [][32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	// Block related methods.
@@ -31,6 +32,7 @@ type Database interface {
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
+	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
