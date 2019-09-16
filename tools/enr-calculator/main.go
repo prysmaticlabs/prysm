@@ -18,8 +18,8 @@ import (
 
 var (
 	privateKey = flag.String("private", "", "Base-64 encoded Private key to use for calculation of ENR")
-	udpPort    = flag.Int("port", 0, "UDP Port to use for calculation of ENR")
-	tcpPort    = flag.Int("port", 0, "TCP Port to use for calculation of ENR")
+	udpPort    = flag.Int("udp-port", 0, "UDP Port to use for calculation of ENR")
+	tcpPort    = flag.Int("tcp-port", 0, "TCP Port to use for calculation of ENR")
 	ipAddr     = flag.String("ipAddress", "", "IP to use in calculation of ENR")
 	outfile    = flag.String("out", "", "Filepath to write ENR")
 )
