@@ -14,6 +14,7 @@ import (
 
 // Ensure Service implements chain info interface.
 var _ = ChainInfoFetcher(&Service{})
+var _ = GenesisTimeFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	c := setupBeaconChain(t, nil)
