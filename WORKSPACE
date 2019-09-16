@@ -679,7 +679,7 @@ go_repository(
 
 go_repository(
     name = "com_github_beorn7_perks",
-    commit = "4ded152d4a3e2847f17f185a27b2041ae7b63979",  # v1.0.0
+    commit = "37c8de3658fcb183f997c4e13e8337516ab753e6",  # v1.0.1
     importpath = "github.com/beorn7/perks",
 )
 
