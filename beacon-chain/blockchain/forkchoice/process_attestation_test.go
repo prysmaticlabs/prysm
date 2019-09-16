@@ -87,22 +87,6 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErr:       true,
 			wantErrString: "could not process attestation from the future epoch",
 		},
-		{
-			name: "process attestation with invalid index",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not convert attestation to indexed attestation",
-		},
-		{
-			name: "process attestation with invalid signature",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not verify indexed attestation",
-		},
 	}
 
 	for _, tt := range tests {

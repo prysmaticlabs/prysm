@@ -99,6 +99,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	// Process aggregated attestation in the queue every `slot/2` duration,
 	// this allows the incoming attestation to aggregate and avoid
 	// excessively processing individual attestations.
+	fmt.Println(baseState.GenesisTime)
 	if halfSlot(baseState.GenesisTime) {
 		s.attsQueueLock.Lock()
 		for root, a := range s.attsQueue {
