@@ -29,6 +29,7 @@ type blockchainService interface {
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
 	blockchain.AttestationReceiver
+	blockchain.ChainFeeds
 }
 
 // NewRegularSync service.
@@ -58,6 +59,7 @@ type RegularSync struct {
 	chain            blockchainService
 	helloTracker     map[peer.ID]*pb.Hello
 	helloTrackerLock sync.RWMutex
+	chainStarted     bool
 }
 
 // Start the regular sync service.

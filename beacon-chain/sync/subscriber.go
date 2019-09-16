@@ -122,6 +122,18 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			return
 		}
 	}
+	go func() {
+		ch := make(chan time.Time)
+		sub := r.chain.StateInitializedFeed().Subscribe(ch)
+		defer sub.Unsubscribe()
+
+		// Wait until chain start.
+		genesis := <-ch
+		if genesis.After(roughtime.Now()) {
+			time.Sleep(roughtime.Until(genesis))
+		}
+		r.chainStarted = true
+	}()
 
 	// The main message loop for receiving incoming messages from this subscription.
 	messageLoop := func() {
@@ -132,7 +144,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				// TODO(3147): Mark status unhealthy.
 				return
 			}
-
+			if !r.chainStarted {
+				messageReceivedBeforeChainStartCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+				continue
+			}
 			// Special validation occurs on messages received from ourselves.
 			fromSelf := msg.GetFrom() == r.p2p.PeerID()
 
