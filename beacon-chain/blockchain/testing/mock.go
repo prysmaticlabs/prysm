@@ -70,7 +70,7 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 
 // GenesisTime mocks the same method in the chain service.
 func (ms *ChainService) GenesisTime() time.Time {
-	return time.Now()
+	return time.Unix(0, 0)
 }
 
 // StateInitializedFeed mocks the same method in the chain service.
