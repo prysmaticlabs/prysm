@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -90,24 +91,35 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
-	for root, a := range s.attsQueue {
-		// Verify attestations can only affect the fork choice of subsequent slots.
-		if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
-			return 0, err
+	// Verify attestations can only affect the fork choice of subsequent slots.
+	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
+		return 0, err
+	}
+
+	// Process aggregated attestation in the queue every `slot/2` duration,
+	// this allows the incoming attestation to aggregate and avoid
+	// process individual attestation.
+	if uint64(time.Now().Unix()) % params.BeaconConfig().SecondsPerSlot/2 == 0 {
+		s.attsQueueLock.Lock()
+		defer s.attsQueueLock.Unlock()
+		for root, a := range s.attsQueue {
+			log.WithFields(logrus.Fields{
+				"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+				"Root": fmt.Sprintf("%#x", root),
+			}).Info("Updating latest votes")
+
+			// Use the target state to to validate attestation and calculate the committees.
+			indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+			if err != nil {
+				return 0, err
+			}
+
+			// Update every validator's latest vote.
+			if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
+				return 0, err
+			}
+			delete(s.attsQueue, root)
 		}
-
-		// Use the target state to to validate attestation and calculate the committees.
-		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
-		if err != nil {
-			return 0, err
-		}
-
-		// Update every validator's latest vote.
-		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-			return 0, err
-		}
-
-
 	}
 
 	return tgtSlot, nil
@@ -245,6 +257,7 @@ func (s *Store) updateAttVotes(
 	indexedAtt *ethpb.IndexedAttestation,
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
+
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
