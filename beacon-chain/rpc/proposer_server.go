@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -70,7 +69,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	attestations, err := ps.attestations(ctx, req.Slot)
+	atts, err := ps.pool.AttestationPool(ctx, req.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get pending attestations")
 	}
@@ -87,7 +86,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:     eth1Data,
 			Deposits:     deposits,
-			Attestations: attestations,
+			Attestations: atts,
 			RandaoReveal: req.RandaoReveal,
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			Transfers:         []*ethpb.Transfer{},
@@ -126,70 +125,6 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 	}
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
-}
-
-// attestations retrieves aggregated attestations kept in the beacon node's operations pool which have
-// not yet been included into the beacon chain. Proposers include these pending attestations in their
-// proposed blocks when performing their responsibility. If desired, callers can choose to filter pending
-// attestations which are ready for inclusion. That is, attestations that satisfy:
-// attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
-func (ps *ProposerServer) attestations(ctx context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	beaconState := ps.headFetcher.HeadState()
-	atts, err := ps.pool.AttestationPool(ctx, expectedSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve pending attestations from operations service")
-	}
-
-	// advance slot, if it is behind
-	if beaconState.Slot < expectedSlot {
-		beaconState, err = state.ProcessSlots(ctx, beaconState, expectedSlot)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var attsReadyForInclusion []*ethpb.Attestation
-	for _, att := range atts {
-		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get attestation slot")
-		}
-		if slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot &&
-			beaconState.Slot <= slot+params.BeaconConfig().SlotsPerEpoch {
-			attsReadyForInclusion = append(attsReadyForInclusion, att)
-		}
-	}
-
-	validAtts := make([]*ethpb.Attestation, 0, len(attsReadyForInclusion))
-	for _, att := range attsReadyForInclusion {
-		slot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get attestation slot")
-		}
-
-		if _, err := blocks.ProcessAttestationNoVerify(beaconState, att); err != nil {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-
-			log.WithError(err).WithFields(logrus.Fields{
-				"slot":     slot,
-				"headRoot": fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot))}).Info(
-				"Deleting failed pending attestation from DB")
-
-			root, err := ssz.HashTreeRoot(att.Data)
-			if err != nil {
-				return nil, err
-			}
-			if err := ps.beaconDB.DeleteAttestation(ctx, root); err != nil {
-				return nil, errors.Wrap(err, "could not delete failed attestation")
-			}
-			continue
-		}
-		validAtts = append(validAtts, att)
-	}
-
-	return validAtts, nil
 }
 
 // eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method

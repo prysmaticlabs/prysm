@@ -277,7 +277,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	operationService := operations.NewService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
-		P2P:      b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(operationService)
