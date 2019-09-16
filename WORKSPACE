@@ -274,7 +274,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "64ffd94071a5bc58130ea88fd8404408aef993f2",  # v0.0.7
+    commit = "249ead2008065c476a2ee45e8e75e8b85d846a72",  # v0.0.8
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -735,7 +735,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "a12e621d84028a4e0f165da8e2ca6be4f5af0502",  # v0.2.0
+    commit = "e216d3cf6cfadfc91b8c3bec6ac9492ea40908d0",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
