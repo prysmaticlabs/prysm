@@ -80,7 +80,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
 	}
 
-	s.checkpointStateLock.Lock()
 	// Store target checkpoint state if not yet seen.
 	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
