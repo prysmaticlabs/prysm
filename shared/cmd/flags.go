@@ -67,7 +67,7 @@ var (
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
-		Value: "/ip4/35.224.249.2/tcp/30001/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw",
+		Value: "",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = cli.StringFlag{

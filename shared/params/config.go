@@ -82,7 +82,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
@@ -228,11 +227,9 @@ func MainnetConfig() *BeaconChainConfig {
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 32 * 1e9
+	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
-	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
-	demoConfig.MinGenesisTime = 0
 	demoConfig.Eth1FollowDistance = 16
 
 	return demoConfig

@@ -5,7 +5,8 @@ test_suite(
     tags = ["spectest"],
     tests = [
         ":go_mainnet_test",
-        ":go_minimal_test",
+        # Minimal tests must be run with --define ssz=minimal
+        #":go_minimal_test",
     ],
 )
 
@@ -36,6 +37,7 @@ go_test(
     ],
 )
 
+# Requires --define ssz=minimal
 go_test(
     name = "go_minimal_test",
     size = "small",
@@ -46,7 +48,11 @@ go_test(
     data = [
         "@eth2_spec_tests_minimal//:test_data",
     ],
-    tags = ["spectest"],
+    tags = [
+        "manual",
+        "minimal",
+        "spectest",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",

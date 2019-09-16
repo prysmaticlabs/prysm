@@ -35,19 +35,19 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 					Shard: uint64(i),
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
 		}
 	}
 
 	// Generate validators and state for the 2 attestations.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
+	validatorCount := 1000
+	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	state := &pb.BeaconState{
-		Slot:             0,
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -58,8 +58,8 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < len(indices)-1; i++ {
-		if indices[i] > indices[i+1] {
-			t.Error("sorted indices not sorted")
+		if indices[i] >= indices[i+1] {
+			t.Error("sorted indices not sorted or duplicated")
 		}
 	}
 
@@ -73,6 +73,45 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	for i := 0; i < len(indices); i++ {
 		if indices[i] == slashedValidator {
 			t.Errorf("Slashed validator %d is not filtered", slashedValidator)
+		}
+	}
+}
+
+func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
+	// Generate 5 of the same attestations.
+	atts := make([]*pb.PendingAttestation, 5)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
+				Target:    &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{},
+			},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
+		}
+	}
+
+	// Generate validators and state for the 5 attestations.
+	validatorCount := 1000
+	validators := make([]*ethpb.Validator, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	indices, err := unslashedAttestingIndices(state, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < len(indices)-1; i++ {
+		if indices[i] >= indices[i+1] {
+			t.Error("sorted indices not sorted or duplicated")
 		}
 	}
 }
@@ -589,10 +628,10 @@ func TestProcessJustificationAndFinalization_NoBlockRootCurrentEpoch(t *testing.
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
-		JustificationBits: []byte{0x03}, // 0b0011
-		Validators:        []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
-		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		BlockRoots:        blockRoots,
+		JustificationBits:   []byte{0x03}, // 0b0011
+		Validators:          []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
+		BlockRoots:          blockRoots,
 	}
 	attestedBalance := 4 * e * 3 / 2
 	_, err := ProcessJustificationAndFinalization(state, 0, attestedBalance)
