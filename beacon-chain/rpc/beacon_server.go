@@ -79,13 +79,6 @@ func (bs *BeaconServer) BlockTree(ctx context.Context, _ *ptypes.Empty) (*pb.Blo
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-// BlockTreeBySlots returns the current tree of saved blocks and their
-// votes starting from the justified state.
-func (bs *BeaconServer) BlockTreeBySlots(ctx context.Context, req *pb.TreeBlockSlotRequest) (*pb.BlockTreeResponse, error) {
-	// TODO(3219): Add after new fork choice service.
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
