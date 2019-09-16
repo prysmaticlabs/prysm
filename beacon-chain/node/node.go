@@ -228,6 +228,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeENR,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
 		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
