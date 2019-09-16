@@ -57,6 +57,62 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	}
 }
 
+func TestStore_AttestationsBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	atts := []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard:      5,
+					ParentRoot: []byte("parent"),
+					StartEpoch: 1,
+					EndEpoch:   2,
+				},
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				Crosslink: &ethpb.Crosslink{
+					Shard:      8,
+					ParentRoot: []byte("parent"),
+					StartEpoch: 3,
+					EndEpoch:   4,
+				},
+			},
+		},
+	}
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 2 {
+		t.Errorf("Received %d attestations, wanted 2", len(retrieved))
+	}
+	roots := make([][32]byte, len(atts))
+	for i := 0; i < len(roots); i++ {
+		r, err := ssz.HashTreeRoot(atts[i].Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		roots[i] = r
+	}
+	if err := db.DeleteAttestations(ctx, roots); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) > 0 {
+		t.Errorf("Received %d attestations, wanted none", len(retrieved))
+	}
+}
+
 func TestStore_BoltDontPanic(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
