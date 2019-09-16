@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -52,7 +54,7 @@ type Service struct {
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	error                      error
-	attestationLock            sync.Mutex
+	attestationLockCache       *ccache.Cache
 }
 
 // Config options for the service.
@@ -70,6 +72,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:                   cfg.BeaconDB,
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
+		attestationLockCache:       ccache.New(ccache.Configure()),
 	}
 }
 
@@ -99,6 +102,23 @@ func (s *Service) Status() error {
 // The beacon block operation pool service will subscribe to this feed in order to receive incoming beacon blocks.
 func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 	return s.incomingProcessedBlockFeed
+}
+
+// retrieves a lock for the specific data root.
+func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
+	keyString := string(key[:])
+	mutex := &sync.Mutex{}
+	item := s.attestationLockCache.Get(keyString)
+	if item == nil {
+		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
+		return mutex
+	}
+	if item.Expired() {
+		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
+		item.Release()
+		return mutex
+	}
+	return item.Value().(*sync.Mutex)
 }
 
 // AttestationPool returns the attestations that have not seen on the beacon chain,
@@ -169,10 +189,16 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
-	s.attestationLock.Lock()
-	defer s.attestationLock.Unlock()
 
 	attestation := message.(*ethpb.Attestation)
+	root, err := ssz.HashTreeRoot(attestation.Data)
+	if err != nil {
+		return err
+	}
+
+	lock := s.retrieveLock(root)
+	lock.Lock()
+	defer lock.Unlock()
 
 	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -185,11 +211,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		if err != nil {
 			return err
 		}
-	}
-
-	root, err := ssz.HashTreeRoot(attestation.Data)
-	if err != nil {
-		return err
 	}
 
 	incomingAttBits := attestation.AggregationBits

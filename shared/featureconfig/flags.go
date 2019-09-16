@@ -10,6 +10,11 @@ var (
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 	}
+	// DemoConfigFlag enables the demo configuration.
+	DemoConfigFlag = cli.BoolFlag{
+		Name:  "demo-config",
+		Usage: "Use demo config with lower deposit thresholds.",
+	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-balance-cache",
@@ -48,11 +53,14 @@ var (
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{}
+var ValidatorFlags = []cli.Flag{
+	DemoConfigFlag,
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,
+	DemoConfigFlag,
 	EnableActiveBalanceCacheFlag,
 	EnableAttestationCacheFlag,
 	EnableAncestorBlockCacheFlag,
