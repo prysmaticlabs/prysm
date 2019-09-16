@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
-var keyPath = "networkKeys"
+const keyPath = "network-keys"
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
@@ -27,18 +27,13 @@ func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
 	return typeAssertedKey
 }
 
-func convertFromInterfacePubKey(pubkey crypto.PubKey) *ecdsa.PublicKey {
-	typeAssertedKey := (*ecdsa.PublicKey)((*btcec.PublicKey)(pubkey.(*crypto.Secp256k1PublicKey)))
-	return typeAssertedKey
-}
-
 func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
 	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)((*btcec.PublicKey)(pubkey)))
 	return typeAssertedKey
 }
 
 func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
-	defaultKeyPath := path.Join(cfg.BaseDataDir, keyPath)
+	defaultKeyPath := path.Join(cfg.DataDir, keyPath)
 	privateKeyPath := cfg.PrivateKey
 
 	_, err := os.Stat(defaultKeyPath)

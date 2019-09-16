@@ -38,7 +38,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkey, err := privKey(&Config{Encoding: "ssz", BaseDataDir: tempPath})
+	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}
