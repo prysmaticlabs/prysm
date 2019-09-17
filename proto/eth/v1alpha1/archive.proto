@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/eth/v1alpha1/beacon_block.proto";
+
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+
+message ArchivedActiveSetChanges {
+    repeated uint64 activated = 1;
+
+    repeated uint64 exited = 2;
+
+    repeated uint64 ejected = 3;
+
+    repeated uint64 proposers_slashed = 4;
+
+    repeated uint64 attesters_slashed = 5;
+
+    repeated VoluntaryExit voluntary_exits = 6;
+
+    repeated ProposerSlashing proposer_slashings = 7;
+
+    repeated AttesterSlashing attester_slashings = 8;
+}
