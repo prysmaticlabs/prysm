@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -49,7 +48,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	topic := "/testing/foobar/1"
-	handler := func(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m := msg.(*pb.TestSimpleMessage)
 		if !bytes.Equal(m.Foo, []byte("foo")) {
 			t.Errorf("Unexpected incoming message: %+v", m)

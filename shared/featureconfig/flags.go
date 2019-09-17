@@ -12,8 +12,8 @@ var (
 	}
 	// DemoConfigFlag enables the demo configuration.
 	DemoConfigFlag = cli.BoolFlag{
-		Name:        "demo-config",
-		Usage:       "Use demo config with lower deposit thresholds.",
+		Name:  "demo-config",
+		Usage: "Use demo config with lower deposit thresholds.",
 	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{
