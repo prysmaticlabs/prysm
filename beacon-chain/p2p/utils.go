@@ -6,12 +6,16 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"net"
+	"os"
+	"path"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
+
+const keyPath = "network-keys"
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
@@ -23,26 +27,46 @@ func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
 	return typeAssertedKey
 }
 
-func convertFromInterfacePubKey(pubkey crypto.PubKey) *ecdsa.PublicKey {
-	typeAssertedKey := (*ecdsa.PublicKey)((*btcec.PublicKey)(pubkey.(*crypto.Secp256k1PublicKey)))
-	return typeAssertedKey
-}
-
 func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
 	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)((*btcec.PublicKey)(pubkey)))
 	return typeAssertedKey
 }
 
 func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
-	if cfg.PrivateKey == "" {
+	defaultKeyPath := path.Join(cfg.DataDir, keyPath)
+	privateKeyPath := cfg.PrivateKey
+
+	_, err := os.Stat(defaultKeyPath)
+	defaultKeysExist := !os.IsNotExist(err)
+	if err != nil && defaultKeysExist {
+		return nil, err
+	}
+
+	if privateKeyPath == "" && !defaultKeysExist {
 		priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
+			return nil, err
+		}
+		rawbytes, err := priv.Raw()
+		if err != nil {
+			return nil, err
+		}
+		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
+		hex.Encode(dst, rawbytes)
+		if err = ioutil.WriteFile(defaultKeyPath, dst, 0600); err != nil {
 			return nil, err
 		}
 		convertedKey := convertFromInterfacePrivKey(priv)
 		return convertedKey, nil
 	}
-	src, err := ioutil.ReadFile(cfg.PrivateKey)
+	if defaultKeysExist && privateKeyPath == "" {
+		privateKeyPath = defaultKeyPath
+	}
+	return retrievePrivKeyFromFile(privateKeyPath)
+}
+
+func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
+	src, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -56,8 +80,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	priv := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
-	return priv, nil
+	return convertFromInterfacePrivKey(unmarshalledKey), nil
 }
 
 func ipAddr(cfg *Config) net.IP {
