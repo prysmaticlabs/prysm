@@ -199,9 +199,14 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
 	}
 
+	return committeeProposerIndex(state, firstCommittee)
+}
+
+func committeeProposerIndex(state *pb.BeaconState, committee []uint64) (uint64, error) {
+	epoch := CurrentEpoch(state)
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed, err := Seed(state, e)
+	seed, err := Seed(state, epoch)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
@@ -209,7 +214,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	// Looping through the committee to select proposer that has enough
 	// effective balance.
 	for i := uint64(0); ; i++ {
-		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
+		candidateIndex := committee[(epoch+i)%uint64(len(committee))]
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBal := state.Validators[candidateIndex].EffectiveBalance

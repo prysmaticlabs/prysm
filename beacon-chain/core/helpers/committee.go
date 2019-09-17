@@ -250,13 +250,12 @@ func CommitteeAssignment(
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					state.Slot = slot
-					proposerIndex, err := BeaconProposerIndex(state)
+					proposerIdx, err := committeeProposerIndex(state, committee)
 					if err != nil {
-						return nil, 0, 0, false, fmt.Errorf(
-							"could not check proposer index: %v", err)
+						return nil, 0, 0, false, errors.Wrap(err, "could not get proposer index from committee:")
 					}
-					isProposer := proposerIndex == validatorIndex
+					// Make sure it's the first committee
+					isProposer := i == 0 && proposerIdx == validatorIndex
 					return committee, shard, slot, isProposer, nil
 				}
 			}
