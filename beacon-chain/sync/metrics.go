@@ -15,4 +15,11 @@ var (
 		},
 		[]string{"topic"},
 	)
+	messageReceivedBeforeChainStartCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "p2p_message_recieved_before_chain_start",
+			Help: "Count of messages received before chain started.",
+		},
+		[]string{"topic"},
+	)
 )

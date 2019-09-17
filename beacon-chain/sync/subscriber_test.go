@@ -31,6 +31,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		wg.Done()
 		return nil
 	})
+	r.chainStarted = true
 
 	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
 
@@ -54,7 +55,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		defer wg.Done()
 		panic("bad")
 	})
-
+	r.chainStarted = true
 	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
