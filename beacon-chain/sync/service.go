@@ -30,6 +30,7 @@ type blockchainService interface {
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
 	blockchain.AttestationReceiver
+	blockchain.ChainFeeds
 }
 
 // NewRegularSync service.
@@ -65,6 +66,7 @@ type RegularSync struct {
 	slotToPendingBlocksLock sync.RWMutex
 	seenPendingBlocks       map[[32]byte]bool
 	seenPendingBlocksLock   sync.RWMutex
+	chainStarted     bool
 }
 
 // Start the regular sync service.

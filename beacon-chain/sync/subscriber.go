@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
 
@@ -38,6 +39,18 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 
 // Register PubSub subscribers
 func (r *RegularSync) registerSubscribers() {
+	go func() {
+		ch := make(chan time.Time)
+		sub := r.chain.StateInitializedFeed().Subscribe(ch)
+		defer sub.Unsubscribe()
+
+		// Wait until chain start.
+		genesis := <-ch
+		if genesis.After(roughtime.Now()) {
+			time.Sleep(roughtime.Until(genesis))
+		}
+		r.chainStarted = true
+	}()
 	r.subscribe(
 		"/eth2/beacon_block",
 		r.validateBeaconBlockPubSub,
@@ -132,7 +145,10 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				// TODO(3147): Mark status unhealthy.
 				return
 			}
-
+			if !r.chainStarted {
+				messageReceivedBeforeChainStartCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+				continue
+			}
 			// Special validation occurs on messages received from ourselves.
 			fromSelf := msg.GetFrom() == r.p2p.PeerID()
 
