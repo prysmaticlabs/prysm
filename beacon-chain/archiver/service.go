@@ -11,6 +11,8 @@ import (
 
 var log = logrus.WithField("prefix", "archiver")
 
+// Service defining archiver functionality for persisting checkpointed
+// beacon chain information to a database backend for historical purposes.
 type Service struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -19,11 +21,13 @@ type Service struct {
 	newHeadRootChan chan [32]byte
 }
 
+// Config options for the archiver service.
 type Config struct {
 	BeaconDB        db.Database
 	NewHeadNotifier blockchain.NewHeadNotifier
 }
 
+// NewArchiverService initializes the service from configuration options.
 func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
@@ -35,17 +39,21 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
+// Start the archiver service event loop.
 func (s *Service) Start() {
 	log.Info("Starting service")
 	go s.run()
 }
 
+// Stop the archiver service event loop.
 func (s *Service) Stop() error {
 	defer s.cancel()
 	log.Info("Stopping service")
 	return nil
 }
 
+// Status reports the healthy status of the archiver. Returning nil means service
+// is correctly running without error.
 func (s *Service) Status() error {
 	return nil
 }
