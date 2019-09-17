@@ -60,7 +60,6 @@ go_test(
     srcs = [
         "attester_server_test.go",
         "beacon_chain_server_test.go",
-        "beacon_server_test.go",
         "node_server_test.go",
         "proposer_server_test.go",
         "service_test.go",
