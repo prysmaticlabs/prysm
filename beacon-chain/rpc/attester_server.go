@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 
-	"github.com/influxdata/influxdb/pkg/tracing"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -39,7 +38,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	}
 
 	go func() {
-		ctx = tracing.NewContextWithSpan(context.Background(), tracing.SpanFromContext(ctx))
+		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not handle attestation in operations service")
 			return
