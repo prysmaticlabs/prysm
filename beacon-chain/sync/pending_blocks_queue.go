@@ -41,6 +41,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	for pid := range hellos {
 		pids = append(pids, pid)
 	}
+	log.Info("PEER IDs", pids)
 
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
 	for s := range r.slotToPendingBlocks {
@@ -49,7 +50,6 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	sort.Ints(slots)
 
 	// For every pending block, process block if parent exists
-	log.Info("PROCESSING PENDING BLOCKS ", slots)
 	for _, s := range slots {
 		b := r.slotToPendingBlocks[uint64(s)]
 
