@@ -68,6 +68,17 @@ type Database interface {
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	// Archival data handlers for storing/retrieving historical beacon node information.
+	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethpb.ArchivedActiveSetChanges, error)
+	SaveArchivedActiveValidatorChanges(ctx context.Context, changes *ethpb.ArchivedActiveSetChanges) error
+	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb.ArchivedCommitteeInfo, error)
+	SaveArchivedCommitteeInfo(ctx context.Context, info *ethpb.ArchivedCommitteeInfo) error
+	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
+	SaveArchivedBalances(ctx context.Context, balances []uint64) error
+	ArchivedActiveIndices(ctx context.Context, epoch uint64) ([]uint64, error)
+	SaveArchivedActiveIndices(ctx context.Context, indices []uint64) error
+	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error)
+	SaveArchivedValidatorParticipation(ctx context.Context, part *ethpb.ValidatorParticipation) error
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
