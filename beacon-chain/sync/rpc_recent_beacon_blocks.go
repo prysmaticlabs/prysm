@@ -13,7 +13,8 @@ import (
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
 func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
-	log := log.WithField("rpc", "recent_beacon_blocks")
+	r.slotToPendingBlocksLock.Lock()
+	defer r.slotToPendingBlocksLock.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -36,11 +37,10 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
 		return err
 	}
+
 	for _, blk := range resp {
-		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
-			log.WithError(err).Error("Unable to process block")
-			return nil
-		}
+		log.Infof("RECEIVED BLOCK FOR SLOT %d", blk.Slot)
+		r.slotToPendingBlocks[blk.Slot] = blk
 	}
 
 	return nil
