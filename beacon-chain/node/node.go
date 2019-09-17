@@ -520,6 +520,13 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 	if !shouldArchive {
 		return nil
 	}
-	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{})
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
+		BeaconDB:        b.db,
+		NewHeadNotifier: chainService,
+	})
 	return b.services.RegisterService(svc)
 }
