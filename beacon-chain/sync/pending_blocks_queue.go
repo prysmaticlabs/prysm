@@ -55,7 +55,6 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 
 		if !r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)] {
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
-			log.Info("SENDING MISSING BLOCK REQUEST FOR PARENT BLOCK AT SLOT", b.Slot)
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				return err
 			}

@@ -19,6 +19,7 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	log.Info("SENDING MISSING BLOCK REQUEST FOR PARENT BLOCK, id ", id)
 	stream, err := r.p2p.Send(ctx, blockRoots, id)
 	if err != nil {
 		return err
@@ -28,6 +29,7 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err != nil {
 		return err
 	}
+	log.Info("STATUS CODE ", code)
 
 	if code != 0 {
 		return errors.New(errMsg)
@@ -37,6 +39,7 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
 		return err
 	}
+	log.Info("RESP ", resp)
 
 	for _, blk := range resp {
 		log.Infof("RECEIVED BLOCK FOR SLOT %d", blk.Slot)
