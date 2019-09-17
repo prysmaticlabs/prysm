@@ -111,6 +111,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
+	blk.Body.Graffiti = make([]byte, 32)
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash block")
