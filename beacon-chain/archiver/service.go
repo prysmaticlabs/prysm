@@ -16,6 +16,7 @@ type Service struct {
 	cancel          context.CancelFunc
 	beaconDB        db.Database
 	newHeadNotifier blockchain.NewHeadNotifier
+	newHeadRootChan chan [32]byte
 }
 
 type Config struct {
@@ -30,6 +31,7 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 		cancel:          cancel,
 		beaconDB:        cfg.BeaconDB,
 		newHeadNotifier: cfg.NewHeadNotifier,
+		newHeadRootChan: make(chan [32]byte, 1),
 	}
 }
 
@@ -49,12 +51,11 @@ func (s *Service) Status() error {
 }
 
 func (s *Service) run() {
-	headRootCh := make(chan [32]byte, 1)
-	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(headRootCh)
+	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadRootChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case h := <-headRootCh:
+		case h := <-s.newHeadRootChan:
 			log.WithField("headRoot", fmt.Sprintf("%#x", h)).Info("New chain head event")
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")

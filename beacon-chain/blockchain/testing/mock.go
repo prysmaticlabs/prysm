@@ -77,3 +77,8 @@ func (ms *ChainService) GenesisTime() time.Time {
 func (ms *ChainService) StateInitializedFeed() *event.Feed {
 	return new(event.Feed)
 }
+
+// HeadUpdatedFeed mocks the same method in the chain service.
+func (ms *ChainService) HeadUpdatedFeed() *event.Feed {
+	return new(event.Feed)
+}
