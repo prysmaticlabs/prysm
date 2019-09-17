@@ -18,6 +18,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state/interop:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/hashutil:go_default_library",
