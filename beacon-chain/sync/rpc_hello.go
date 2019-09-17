@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -62,7 +61,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 
 // helloRPCHandler reads the incoming Hello RPC from the peer and responds with our version of a hello message.
 // This handler will disconnect any peer that does not match our fork version.
-func (r *RegularSync) helloRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+func (r *RegularSync) helloRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

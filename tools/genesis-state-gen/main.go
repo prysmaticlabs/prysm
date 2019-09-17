@@ -27,7 +27,6 @@ var (
 
 func main() {
 	flag.Parse()
-	// TODO(#3398): Cannot generate more than 190 keys due to BLS errors.
 	if *numValidators == 0 {
 		log.Fatal("Expected --num-validators to have been provided, received 0")
 	}
