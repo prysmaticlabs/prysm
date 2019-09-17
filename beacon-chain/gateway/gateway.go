@@ -49,7 +49,7 @@ func (g *Gateway) Start() {
 
 	gwmux := gwruntime.NewServeMux()
 	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
-		pb.RegisterBeaconServiceHandler,
+		pb.RegisterBeaconChainServiceServer,
 	} {
 		if err := f(ctx, gwmux, conn); err != nil {
 			log.WithError(err).Error("Failed to start gateway")

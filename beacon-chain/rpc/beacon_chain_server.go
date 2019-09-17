@@ -498,6 +498,12 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	}, nil
 }
 
+// CanonicalHead of the current beacon chain. This method is requested on-demand
+// by a validator when it is their time to propose or attest.
+func (bs *BeaconChainServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
+	return bs.headFetcher.HeadBlock(), nil
+}
+
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does

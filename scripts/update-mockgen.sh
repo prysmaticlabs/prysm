@@ -7,7 +7,7 @@ mocks=(
       "./beacon-chain/internal/beacon_service_mock.go BeaconServiceServer,BeaconService_WaitForChainStartServer"
       "./beacon-chain/internal/validator_service_mock.go ValidatorServiceServer,ValidatorService_WaitForActivationServer"
       "./validator/internal/attester_service_mock.go AttesterServiceClient"
-       "./validator/internal/beacon_service_mock.go BeaconServiceClient,BeaconService_WaitForChainStartClient"
+       "./validator/internal/beacon_chain_service_mock.go BeaconChainServiceClient,BeaconChainService_WaitForChainStartClient"
        "./validator/internal/proposer_service_mock.go ProposerServiceClient"
        "./validator/internal/validator_service_mock.go ValidatorServiceClient,ValidatorService_WaitForActivationClient")
 

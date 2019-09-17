@@ -25,7 +25,7 @@ type validator struct {
 	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
-	beaconClient         pb.BeaconServiceClient
+	beaconClient         pb.BeaconChainServiceClient
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte

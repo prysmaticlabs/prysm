@@ -38,17 +38,9 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 };
 
 
-service BeaconService {
+service BeaconChainService {
   rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
   rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-      summary: "Fetches block tree since last finalized block.";
-    };
-    option (google.api.http) = {
-      get: "/v1/beacon/blocktree";
-    };
-  }
 }
 
 service AttesterService {
