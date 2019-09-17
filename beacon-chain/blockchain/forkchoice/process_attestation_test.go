@@ -1,10 +1,12 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -84,22 +86,6 @@ func TestStore_OnAttestation(t *testing.T) {
 			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "could not process attestation from the future epoch",
-		},
-		{
-			name: "process attestation with invalid index",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not convert attestation to indexed attestation",
-		},
-		{
-			name: "process attestation with invalid signature",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not verify indexed attestation",
 		},
 	}
 
@@ -211,5 +197,39 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 	if s3.Slot != s.Slot {
 		t.Errorf("Wanted state slot: %d, got: %d", s.Slot, s3.Slot)
+	}
+}
+
+func TestStore_AggregateAttestation(t *testing.T) {
+	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}
+
+	bits := bitfield.NewBitlist(8)
+	bits.SetBitAt(0, true)
+	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	r, _ := ssz.HashTreeRoot(a.Data)
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, bits) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(1, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{3, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(7, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{131, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
 	}
 }
