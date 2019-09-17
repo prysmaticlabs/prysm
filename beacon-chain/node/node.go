@@ -528,6 +528,5 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		BeaconDB:        b.db,
 		NewHeadNotifier: chainService,
 	})
-	log.Info("Registering arc")
 	return b.services.RegisterService(svc)
 }
