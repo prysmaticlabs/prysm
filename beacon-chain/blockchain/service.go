@@ -29,12 +29,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ChainFeeds interface defines the methods of the Service which provide
-// information feeds.
+// ChainFeeds interface defines the methods of the Service which provide state related
+// information feeds to consumers.
 type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
 }
 
+// NewHeadNotifier defines a struct which can notify many consumers of a new,
+// canonical chain head event occuring in the node.
 type NewHeadNotifier interface {
 	HeadUpdatedFeed() *event.Feed
 }
