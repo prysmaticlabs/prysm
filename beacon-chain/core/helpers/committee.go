@@ -245,12 +245,11 @@ func CommitteeAssignment(
 			shard := (slotStatShard + i) % params.BeaconConfig().ShardCount
 			committee, err := CrosslinkCommittee(state, epoch, shard)
 			if err != nil {
-				return nil, 0, 0, false, fmt.Errorf(
-					"could not get crosslink committee: %v", err)
+				return nil, 0, 0, false, errors.Wrap(err, "could not get crosslink committee")
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					proposerIdx, err := committeeProposerIndex(state, committee)
+					proposerIdx, err := committeeProposerIndex(state, epoch, committee)
 					if err != nil {
 						return nil, 0, 0, false, errors.Wrap(err, "could not get proposer index from committee:")
 					}

@@ -199,11 +199,10 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
 	}
 
-	return committeeProposerIndex(state, firstCommittee)
+	return committeeProposerIndex(state, e, firstCommittee)
 }
 
-func committeeProposerIndex(state *pb.BeaconState, committee []uint64) (uint64, error) {
-	epoch := CurrentEpoch(state)
+func committeeProposerIndex(state *pb.BeaconState, epoch uint64, committee []uint64) (uint64, error) {
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
 	seed, err := Seed(state, epoch)
