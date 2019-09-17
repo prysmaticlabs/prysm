@@ -30,7 +30,7 @@ func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
 // as expected, and return true or false to continue the message processing
 // pipeline. FromSelf indicates whether or not this is a message received from our
 // node in pubsub.
-type validator func(ctx context.Context, msg proto.Message, broadcaster p2p.Broadcaster, fromSelf bool) bool
+type validator func(ctx context.Context, msg interface{}, broadcaster p2p.Broadcaster, fromSelf bool) bool
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
@@ -117,14 +117,14 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			return
 		}
 
-		msg := reflect.New(base).Elem().Interface()
+		msg := reflect.New(reflect.TypeOf(base)).Elem().Interface()
 		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}
 
 		if !validate(ctx, msg, r.p2p, fromSelf) {
-			log.WithField("message", msg.String()).Debug("Message did not verify")
+			log.WithField("message", msg).Debug("Message did not verify")
 
 			// TODO(3147): Increment metrics.
 			return

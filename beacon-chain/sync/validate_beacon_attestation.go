@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -13,7 +12,7 @@ import (
 
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
-func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg interface{}, p p2p.Broadcaster, fromSelf bool) bool {
 	att := msg.(*ethpb.Attestation)
 
 	attRoot, err := ssz.HashTreeRoot(att)
