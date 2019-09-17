@@ -13,6 +13,7 @@ import (
 
 var (
 	numKeys    = flag.Int("num-keys", 0, "Number of validator private/withdrawal keys to generate")
+	startIndex = flag.Uint64("start-index", 0, "Start index for the determinstic keygen algorithm")
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
@@ -53,18 +54,18 @@ func main() {
 		}
 	}()
 
-	ctnr := generateUnencryptedKeys()
+	ctnr := generateUnencryptedKeys(*startIndex)
 	if err := SaveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys() *UnencryptedKeysContainer {
+func generateUnencryptedKeys(startIndex uint64) *UnencryptedKeysContainer {
 	ctnr := &UnencryptedKeysContainer{
 		Keys: make([]*UnencryptedKeys, *numKeys),
 	}
 
-	sks, _, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, uint64(*numKeys))
+	sks, _, err := interop.DeterministicallyGenerateKeys(startIndex, uint64(*numKeys))
 
 	if err != nil {
 		panic(err)
