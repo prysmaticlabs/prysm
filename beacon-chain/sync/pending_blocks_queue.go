@@ -14,9 +14,10 @@ import (
 var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
 
 // processes pending blocks queue on every processPendingBlocksPeriod
-func (r *RegularSync) processPendingBlocksQueue(ctx context.Context) {
+func (r *RegularSync) processPendingBlocksQueue() {
 	ticker := time.NewTicker(processPendingBlocksPeriod)
 	for {
+		ctx := context.TODO()
 		select {
 		case <-ticker.C:
 			r.processPendingBlocks(ctx)
@@ -31,11 +32,6 @@ func (r *RegularSync) processPendingBlocksQueue(ctx context.Context) {
 // processes the block tree inside the queue
 func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	// Construct a sorted list of slots from outstanding pending blocks
-	r.slotToPendingBlocksLock.Lock()
-	r.seenPendingBlocksLock.Lock()
-	defer r.slotToPendingBlocksLock.Unlock()
-	defer r.seenPendingBlocksLock.Unlock()
-
 	hellos := r.Hellos()
 	pids := make([]peer.ID, 0, len(hellos))
 	for pid := range hellos {
@@ -52,8 +48,9 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	// For every pending block, process block if parent exists
 	for _, s := range slots {
 		b := r.slotToPendingBlocks[uint64(s)]
-
+		log.Infof("PROCESSING SLOT %d", b.Slot)
 		if !r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)] {
+			log.Infof("MISSING PARENT ROOT FOR SLOT %d", b.Slot)
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				return err

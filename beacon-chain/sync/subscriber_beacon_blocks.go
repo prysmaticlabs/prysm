@@ -14,7 +14,6 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	block := msg.(*ethpb.BeaconBlock)
 
 	headState := r.chain.HeadState()
-
 	// Ignore block older than last finalized checkpoint.
 	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch) {
 		log.Debugf("Received a block that's older than finalized checkpoint, %d < %d",
@@ -34,11 +33,6 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
-		r.slotToPendingBlocksLock.Lock()
-		r.seenPendingBlocksLock.Lock()
-		defer r.slotToPendingBlocksLock.Unlock()
-		defer r.seenPendingBlocksLock.Unlock()
-
 		r.slotToPendingBlocks[block.Slot] = block
 		r.seenPendingBlocks[blockRoot] = true
 
