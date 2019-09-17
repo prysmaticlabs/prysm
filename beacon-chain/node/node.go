@@ -71,6 +71,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+	featureconfig.ConfigureBeaconFeatures(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -90,8 +91,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 			params.UseMinimalConfig()
 		}
 	}
-
-	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
