@@ -35,6 +35,7 @@ var appFlags = []cli.Flag{
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
+	flags.ArchiveValidatorSetChangesFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
