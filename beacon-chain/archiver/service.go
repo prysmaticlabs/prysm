@@ -1,9 +1,23 @@
 package archiver
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/db"
+import (
+	"context"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+)
 
 type Service struct {
 	beaconDB db.Database
+}
+
+type Config struct {
+	BeaconDB db.Database
+}
+
+func NewArchiverService(ctx context.Context, cfg *Config) *Service {
+	return &Service{
+		beaconDB: cfg.BeaconDB,
+	}
 }
 
 func (s *Service) Start() {
