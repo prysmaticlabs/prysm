@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"time"
 
@@ -19,7 +20,7 @@ const oneYear = 365 * 24 * time.Hour
 const invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
-type subHandler func(context.Context, proto.Message) error
+type subHandler func(context.Context, interface{}) error
 
 func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
 	return errors.New("not implemented")
@@ -116,7 +117,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 			return
 		}
 
-		msg := proto.Clone(base)
+		msg := reflect.New(base).Elem().Interface()
 		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return

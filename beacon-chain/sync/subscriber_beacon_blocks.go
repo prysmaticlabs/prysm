@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,7 +17,7 @@ import (
 // process pending blocks after a link to the canonical chain is found.
 var pendingBlocks = ccache.New(ccache.Configure())
 
-func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
+func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg interface{}) error {
 	block := msg.(*ethpb.BeaconBlock)
 
 	headState := r.chain.HeadState()

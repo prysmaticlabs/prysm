@@ -2,9 +2,9 @@ package sync
 
 import (
 	"context"
+	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,13 +41,13 @@ func (r *RegularSync) registerRPCHandlers() {
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
-		&pb.RecentBeaconBlocksRequest{},
+		[][32]byte{},
 		r.recentBeaconBlocksRPCHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHandler) {
+func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
@@ -65,7 +65,7 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHa
 
 		// Clone the base message type so we have a newly initialized message as the decoding
 		// destination.
-		msg := proto.Clone(base)
+		msg := reflect.New(base).Elem().Interface()
 		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 			log.WithError(err).Error("Failed to decode stream message")
 			return

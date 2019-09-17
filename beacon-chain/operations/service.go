@@ -169,7 +169,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 }
 
 // HandleValidatorExits processes a validator exit operation.
-func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Message) error {
+func (s *Service) HandleValidatorExits(ctx context.Context, message interface{}) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleValidatorExits")
 	defer span.End()
 
