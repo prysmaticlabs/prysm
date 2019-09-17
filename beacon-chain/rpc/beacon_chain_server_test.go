@@ -8,24 +8,33 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(10)
@@ -59,8 +68,8 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -157,8 +166,8 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(1)
@@ -201,8 +210,8 @@ func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -240,8 +249,8 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	bs := &BeaconChainServer{
 		pool: &mockOps.Operations{
 			Attestations: []*ethpb.Attestation{
@@ -286,8 +295,8 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	setupValidators(t, db, 100)
 
@@ -340,8 +349,8 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	_, balances := setupValidators(t, db, 1)
 
 	bs := &BeaconChainServer{
@@ -356,8 +365,8 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
 	bs := &BeaconChainServer{
@@ -375,8 +384,8 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	count := 100
 	setupValidators(t, db, count)
@@ -433,8 +442,8 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	count := 1
 	validators, _ := setupValidators(t, db, count)
@@ -461,8 +470,8 @@ func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
 	bs := &BeaconChainServer{
@@ -483,8 +492,8 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	setupValidators(t, db, 1)
 	bs := &BeaconChainServer{beaconDB: db}
@@ -507,8 +516,8 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 1000
@@ -581,8 +590,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 100
@@ -651,8 +660,8 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 100
@@ -759,8 +768,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	epoch := uint64(1)
@@ -825,8 +834,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -919,8 +928,8 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	bs := &BeaconChainServer{beaconDB: db}
@@ -1027,6 +1036,104 @@ func TestBeaconChainServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
 			[]byte{'C'}, head.FinalizedBlockRoot)
 	}
+}
+
+func TestWaitForChainStart_ContextClosed(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	beaconServer := &BeaconChainServer{
+		ctx: ctx,
+		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	go func(tt *testing.T) {
+		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "context closed") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	headBlockRoot := [32]byte{0x01, 0x02}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{Slot: 3}, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconServer := &BeaconChainServer{
+		ctx: context.Background(),
+		chainStartFetcher: &mockPOW.POWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		},
+	).Return(nil)
+	if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+}
+
+func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	hook := logTest.NewGlobal()
+	beaconServer := &BeaconChainServer{
+		ctx:            context.Background(),
+		chainStartChan: make(chan time.Time, 1),
+		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconService_WaitForChainStartServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		},
+	).Return(nil)
+	go func(tt *testing.T) {
+		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	beaconServer.chainStartChan <- time.Unix(0, 0)
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending ChainStart log and genesis time to connected validator clients")
 }
 
 func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
