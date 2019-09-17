@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "attester_server.go",
         "beacon_chain_server.go",
-        "beacon_server.go",
         "node_server.go",
         "proposer_server.go",
         "service.go",
