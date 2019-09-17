@@ -14,6 +14,12 @@ import (
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
 func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+	if r.Syncing() {
+		// Processing attestations while syncing will almost always fail since the client
+		// doesn't have recent blocks. Return false to prevent wasted resources.
+		return false
+	}
+
 	att := msg.(*ethpb.Attestation)
 
 	attRoot, err := ssz.HashTreeRoot(att)
@@ -36,6 +42,9 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	if fromSelf {
 		return false
 	}
+
+	// TODO(1332): Add blocks.VerifyAttestation before processing further.
+	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
 
 	if err := p.Broadcast(ctx, msg); err != nil {
 		log.WithError(err).Error("Failed to broadcast message")

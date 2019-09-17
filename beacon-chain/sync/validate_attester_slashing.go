@@ -49,6 +49,11 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	s := r.chain.HeadState()
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < slashSlot {
+		if ctx.Err() != nil {
+			log.WithError(ctx.Err()).Errorf("Failed to advance state to slot %d to process attester slashing", slashSlot)
+			return false
+		}
+
 		var err error
 		s, err = state.ProcessSlots(ctx, s, slashSlot)
 		if err != nil {

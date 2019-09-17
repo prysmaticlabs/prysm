@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -41,9 +42,12 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:       make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	}
 
 	domain := helpers.Domain(
@@ -140,5 +144,23 @@ func TestValidateProposerSlashing_ValidSlashing_FromSelf(t *testing.T) {
 
 	if p2p.BroadcastCalled {
 		t.Error("Broadcast was called")
+	}
+}
+
+func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+
+	slashing, state := setupValidProposerSlashing(t)
+	slashing.Header_1.Slot = 100000000
+
+	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+
+	r := &RegularSync{
+		p2p:   p2p,
+		chain: &mock.ChainService{State: state},
+	}
+
+	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }

@@ -27,9 +27,6 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 		return false
 	}
 
-	// TODO(1332): Add blocks.VerifyAttestation before processing further.
-	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
-
 	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
 		return false
 	}
@@ -43,5 +40,5 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	if err == nil {
 		p.Broadcast(ctx, m)
 	}
-	return err == nil
+	return err == nil && !r.Syncing()
 }

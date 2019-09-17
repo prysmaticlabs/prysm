@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -135,5 +136,23 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 
 	if p2p.BroadcastCalled {
 		t.Error("Broadcast was called")
+	}
+}
+
+func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+
+	slashing, state := setupValidAttesterSlashing(t)
+	slashing.Attestation_1.Data.Target.Epoch = 100000000
+
+	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+
+	r := &RegularSync{
+		p2p:   p2p,
+		chain: &mock.ChainService{State: state},
+	}
+
+	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }
