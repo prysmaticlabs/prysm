@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//shared/version:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",
+        "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
@@ -35,6 +36,7 @@ go_image(
     deps = [
         "//shared/version:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",
+        "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
