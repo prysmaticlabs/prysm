@@ -27,12 +27,12 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 		return nil
 	}
 
-	resp := &pb.Hello{
-		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:       r.chain.HeadRoot(),
-		HeadSlot:       r.chain.HeadSlot(),
+	resp := &pb.Status{
+		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:        r.chain.HeadRoot(),
+		HeadSlot:        r.chain.HeadSlot(),
 	}
 	stream, err := r.p2p.Send(ctx, resp, id)
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 		return errors.New(errMsg)
 	}
 
-	msg := &pb.Hello{}
+	msg := &pb.Status{}
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	r.statusTracker[stream.Conn().RemotePeer()] = msg
 	r.statusTrackerLock.Unlock()
 
-	return r.validateHelloMessage(msg, stream)
+	return r.validateStatusMessage(msg, stream)
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
@@ -77,13 +77,13 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 		return nil
 	}
 
-	m := msg.(*pb.Hello)
+	m := msg.(*pb.Status)
 
 	r.statusTrackerLock.Lock()
 	r.statusTracker[stream.Conn().RemotePeer()] = m
 	r.statusTrackerLock.Unlock()
 
-	if err := r.validateHelloMessage(m, stream); err != nil {
+	if err := r.validateStatusMessage(m, stream); err != nil {
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {
@@ -109,12 +109,12 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 
 	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
-	resp := &pb.Hello{
-		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:       r.chain.HeadRoot(),
-		HeadSlot:       r.chain.HeadSlot(),
+	resp := &pb.Status{
+		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:        r.chain.HeadRoot(),
+		HeadSlot:        r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
@@ -125,8 +125,8 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	return err
 }
 
-func (r *RegularSync) validateHelloMessage(msg *pb.Hello, stream network.Stream) error {
-	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.ForkVersion) {
+func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
+	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
 		return errWrongForkVersion
 	}
 	return nil

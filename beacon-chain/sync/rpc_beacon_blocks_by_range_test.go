@@ -25,14 +25,14 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 
-	req := &pb.BeaconBlocksRequest{
-		HeadSlot: 100,
-		Step:     4,
-		Count:    100,
+	req := &pb.BeaconBlocksByRangeRequest{
+		StartSlot: 100,
+		Step:      4,
+		Count:     100,
 	}
 
 	// Populate the database with blocks that would match the request.
-	for i := req.HeadSlot; i < req.HeadSlot+(req.Step*req.Count); i++ {
+	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i++ {
 		if err := d.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: i}); err != nil {
 			t.Fatal(err)
 		}
@@ -54,7 +54,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 			t.Errorf("Received only %d blocks, expected %d", len(res), req.Count)
 		}
 		for _, blk := range res {
-			if (blk.Slot-req.HeadSlot)%req.Step != 0 {
+			if (blk.Slot-req.StartSlot)%req.Step != 0 {
 				t.Errorf("Received unexpected block slot %d", blk.Slot)
 			}
 		}

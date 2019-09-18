@@ -74,7 +74,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.recentBeaconBlocksRPCHandler(context.Background(), blkRoots, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		statusTracker: make(map[peer.ID]*pb.Hello),
+		statusTracker: make(map[peer.ID]*pb.Status),
 		ctx:           context.Background(),
 	}
 

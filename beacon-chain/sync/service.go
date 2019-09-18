@@ -40,7 +40,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		p2p:           cfg.P2P,
 		operations:    cfg.Operations,
 		chain:         cfg.Chain,
-		statusTracker: make(map[peer.ID]*pb.Hello),
+		statusTracker: make(map[peer.ID]*pb.Status),
 	}
 
 	r.registerRPCHandlers()
@@ -57,7 +57,7 @@ type RegularSync struct {
 	db                db.Database
 	operations        *operations.Service
 	chain             blockchainService
-	statusTracker     map[peer.ID]*pb.Hello
+	statusTracker     map[peer.ID]*pb.Status
 	statusTrackerLock sync.RWMutex
 	chainStarted      bool
 }
@@ -84,7 +84,7 @@ func (r *RegularSync) Syncing() bool {
 }
 
 // PeerStatuses returns the map of status messages received so far.
-func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Hello {
+func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Status {
 	r.statusTrackerLock.RLock()
 	defer r.statusTrackerLock.RUnlock()
 	return r.statusTracker
@@ -99,5 +99,5 @@ type Checker interface {
 
 // HelloTracker interface for accessing the hello / handshake messages received so far.
 type PeerTracker interface {
-	PeerStatuses() map[peer.ID]*pb.Hello
+	PeerStatuses() map[peer.ID]*pb.Status
 }
