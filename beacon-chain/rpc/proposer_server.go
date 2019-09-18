@@ -306,3 +306,15 @@ func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHe
 		DepositCount: depositsTillHeight,
 	}, nil
 }
+
+func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
+	proof, err := trie.MerkleProof(index)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)
+	}
+	// For every deposit, we construct a Merkle proof using the powchain service's
+	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
+	// property changes during a state transition after a voting period.
+	deposit.Proof = proof
+	return deposit, nil
+}

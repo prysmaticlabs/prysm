@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -28,9 +29,11 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
@@ -1078,6 +1081,104 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
+}
+
+func TestWaitForChainStart_ContextClosed(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	validatorServer := &ValidatorServer{
+		ctx: ctx,
+		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	go func(tt *testing.T) {
+		if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "context closed") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+	headBlockRoot := [32]byte{0x01, 0x02}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pbp2p.BeaconState{Slot: 3}, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	validatorServer := &ValidatorServer{
+		ctx: context.Background(),
+		chainStartFetcher: &mockPOW.POWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		},
+	).Return(nil)
+	if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+}
+
+func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	hook := logTest.NewGlobal()
+	validatorServer := &ValidatorServer{
+		ctx:            context.Background(),
+		chainStartChan: make(chan time.Time, 1),
+		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+			ChainFeed: new(event.Feed),
+		},
+		stateFeedListener: &mockChain.ChainService{},
+		beaconDB:          db,
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		},
+	).Return(nil)
+	go func(tt *testing.T) {
+		if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	validatorServer.chainStartChan <- time.Unix(0, 0)
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending ChainStart log and genesis time to connected validator clients")
 }
 
 func BenchmarkAssignment(b *testing.B) {
