@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",
