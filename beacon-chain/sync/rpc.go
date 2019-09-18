@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -65,7 +66,7 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 
 		// Clone the base message type so we have a newly initialized message as the decoding
 		// destination.
-		msg := proto.Clone(base)
+		msg := copyValues(base)
 		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 			log.WithError(err).Error("Failed to decode stream message")
 			return
@@ -75,4 +76,17 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 			log.WithError(err).Error("Failed to handle p2p RPC")
 		}
 	})
+}
+
+func copyValues(msg interface{}) interface{} {
+	switch t := msg.(type) {
+	case proto.Message:
+		return proto.Clone(t)
+	case uint64:
+		return new(uint64)
+	case [][32]byte:
+		return [][32]byte{}
+	default:
+		return reflect.New(reflect.TypeOf(t).Elem())
+	}
 }

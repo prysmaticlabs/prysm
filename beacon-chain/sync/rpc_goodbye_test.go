@@ -43,7 +43,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.goodbyeRPCHandler(context.Background(), 0, stream1)
+	err = r.goodbyeRPCHandler(context.Background(), uint64(0), stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}

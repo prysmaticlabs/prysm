@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
+func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	// TODO(3441): Fix ssz string length issue.
 	t.Skip("3441: SSZ is decoding a string with an unexpected length")
 	p1 := p2ptest.NewTestP2P(t)
@@ -30,7 +30,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{p2p: p1, statusTracker: make(map[peer.ID]*pb.Hello)}
+	r := &RegularSync{p2p: p1, statusTracker: make(map[peer.ID]*pb.Status)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -55,7 +55,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -69,7 +69,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 }
 
-func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
+func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -104,7 +104,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		statusTracker: make(map[peer.ID]*pb.Hello),
+		statusTracker: make(map[peer.ID]*pb.Status),
 	}
 
 	// Setup streams
@@ -114,16 +114,16 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -134,7 +134,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestRegularSync_HelloRPCHandler_AddsHandshake(t *testing.T) {
 	t.Skip("TODO(3147): Add a test to ensure the handshake was added.")
 }
 
-func TestHelloRPCRequest_RequestSent(t *testing.T) {
+func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
@@ -179,26 +179,26 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		statusTracker: make(map[peer.ID]*pb.Hello),
+		statusTracker: make(map[peer.ID]*pb.Status),
 		ctx:           context.Background(),
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)

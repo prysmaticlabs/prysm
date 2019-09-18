@@ -56,7 +56,7 @@ type PeerManager interface {
 
 // HandshakeManager abstracts certain methods regarding handshake records.
 type HandshakeManager interface {
-	AddHandshake(peer.ID, *pb.Hello)
+	AddHandshake(peer.ID, *pb.Status)
 }
 
 // Sender abstracts the sending functionality from libp2p.

@@ -19,9 +19,9 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_range")
 
-	m := msg.(*pb.BeaconBlocksRequest)
+	m := msg.(*pb.BeaconBlocksByRangeRequest)
 
-	startSlot := m.HeadSlot
+	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * m.Count)
 
 	// TODO(3147): Update this with reasonable constraints.

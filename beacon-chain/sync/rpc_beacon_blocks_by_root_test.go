@@ -124,7 +124,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/recent_beacon_blocks/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
