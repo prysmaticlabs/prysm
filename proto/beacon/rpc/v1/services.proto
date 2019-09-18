@@ -100,7 +100,8 @@ message ValidatorPerformanceResponse {
   repeated uint64 balances = 1;
   uint64 total_validators = 2;
   uint64 total_active_validators = 3;
-  float average_active_validator_balance = 4;
+  repeated bytes missing_validators = 4;
+  float average_active_validator_balance = 5;
 }
 
 message ValidatorActivationRequest {
