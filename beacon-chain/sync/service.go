@@ -72,6 +72,7 @@ type RegularSync struct {
 // Start the regular sync service.
 func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
+	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
 }
 

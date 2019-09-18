@@ -210,7 +210,6 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve children info")
 		}
-
 		if len(children) == 0 {
 			return head, nil
 		}
