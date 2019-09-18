@@ -82,3 +82,8 @@ func (ms *ChainService) StateInitializedFeed() *event.Feed {
 	ms.StateFeed = new(event.Feed)
 	return ms.StateFeed
 }
+
+// HeadUpdatedFeed mocks the same method in the chain service.
+func (ms *ChainService) HeadUpdatedFeed() *event.Feed {
+	return new(event.Feed)
+}
