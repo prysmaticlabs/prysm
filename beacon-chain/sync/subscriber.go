@@ -43,9 +43,11 @@ func (r *RegularSync) registerSubscribers() {
 		ch := make(chan time.Time)
 		sub := r.chain.StateInitializedFeed().Subscribe(ch)
 		defer sub.Unsubscribe()
-
+		log.Warn("Wait until chain start.")
 		// Wait until chain start.
 		genesis := <-ch
+		log.Warn("Received chain start.")
+
 		if genesis.After(roughtime.Now()) {
 			time.Sleep(roughtime.Until(genesis))
 		}

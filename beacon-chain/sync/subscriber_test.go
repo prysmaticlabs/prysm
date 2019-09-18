@@ -2,15 +2,33 @@ package sync
 
 import (
 	"context"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func checkPanic(want error, fn func()) (err error) {
+	defer func() {
+		panic := recover()
+		if panic == nil {
+			err = fmt.Errorf("didn't panic")
+		} else if !reflect.DeepEqual(panic, want) {
+			err = fmt.Errorf("panicked with wrong error: got %q, want %q", panic, want)
+		}
+	}()
+	fn()
+	return nil
+}
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
@@ -18,7 +36,6 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		ctx: context.Background(),
 		p2p: p2p,
 	}
-
 	topic := "/eth2/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -38,6 +55,39 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
+}
+
+func TestSubscribe_WaitToSync(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	r := RegularSync{
+		ctx: context.Background(),
+		p2p: p2p,
+	}
+
+	r.chain = &mockChain.ChainService{}
+	topic := "/eth2/beacon_block"
+	r.registerSubscribers()
+	i := r.chain.StateInitializedFeed().Send(time.Now().Unix())
+	if i == 0 {
+		t.Fatal("didn't send genesis time to subscribers")
+	}
+	b := []byte("sk")
+	b32 := bytesutil.ToBytes32(b)
+	sk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+	}
+	p2p.ReceivePubSub(topic, msg)
+	time.Sleep(10 * time.Second)
+	if !r.chainStarted {
+		t.Fatal("Did not receive chain start event.")
+	}
+
 }
 
 func TestSubscribe_HandlesPanic(t *testing.T) {
