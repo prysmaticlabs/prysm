@@ -65,7 +65,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.beaconBlocksRPCHandler(context.Background(), req, stream1)
+	err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

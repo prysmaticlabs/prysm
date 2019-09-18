@@ -24,10 +24,10 @@ import (
 
 // TopicMappings are the protocol ids for the different types of requests.
 var TopicMappings = map[reflect.Type]string{
-	reflect.TypeOf(&pb.Hello{}):               "/eth2/beacon_chain/req/hello/1",
+	reflect.TypeOf(&pb.Hello{}):               "/eth2/beacon_chain/req/status/1",
 	reflect.TypeOf(&pb.Goodbye{}):             "/eth2/beacon_chain/req/goodbye/1",
-	reflect.TypeOf(&pb.BeaconBlocksRequest{}): "/eth2/beacon_chain/req/beacon_blocks/1",
-	reflect.TypeOf([][32]byte{}):              "/eth2/beacon_chain/req/recent_beacon_blocks/1",
+	reflect.TypeOf(&pb.BeaconBlocksRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+	reflect.TypeOf([][32]byte{}):              "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.

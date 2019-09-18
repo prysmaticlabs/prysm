@@ -35,19 +35,19 @@ func (r *RegularSync) registerRPCHandlers() {
 		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks/1",
+		"/eth2/beacon_chain/req/beacon_blocks_by_range/1",
 		&pb.BeaconBlocksRequest{},
-		r.beaconBlocksRPCHandler,
+		r.beaconBlocksByRangeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
-		&pb.RecentBeaconBlocksRequest{},
-		r.recentBeaconBlocksRPCHandler,
+		"/eth2/beacon_chain/req/beacon_blocks_by_root/1",
+		[][32]byte{},
+		r.beaconBlocksRootRPCHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHandler) {
+func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
