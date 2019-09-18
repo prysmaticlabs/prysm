@@ -481,6 +481,9 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
 		}
+		if participation == nil {
+			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", req.Epoch)
+		}
 		return participation, nil
 	}
 	// Else if the request is for the current epoch, we compute validator participation
