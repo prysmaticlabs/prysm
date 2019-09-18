@@ -2,9 +2,9 @@ package archiver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/sirupsen/logrus"
 )
@@ -18,7 +18,7 @@ type Service struct {
 	cancel          context.CancelFunc
 	beaconDB        db.Database
 	newHeadNotifier blockchain.NewHeadNotifier
-	newHeadRootChan chan [32]byte
+	newHeadSlotChan chan uint64
 }
 
 // Config options for the archiver service.
@@ -35,7 +35,7 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 		cancel:          cancel,
 		beaconDB:        cfg.BeaconDB,
 		newHeadNotifier: cfg.NewHeadNotifier,
-		newHeadRootChan: make(chan [32]byte, 1),
+		newHeadSlotChan: make(chan uint64, 1),
 	}
 }
 
@@ -58,13 +58,21 @@ func (s *Service) Status() error {
 	return nil
 }
 
+func (s *Service) archiveParticipation(slot uint64) {
+	// We do the same logic as the RPC server does when computing
+	// participation metrics below.
+}
+
 func (s *Service) run() {
-	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadRootChan)
+	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadSlotChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case h := <-s.newHeadRootChan:
-			log.WithField("headRoot", fmt.Sprintf("%#x", h)).Info("New chain head event")
+		case slot := <-s.newHeadSlotChan:
+			log.WithField("headSlot", slot).Info("New chain head event")
+			if helpers.IsEpochStart(slot) {
+				s.archiveParticipation(slot)
+			}
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
 			return
