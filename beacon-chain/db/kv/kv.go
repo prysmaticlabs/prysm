@@ -60,6 +60,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			voluntaryExitsBucket,
 			chainMetadataBucket,
 			checkpointBucket,
+			archivedValidatorSetChangesBucket,
 			// Indices buckets.
 			attestationShardIndicesBucket,
 			attestationParentRootIndicesBucket,
