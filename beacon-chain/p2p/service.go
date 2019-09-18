@@ -92,7 +92,6 @@ func (s *Service) Start() {
 		log.Error("Attempted to start p2p service when it was already started")
 		return
 	}
-	s.addDisconnectionHandler()
 
 	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
 		ipAddr := ipAddr(s.cfg)
