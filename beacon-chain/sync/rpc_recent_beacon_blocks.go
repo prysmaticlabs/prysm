@@ -16,6 +16,8 @@ import (
 func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
 	r.slotToPendingBlocksLock.Lock()
 	defer r.slotToPendingBlocksLock.Unlock()
+	r.seenPendingBlocksLock.Lock()
+	defer r.seenPendingBlocksLock.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
