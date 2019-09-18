@@ -2,8 +2,6 @@ package testing
 
 import (
 	"context"
-
-	"github.com/gogo/protobuf/proto"
 )
 
 // MockBroadcaster implements p2p.Broadcaster for testing.
@@ -12,7 +10,7 @@ type MockBroadcaster struct {
 }
 
 // Broadcast records a broadcast occurred.
-func (m *MockBroadcaster) Broadcast(context.Context, proto.Message) error {
+func (m *MockBroadcaster) Broadcast(context.Context, interface{}) error {
 	m.BroadcastCalled = true
 	return nil
 }
