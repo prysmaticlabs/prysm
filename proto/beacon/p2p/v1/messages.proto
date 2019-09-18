@@ -32,10 +32,6 @@ message BeaconBlocksRequest {
   uint64 step = 4;
 }
 
-message RecentBeaconBlocksRequest {
-  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\""];
-}
-
 message ErrorMessage {
   string error_message = 1;
 }
