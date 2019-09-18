@@ -3,7 +3,11 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/rand"
 	"net"
+	"os"
+	"path"
+	"strconv"
 	"testing"
 	"time"
 
@@ -17,13 +21,24 @@ import (
 
 var discoveryWaitTime = 1 * time.Second
 
+func init() {
+	rand.Seed(time.Now().Unix())
+}
+
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {
 		t.Fatalf("Could not get ip: %v", err)
 	}
 	ipAddr := net.ParseIP(ip)
-	pkey, err := privKey(&Config{Encoding: "ssz"})
+	temp := testutil.TempDir()
+	randNum := rand.Int()
+	tempPath := path.Join(temp, strconv.Itoa(randNum))
+	err = os.Mkdir(tempPath, 0700)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}

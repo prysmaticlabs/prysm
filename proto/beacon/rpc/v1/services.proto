@@ -49,7 +49,6 @@ service BeaconService {
       get: "/v1/beacon/blocktree";
     };
   }
-  rpc BlockTreeBySlots(TreeBlockSlotRequest) returns (BlockTreeResponse);
 }
 
 service AttesterService {

@@ -772,13 +772,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	state := &pbp2p.BeaconState{
-		Slot: 0,
-		Validators: []*ethpb.Validator{{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			PublicKey:       pubKey},
-		}}
+	state := &pbp2p.BeaconState{Slot: 0}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -963,10 +957,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			Statuses: []*pb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
 					Status: &pb.ValidatorStatusResponse{
-						Status:                    pb.ValidatorStatus_ACTIVE,
-						Eth1DepositBlockNumber:    10,
-						DepositInclusionSlot:      3413,
-						PositionInActivationQueue: params.BeaconConfig().FarFutureEpoch,
+						Status:                 pb.ValidatorStatus_ACTIVE,
+						Eth1DepositBlockNumber: 10,
+						DepositInclusionSlot:   3413,
 					},
 				},
 				{PublicKey: pubKey2,
@@ -1064,7 +1057,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
-	activeExists, response, err := vs.MultipleValidatorStatus(context.Background(), pubKeys)
+	activeExists, response, err := vs.multipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
 		t.Fatal(err)
 	}

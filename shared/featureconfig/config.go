@@ -26,6 +26,7 @@ var log = logrus.WithField("prefix", "flags")
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
 	NoGenesisDelay bool // NoGenesisDelay when processing a chain start genesis event.
+	DemoConfig     bool // DemoConfig with lower deposit thresholds.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -56,6 +57,10 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
+	if ctx.GlobalBool(DemoConfigFlag.Name) {
+		log.Warn("Using demo config")
+		cfg.DemoConfig = true
+	}
 	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true

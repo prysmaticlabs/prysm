@@ -42,6 +42,7 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
 	powChainService       powchain.Chain
@@ -75,6 +76,7 @@ type Config struct {
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
+	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
 	MockEth1Votes         bool
 	OperationsHandler     operations.Handler
 	AttestationsPool      operations.Pool
@@ -94,6 +96,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
@@ -189,9 +192,10 @@ func (s *Service) Start() {
 		depositFetcher:     s.depositFetcher,
 	}
 	nodeServer := &NodeServer{
-		beaconDB:    s.beaconDB,
-		server:      s.grpcServer,
-		syncChecker: s.syncService,
+		beaconDB:           s.beaconDB,
+		server:             s.grpcServer,
+		syncChecker:        s.syncService,
+		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
 		beaconDB:    s.beaconDB,

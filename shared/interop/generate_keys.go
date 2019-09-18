@@ -34,9 +34,15 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 			return nil, nil, errors.New("could not set bls curve order as big int")
 		}
 		num = num.Mod(num, order)
-		priv, err := bls.SecretKeyFromBytes(num.Bytes())
+		numBytes := num.Bytes()
+		// pad key at the start with zero bytes to make it into a 32 byte key
+		if len(numBytes) < 32 {
+			emptyBytes := make([]byte, 32-len(numBytes))
+			numBytes = append(emptyBytes, numBytes...)
+		}
+		priv, err := bls.SecretKeyFromBytes(numBytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create bls secret key from raw bytes")
+			return nil, nil, errors.Wrapf(err, "could not create bls secret key at index %d from raw bytes", i)
 		}
 		privKeys[i-startIndex] = priv
 		pubKeys[i-startIndex] = priv.PublicKey()

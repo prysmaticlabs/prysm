@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -21,12 +20,7 @@ var ttfbTimeout = 5 * time.Second
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
 // not be relayed to the peer.
-type rpcHandler func(context.Context, proto.Message, libp2pcore.Stream) error
-
-// TODO(3147): Delete after all handlers implemented.
-func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.Stream) error {
-	return errors.New("not implemented")
-}
+type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (r *RegularSync) registerRPCHandlers() {

@@ -24,10 +24,10 @@ import (
 
 // TopicMappings are the protocol ids for the different types of requests.
 var TopicMappings = map[reflect.Type]string{
-	reflect.TypeOf(&pb.Hello{}):                     "/eth2/beacon_chain/req/hello/1",
-	reflect.TypeOf(&pb.Goodbye{}):                   "/eth2/beacon_chain/req/goodbye/1",
-	reflect.TypeOf(&pb.BeaconBlocksRequest{}):       "/eth2/beacon_chain/req/beacon_blocks/1",
-	reflect.TypeOf(&pb.RecentBeaconBlocksRequest{}): "/eth2/beacon_chain/req/recent_beacon_blocks/1",
+	reflect.TypeOf(&pb.Hello{}):               "/eth2/beacon_chain/req/hello/1",
+	reflect.TypeOf(&pb.Goodbye{}):             "/eth2/beacon_chain/req/goodbye/1",
+	reflect.TypeOf(&pb.BeaconBlocksRequest{}): "/eth2/beacon_chain/req/beacon_blocks/1",
+	reflect.TypeOf([][32]byte{}):              "/eth2/beacon_chain/req/recent_beacon_blocks/1",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -175,7 +175,7 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 }
 
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (network.Stream, error) {
+func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (network.Stream, error) {
 	protocol := TopicMappings[reflect.TypeOf(msg)]
 	if protocol == "" {
 		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)

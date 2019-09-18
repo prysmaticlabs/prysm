@@ -208,7 +208,7 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 	p1.AddConnectionHandler(r.sendRPCHelloRequest)
 	p1.Connect(p2)
 
-	if testutil.WaitTimeout(&wg, 1000*time.Second) {
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

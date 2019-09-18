@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
-func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
