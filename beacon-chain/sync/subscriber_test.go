@@ -2,11 +2,12 @@ package sync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/gogo/protobuf/proto"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
