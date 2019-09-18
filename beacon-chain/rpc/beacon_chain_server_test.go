@@ -757,7 +757,42 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
+func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(4)
+	part := &ethpb.ValidatorParticipation{
+		Epoch:                   epoch,
+		Finalized:               true,
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
+		},
+	}
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch + 2}); err == nil {
+		t.Error("Expected error when requesting future epoch, received nil")
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(part, res) {
+		t.Errorf("Wanted %v, received %v", part, res)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
