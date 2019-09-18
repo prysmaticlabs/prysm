@@ -34,15 +34,22 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	slots := r.sortedPendingSlots()
 
 	for _, s := range slots {
+		r.slotToPendingBlocksLock.RLock()
 		b := r.slotToPendingBlocks[uint64(s)]
+		r.slotToPendingBlocksLock.RUnlock()
+
+		r.seenPendingBlocksLock.RLock()
 		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)]
+		r.seenPendingBlocksLock.RUnlock()
+
 		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		hasPeer := len(pids) != 0
 
+		// Only request for missing parent block if it's not in DB, not in pending cache
+		// and has peer in the peer list.
 		if !inPendingQueue && !inDB && hasPeer {
 			log.Infof("Request parent of block %d", b.Slot)
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
-			// Always request from the first peer, to be upgraded with round robin
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				log.Errorf("Could not send recent block request: %v", err)
 			}
@@ -57,8 +64,12 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 			log.Errorf("Could not process block from slot %d: %v", b.Slot, err)
 		}
 
+		r.slotToPendingBlocksLock.Lock()
+		r.seenPendingBlocksLock.Lock()
 		delete(r.slotToPendingBlocks, uint64(s))
 		delete(r.seenPendingBlocks, bytesutil.ToBytes32(b.ParentRoot))
+		r.slotToPendingBlocksLock.Unlock()
+		r.seenPendingBlocksLock.Unlock()
 
 		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
 	}
