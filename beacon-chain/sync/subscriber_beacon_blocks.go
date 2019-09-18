@@ -26,10 +26,6 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		log.Errorf("Could not sign root block: %v", err)
 		return nil
 	}
-	// Ignore block already in pending blocks cache
-	if r.seenPendingBlocks[blockRoot] {
-		return nil
-	}
 
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
