@@ -188,11 +188,11 @@ func (s *Service) Start() {
 		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:    s.beaconDB,
-		pool:        s.attestationsPool,
-		headFetcher: s.headFetcher,
-		chainStartFetcher:      s.chainStartFetcher,
-		canonicalStateChan:     s.canonicalStateChan,
+		beaconDB:           s.beaconDB,
+		pool:               s.attestationsPool,
+		headFetcher:        s.headFetcher,
+		chainStartFetcher:  s.chainStartFetcher,
+		canonicalStateChan: s.canonicalStateChan,
 	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)

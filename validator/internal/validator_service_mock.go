@@ -6,8 +6,10 @@ package internal
 
 import (
 	context "context"
+	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 	reflect "reflect"
@@ -34,6 +36,26 @@ func NewMockValidatorServiceClient(ctrl *gomock.Controller) *MockValidatorServic
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRecorder {
 	return m.recorder
+}
+
+// CanonicalHead mocks base method
+func (m *MockValidatorServiceClient) CanonicalHead(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CanonicalHead", varargs...)
+	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CanonicalHead indicates an expected call of CanonicalHead
+func (mr *MockValidatorServiceClientMockRecorder) CanonicalHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockValidatorServiceClient)(nil).CanonicalHead), varargs...)
 }
 
 // CommitteeAssignment mocks base method
@@ -174,6 +196,26 @@ func (mr *MockValidatorServiceClientMockRecorder) WaitForActivation(arg0, arg1 i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForActivation", reflect.TypeOf((*MockValidatorServiceClient)(nil).WaitForActivation), varargs...)
+}
+
+// WaitForChainStart mocks base method
+func (m *MockValidatorServiceClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v1.ValidatorService_WaitForChainStartClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitForChainStart", varargs...)
+	ret0, _ := ret[0].(v1.ValidatorService_WaitForChainStartClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitForChainStart indicates an expected call of WaitForChainStart
+func (mr *MockValidatorServiceClientMockRecorder) WaitForChainStart(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForChainStart", reflect.TypeOf((*MockValidatorServiceClient)(nil).WaitForChainStart), varargs...)
 }
 
 // MockValidatorService_WaitForActivationClient is a mock of ValidatorService_WaitForActivationClient interface
