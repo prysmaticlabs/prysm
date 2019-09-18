@@ -5,7 +5,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -80,22 +80,70 @@ func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, inf
 
 // ArchivedBalances retrieval by epoch.
 func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedBalances")
+	defer span.End()
+
+	buf := uint64ToBytes(epoch)
+	var target []uint64
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(archivedBalancesBucket)
+		enc := bkt.Get(buf)
+		if enc == nil {
+			return nil
+		}
+		target = make([]uint64, 0)
+		return ssz.Unmarshal(enc, &target)
+	})
+	return target, err
 }
 
 // SaveArchivedBalances by epoch.
 func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
-	return errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedBalances")
+	defer span.End()
+	buf := uint64ToBytes(epoch)
+	enc, err := ssz.Marshal(balances)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedBalancesBucket)
+		return bucket.Put(buf, enc)
+	})
 }
 
 // ArchivedActiveIndices retrieval by epoch.
 func (k *Store) ArchivedActiveIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedActiveIndices")
+	defer span.End()
+
+	buf := uint64ToBytes(epoch)
+	var target []uint64
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(archivedActiveIndicesBucket)
+		enc := bkt.Get(buf)
+		if enc == nil {
+			return nil
+		}
+		target = make([]uint64, 0)
+		return ssz.Unmarshal(enc, &target)
+	})
+	return target, err
 }
 
 // SaveArchivedActiveIndices by epoch.
 func (k *Store) SaveArchivedActiveIndices(ctx context.Context, epoch uint64, indices []uint64) error {
-	return errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveIndices")
+	defer span.End()
+	buf := uint64ToBytes(epoch)
+	enc, err := ssz.Marshal(indices)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedActiveIndicesBucket)
+		return bucket.Put(buf, enc)
+	})
 }
 
 // ArchivedValidatorParticipation retrieval by epoch.
