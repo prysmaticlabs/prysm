@@ -3,9 +3,12 @@ package archiver
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,6 +20,7 @@ type Service struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	beaconDB        db.Database
+	headFetcher     blockchain.HeadFetcher
 	newHeadNotifier blockchain.NewHeadNotifier
 	newHeadSlotChan chan uint64
 }
@@ -24,6 +28,7 @@ type Service struct {
 // Config options for the archiver service.
 type Config struct {
 	BeaconDB        db.Database
+	HeadFetcher     blockchain.HeadFetcher
 	NewHeadNotifier blockchain.NewHeadNotifier
 }
 
@@ -34,6 +39,7 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 		ctx:             ctx,
 		cancel:          cancel,
 		beaconDB:        cfg.BeaconDB,
+		headFetcher:     cfg.HeadFetcher,
 		newHeadNotifier: cfg.NewHeadNotifier,
 		newHeadSlotChan: make(chan uint64, 1),
 	}
@@ -58,9 +64,33 @@ func (s *Service) Status() error {
 	return nil
 }
 
-func (s *Service) archiveParticipation(slot uint64) {
-	// We do the same logic as the RPC server does when computing
-	// participation metrics below.
+func (s *Service) archiveParticipation(slot uint64) error {
+	// We compute participation metrics by first retrieving the head state and
+	// matching validator attestations during the epoch.
+	headState := s.headFetcher.HeadState()
+	currentEpoch := helpers.SlotToEpoch(slot)
+	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
+
+	atts, err := epoch.MatchAttestations(headState, currentEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head attestations")
+	}
+	attestedBalances, err := epoch.AttestingBalance(headState, atts.Target)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve attested balances")
+	}
+	totalBalances, err := helpers.TotalActiveBalance(headState)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve total balances")
+	}
+	participation := &ethpb.ValidatorParticipation{
+		Epoch:                   currentEpoch,
+		Finalized:               finalized,
+		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
+		VotedEther:              attestedBalances,
+		EligibleEther:           totalBalances,
+	}
+	return s.beaconDB.SaveArchivedValidatorParticipation(s.ctx, currentEpoch, participation)
 }
 
 func (s *Service) run() {
@@ -70,8 +100,11 @@ func (s *Service) run() {
 		select {
 		case slot := <-s.newHeadSlotChan:
 			log.WithField("headSlot", slot).Info("New chain head event")
-			if helpers.IsEpochStart(slot) {
-				s.archiveParticipation(slot)
+			if !helpers.IsEpochStart(slot) {
+				continue
+			}
+			if err := s.archiveParticipation(slot); err != nil {
+				log.WithError(err).Error("Could not archive validator participation")
 			}
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
