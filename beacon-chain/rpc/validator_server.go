@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -33,6 +35,8 @@ type ValidatorServer struct {
 	blockFetcher       powchain.POWBlockFetcher
 	depositFetcher     depositcache.DepositFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
+	stateFeedListener  blockchain.ChainFeeds
+	chainStartChan     chan time.Time
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -95,14 +99,7 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 func (vs *ValidatorServer) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-	}
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
-	}
-
+	var err error
 	headState := vs.headFetcher.HeadState()
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if req.Slot > headState.Slot {
@@ -110,6 +107,18 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
 		}
+	}
+
+	balances := make([]uint64, len(req.PublicKeys))
+	missingValidators := make([][]byte, 0)
+	for i, key := range req.PublicKeys {
+		index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
+		if err != nil || !ok {
+			missingValidators = append(missingValidators, key)
+			balances[i] = 0
+			continue
+		}
+		balances[i] = headState.Balances[index]
 	}
 
 	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
@@ -123,10 +132,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 
 	avgBalance := float32(totalActiveBalance / activeCount)
-	balance := headState.Balances[index]
 	return &pb.ValidatorPerformanceResponse{
-		Balance:                       balance,
+		Balances:                      balances,
 		AverageActiveValidatorBalance: avgBalance,
+		MissingValidators:             missingValidators,
 		TotalValidators:               uint64(len(headState.Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
@@ -363,6 +372,48 @@ func (vs *ValidatorServer) assignmentStatus(validatorIdx uint64, beaconState *pb
 	}
 
 	return status
+}
+
+// CanonicalHead of the current beacon chain. This method is requested on-demand
+// by a validator when it is their time to propose or attest.
+func (vs *ValidatorServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
+	return vs.headFetcher.HeadBlock(), nil
+}
+
+// WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
+// has started its runtime and validators begin their responsibilities. If it has not, it then
+// subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
+// occur in the Deposit Contract on ETH 1.0.
+func (vs *ValidatorServer) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorService_WaitForChainStartServer) error {
+	head, err := vs.beaconDB.HeadState(context.Background())
+	if err != nil {
+		return err
+	}
+	if head != nil {
+		res := &pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: head.GenesisTime,
+		}
+		return stream.Send(res)
+	}
+
+	sub := vs.stateFeedListener.StateInitializedFeed().Subscribe(vs.chainStartChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case chainStartTime := <-vs.chainStartChan:
+			log.Info("Sending ChainStart log and genesis time to connected validator clients")
+			res := &pb.ChainStartResponse{
+				Started:     true,
+				GenesisTime: uint64(chainStartTime.Unix()),
+			}
+			return stream.Send(res)
+		case <-sub.Err():
+			return errors.New("subscriber closed, exiting goroutine")
+		case <-vs.ctx.Done():
+			return errors.New("rpc context closed, exiting goroutine")
+		}
+	}
 }
 
 func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uint64,
