@@ -118,6 +118,15 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropNumValidatorsFlag,
 		},
 	},
+	{
+		Name: "archive",
+		Flags: []cli.Flag{
+			flags.ArchiveEnableFlag,
+			flags.ArchiveValidatorSetChangesFlag,
+			flags.ArchiveBlocksFlag,
+			flags.ArchiveAttestationsFlag,
+		},
+	},
 }
 
 func init() {
