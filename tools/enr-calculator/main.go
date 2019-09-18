@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	privateKey = flag.String("private", "", "Base-64 encoded Private key to use for calculation of ENR")
+	privateKey = flag.String("private", "", "Hex encoded Private key to use for calculation of ENR")
 	udpPort    = flag.Int("udp-port", 0, "UDP Port to use for calculation of ENR")
 	tcpPort    = flag.Int("tcp-port", 0, "TCP Port to use for calculation of ENR")
 	ipAddr     = flag.String("ipAddress", "", "IP to use in calculation of ENR")
