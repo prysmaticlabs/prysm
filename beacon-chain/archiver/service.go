@@ -65,13 +65,13 @@ func (s *Service) Status() error {
 
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
-func (s *Service) archiveParticipation(slot uint64) error {
+func (s *Service) archiveParticipation() error {
 	headState := s.headFetcher.HeadState()
-	participation, err := epoch.ComputeValidatorParticipation(headState, slot)
+	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return errors.Wrap(err, "could not compute participation")
 	}
-	return s.beaconDB.SaveArchivedValidatorParticipation(s.ctx, helpers.SlotToEpoch(slot), participation)
+	return s.beaconDB.SaveArchivedValidatorParticipation(s.ctx, helpers.SlotToEpoch(headState.Slot), participation)
 }
 
 func (s *Service) run() {
@@ -80,13 +80,17 @@ func (s *Service) run() {
 	for {
 		select {
 		case slot := <-s.newHeadSlotChan:
-			log.WithField("headSlot", slot).Info("New chain head event")
-			if !helpers.IsEpochStart(slot) {
+			log.WithField("headSlot", slot).Debug("New chain head event")
+			if !helpers.IsEpochEnd(slot) {
 				continue
 			}
-			if err := s.archiveParticipation(slot); err != nil {
+			if err := s.archiveParticipation(); err != nil {
 				log.WithError(err).Error("Could not archive validator participation")
 			}
+			log.WithField(
+				"epoch",
+				helpers.SlotToEpoch(slot),
+			).Debug("Successfully archived validator participation during epoch")
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
 			return

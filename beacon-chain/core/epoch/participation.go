@@ -9,8 +9,8 @@ import (
 
 // ComputeValidatorParticipation by matching validator attestations during the epoch,
 // computing the attesting balance, and how much attested compared to the total balances.
-func ComputeValidatorParticipation(state *pb.BeaconState, slot uint64) (*ethpb.ValidatorParticipation, error) {
-	currentEpoch := helpers.SlotToEpoch(slot)
+func ComputeValidatorParticipation(state *pb.BeaconState) (*ethpb.ValidatorParticipation, error) {
+	currentEpoch := helpers.SlotToEpoch(state.Slot)
 	finalized := currentEpoch == state.FinalizedCheckpoint.Epoch
 
 	atts, err := MatchAttestations(state, currentEpoch)

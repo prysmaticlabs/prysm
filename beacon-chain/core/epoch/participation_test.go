@@ -51,7 +51,7 @@ func TestComputeValidatorParticipation(t *testing.T) {
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
 	}
 
-	res, err := ComputeValidatorParticipation(s, s.Slot)
+	res, err := ComputeValidatorParticipation(s)
 	if err != nil {
 		t.Fatal(err)
 	}

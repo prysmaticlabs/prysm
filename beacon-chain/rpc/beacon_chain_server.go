@@ -469,7 +469,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 	headState := bs.headFetcher.HeadState()
-	participation, err := epoch.ComputeValidatorParticipation(headState, headState.Slot)
+	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}
