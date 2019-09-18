@@ -58,7 +58,7 @@ func GenerateDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bl
 		if err != nil {
 			t.Fatalf("could not get signing root of deposit data %v", err)
 		}
-		depositData.Signature = priv.Sign(root[:], domain).Marshal()
+		depositData.Signature = priv.Sign(root[:], domain).Marshal()[:]
 		deposit := &ethpb.Deposit{
 			Data: depositData,
 		}
