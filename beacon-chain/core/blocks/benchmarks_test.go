@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"strconv"
@@ -462,6 +463,7 @@ func createGenesisState(numDeposits int) (*pb.BeaconState, []*ethpb.Deposit) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(len(genesisState.Validators))
 
 	genesisState.Slot = params.BeaconConfig().SlotsPerEth1VotingPeriod * 4
 	genesisState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(genesisState)
