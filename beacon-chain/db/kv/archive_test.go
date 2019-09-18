@@ -13,15 +13,95 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
+	activated := []uint64{3, 4, 5}
+	exited := []uint64{6, 7, 8}
+	ejected := []uint64{1, 2}
+	proposerSlashed := []uint64{1212}
+	attestersSlashed := []uint64{444444}
+	someRoot := [32]byte{1, 2, 3}
 	changes := &ethpb.ArchivedActiveSetChanges{
-		Activated:         nil,
-		Exited:            nil,
-		Ejected:           nil,
-		ProposersSlashed:  nil,
-		AttestersSlashed:  nil,
-		VoluntaryExits:    nil,
-		ProposerSlashings: nil,
-		AttesterSlashings: nil,
+		Activated:        activated,
+		Exited:           exited,
+		Ejected:          ejected,
+		ProposersSlashed: proposerSlashed,
+		AttestersSlashed: attestersSlashed,
+		VoluntaryExits: []*ethpb.VoluntaryExit{
+			{
+				Epoch:          5,
+				ValidatorIndex: 6,
+			},
+			{
+				Epoch:          5,
+				ValidatorIndex: 7,
+			},
+			{
+				Epoch:          5,
+				ValidatorIndex: 8,
+			},
+		},
+		ProposerSlashings: []*ethpb.ProposerSlashing{
+			{
+				ProposerIndex: 1212,
+				Header_1: &ethpb.BeaconBlockHeader{
+					Slot:       10,
+					ParentRoot: someRoot[:],
+					StateRoot:  someRoot[:],
+					BodyRoot:   someRoot[:],
+					Signature:  make([]byte, 96),
+				},
+				Header_2: &ethpb.BeaconBlockHeader{
+					Slot:       10,
+					ParentRoot: someRoot[:],
+					StateRoot:  someRoot[:],
+					BodyRoot:   someRoot[:],
+					Signature:  make([]byte, 96),
+				},
+			},
+		},
+		AttesterSlashings: []*ethpb.AttesterSlashing{
+			{
+				Attestation_1: &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: someRoot[:],
+						Source: &ethpb.Checkpoint{
+							Epoch: 5,
+							Root:  someRoot[:],
+						},
+						Target: &ethpb.Checkpoint{
+							Epoch: 5,
+							Root:  someRoot[:],
+						},
+						Crosslink: &ethpb.Crosslink{
+							Shard:      3,
+							ParentRoot: someRoot[:],
+							StartEpoch: 3,
+							EndEpoch:   4,
+							DataRoot:   someRoot[:],
+						},
+					},
+				},
+				Attestation_2: &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: someRoot[:],
+						Source: &ethpb.Checkpoint{
+							Epoch: 5,
+							Root:  someRoot[:],
+						},
+						Target: &ethpb.Checkpoint{
+							Epoch: 5,
+							Root:  someRoot[:],
+						},
+						Crosslink: &ethpb.Crosslink{
+							Shard:      3,
+							ParentRoot: someRoot[:],
+							StartEpoch: 3,
+							EndEpoch:   4,
+							DataRoot:   someRoot[:],
+						},
+					},
+				},
+			},
+		},
 	}
 	epoch := uint64(10)
 	if err := db.SaveArchivedActiveValidatorChanges(ctx, epoch, changes); err != nil {
@@ -40,7 +120,12 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	info := &ethpb.ArchivedCommitteeInfo{}
+	someSeed := [32]byte{1, 2, 3}
+	info := &ethpb.ArchivedCommitteeInfo{
+		Seed:           someSeed[:],
+		CurrentShard:   10,
+		CommitteeCount: 4096,
+	}
 	epoch := uint64(10)
 	if err := db.SaveArchivedCommitteeInfo(ctx, epoch, info); err != nil {
 		t.Fatal(err)
@@ -94,8 +179,14 @@ func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	part := &ethpb.ValidatorParticipation{}
 	epoch := uint64(10)
+	part := &ethpb.ValidatorParticipation{
+		Epoch:                   epoch,
+		Finalized:               true,
+		GlobalParticipationRate: 0.99,
+		EligibleEther:           12202000,
+		VotedEther:              12079998,
+	}
 	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
 		t.Fatal(err)
 	}
