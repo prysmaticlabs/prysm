@@ -64,9 +64,9 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// We compute participation metrics by first retrieving the head state and
+// matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(slot uint64) error {
-	// We compute participation metrics by first retrieving the head state and
-	// matching validator attestations during the epoch.
 	headState := s.headFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(slot)
 	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
