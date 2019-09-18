@@ -711,14 +711,14 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 //        signature=attestation.signature,
 //    )
 func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
+	data := attestation.Data
+	committee, err := helpers.CrosslinkCommittee(state, data.Target.Epoch, data.Crosslink.Shard)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting indices")
+		return nil, errors.Wrap(err, "could not get committee")
 	}
-	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
-	if err != nil {
-		return nil, err
-	}
+	attIndices := helpers.BitfieldIndices(attestation.AggregationBits, committee)
+	cb1i := helpers.BitfieldIndices(attestation.CustodyBits, committee)
+
 	if !sliceutil.SubsetUint64(cb1i, attIndices) {
 		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
 	}
@@ -740,7 +740,7 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*e
 		return cb1i[i] < cb1i[j]
 	})
 	inAtt := &ethpb.IndexedAttestation{
-		Data:                attestation.Data,
+		Data:                data,
 		Signature:           attestation.Signature,
 		CustodyBit_0Indices: cb0i,
 		CustodyBit_1Indices: cb1i,
