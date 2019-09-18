@@ -30,7 +30,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{p2p: p1, helloTracker: make(map[peer.ID]*pb.Hello)}
+	r := &RegularSync{p2p: p1, statusTracker: make(map[peer.ID]*pb.Hello)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -55,7 +55,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -104,7 +104,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
+		statusTracker: make(map[peer.ID]*pb.Hello),
 	}
 
 	// Setup streams
@@ -134,7 +134,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -179,8 +179,8 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		statusTracker: make(map[peer.ID]*pb.Hello),
+		ctx:           context.Background(),
 	}
 
 	// Setup streams
@@ -205,7 +205,7 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCHelloRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {

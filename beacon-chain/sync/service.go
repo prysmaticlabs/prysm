@@ -35,12 +35,12 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:          context.Background(),
-		db:           cfg.DB,
-		p2p:          cfg.P2P,
-		operations:   cfg.Operations,
-		chain:        cfg.Chain,
-		helloTracker: make(map[peer.ID]*pb.Hello),
+		ctx:           context.Background(),
+		db:            cfg.DB,
+		p2p:           cfg.P2P,
+		operations:    cfg.Operations,
+		chain:         cfg.Chain,
+		statusTracker: make(map[peer.ID]*pb.Hello),
 	}
 
 	r.registerRPCHandlers()
@@ -52,19 +52,19 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx              context.Context
-	p2p              p2p.P2P
-	db               db.Database
-	operations       *operations.Service
-	chain            blockchainService
-	helloTracker     map[peer.ID]*pb.Hello
-	helloTrackerLock sync.RWMutex
-	chainStarted     bool
+	ctx               context.Context
+	p2p               p2p.P2P
+	db                db.Database
+	operations        *operations.Service
+	chain             blockchainService
+	statusTracker     map[peer.ID]*pb.Hello
+	statusTrackerLock sync.RWMutex
+	chainStarted      bool
 }
 
 // Start the regular sync service.
 func (r *RegularSync) Start() {
-	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
+	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 }
 
 // Stop the regular sync service.
@@ -83,11 +83,11 @@ func (r *RegularSync) Syncing() bool {
 	return false
 }
 
-// Hellos returns the map of hello messages received so far.
-func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
-	r.helloTrackerLock.RLock()
-	defer r.helloTrackerLock.RUnlock()
-	return r.helloTracker
+// PeerStatuses returns the map of status messages received so far.
+func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Hello {
+	r.statusTrackerLock.RLock()
+	defer r.statusTrackerLock.RUnlock()
+	return r.statusTracker
 }
 
 // Checker defines a struct which can verify whether a node is currently
@@ -98,6 +98,6 @@ type Checker interface {
 }
 
 // HelloTracker interface for accessing the hello / handshake messages received so far.
-type HelloTracker interface {
-	Hellos() map[peer.ID]*pb.Hello
+type PeerTracker interface {
+	PeerStatuses() map[peer.ID]*pb.Hello
 }

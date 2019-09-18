@@ -119,8 +119,8 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		statusTracker: make(map[peer.ID]*pb.Hello),
+		ctx:           context.Background(),
 	}
 
 	// Setup streams
