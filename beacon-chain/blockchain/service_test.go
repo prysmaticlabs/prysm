@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -376,4 +376,25 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
 		t.Error("head slot incorrect")
 	}
+}
+
+func TestChainService_SaveHead_DataRace(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	s := &Service{
+		beaconDB:       db,
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	go func() {
+		s.saveHead(
+			context.Background(),
+			&ethpb.BeaconBlock{Slot: 777},
+			[32]byte{},
+		)
+	}()
+	s.saveHead(
+		context.Background(),
+		&ethpb.BeaconBlock{Slot: 888},
+		[32]byte{},
+	)
 }
