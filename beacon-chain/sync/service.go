@@ -97,7 +97,7 @@ type Checker interface {
 	Status() error
 }
 
-// HelloTracker interface for accessing the hello / handshake messages received so far.
+// PeerTracker interface for accessing the status / handshake messages received so far.
 type PeerTracker interface {
 	PeerStatuses() map[peer.ID]*pb.Status
 }
