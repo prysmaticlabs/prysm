@@ -14,6 +14,7 @@ type ChainService struct {
 	State               *pb.BeaconState
 	Root                []byte
 	FinalizedCheckPoint *ethpb.Checkpoint
+	StateFeed           *event.Feed
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -75,7 +76,11 @@ func (ms *ChainService) GenesisTime() time.Time {
 
 // StateInitializedFeed mocks the same method in the chain service.
 func (ms *ChainService) StateInitializedFeed() *event.Feed {
-	return new(event.Feed)
+	if ms.StateFeed != nil {
+		return ms.StateFeed
+	}
+	ms.StateFeed = new(event.Feed)
+	return ms.StateFeed
 }
 
 // HeadUpdatedFeed mocks the same method in the chain service.
