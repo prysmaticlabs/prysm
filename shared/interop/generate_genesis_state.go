@@ -113,6 +113,6 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(pubKey []byte) []byte {
-	h := hashutil.HashKeccak256(pubKey)
-	return append([]byte{blsWithdrawalPrefixByte}, h[0:]...)[:32]
+	h := hashutil.Hash(pubKey)
+	return append([]byte{blsWithdrawalPrefixByte}, h[1:]...)[:32]
 }
