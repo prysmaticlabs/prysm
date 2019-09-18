@@ -16,7 +16,9 @@ var (
 	voluntaryExitsBucket              = []byte("voluntary-exits")
 	chainMetadataBucket               = []byte("chain-metadata")
 	checkpointBucket                  = []byte("check-point")
-	archivedValidatorSetChangesBucket = []byte("archived-active-changes-bucket")
+	archivedValidatorSetChangesBucket = []byte("archived-active-changes")
+	archivedCommitteeInfoBucket       = []byte("archived-committee-info")
+	archivedBalancesBucket            = []byte("archived-balances")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket       = []byte("block-parent-root-indices")

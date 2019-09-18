@@ -17,27 +17,51 @@ func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64
 	defer span.End()
 
 	buf := uint64ToBytes(epoch)
-	var changes *ethpb.ArchivedActiveSetChanges
+	var target *ethpb.ArchivedActiveSetChanges
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedValidatorSetChangesBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
 			return nil
 		}
-		changes = &ethpb.ArchivedActiveSetChanges{}
-		return proto.Unmarshal(enc, changes)
+		target = &ethpb.ArchivedActiveSetChanges{}
+		return proto.Unmarshal(enc, target)
 	})
-	return changes, err
+	return target, err
 }
 
 // SaveArchivedActiveValidatorChanges by epoch.
 func (k *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethpb.ArchivedActiveSetChanges) error {
-	return errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveValidatorChanges")
+	defer span.End()
+	buf := uint64ToBytes(epoch)
+	enc, err := proto.Marshal(changes)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedValidatorSetChangesBucket)
+		return bucket.Put(buf, enc)
+	})
 }
 
 // ArchivedCommitteeInfo retrieval by epoch.
 func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb.ArchivedCommitteeInfo, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedCommitteeInfo")
+	defer span.End()
+
+	buf := uint64ToBytes(epoch)
+	var target *ethpb.ArchivedCommitteeInfo
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(archivedValidatorSetChangesBucket)
+		enc := bkt.Get(buf)
+		if enc == nil {
+			return nil
+		}
+		target = &ethpb.ArchivedCommitteeInfo{}
+		return proto.Unmarshal(enc, target)
+	})
+	return target, err
 }
 
 // SaveArchivedCommitteeInfo by epoch.
