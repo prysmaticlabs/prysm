@@ -25,7 +25,6 @@ type validator struct {
 	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
-	beaconClient         pb.BeaconServiceClient
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
@@ -46,7 +45,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
@@ -169,7 +168,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	head, err := v.validatorClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		return 0, err
 	}
