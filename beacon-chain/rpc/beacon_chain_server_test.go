@@ -59,8 +59,8 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	someRoot := []byte{1, 2, 3}
