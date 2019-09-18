@@ -173,7 +173,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%d", params.BeaconConfig().SlotsPerEpoch-3))
 	testutil.AssertLogsContain(t, hook, "New chain head event")
-	// The service should NOT log any archival logs if we receive a
-	// head slot that is NOT an epoch end.
+	// The service should ONLY log any archival logs if we receive a
+	// head slot that is an epoch end.
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
 }
