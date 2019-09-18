@@ -174,6 +174,18 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 	})
 }
 
+// AddDisconnectionHandler -- 
+func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+	p.Host.Network().Notify(&network.NotifyBundle{
+		DisconnectedF: func(net network.Network, conn network.Conn) {
+			// Must be handled in a goroutine as this callback cannot be blocking.
+			go func() {
+				f(context.Background(), conn.RemotePeer())
+			}()
+		},
+	})
+}
+
 // Send a message to a specific peer.
 func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (network.Stream, error) {
 	protocol := TopicMappings[reflect.TypeOf(msg)]
