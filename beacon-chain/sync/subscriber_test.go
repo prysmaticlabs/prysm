@@ -67,7 +67,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 	r.chain = &mockChain.ChainService{}
 	topic := "/eth2/beacon_block"
 	r.registerSubscribers()
-	i := f.Send(time.Now())
+	i := r.chain.StateInitializedFeed().Send(time.Now())
 	if i == 0 {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
