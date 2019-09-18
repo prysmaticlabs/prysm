@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/btcsuite/btcd/btcec"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -26,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	gethlog "github.com/ethereum/go-ethereum/log"
 	_ "go.uber.org/automaxprocs"
 )
 
