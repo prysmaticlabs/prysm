@@ -22,7 +22,7 @@ import (
 )
 
 var validatorCount = 128
-var runAmount = 20
+var runAmount = 50
 var conditions = "SML"
 
 var deposits, privs = testutil.GenerateDeposits(&testing.B{}, uint64(validatorCount))
