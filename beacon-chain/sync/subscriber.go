@@ -29,11 +29,11 @@ func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
 // as expected, and return true or false to continue the message processing
 // pipeline. FromSelf indicates whether or not this is a message received from our
 // node in pubsub.
-type validator func(ctx context.Context, msg interface{}, broadcaster p2p.Broadcaster, fromSelf bool) bool
+type validator func(ctx context.Context, msg proto.Message, broadcaster p2p.Broadcaster, fromSelf bool) bool
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
-func noopValidator(_ context.Context, _ interface{}, _ p2p.Broadcaster, _ bool) bool {
+func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) bool {
 	return true
 }
 

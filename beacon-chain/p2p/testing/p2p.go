@@ -118,7 +118,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 }
 
 // Broadcast a message.
-func (p *TestP2P) Broadcast(ctx context.Context, v interface{}) error {
+func (p *TestP2P) Broadcast(ctx context.Context, msg proto.Message) error {
 	p.BroadcastCalled = true
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -21,7 +22,7 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg interface{}, p p2p.Broadcaster, fromSelf bool) bool {
+func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
 	exit, ok := msg.(*ethpb.VoluntaryExit)
 	if !ok {
 		return false

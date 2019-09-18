@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -25,7 +26,7 @@ func attSlashingCacheKey(slashing *ethpb.AttesterSlashing) (string, error) {
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg interface{}, p p2p.Broadcaster, fromSelf bool) bool {
+func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
 		return false

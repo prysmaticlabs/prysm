@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -24,7 +25,7 @@ type P2P interface {
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
-	Broadcast(context.Context, interface{}) error
+	Broadcast(context.Context, proto.Message) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
