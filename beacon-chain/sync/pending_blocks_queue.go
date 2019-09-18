@@ -37,7 +37,6 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	for pid := range hellos {
 		pids = append(pids, pid)
 	}
-	log.Info("PEER IDs", pids)
 
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
 	for s := range r.slotToPendingBlocks {
@@ -53,7 +52,8 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 			log.Infof("MISSING PARENT ROOT FOR SLOT %d", b.Slot)
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
-				return err
+				log.Errorf("Could not send recent block request: %v", err)
+				continue
 			}
 			continue
 		}
