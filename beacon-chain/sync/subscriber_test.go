@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,7 +23,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, noopValidator, func(_ context.Context, msg interface{}) error {
+	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
 		m := msg.(*pb.VoluntaryExit)
 		if m.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
@@ -50,7 +51,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, noopValidator, func(_ context.Context, _ interface{}) error {
+	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
 	})
