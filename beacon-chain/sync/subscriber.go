@@ -33,7 +33,7 @@ type validator func(ctx context.Context, msg interface{}, broadcaster p2p.Broadc
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
-func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) bool {
+func noopValidator(_ context.Context, _ interface{}, _ p2p.Broadcaster, _ bool) bool {
 	return true
 }
 
