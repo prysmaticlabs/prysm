@@ -7,6 +7,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -19,7 +20,6 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	log.Info("SENDING MISSING BLOCK REQUEST FOR PARENT BLOCK, id ", id)
 	stream, err := r.p2p.Send(ctx, blockRoots, id)
 	if err != nil {
 		return err
@@ -29,7 +29,6 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err != nil {
 		return err
 	}
-	log.Info("STATUS CODE ", code)
 
 	if code != 0 {
 		return errors.New(errMsg)
@@ -39,11 +38,11 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
 		return err
 	}
-	log.Info("RESP ", resp)
 
 	for _, blk := range resp {
-		log.Infof("RECEIVED BLOCK FOR SLOT %d", blk.Slot)
 		r.slotToPendingBlocks[blk.Slot] = blk
+		blkRoot, _ := ssz.SigningRoot(blk)
+		r.seenPendingBlocks[blkRoot] = true
 	}
 
 	return nil

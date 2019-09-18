@@ -63,23 +63,27 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 			return
 		}
 
-		// Instantiate an empty message as the decoding destination.
-		msg := instantiateEmptyMessage(base)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
-			log.WithError(err).Error("Failed to decode stream message")
-			return
+		t := reflect.TypeOf(base)
+		if t.Kind() == reflect.Ptr {
+			msg := reflect.New(t.Elem())
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
+		} else {
+			msg := reflect.New(t)
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
 		}
-		if err := handle(ctx, msg, stream); err != nil {
-			// TODO(3147): Update metrics
-			log.WithError(err).Error("Failed to handle p2p RPC")
-		}
+
 	})
 }
 
-func instantiateEmptyMessage(v interface{}) interface{} {
-	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
-		return reflect.New(t.Elem()).Interface()
-	}
-	return reflect.New(t).Elem().Interface()
-}

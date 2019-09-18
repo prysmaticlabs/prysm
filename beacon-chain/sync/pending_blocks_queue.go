@@ -6,7 +6,6 @@ import (
 	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -44,13 +43,16 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	}
 	sort.Ints(slots)
 
-	// For every pending block, process block if parent exists
 	for _, s := range slots {
 		b := r.slotToPendingBlocks[uint64(s)]
-		log.Infof("PROCESSING SLOT %d", b.Slot)
-		if !r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)] {
-			log.Infof("MISSING PARENT ROOT FOR SLOT %d", b.Slot)
+		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)]
+		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		hasPeer := len(pids) != 0
+
+		if !inPendingQueue && !inDB && hasPeer {
+			log.Infof("Request parent of block %d", b.Slot)
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
+			// Always request from the first peer, should be upgraded with round robin
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				log.Errorf("Could not send recent block request: %v", err)
 				continue
@@ -58,19 +60,17 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 			continue
 		}
 
-		if !r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot)) {
+		if !inDB {
 			continue
 		}
 
 		if err := r.chain.ReceiveBlockNoPubsub(ctx, b); err != nil {
 			log.Errorf("Could not process block from slot %d: %v", b.Slot, err)
 		}
-		bRoot, err := ssz.SigningRoot(b)
-		if err != nil {
-			return err
-		}
+
 		delete(r.slotToPendingBlocks, uint64(s))
-		delete(r.seenPendingBlocks, bRoot)
+		delete(r.seenPendingBlocks, bytesutil.ToBytes32(b.ParentRoot))
+
 		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
 	}
 	return nil
