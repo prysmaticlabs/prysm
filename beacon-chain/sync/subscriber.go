@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"runtime/debug"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 )
 
 const oneYear = 365 * 24 * time.Hour
+
+var f *event.Feed
 
 // prefix to add to keys, so that we can represent invalid objects
 const invalid = "invalidObject"
@@ -41,7 +44,8 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 func (r *RegularSync) registerSubscribers() {
 	go func() {
 		ch := make(chan time.Time)
-		sub := r.chain.StateInitializedFeed().Subscribe(ch)
+		f = r.chain.StateInitializedFeed()
+		sub := f.Subscribe(ch)
 		defer sub.Unsubscribe()
 		log.Warn("Wait until chain start.")
 		// Wait until chain start.

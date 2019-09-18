@@ -67,7 +67,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 	r.chain = &mockChain.ChainService{}
 	topic := "/eth2/beacon_block"
 	r.registerSubscribers()
-	i := r.chain.StateInitializedFeed().Send(time.Now().Unix())
+	i := f.Send(time.Now())
 	if i == 0 {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
@@ -83,7 +83,6 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
-	time.Sleep(10 * time.Second)
 	if !r.chainStarted {
 		t.Fatal("Did not receive chain start event.")
 	}
