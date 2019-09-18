@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -25,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -44,6 +46,13 @@ func main() {
 
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
+
+		// Geth specific logging.
+		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(false)))
+		glogger.Verbosity(gethlog.LvlTrace)
+		gethlog.Root().SetHandler(glogger)
+
+		log.Debug("Debug logging enabled.")
 	}
 	cfg := discover.Config{
 		PrivateKey: extractPrivateKey(),
