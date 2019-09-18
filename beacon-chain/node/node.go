@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -71,6 +72,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+	featureconfig.ConfigureBeaconFeatures(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -90,8 +92,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 			params.UseMinimalConfig()
 		}
 	}
-
-	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
@@ -130,6 +130,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerGRPCGateway(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerArchiverService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -509,4 +513,20 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
+}
+
+func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
+	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
+	if !shouldArchive {
+		return nil
+	}
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
+		BeaconDB:        b.db,
+		NewHeadNotifier: chainService,
+	})
+	return b.services.RegisterService(svc)
 }
