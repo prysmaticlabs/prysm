@@ -100,6 +100,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	s.reportSlotMetrics(block.Slot)
 
 	processedBlkNoPubsub.Inc()
+
+	// We write the latest saved head root to a feed for consumption by other services.
+	s.headUpdatedFeed.Send(bytesutil.ToBytes32(headRoot))
 	return nil
 }
 
@@ -134,6 +137,8 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(block.Slot)
 
+	// We write the latest saved head root to a feed for consumption by other services.
+	s.headUpdatedFeed.Send(root)
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
