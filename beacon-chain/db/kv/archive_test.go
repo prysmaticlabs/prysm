@@ -37,6 +37,21 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 }
 
 func TestStore_ArchivedCommitteeInfo(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	info := &ethpb.ArchivedCommitteeInfo{}
+	epoch := uint64(10)
+	if err := db.SaveArchivedCommitteeInfo(ctx, epoch, info); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.ArchivedCommitteeInfo(ctx, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(info, retrieved) {
+		t.Errorf("Wanted %v, received %v", info, retrieved)
+	}
 }
 
 func TestStore_ArchivedBalances(t *testing.T) {
@@ -76,4 +91,19 @@ func TestStore_ArchivedActiveIndices(t *testing.T) {
 }
 
 func TestStore_ArchivedValidatorParticipation(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	part := &ethpb.ValidatorParticipation{}
+	epoch := uint64(10)
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.ArchivedValidatorParticipation(ctx, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(part, retrieved) {
+		t.Errorf("Wanted %v, received %v", part, retrieved)
+	}
 }
