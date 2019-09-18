@@ -55,7 +55,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 	})
 }
 
-// addDisconnectionHandler ensures that previously disconnected peers aren't dialed again. Due
+// AddDisconnectionHandler ensures that previously disconnected peers aren't dialed again. Due
 // to either their ports being closed, nodes are no longer active,etc. This also calls the handler
 // responsible for maintaining other parts of the sync or p2p system.
 func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id peer.ID) error) {
