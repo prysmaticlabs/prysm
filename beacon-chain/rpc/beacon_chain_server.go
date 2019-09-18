@@ -461,14 +461,30 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
-// it returns the information about validator's participation rate
-//
-// TODO(#3064): Implement validator participation for a specific epoch. Current implementation returns latest,
-// this is blocked by DB refactor.
+// it returns the information about validator's participation rate in voting on the proof of stake
+// rules based on their balance compared to the total active validator balance.
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
 	headState := bs.headFetcher.HeadState()
+	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	if req.Epoch > helpers.SlotToEpoch(headState.Slot) {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", req.Epoch, currentEpoch,
+		)
+	}
+	// If the request is from a past epoch, we look into our archived
+	// data to find it and return it if it exists.
+	if req.Epoch < helpers.SlotToEpoch(headState.Slot) {
+		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+		}
+		return participation, nil
+	}
+	// Else if the request is for the current epoch, we compute validator participation
+	// right away and return the result based on the head state.
 	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
