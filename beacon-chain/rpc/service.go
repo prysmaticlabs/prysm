@@ -151,16 +151,6 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	beaconServer := &BeaconServer{
-		beaconDB:            s.beaconDB,
-		ctx:                 s.ctx,
-		chainStartFetcher:   s.chainStartFetcher,
-		headFetcher:         s.headFetcher,
-		stateFeedListener:   s.stateFeedListener,
-		incomingAttestation: s.incomingAttestation,
-		canonicalStateChan:  s.canonicalStateChan,
-		chainStartChan:      make(chan time.Time, 1),
-	}
 	proposerServer := &ProposerServer{
 		beaconDB:               s.beaconDB,
 		headFetcher:            s.headFetcher,
@@ -198,11 +188,12 @@ func (s *Service) Start() {
 		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:    s.beaconDB,
-		pool:        s.attestationsPool,
-		headFetcher: s.headFetcher,
+		beaconDB:           s.beaconDB,
+		pool:               s.attestationsPool,
+		headFetcher:        s.headFetcher,
+		chainStartFetcher:  s.chainStartFetcher,
+		canonicalStateChan: s.canonicalStateChan,
 	}
-	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
