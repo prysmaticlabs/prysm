@@ -16,7 +16,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestArchiverService_ReceivesNewChainHead(t *testing.T) {
+func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx, cancel := context.WithCancel(context.Background())
 	svc := &Service{
