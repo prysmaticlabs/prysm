@@ -99,14 +99,7 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 func (vs *ValidatorServer) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
-	}
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", req.PublicKey)
-	}
-
+	var err error
 	headState := vs.headFetcher.HeadState()
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if req.Slot > headState.Slot {
@@ -114,6 +107,18 @@ func (vs *ValidatorServer) ValidatorPerformance(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
 		}
+	}
+
+	balances := make([]uint64, len(req.PublicKeys))
+	missingValidators := make([][]byte, 0)
+	for i, key := range req.PublicKeys {
+		index, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
+		if err != nil || !ok {
+			missingValidators = append(missingValidators, key)
+			balances[i] = 0
+			continue
+		}
+		balances[i] = headState.Balances[index]
 	}
 
 	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
@@ -127,10 +132,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 
 	avgBalance := float32(totalActiveBalance / activeCount)
-	balance := headState.Balances[index]
 	return &pb.ValidatorPerformanceResponse{
-		Balance:                       balance,
+		Balances:                      balances,
 		AverageActiveValidatorBalance: avgBalance,
+		MissingValidators:             missingValidators,
 		TotalValidators:               uint64(len(headState.Validators)),
 		TotalActiveValidators:         uint64(activeCount),
 	}, nil
