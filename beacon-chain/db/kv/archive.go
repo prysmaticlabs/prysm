@@ -53,7 +53,7 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb
 	buf := uint64ToBytes(epoch)
 	var target *ethpb.ArchivedCommitteeInfo
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(archivedValidatorSetChangesBucket)
+		bkt := tx.Bucket(archivedCommitteeInfoBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
 			return nil
@@ -66,7 +66,17 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb
 
 // SaveArchivedCommitteeInfo by epoch.
 func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethpb.ArchivedCommitteeInfo) error {
-	return errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedCommitteeInfo")
+	defer span.End()
+	buf := uint64ToBytes(epoch)
+	enc, err := proto.Marshal(info)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedCommitteeInfoBucket)
+		return bucket.Put(buf, enc)
+	})
 }
 
 // ArchivedBalances retrieval by epoch.
