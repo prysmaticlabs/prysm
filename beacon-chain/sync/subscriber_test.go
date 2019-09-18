@@ -2,10 +2,8 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
