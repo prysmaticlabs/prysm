@@ -6,9 +6,8 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 // ArchivedActiveValidatorChanges retrieval by epoch.
@@ -101,10 +100,34 @@ func (k *Store) SaveArchivedActiveIndices(ctx context.Context, epoch uint64, ind
 
 // ArchivedValidatorParticipation retrieval by epoch.
 func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedValidatorParticipation")
+	defer span.End()
+
+	buf := uint64ToBytes(epoch)
+	var target *ethpb.ValidatorParticipation
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(archivedValidatorParticipationBucket)
+		enc := bkt.Get(buf)
+		if enc == nil {
+			return nil
+		}
+		target = &ethpb.ValidatorParticipation{}
+		return proto.Unmarshal(enc, target)
+	})
+	return target, err
 }
 
 // SaveArchivedValidatorParticipation by epoch.
 func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error {
-	return errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedValidatorParticipation")
+	defer span.End()
+	buf := uint64ToBytes(epoch)
+	enc, err := proto.Marshal(part)
+	if err != nil {
+		return err
+	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedValidatorParticipationBucket)
+		return bucket.Put(buf, enc)
+	})
 }
