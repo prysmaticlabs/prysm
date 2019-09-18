@@ -56,17 +56,22 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 }
 
 // addDisconnectionHandler ensures that previously disconnected peers aren't dialed again. Due
-// to either their ports being closed, nodes are no longer active,etc.
-func (s *Service) addDisconnectionHandler() {
+// to either their ports being closed, nodes are no longer active,etc. This also calls the handler
+// responsible for maintaining other parts of the sync or p2p system.
+func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		DisconnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
 				s.exclusionList.Set(conn.RemotePeer().String(), true, ttl)
-				log.WithField("peer", conn.RemotePeer()).Debug(
-					"Peer is added to exclusion list",
-				)
+				log := log.WithField("peer", conn.RemotePeer())
+				log.Debug("Peer is added to exclusion list")
+				ctx := context.Background()
+				if err := handler(ctx, conn.RemotePeer()); err != nil {
+					log.WithError(err).Error("Failed to handle disconnecting peer")
+				}
 			}()
+
 		},
 	})
 }
