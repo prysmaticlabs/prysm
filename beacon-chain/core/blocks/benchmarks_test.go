@@ -21,14 +21,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var valNum = 128
-var runAmount = 10
+var validatorCount = 128
+var runAmount = 20
 var conditions = "SML"
 
-var deposits, privs = testutil.GenerateDeposits(&testing.B{}, uint64(valNum))
+var deposits, privs = testutil.GenerateDeposits(&testing.B{}, uint64(validatorCount))
 
 func setBenchmarkConfig() {
-	logrus.Printf("Running block benchmarks for %d validators", valNum)
+	logrus.Printf("Running block benchmarks for %d validators", validatorCount)
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 	c := params.DemoBeaconConfig()
@@ -148,7 +148,7 @@ func BenchmarkProcessAttesterSlashings(b *testing.B) {
 	cleanUp()
 }
 
-func BenchmarkProcessBlockAttestations(b *testing.B) {
+func BenchmarkProcessAttestations(b *testing.B) {
 	beaconState, block := createBeaconStateAndBlock(b)
 	cleanStates := createCleanStates(beaconState)
 

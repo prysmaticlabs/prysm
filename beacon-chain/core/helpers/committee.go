@@ -161,7 +161,11 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get committee")
 	}
+	return BitfieldIndices(bf, committee), nil
+}
 
+// BitfieldIndices gives you the active indices of a bitfield from its committee.
+func BitfieldIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 	indices := make([]uint64, 0, len(committee))
 	indicesSet := make(map[uint64]bool)
 	for i, idx := range committee {
@@ -172,7 +176,7 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 		}
 		indicesSet[idx] = true
 	}
-	return indices, nil
+	return indices
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.

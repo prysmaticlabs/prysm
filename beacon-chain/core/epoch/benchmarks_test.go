@@ -2,26 +2,30 @@ package epoch_test
 
 import (
 	"context"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"io/ioutil"
-	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
-func setBenchmarkConfig(conditions string, validatorCount uint64) {
+var validatorCount = uint64(128)
+var runAmount = 10
+var conditions = "SML"
+
+var deposits, privs = testutil.GenerateDeposits(&testing.B{}, uint64(validatorCount))
+
+func setBenchmarkConfig() {
 	logrus.Printf("Running epoch benchmarks for %d validators", validatorCount)
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
@@ -38,11 +42,6 @@ func setBenchmarkConfig(conditions string, validatorCount uint64) {
 		c.MaxVoluntaryExits = 2
 	}
 	params.OverrideBeaconConfig(c)
-
-	featureCfg := &featureconfig.FeatureFlagConfig{
-		EnableCrosslinks: false,
-	}
-	featureconfig.InitFeatureConfig(featureCfg)
 }
 
 func cleanUpConfigs() {
@@ -50,7 +49,7 @@ func cleanUpConfigs() {
 }
 
 func TestBenchmarkEpoch_PerformsSuccessfully(t *testing.T) {
-	beaconState := createFullState()
+	beaconState := createFullState(t)
 	_, err := state.ProcessEpoch(context.Background(), beaconState)
 	if err != nil {
 		t.Fatalf("failed to process epoch, benchmarks will fail: %v", err)
@@ -59,24 +58,24 @@ func TestBenchmarkEpoch_PerformsSuccessfully(t *testing.T) {
 }
 
 func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
-	prevEpoch := helpers.PrevEpoch(genesisBeaconState)
-	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
+	prevEpoch := helpers.PrevEpoch(beaconState)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 
-	prevEpochAtts, err := e.MatchAttestations(genesisBeaconState, prevEpoch)
+	prevEpochAtts, err := e.MatchAttestations(beaconState, prevEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAtts, err := e.MatchAttestations(genesisBeaconState, currentEpoch)
+	currentEpochAtts, err := e.MatchAttestations(beaconState, currentEpoch)
 	if err != nil {
 		b.Fatal(err)
 	}
-	prevEpochAttestedBalance, err := e.AttestingBalance(genesisBeaconState, prevEpochAtts.Target)
+	prevEpochAttestedBalance, err := e.AttestingBalance(beaconState, prevEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
-	currentEpochAttestedBalance, err := e.AttestingBalance(genesisBeaconState, currentEpochAtts.Target)
+	currentEpochAttestedBalance, err := e.AttestingBalance(beaconState, currentEpochAtts.Target)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -97,8 +96,8 @@ func BenchmarkProcessJustificationAndFinalization(b *testing.B) {
 }
 
 func BenchmarkProcessCrosslinks(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -111,8 +110,8 @@ func BenchmarkProcessCrosslinks(b *testing.B) {
 }
 
 func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -125,8 +124,8 @@ func BenchmarkProcessRewardsAndPenalties(b *testing.B) {
 }
 
 func BenchmarkProcessRegistryUpdates(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -139,8 +138,8 @@ func BenchmarkProcessRegistryUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessSlashings(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -153,8 +152,8 @@ func BenchmarkProcessSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessFinalUpdates(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -167,8 +166,8 @@ func BenchmarkProcessFinalUpdates(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch(b *testing.B) {
-	genesisBeaconState := createFullState()
-	beaconStates := createCleanStates(genesisBeaconState)
+	beaconState := createFullState(b)
+	beaconStates := createCleanStates(beaconState)
 	b.N = 42
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -181,13 +180,13 @@ func BenchmarkProcessEpoch(b *testing.B) {
 }
 
 func BenchmarkActiveValidatorIndices(b *testing.B) {
-	genesisBeaconState := createFullState()
-	currentEpoch := helpers.CurrentEpoch(genesisBeaconState)
+	beaconState := createFullState(b)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 
 	b.N = 100
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := helpers.ActiveValidatorIndices(genesisBeaconState, currentEpoch)
+		_, err := helpers.ActiveValidatorIndices(beaconState, currentEpoch)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -196,18 +195,17 @@ func BenchmarkActiveValidatorIndices(b *testing.B) {
 }
 
 func BenchmarkValidatorIndexMap(b *testing.B) {
-	genesisBeaconState := createFullState()
+	beaconState := createFullState(b)
 	b.N = 100
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = stateutils.ValidatorIndexMap(genesisBeaconState)
+		_ = stateutils.ValidatorIndexMap(beaconState)
 	}
 	cleanUpConfigs()
 }
 
-func createFullState() *pb.BeaconState {
-	validatorCount := uint64(65536)
-	bState := createGenesisState(validatorCount)
+func createFullState(b testing.TB) *pb.BeaconState {
+	bState := createBeaconState(b)
 
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
@@ -278,7 +276,7 @@ func createFullState() *pb.BeaconState {
 		}
 	}
 
-	prevCommitteeCount, err := helpers.EpochCommitteeCount(bState, prevEpoch)
+	prevCommitteeCount, err := helpers.CommitteeCount(bState, prevEpoch)
 	if err != nil {
 		panic(err)
 	}
@@ -286,7 +284,7 @@ func createFullState() *pb.BeaconState {
 	if err != nil {
 		panic(err)
 	}
-	prevCommitteeSize := int(prevValidatorCount / prevCommitteeCount)
+	prevCommitteeSize := prevValidatorCount / prevCommitteeCount
 
 	attestationsPerEpoch := slotsPerEpoch * params.BeaconConfig().MaxAttestations
 
@@ -297,25 +295,27 @@ func createFullState() *pb.BeaconState {
 
 	var prevAttestations []*pb.PendingAttestation
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
-		aggregationBits, err := bitutil.SetBitfield(int(i)%prevCommitteeSize, prevCommitteeSize)
-		if err != nil {
-			panic(err)
-		}
+		aggregationBits := bitfield.NewBitlist(prevCommitteeSize)
+		aggregationBits.SetBitAt(i%prevCommitteeSize, true)
 
-		crosslink := &pb.Crosslink{
+		crosslink := &ethpb.Crosslink{
 			Shard:      i % params.BeaconConfig().ShardCount,
 			StartEpoch: prevEpoch - 1,
 			EndEpoch:   prevEpoch,
 		}
 
 		attestation := &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Crosslink:       crosslink,
-				SourceEpoch:     prevEpoch - 1,
-				TargetEpoch:     prevEpoch,
+			Data: &ethpb.AttestationData{
+				Crosslink: crosslink,
+				Source: &ethpb.Checkpoint{
+					Epoch: prevEpoch - 1,
+					Root:  prevRoot,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: prevEpoch,
+					Root:  prevRoot,
+				},
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      prevRoot,
-				TargetRoot:      prevRoot,
 			},
 			AggregationBits: aggregationBits,
 			InclusionDelay:  params.BeaconConfig().MinAttestationInclusionDelay,
@@ -336,7 +336,7 @@ func createFullState() *pb.BeaconState {
 	}
 	bState.PreviousEpochAttestations = prevAttestations
 
-	curCommitteeCount, err := helpers.EpochCommitteeCount(bState, currentEpoch)
+	curCommitteeCount, err := helpers.CommitteeCount(bState, currentEpoch)
 	if err != nil {
 		panic(err)
 	}
@@ -344,7 +344,7 @@ func createFullState() *pb.BeaconState {
 	if err != nil {
 		panic(err)
 	}
-	curCommitteeSize := int(curValidatorCount / curCommitteeCount)
+	curCommitteeSize := curValidatorCount / curCommitteeCount
 
 	var currentAttestations []*pb.PendingAttestation
 	currentRoot, err := helpers.BlockRoot(bState, currentEpoch)
@@ -352,25 +352,27 @@ func createFullState() *pb.BeaconState {
 		panic(err)
 	}
 	for i := uint64(0); i < attestationsPerEpoch; i++ {
-		aggregationBits, err := bitutil.SetBitfield(int(i)%curCommitteeSize, curCommitteeSize)
-		if err != nil {
-			panic(err)
-		}
+		aggregationBits := bitfield.NewBitlist(curCommitteeSize)
+		aggregationBits.SetBitAt(i%curCommitteeSize, true)
 
-		crosslink := &pb.Crosslink{
+		crosslink := &ethpb.Crosslink{
 			Shard:      i % params.BeaconConfig().ShardCount,
 			StartEpoch: currentEpoch - 1,
 			EndEpoch:   currentEpoch,
 		}
 
 		attestation := &pb.PendingAttestation{
-			Data: &pb.AttestationData{
-				Crosslink:       crosslink,
-				SourceEpoch:     currentEpoch - 1,
-				TargetEpoch:     currentEpoch,
+			Data: &ethpb.AttestationData{
+				Crosslink: crosslink,
+				Source: &ethpb.Checkpoint{
+					Epoch: currentEpoch - 1,
+					Root:  currentRoot,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  currentRoot,
+				},
 				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
-				SourceRoot:      currentRoot,
-				TargetRoot:      currentRoot,
 			},
 			AggregationBits: aggregationBits,
 			InclusionDelay:  params.BeaconConfig().MinAttestationInclusionDelay,
@@ -394,58 +396,32 @@ func createFullState() *pb.BeaconState {
 	return bState
 }
 
-func createGenesisState(numDeposits uint64) *pb.BeaconState {
-	setBenchmarkConfig("SML", numDeposits)
-	deposits := make([]*pb.Deposit, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		pubkey := []byte{}
-		pubkey = make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		copy(pubkey[:], []byte(strconv.FormatUint(uint64(i), 10)))
-
-		depositData := &pb.DepositData{
-			Pubkey:                pubkey,
-			Amount:                params.BeaconConfig().MaxEffectiveBalance,
-			WithdrawalCredentials: []byte{1},
-		}
-		deposits[i] = &pb.Deposit{
-			Data: depositData,
-		}
-	}
-
-	encodedDeposits := make([][]byte, len(deposits))
-	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
-		if err != nil {
-			panic(err)
-		}
-		encodedDeposits[i] = hashedDeposit[:]
-	}
-
-	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+func createBeaconState(b testing.TB) *pb.BeaconState {
+	setBenchmarkConfig()
+	eth1Data := testutil.GenerateEth1Data(b, deposits)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
-		panic(err)
+		b.Fatal(err)
 	}
 
-	for i := range deposits {
-		proof, err := depositTrie.MerkleProof(i)
-		if err != nil {
-			panic(err)
+	beaconState.Slot = params.BeaconConfig().PersistentCommitteePeriod*8 + (params.BeaconConfig().SlotsPerEpoch / 2)
+	beaconState.CurrentJustifiedCheckpoint.Epoch = helpers.PrevEpoch(beaconState)
+	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(crosslinks); i++ {
+		crosslinks[i] = &ethpb.Crosslink{
+			Shard:      uint64(i),
+			StartEpoch: helpers.PrevEpoch(beaconState) - 1,
+			EndEpoch:   helpers.PrevEpoch(beaconState),
+			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		}
-		deposits[i].Proof = proof
+	}
+	beaconState.CurrentCrosslinks = crosslinks
+
+	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		Slot: beaconState.Slot,
 	}
 
-	root := depositTrie.Root()
-	eth1Data := &pb.Eth1Data{
-		BlockHash:   root[:],
-		DepositRoot: root[:],
-	}
-
-	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
-	if err != nil {
-		panic(err)
-	}
-
-	return genesisState
+	return beaconState
 }
 
 func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
