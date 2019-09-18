@@ -64,7 +64,7 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 		}
 
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us d
-		// access to reflect.Kind and based on the result we can decode
+		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
 		t := reflect.TypeOf(base)
 		if t.Kind() == reflect.Ptr {
