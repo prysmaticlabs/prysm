@@ -175,8 +175,8 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status always returns nil.
-// TODO(1202): Add service health checks.
+// Status always returns nil unless there is an error condition that causes
+// this service to be unhealthy.
 func (s *Service) Status() error {
 	if runtime.NumGoroutine() > int(s.maxRoutines) {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())

@@ -39,7 +39,7 @@ func RandKey(r io.Reader) (*SecretKey, error) {
 	return &SecretKey{val: k}, nil
 }
 
-// SecretKeyFromBytes creates a BLS private key from a byte slice.
+// SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	k := bytesutil.ToBytes32(priv)
 	val := g1.DeserializeSecretKey(k)
@@ -49,7 +49,7 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	return &SecretKey{val}, nil
 }
 
-// PublicKeyFromBytes creates a BLS public key from a byte slice.
+// PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
@@ -59,7 +59,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	return &PublicKey{val: k}, nil
 }
 
-// SignatureFromBytes creates a BLS signature from a byte slice.
+// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
@@ -82,13 +82,13 @@ func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 	return &Signature{val: sig}
 }
 
-// Marshal a secret key into a byte slice.
+// Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
 	k := s.val.Serialize()
 	return k[:]
 }
 
-// Marshal a public key into a byte slice.
+// Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
 	k := p.val.Serialize()
 	return k[:]
@@ -140,7 +140,7 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
 }
 
-// Marshal a signature into a byte slice.
+// Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	k := s.val.Serialize()
 	return k[:]

@@ -15,13 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func init() {
-	// TODO(2312): remove this and use the mainnet count.
-	c := params.BeaconConfig()
-	c.MinGenesisActiveValidatorCount = 16384
-	params.OverrideBeaconConfig(c)
-}
-
 func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -52,9 +45,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
-	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
-		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
-	}
 	depositsForChainStart := 100
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {

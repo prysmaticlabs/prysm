@@ -71,6 +71,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+	featureconfig.ConfigureBeaconFeatures(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -83,13 +84,13 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		if featureconfig.FeatureConfig().DemoConfig {
+			log.Info("Using demo config")
 			params.UseDemoBeaconConfig()
 		} else {
+			log.Info("Using minimal config")
 			params.UseMinimalConfig()
 		}
 	}
-
-	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
@@ -226,6 +227,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeENR,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
 		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
@@ -277,7 +279,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	operationService := operations.NewService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
-		P2P:      b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(operationService)
@@ -440,6 +441,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		StateFeedListener:     chainService,
+		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
 		POWChainService:       web3Service,
