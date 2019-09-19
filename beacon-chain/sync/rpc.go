@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -64,16 +63,28 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 			return
 		}
 
-		// Clone the base message type so we have a newly initialized message as the decoding
-		// destination.
-		msg := copyValues(base)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
-			log.WithError(err).Error("Failed to decode stream message")
-			return
-		}
-		if err := handle(ctx, msg, stream); err != nil {
-			// TODO(3147): Update metrics
-			log.WithError(err).Error("Failed to handle p2p RPC")
+		// Given we have an input argument that can be pointer or [][32]byte, this gives us
+		// a way to check for its reflect.Kind and based on the result, we can decode
+		// accordingly.
+		t := reflect.TypeOf(base)
+		if t.Kind() == reflect.Ptr {
+			msg := reflect.New(t.Elem())
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
+		} else {
+			msg := reflect.New(t)
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
 		}
 	})
 }

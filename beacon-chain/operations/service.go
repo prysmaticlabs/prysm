@@ -156,6 +156,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, err
 			}
+			continue
 		}
 
 		validAttsCount++

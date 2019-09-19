@@ -18,7 +18,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
 
 func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	// TODO(3441): Fix ssz string length issue.
@@ -144,8 +149,71 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	}
 }
 
-func TestRegularSync_HelloRPCHandler_AddsHandshake(t *testing.T) {
-	t.Skip("TODO(3147): Add a test to ensure the handshake was added.")
+func TestHandshakeHandlers_Roundtrip(t *testing.T) {
+	// Scenario is that p1 and p2 connect, exchange handshakes.
+	// p2 disconnects and p1 should forget the handshake status.
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+
+	r := &RegularSync{
+		p2p: p1,
+		chain: &mock.ChainService{
+			State:               &pb.BeaconState{Slot: 5},
+			FinalizedCheckPoint: &ethpb.Checkpoint{},
+		},
+		helloTracker: make(map[peer.ID]*pb.Hello),
+		ctx:          context.Background(),
+	}
+
+	r.Start()
+
+	// Setup streams
+	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := &pb.Hello{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+
+		resp := &pb.Hello{HeadSlot: 100, ForkVersion: params.BeaconConfig().GenesisForkVersion}
+
+		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+			t.Fatal(err)
+		}
+		_, err := r.p2p.Encoding().EncodeWithLength(stream, resp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stream.Close()
+	})
+
+	p1.Connect(p2)
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	// Wait for stream buffer to be read.
+	time.Sleep(200 * time.Millisecond)
+
+	if len(r.helloTracker) != 1 {
+		t.Errorf("Expected 1 status in the tracker, got %d", len(r.helloTracker))
+	}
+
+	if err := p2.Disconnect(p1.PeerID()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for disconnect event to trigger.
+	time.Sleep(200 * time.Millisecond)
+
+	if len(r.helloTracker) != 0 {
+		t.Errorf("Expected 0 status in the tracker, got %d", len(r.helloTracker))
+	}
+
 }
 
 func TestStatusRPCRequest_RequestSent(t *testing.T) {

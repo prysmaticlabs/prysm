@@ -59,6 +59,13 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	return r.validateStatusMessage(msg, stream)
 }
 
+func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
+	r.helloTrackerLock.Lock()
+	delete(r.helloTracker, pid)
+	r.helloTrackerLock.Unlock()
+	return nil
+}
+
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
 func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
