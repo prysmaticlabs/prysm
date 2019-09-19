@@ -782,7 +782,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch + 2}); err == nil {
 		t.Error("Expected error when requesting future epoch, received nil")
 	}
-	// We request data from epoch 0, which we didn't archive, so we should expect an error
+	// We request data from epoch 0, which we didn't archive, so we should expect an error.
 	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: 0}); err == nil {
 		t.Error("Expected error when data from archive is not found, received nil")
 	}
