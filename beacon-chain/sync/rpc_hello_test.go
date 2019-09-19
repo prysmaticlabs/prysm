@@ -158,7 +158,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r := &RegularSync{
 		p2p: p1,
 		chain: &mock.ChainService{
-			State: &pb.BeaconState{Slot: 5},
+			State:               &pb.BeaconState{Slot: 5},
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
 		},
 		helloTracker: make(map[peer.ID]*pb.Hello),
