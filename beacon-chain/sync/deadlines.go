@@ -7,7 +7,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
+var defaultReadDuration time.Duration = 5
+var defaultWriteDuration time.Duration = 10
+
 func setRPCStreamDeadlines(stream network.Stream) {
-	stream.SetReadDeadline(roughtime.Now().Add(5 * time.Second))   // TTFB_TIMEOUT
-	stream.SetWriteDeadline(roughtime.Now().Add(10 * time.Second)) // RESP_TIMEOUT
+	setStreamReadDeadline(stream, defaultReadDuration)
+	setStreamWriteDeadline(stream, defaultWriteDuration)
+}
+
+func setStreamReadDeadline(stream network.Stream, duration time.Duration) {
+	stream.SetReadDeadline(roughtime.Now().Add(duration * time.Second)) // TTFB_TIMEOUT
+}
+
+func setStreamWriteDeadline(stream network.Stream, duration time.Duration) {
+	stream.SetWriteDeadline(roughtime.Now().Add(duration * time.Second)) // RESP_TIMEOUT
 }

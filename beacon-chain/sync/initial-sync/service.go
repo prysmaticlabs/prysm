@@ -117,23 +117,21 @@ func (s *InitialSync) Start() {
 			panic(err)
 		}
 
-		// Read status code.
-		code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
-		if err != nil {
-			panic(err)
-		}
-		if code != 0 {
-			log.Errorf("Request failed. Request was %+v", req)
-			panic(errMsg)
-		}
-
-		resp := make([]*eth.BeaconBlock, 0)
-		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
-			log.Error(err)
-			continue
-		}
-
-		for _, blk := range resp {
+		for i := req.StartSlot; i < req.StartSlot+(req.Count*req.Step); i += req.Step {
+			// Read status code.
+			code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
+			if err != nil {
+				panic(err)
+			}
+			if code != 0 {
+				log.Errorf("Request failed. Request was %+v", req)
+				panic(errMsg)
+			}
+			blk := &eth.BeaconBlock{}
+			if err := s.p2p.Encoding().DecodeWithLength(strm, blk); err != nil {
+				log.Error(err)
+				continue
+			}
 			if blk.Slot <= headSlot {
 				continue
 			}
@@ -148,7 +146,6 @@ func (s *InitialSync) Start() {
 			}
 			last = blk
 		}
-
 		headSlot = s.chain.HeadSlot()
 	}
 

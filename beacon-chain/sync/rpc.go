@@ -92,3 +92,12 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 		}
 	})
 }
+
+func (r *RegularSync) chunkedHandler(stream libp2pcore.Stream, msg interface{}) error {
+	setStreamWriteDeadline(stream, defaultWriteDuration)
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	_, err := r.p2p.Encoding().EncodeWithLength(stream, msg)
+	return err
+}

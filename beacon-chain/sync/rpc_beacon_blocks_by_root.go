@@ -22,27 +22,27 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err != nil {
 		return err
 	}
+	for i := 0; i < len(blockRoots); i++ {
+		setStreamReadDeadline(stream, 10)
+		code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+		if err != nil {
+			return err
+		}
 
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
-	if err != nil {
-		return err
-	}
+		if code != 0 {
+			return errors.New(errMsg)
+		}
 
-	if code != 0 {
-		return errors.New(errMsg)
-	}
+		blk := &eth.BeaconBlock{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, blk); err != nil {
+			return err
+		}
 
-	resp := make([]*eth.BeaconBlock, 0)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return err
-	}
-	for _, blk := range resp {
 		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
 			log.WithError(err).Error("Unable to process block")
 			return nil
 		}
 	}
-
 	return nil
 }
 
@@ -66,7 +66,7 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 		}
 		return errors.New("no block roots provided")
 	}
-	ret := make([]*eth.BeaconBlock, 0)
+
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
 		if err != nil {
@@ -81,13 +81,9 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 			}
 			return err
 		}
-		// if block returned is nil, it appends nil to the slice
-		ret = append(ret, blk)
+		if err := r.chunkedHandler(stream, blk); err != nil {
+			return err
+		}
 	}
-
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
-	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, ret)
-	return err
+	return nil
 }
