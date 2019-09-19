@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -54,9 +53,6 @@ func (s sortableAttestations) Less(i, j int) bool {
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
-//
-// TODO(#3064): Filtering blocked by DB refactor for easier access to
-// fetching data by attributes efficiently.
 func (bs *BeaconChainServer) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
@@ -64,17 +60,39 @@ func (bs *BeaconChainServer) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
-	switch req.QueryFilter.(type) {
-	case *ethpb.ListAttestationsRequest_BlockRoot:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
-	case *ethpb.ListAttestationsRequest_Slot:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
-	case *ethpb.ListAttestationsRequest_Epoch:
-		return nil, status.Error(codes.Unimplemented, "not implemented")
-	}
-	atts, err := bs.beaconDB.Attestations(ctx, nil)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+	var atts []*ethpb.Attestation
+	var err error
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
+	case *ethpb.ListAttestationsRequest_SourceEpoch:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
+	case *ethpb.ListAttestationsRequest_SourceRoot:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
+	case *ethpb.ListAttestationsRequest_TargetEpoch:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
+	case *ethpb.ListAttestationsRequest_TargetRoot:
+		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
+	default:
+		atts, err = bs.beaconDB.Attestations(ctx, nil)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		}
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -103,10 +121,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock, err := bs.beaconDB.(*kv.Store).HeadBlock(ctx)
-	if err != nil {
-		return nil, err
-	}
+	headBlock := bs.headFetcher.HeadBlock()
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "no head block found in db")
 	}

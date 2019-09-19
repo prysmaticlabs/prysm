@@ -180,6 +180,8 @@ func (s *Service) Start() {
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
 		depositFetcher:     s.depositFetcher,
+		stateFeedListener:  s.stateFeedListener,
+		chainStartChan:     make(chan time.Time),
 	}
 	nodeServer := &NodeServer{
 		beaconDB:           s.beaconDB,
