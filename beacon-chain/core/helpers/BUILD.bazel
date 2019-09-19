@@ -17,6 +17,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//slasher:__subpackages__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",

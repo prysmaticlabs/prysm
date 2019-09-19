@@ -17,24 +17,12 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockSyncService struct {
-}
-
-func (ms *mockSyncService) Status() error {
-	return nil
-}
-
-func (ms *mockSyncService) Syncing() bool {
-	return false
-}
-
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "7348",
-		CertFlag:    "alice.crt",
-		KeyFlag:     "alice.key",
-		SyncService: &mockSyncService{},
+		Port:     "7348",
+		CertFlag: "alice.crt",
+		KeyFlag:  "alice.key",
 	})
 
 	rpcService.Start()
@@ -51,8 +39,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "ralph merkle!!!",
-		SyncService: &mockSyncService{},
+		Port: "ralph merkle!!!",
 	})
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
@@ -79,8 +66,7 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:        "7777",
-		SyncService: &mockSyncService{},
+		Port: "7777",
 	})
 
 	rpcService.Start()
