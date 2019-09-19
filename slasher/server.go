@@ -2,8 +2,9 @@ package slasher
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"reflect"
+
+	"github.com/pkg/errors"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"

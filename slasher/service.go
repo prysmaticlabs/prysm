@@ -4,9 +4,10 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/slasher/db"
 	"net"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/slasher/db"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
