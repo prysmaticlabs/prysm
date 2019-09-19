@@ -34,6 +34,9 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
 	}
+	svc.headFetcher = &mock.ChainService{
+		State: &pb.BeaconState{Slot: 1},
+	}
 	exitRoutine := make(chan bool)
 	go func() {
 		svc.run()
@@ -99,16 +102,15 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	headFetcher := &mock.ChainService{
-		State: headState,
-	}
 	svc := &Service{
 		beaconDB:        db,
 		ctx:             ctx,
 		cancel:          cancel,
 		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
-		headFetcher:     headFetcher,
+	}
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
 	}
 	exitRoutine := make(chan bool)
 	go func() {
@@ -116,7 +118,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	// Upon receiving a new head state,
+	// Upon receiving a new head.
 	svc.newHeadRootChan <- [32]byte{}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
