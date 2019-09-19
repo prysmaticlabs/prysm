@@ -65,7 +65,12 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// We archive active validator set changes during the epoch.
+// We archive committee information pertaining to the head state's epoch.
+func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
+	return nil
+}
+
+// We archive active validator set changes that happened during the epoch.
 func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
 	return nil
 }
@@ -110,6 +115,10 @@ func (s *Service) run() {
 			}
 			if err := s.archiveActiveSetChanges(headState); err != nil {
 				log.WithError(err).Error("Could not archive active validator set changes")
+				continue
+			}
+			if err := s.archiveCommitteeInfo(headState); err != nil {
+				log.WithError(err).Error("Could not archive committee info")
 				continue
 			}
 			if err := s.archiveParticipation(headState); err != nil {
