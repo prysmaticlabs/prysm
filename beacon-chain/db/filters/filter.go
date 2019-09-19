@@ -33,6 +33,16 @@ const (
 	EndEpoch FilterType = 4
 	// Shard is used for filtering data by shard index.
 	Shard FilterType = 5
+	// HeadBlockRoot defines a filter for the head block root attribute of objects.
+	HeadBlockRoot FilterType = 6
+	// SourceEpoch defines a filter for the source epoch attribute of objects.
+	SourceEpoch FilterType = 7
+	// SourceRoot defines a filter for the source root attribute of objects.
+	SourceRoot FilterType = 8
+	// TargetEpoch defines a filter for the target epoch attribute of objects.
+	TargetEpoch FilterType = 9
+	// TargetRoot defines a filter for the target root attribute of objects.
+	TargetRoot FilterType = 10
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -59,6 +69,36 @@ func (q *QueryFilter) Filters() map[FilterType]interface{} {
 // SetParentRoot allows for filtering by the parent root data attribute of an object.
 func (q *QueryFilter) SetParentRoot(val []byte) *QueryFilter {
 	q.queries[ParentRoot] = val
+	return q
+}
+
+// SetHeadBlockRoot allows for filtering by the beacon block root data attribute of an object.
+func (q *QueryFilter) SetHeadBlockRoot(val []byte) *QueryFilter {
+	q.queries[HeadBlockRoot] = val
+	return q
+}
+
+// SetSourceRoot allows for filtering by the source root data attribute of an object.
+func (q *QueryFilter) SetSourceRoot(val []byte) *QueryFilter {
+	q.queries[SourceRoot] = val
+	return q
+}
+
+// SetTargetRoot allows for filtering by the target root data attribute of an object.
+func (q *QueryFilter) SetTargetRoot(val []byte) *QueryFilter {
+	q.queries[TargetRoot] = val
+	return q
+}
+
+// SetSourceEpoch enables filtering by the source epoch data attribute of an object.
+func (q *QueryFilter) SetSourceEpoch(val uint64) *QueryFilter {
+	q.queries[SourceEpoch] = val
+	return q
+}
+
+// SetTargetEpoch enables filtering by the target epoch data attribute of an object.
+func (q *QueryFilter) SetTargetEpoch(val uint64) *QueryFilter {
+	q.queries[TargetEpoch] = val
 	return q
 }
 

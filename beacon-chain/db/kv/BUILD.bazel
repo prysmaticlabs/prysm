@@ -36,6 +36,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "archive_test.go",
         "attestations_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
