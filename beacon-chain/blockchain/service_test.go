@@ -378,24 +378,3 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 		t.Error("head slot incorrect")
 	}
 }
-
-func TestChainService_SaveHead_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
-	}
-	go func() {
-		s.saveHead(
-			context.Background(),
-			&ethpb.BeaconBlock{Slot: 777},
-			[32]byte{},
-		)
-	}()
-	s.saveHead(
-		context.Background(),
-		&ethpb.BeaconBlock{Slot: 888},
-		[32]byte{},
-	)
-}
