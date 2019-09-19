@@ -39,6 +39,8 @@ type Store struct {
 	checkpointStateLock sync.Mutex
 	attsQueue           map[[32]byte]*ethpb.Attestation
 	attsQueueLock       sync.Mutex
+	seenAtts            map[[32]byte]bool
+	seenAttsLock        sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will

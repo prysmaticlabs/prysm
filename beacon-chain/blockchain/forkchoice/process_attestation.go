@@ -16,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -121,6 +122,14 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		}
 		s.attsQueueLock.Unlock()
 	}
+
+	r, err := hashutil.HashProto(a)
+	if err != nil {
+		return 0, err
+	}
+	s.seenAttsLock.Lock()
+	s.seenAtts[r] = true
+	s.seenAttsLock.Unlock()
 
 	return tgtSlot, nil
 }
