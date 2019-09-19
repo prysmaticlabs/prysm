@@ -93,6 +93,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
+	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
+		return errors.Wrap(err, "could not update votes for attestations in block")
+	}
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
@@ -133,8 +136,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// updateBlockVotes updates validator's latest votes based on attestations in the block
-func (s *Store) updateBlockVotes(ctx context.Context, atts []*ethpb.Attestation) error {
+// updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
+// the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
+func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
 	s.seenAttsLock.Lock()
 	defer s.seenAttsLock.Unlock()
 
@@ -144,34 +148,43 @@ func (s *Store) updateBlockVotes(ctx context.Context, atts []*ethpb.Attestation)
 		if err != nil {
 			return err
 		}
+		log.Errorf("Is attestation seen: %v", r)
 		if s.seenAtts[r] {
-			return nil
+			continue
 		}
-
-		tgt := att.Data.Target
-		baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
-		if err != nil {
-			return errors.Wrap(err, "could not get state for attestation tgt root")
-		}
-		indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
-		if err != nil {
-			return errors.Wrap(err, "could not convert attestation to indexed attestation")
-		}
-		for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-			vote, err := s.db.ValidatorLatestVote(ctx, i)
-			if err != nil {
-				return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-			}
-			if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
-				if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
-					Epoch: tgt.Epoch,
-					Root:  tgt.Root,
-				}); err != nil {
-					return errors.Wrapf(err, "could not save latest vote for validator %d", i)
-				}
-			}
+		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
+			return err
 		}
 		s.seenAtts[r] = true
+	}
+	return nil
+}
+
+// updateBlockAttestationVotes checks the attestation to update validator's latest votes.
+func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
+	tgt := att.Data.Target
+	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get state for attestation tgt root")
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
+	if err != nil {
+		return errors.Wrap(err, "could not convert attestation to indexed attestation")
+	}
+	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+		vote, err := s.db.ValidatorLatestVote(ctx, i)
+		if err != nil {
+			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
+		}
+		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
+			log.Errorf("Updated votes for validator %d", i)
+			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+				Epoch: tgt.Epoch,
+				Root:  tgt.Root,
+			}); err != nil {
+				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
+			}
+		}
 	}
 	return nil
 }
@@ -238,7 +251,7 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 
 // clearSeenAtts clears seen attestations map, it gets called upon new finalization
 func (s *Store) clearSeenAtts() {
-	s.seenAtts = nil
+	s.seenAtts = make(map[[32]byte]bool)
 }
 
 // verifyBlkSlotTime validates the input block slot is not from the future.

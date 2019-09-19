@@ -103,6 +103,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	if halfSlot(baseState.GenesisTime) {
 		s.attsQueueLock.Lock()
 		for root, a := range s.attsQueue {
+			log.Error(a)
 			log.WithFields(logrus.Fields{
 				"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
 				"Root":               fmt.Sprintf("%#x", root),
@@ -118,13 +119,15 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
 				return 0, err
 			}
+
+			// Mark attestation as seen we don't update votes when it appears in block.
+			//if err := s.setSeenAtt(a); err != nil {
+			//	return 0, err
+			//}
+
 			delete(s.attsQueue, root)
 		}
 		s.attsQueueLock.Unlock()
-	}
-
-	if err := s.setSeenAtt(a); err != nil {
-		return 0, err
 	}
 
 	return tgtSlot, nil
@@ -290,6 +293,7 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	if err != nil {
 		return err
 	}
+	log.Errorf("Set attestation seen: %v", r)
 	s.seenAtts[r] = true
 
 	return nil
