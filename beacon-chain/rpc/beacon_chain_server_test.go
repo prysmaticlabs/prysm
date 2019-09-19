@@ -16,7 +16,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	testutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -24,8 +24,8 @@ import (
 )
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(10)
@@ -58,9 +58,127 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	someRoot := []byte{1, 2, 3}
+	sourceRoot := []byte{4, 5, 6}
+	sourceEpoch := uint64(5)
+	targetRoot := []byte{7, 8, 9}
+	targetEpoch := uint64(7)
+
+	unknownRoot := []byte{1, 1, 1}
+	atts := []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  sourceRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  targetRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 3,
+				},
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: unknownRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  sourceRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  targetRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 4,
+				},
+			},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot,
+				Source: &ethpb.Checkpoint{
+					Root:  unknownRoot,
+					Epoch: sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  unknownRoot,
+					Epoch: targetEpoch,
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard: 5,
+				},
+			},
+		},
+	}
+
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+	}
+
+	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{HeadBlockRoot: someRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with root %#x, received %d", someRoot, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: sourceEpoch},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 3 {
+		t.Errorf("Wanted 3 matching attestations with source epoch %d, received %d", sourceEpoch, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_SourceRoot{SourceRoot: sourceRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with source root %#x, received %d", sourceRoot, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: targetEpoch},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 3 {
+		t.Errorf("Wanted 3 matching attestations with target epoch %d, received %d", targetEpoch, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetRoot{TargetRoot: targetRoot},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 2 {
+		t.Errorf("Wanted 2 matching attestations with target root %#x, received %d", targetRoot, len(received.Attestations))
+	}
+}
+
 func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -157,8 +275,8 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(1)
@@ -201,8 +319,8 @@ func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -240,8 +358,9 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	block := &ethpb.BeaconBlock{
+		Slot: 10,
+	}
 	bs := &BeaconChainServer{
 		pool: &mockOps.Operations{
 			Attestations: []*ethpb.Attestation{
@@ -257,23 +376,9 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 				},
 			},
 		},
-		beaconDB: db,
-	}
-	block := &ethpb.BeaconBlock{
-		Slot: 10,
-	}
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveBlock(ctx, block); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := bs.beaconDB.SaveState(ctx, &pbp2p.BeaconState{Slot: 10}, blockRoot); err != nil {
-		t.Fatal(err)
+		headFetcher: &mock.ChainService{
+			Block: block,
+		},
 	}
 	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -286,8 +391,8 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	setupValidators(t, db, 100)
 
@@ -340,8 +445,8 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	_, balances := setupValidators(t, db, 1)
 
 	bs := &BeaconChainServer{
@@ -356,8 +461,8 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
 	bs := &BeaconChainServer{
@@ -375,8 +480,8 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	count := 100
 	setupValidators(t, db, count)
@@ -433,8 +538,8 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	count := 1
 	validators, _ := setupValidators(t, db, count)
@@ -461,8 +566,8 @@ func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
 	bs := &BeaconChainServer{
@@ -483,8 +588,8 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	setupValidators(t, db, 1)
 	bs := &BeaconChainServer{beaconDB: db}
@@ -507,8 +612,8 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 1000
@@ -581,8 +686,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 100
@@ -651,8 +756,8 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 100
@@ -759,8 +864,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 	helpers.ClearAllCaches()
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	epoch := uint64(1)
@@ -825,8 +930,8 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -919,8 +1024,8 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
-	db := testutil.SetupDB(t)
-	defer testutil.TeardownDB(t, db)
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	bs := &BeaconChainServer{beaconDB: db}

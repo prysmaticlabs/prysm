@@ -91,8 +91,9 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			BeaconBlockRoot: []byte("block-root"),
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Crosslink: &ethpb.Crosslink{
 				Shard:      0,
 				StartEpoch: 0,
@@ -463,7 +464,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -474,7 +475,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 			Crosslink: &ethpb.Crosslink{
 				Shard:      0,
@@ -484,8 +485,27 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
+	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	if err != nil {
+		t.Error(err)
+	}
+	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: false,
+	}
+	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	sigs := make([]*bls.Signature, len(attestingIndices))
+
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
+	for i, indice := range attestingIndices {
+		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		if err != nil {
+			t.Error(err)
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sigs[i] = sig
+	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
@@ -494,7 +514,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -531,14 +552,12 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	// Save 140 attestations for slots 0 to 139.
 	origAttestations := make([]*ethpb.Attestation, 140)
-	shardDiff := uint64(192)
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
-					Shard: uint64(i) - shardDiff,
+					Shard: uint64(i),
 				},
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
@@ -549,7 +568,6 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 		}
 	}
 
-	// At slot 200 only attestations up to from slot 137 to 139 are valid attestations.
 	headBlockRoot := [32]byte{1, 2, 3}
 	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
@@ -565,7 +583,8 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
-	if len(attestations) != 127 {
+
+	if len(attestations) != 0 {
 		t.Error("Incorrect pruned attestations")
 	}
 
@@ -657,12 +676,6 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	atts, _ := s.AttestationPool(context.Background(), 15)
-	if len(atts) != len(attestations) {
-		t.Errorf("Attestation pool should be %d but got a length of %d",
-			len(attestations), len(atts))
-	}
-
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Attestations: attestations,
@@ -674,7 +687,10 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	atts, _ = s.AttestationPool(context.Background(), 15)
+	atts, err := s.AttestationPool(context.Background(), 15)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
