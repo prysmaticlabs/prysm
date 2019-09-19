@@ -90,7 +90,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     race = "on",
-    tags = ["race_on"],
+    tags = ["spectest"],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
