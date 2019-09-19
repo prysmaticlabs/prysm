@@ -38,6 +38,25 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "New chain head event")
 }
 
+func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
+	hook := logTest.NewGlobal()
+	svc := setupService(t)
+	// The head state is NOT an epoch end.
+	svc.headFetcher = &mock.ChainService{
+		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
+	}
+	triggerNewHeadEvent(t, svc, [32]byte{})
+
+	// The context should have been canceled.
+	if svc.ctx.Err() != context.Canceled {
+		t.Error("context was not canceled")
+	}
+	testutil.AssertLogsContain(t, hook, "New chain head event")
+	// The service should ONLY log any archival logs if we receive a
+	// head slot that is an epoch end.
+	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
+}
+
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
@@ -90,25 +109,6 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 		)
 	}
 	testutil.AssertLogsContain(t, hook, "archived validator balances and active indices")
-}
-
-func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
-	hook := logTest.NewGlobal()
-	svc := setupService(t)
-	// The head state is NOT an epoch end.
-	svc.headFetcher = &mock.ChainService{
-		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
-	}
-	triggerNewHeadEvent(t, svc, [32]byte{})
-
-	// The context should have been canceled.
-	if svc.ctx.Err() != context.Canceled {
-		t.Error("context was not canceled")
-	}
-	testutil.AssertLogsContain(t, hook, "New chain head event")
-	// The service should ONLY log any archival logs if we receive a
-	// head slot that is an epoch end.
-	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
 }
 
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
