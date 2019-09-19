@@ -174,7 +174,7 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 	})
 }
 
-// AddDisconnectionHandler -- 
+// AddDisconnectionHandler --
 func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error) {
 	p.Host.Network().Notify(&network.NotifyBundle{
 		DisconnectedF: func(net network.Network, conn network.Conn) {

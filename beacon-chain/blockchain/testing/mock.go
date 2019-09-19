@@ -13,6 +13,7 @@ import (
 type ChainService struct {
 	State               *pb.BeaconState
 	Root                []byte
+	Block               *ethpb.BeaconBlock
 	FinalizedCheckPoint *ethpb.Checkpoint
 	StateFeed           *event.Feed
 }
@@ -46,7 +47,7 @@ func (ms *ChainService) HeadRoot() []byte {
 
 // HeadBlock mocks HeadBlock method in chain service.
 func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
-	return nil
+	return ms.Block
 }
 
 // HeadState mocks HeadState method in chain service.
