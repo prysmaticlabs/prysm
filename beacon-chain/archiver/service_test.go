@@ -28,13 +28,7 @@ func init() {
 
 func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx, cancel := context.WithCancel(context.Background())
-	svc := &Service{
-		ctx:             ctx,
-		cancel:          cancel,
-		newHeadRootChan: make(chan [32]byte, 0),
-		newHeadNotifier: &mock.ChainService{},
-	}
+	svc := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
@@ -46,19 +40,9 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	svc := &Service{
-		beaconDB:        db,
-		ctx:             ctx,
-		cancel:          cancel,
-		newHeadRootChan: make(chan [32]byte, 0),
-		newHeadNotifier: &mock.ChainService{},
-	}
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
+	svc := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -72,7 +56,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
 	}
 
-	retrieved, err := svc.beaconDB.ArchivedValidatorParticipation(ctx, wanted.Epoch)
+	retrieved, err := svc.beaconDB.ArchivedValidatorParticipation(svc.ctx, wanted.Epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,25 +69,15 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 
 func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	svc := &Service{
-		beaconDB:        db,
-		ctx:             ctx,
-		cancel:          cancel,
-		newHeadRootChan: make(chan [32]byte, 0),
-		newHeadNotifier: &mock.ChainService{},
-	}
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
+	svc := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
-	retrieved, err := svc.beaconDB.ArchivedBalances(ctx, helpers.CurrentEpoch(headState))
+	retrieved, err := svc.beaconDB.ArchivedBalances(svc.ctx, helpers.CurrentEpoch(headState))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,13 +94,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx, cancel := context.WithCancel(context.Background())
-	svc := &Service{
-		ctx:             ctx,
-		cancel:          cancel,
-		newHeadRootChan: make(chan [32]byte, 0),
-		newHeadNotifier: &mock.ChainService{},
-	}
+	svc := setupService(t)
 	// The head state is NOT an epoch end.
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
@@ -179,6 +147,19 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+	}
+}
+
+func setupService(t *testing.T) *Service {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Service{
+		beaconDB:        db,
+		ctx:             ctx,
+		cancel:          cancel,
+		newHeadRootChan: make(chan [32]byte, 0),
+		newHeadNotifier: &mock.ChainService{},
 	}
 }
 
