@@ -66,7 +66,7 @@ type RegularSync struct {
 	slotToPendingBlocksLock sync.RWMutex
 	seenPendingBlocks       map[[32]byte]bool
 	seenPendingBlocksLock   sync.RWMutex
-	chainStarted     bool
+	chainStarted            bool
 }
 
 // Start the regular sync service.

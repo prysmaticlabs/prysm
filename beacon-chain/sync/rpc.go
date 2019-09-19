@@ -89,4 +89,3 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 
 	})
 }
-
