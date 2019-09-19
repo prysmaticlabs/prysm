@@ -34,13 +34,17 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 		newHeadSlotChan: make(chan uint64, 0),
 		newHeadNotifier: &mock.ChainService{},
 	}
+	svc.headFetcher = &mock.ChainService{
+		State: &pb.BeaconState{Slot: 1},
+	}
 	exitRoutine := make(chan bool)
 	go func() {
 		svc.run()
 		<-exitRoutine
 	}()
 
-	svc.newHeadSlotChan <- 1
+	// We send a head slot over the channel that is NOT an epoch end.
+	svc.newHeadSlotChan <- params.BeaconConfig().SlotsPerEpoch - 3
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +54,11 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	if svc.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "1")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%d", params.BeaconConfig().SlotsPerEpoch-3))
 	testutil.AssertLogsContain(t, hook, "New chain head event")
+	// The service should NOT log any archival logs if we receive a
+	// head slot that is NOT an epoch end.
+	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
 }
 
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
@@ -103,11 +110,11 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 		beaconDB:        db,
 		ctx:             ctx,
 		cancel:          cancel,
-		newHeadSlotChan: make(chan uint64, 0),
+		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
-		headFetcher: &mock.ChainService{
-			State: headState,
-		},
+	}
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
 	}
 	exitRoutine := make(chan bool)
 	go func() {
@@ -115,8 +122,8 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	// Upon receiving a new head state,
-	svc.newHeadSlotChan <- headState.Slot
+	// Upon receiving a new head.
+	svc.newHeadRootChan <- [32]byte{}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +158,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	svc := &Service{
 		ctx:             ctx,
 		cancel:          cancel,
-		newHeadSlotChan: make(chan uint64, 0),
+		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
 	}
 	exitRoutine := make(chan bool)
@@ -160,8 +167,11 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	// We send a head slot over the channel that is NOT an epoch end.
-	svc.newHeadSlotChan <- params.BeaconConfig().SlotsPerEpoch - 3
+	// The head state is NOT an epoch end.
+	svc.headFetcher = &mock.ChainService{
+		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
+	}
+	svc.newHeadRootChan <- [32]byte{}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
 	}
@@ -171,9 +181,8 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	if svc.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%d", params.BeaconConfig().SlotsPerEpoch-3))
 	testutil.AssertLogsContain(t, hook, "New chain head event")
-	// The service should NOT log any archival logs if we receive a
-	// head slot that is NOT an epoch end.
+	// The service should ONLY log any archival logs if we receive a
+	// head slot that is an epoch end.
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
 }

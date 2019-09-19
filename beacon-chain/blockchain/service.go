@@ -198,7 +198,7 @@ func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
 }
 
-// HeadUpdatedFeed is a feed containing the head block slot and
+// HeadUpdatedFeed is a feed containing the head block root and
 // is written to when a new head block is saved to DB.
 func (s *Service) HeadUpdatedFeed() *event.Feed {
 	return s.headUpdatedFeed
