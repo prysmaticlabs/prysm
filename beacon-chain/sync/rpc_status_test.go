@@ -161,24 +161,24 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			State:               &pb.BeaconState{Slot: 5},
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		statusTracker: make(map[peer.ID]*pb.Status),
+		ctx:           context.Background(),
 	}
 
 	r.Start()
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 
-		resp := &pb.Hello{HeadSlot: 100, ForkVersion: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -199,8 +199,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// Wait for stream buffer to be read.
 	time.Sleep(200 * time.Millisecond)
 
-	if len(r.helloTracker) != 1 {
-		t.Errorf("Expected 1 status in the tracker, got %d", len(r.helloTracker))
+	if len(r.statusTracker) != 1 {
+		t.Errorf("Expected 1 status in the tracker, got %d", len(r.statusTracker))
 	}
 
 	if err := p2.Disconnect(p1.PeerID()); err != nil {
@@ -210,8 +210,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// Wait for disconnect event to trigger.
 	time.Sleep(200 * time.Millisecond)
 
-	if len(r.helloTracker) != 0 {
-		t.Errorf("Expected 0 status in the tracker, got %d", len(r.helloTracker))
+	if len(r.statusTracker) != 0 {
+		t.Errorf("Expected 0 status in the tracker, got %d", len(r.statusTracker))
 	}
 
 }

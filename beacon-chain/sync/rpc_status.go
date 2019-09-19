@@ -60,9 +60,9 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	r.helloTrackerLock.Lock()
-	delete(r.helloTracker, pid)
-	r.helloTrackerLock.Unlock()
+	r.statusTrackerLock.Lock()
+	delete(r.statusTracker, pid)
+	r.statusTrackerLock.Unlock()
 	return nil
 }
 
