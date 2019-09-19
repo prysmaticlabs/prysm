@@ -86,7 +86,7 @@ go_test(
     name = "go_raceon_test",
     srcs = [
         "service_norace_test.go",
-        "chain_info_norace_test",
+        "chain_info_norace_test.go",
     ],
     embed = [":go_default_library"],
     race = "on",
