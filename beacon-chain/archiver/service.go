@@ -73,9 +73,17 @@ func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get committee count")
 	}
+	seed, err := helpers.Seed(headState, currentEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not generate seed")
+	}
+	startShard, err := helpers.StartShard(headState, currentEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get start shard")
+	}
 	info := &ethpb.ArchivedCommitteeInfo{
-		Seed:           nil,
-		CurrentShard:   0,
+		Seed:           seed[:],
+		StartShard:     startShard,
 		CommitteeCount: committeeCount,
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(s.ctx, currentEpoch, info); err != nil {

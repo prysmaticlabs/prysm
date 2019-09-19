@@ -123,7 +123,7 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	someSeed := [32]byte{1, 2, 3}
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           someSeed[:],
-		CurrentShard:   10,
+		StartShard:     10,
 		CommitteeCount: 4096,
 	}
 	epoch := uint64(10)
