@@ -88,17 +88,3 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 		}
 	})
 }
-
-/*
-func copyValues(msg interface{}) interface{} {
-	switch t := msg.(type) {
-	case proto.Message:
-		return proto.Clone(t)
-	case uint64:
-		return new(uint64)
-	case [][32]byte:
-		return [][32]byte{}
-	default:
-		return reflect.New(reflect.TypeOf(t).Elem())
-	}
-}*/
