@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,6 +68,19 @@ func (s *Service) Status() error {
 
 // We archive committee information pertaining to the head state's epoch.
 func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
+	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	committeeCount, err := helpers.CommitteeCount(headState, currentEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get committee count")
+	}
+	info := &ethpb.ArchivedCommitteeInfo{
+		Seed:           nil,
+		CurrentShard:   0,
+		CommitteeCount: committeeCount,
+	}
+	if err := s.beaconDB.SaveArchivedCommitteeInfo(s.ctx, currentEpoch, info); err != nil {
+		return errors.Wrap(err, "could not archive committee info")
+	}
 	return nil
 }
 
