@@ -6,11 +6,11 @@ import (
 
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 )
 
 // General note for writing validation tests: Use a random value for any field
@@ -28,7 +28,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	mock := &p2ptest.MockBroadcaster{}
 
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 	result := r.validateBeaconBlockPubSub(
@@ -59,7 +59,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 	mock := &p2ptest.MockBroadcaster{}
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -95,7 +95,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 	mock := &p2ptest.MockBroadcaster{}
 
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 	result := r.validateBeaconBlockPubSub(
@@ -145,7 +145,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	mock := &p2ptest.MockBroadcaster{}
 
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 	result := r.validateBeaconBlockPubSub(
@@ -180,7 +180,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
 	mock := &p2ptest.MockBroadcaster{}
 
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 	result := r.validateBeaconBlockPubSub(
@@ -215,7 +215,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	mock := &p2ptest.MockBroadcaster{}
 
 	r := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 	result := r.validateBeaconBlockPubSub(

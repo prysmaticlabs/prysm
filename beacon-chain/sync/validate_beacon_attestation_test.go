@@ -19,7 +19,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -66,7 +66,7 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -91,7 +91,7 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &RegularSync{
-		db: db,
+		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 

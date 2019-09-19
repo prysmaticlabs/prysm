@@ -11,12 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
@@ -96,8 +96,8 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: s},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -128,8 +128,8 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: s},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -151,8 +151,8 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: state},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: state},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -168,8 +168,8 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: s},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 
