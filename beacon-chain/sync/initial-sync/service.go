@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -120,6 +121,10 @@ func (s *InitialSync) Start() {
 		for i := req.StartSlot; i < req.StartSlot+(req.Count*req.Step); i += req.Step {
 			// Read status code.
 			code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
+			if err == io.EOF {
+				log.Error("Reached the end of the stream")
+				break
+			}
 			if err != nil {
 				panic(err)
 			}

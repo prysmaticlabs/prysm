@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -25,6 +26,9 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	for i := 0; i < len(blockRoots); i++ {
 		setStreamReadDeadline(stream, 10)
 		code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+		if err == io.EOF {
+			return errors.New("reached the end of the stream")
+		}
 		if err != nil {
 			return err
 		}
