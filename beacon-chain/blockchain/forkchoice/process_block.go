@@ -247,8 +247,10 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 	return nil
 }
 
-// clearSeenAtts clears seen attestations map, it gets called upon new finalization
+// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
 func (s *Store) clearSeenAtts() {
+	s.seenAttsLock.Lock()
+	s.seenAttsLock.Unlock()
 	s.seenAtts = make(map[[32]byte]bool)
 }
 

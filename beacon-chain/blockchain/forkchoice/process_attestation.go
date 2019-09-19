@@ -98,6 +98,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	}
 
 	s.attsQueueLock.Lock()
+	defer s.attsQueueLock.Unlock()
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
 			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
@@ -119,10 +120,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		if err := s.setSeenAtt(a); err != nil {
 			return 0, err
 		}
-
 		delete(s.attsQueue, root)
 	}
-	s.attsQueueLock.Unlock()
 
 	return tgtSlot, nil
 }
