@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -94,6 +96,62 @@ func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
 
 // We archive active validator set changes that happened during the epoch.
 func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
+	currentEpoch := helpers.CurrentEpoch(headState)
+	activations := make([]uint64, 0)
+	slashings := make([]uint64, 0)
+	exited := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	for i := 0; i < len(headState.Validators); i++ {
+		val := headState.Validators[i]
+		if val.ActivationEpoch == delayedActivationEpoch {
+			activations = append(activations, uint64(i))
+		}
+		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
+			slashings = append(slashings, uint64(i))
+		}
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range headState.Validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+	churn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		return errors.Wrap(err, "could not get churn limit")
+	}
+
+	if uint64(exitQueueChurn) >= churn {
+		exitQueueEpoch++
+	}
+	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	for i, val := range headState.Validators {
+		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
+			exited = append(exited, uint64(i))
+		}
+	}
+
+	activeSetChanges := &ethpb.ArchivedActiveSetChanges{
+		Activated:        activations,
+		Exited:           exited,
+		ProposersSlashed: slashings,
+	}
+	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(s.ctx, currentEpoch, activeSetChanges); err != nil {
+		return errors.Wrap(err, "could not archive active validator set changes")
+	}
 	return nil
 }
 
@@ -110,7 +168,7 @@ func (s *Service) archiveParticipation(headState *pb.BeaconState) error {
 // We archive validator balances and active indices.
 func (s *Service) archiveBalancesAndIndices(headState *pb.BeaconState) error {
 	balances := headState.Balances
-	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	currentEpoch := helpers.CurrentEpoch(headState)
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, currentEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not determine active indices")
@@ -153,15 +211,15 @@ func (s *Service) run() {
 			}
 			log.WithField(
 				"epoch",
-				helpers.SlotToEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState.Slot),
 			).Debug("Successfully archived active validator set changes during epoch")
 			log.WithField(
 				"epoch",
-				helpers.SlotToEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState.Slot),
 			).Debug("Successfully archived validator balances and active indices during epoch")
 			log.WithField(
 				"epoch",
-				helpers.SlotToEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState.Slot),
 			).Debug("Successfully archived validator participation during epoch")
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
