@@ -148,7 +148,6 @@ func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.
 		if err != nil {
 			return err
 		}
-		log.Errorf("Is attestation seen: %v", r)
 		if s.seenAtts[r] {
 			continue
 		}
@@ -177,7 +176,6 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
 		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
-			log.Errorf("Updated votes for validator %d", i)
 			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
