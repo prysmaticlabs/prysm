@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -41,7 +40,6 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		p2p:          cfg.P2P,
 		operations:   cfg.Operations,
 		chain:        cfg.Chain,
-		helloTracker: make(map[peer.ID]*pb.Hello),
 		initialSync:  cfg.InitialSync,
 	}
 
@@ -59,8 +57,6 @@ type RegularSync struct {
 	db               db.Database
 	operations       *operations.Service
 	chain            blockchainService
-	helloTracker     map[peer.ID]*pb.Hello
-	helloTrackerLock sync.RWMutex
 	chainStarted     bool
 	initialSync      Checker
 }
@@ -79,13 +75,6 @@ func (r *RegularSync) Stop() error {
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
-}
-
-// Hellos returns the map of hello messages received so far.
-func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
-	r.helloTrackerLock.RLock()
-	defer r.helloTrackerLock.RUnlock()
-	return r.helloTracker
 }
 
 // Checker defines a struct which can verify whether a node is currently

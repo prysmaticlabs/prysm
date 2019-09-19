@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,7 +22,7 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	defer cancel()
 
 	// return if hello already exists
-	hello := r.helloTracker[id]
+	hello := peerstatus.Get(id)
 	if hello != nil {
 		log.Debugf("Peer %s already exists", id)
 		return nil
@@ -52,17 +53,13 @@ func (r *RegularSync) sendRPCHelloRequest(ctx context.Context, id peer.ID) error
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
-	r.helloTrackerLock.Lock()
-	r.helloTracker[stream.Conn().RemotePeer()] = msg
-	r.helloTrackerLock.Unlock()
+	peerstatus.Set(stream.Conn().RemotePeer(), msg)
 
 	return r.validateHelloMessage(msg, stream)
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	r.helloTrackerLock.Lock()
-	delete(r.helloTracker, pid)
-	r.helloTrackerLock.Unlock()
+	peerstatus.Delete(pid)
 	return nil
 }
 
@@ -76,9 +73,7 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg interface{}, stre
 	log := log.WithField("rpc", "hello")
 
 	// return if hello already exists
-	r.helloTrackerLock.RLock()
-	hello := r.helloTracker[stream.Conn().RemotePeer()]
-	r.helloTrackerLock.RUnlock()
+	hello := peerstatus.Get(stream.Conn().RemotePeer())
 	if hello != nil {
 		log.Debugf("Peer %s already exists", stream.Conn().RemotePeer())
 		return nil
@@ -86,9 +81,7 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg interface{}, stre
 
 	m := msg.(*pb.Hello)
 
-	r.helloTrackerLock.Lock()
-	r.helloTracker[stream.Conn().RemotePeer()] = m
-	r.helloTrackerLock.Unlock()
+	peerstatus.Set(stream.Conn().RemotePeer(), m)
 
 	if err := r.validateHelloMessage(m, stream); err != nil {
 		originalErr := err
@@ -109,12 +102,6 @@ func (r *RegularSync) helloRPCHandler(ctx context.Context, msg interface{}, stre
 		}
 		return originalErr
 	}
-
-	r.helloTrackerLock.Lock()
-	r.helloTracker[stream.Conn().RemotePeer()] = m
-	r.helloTrackerLock.Unlock()
-
-	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
 	resp := &pb.Hello{
 		ForkVersion:    params.BeaconConfig().GenesisForkVersion,
