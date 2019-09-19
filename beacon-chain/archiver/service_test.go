@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -28,7 +29,8 @@ func init() {
 
 func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc := setupService(t)
+	svc, db := setupService(t)
+	defer dbutil.TeardownDB(t, db)
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
@@ -40,7 +42,8 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc := setupService(t)
+	svc, db := setupService(t)
+	defer dbutil.TeardownDB(t, db)
 	// The head state is NOT an epoch end.
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
@@ -61,7 +64,8 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
-	svc := setupService(t)
+	svc, db := setupService(t)
+	defer dbutil.TeardownDB(t, db)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -90,7 +94,8 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
-	svc := setupService(t)
+	svc, db := setupService(t)
+	defer dbutil.TeardownDB(t, db)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -105,6 +110,51 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 			"Wanted balances for epoch %d %v, retrieved %v",
 			helpers.CurrentEpoch(headState),
 			headState.Balances,
+			retrieved,
+		)
+	}
+	testutil.AssertLogsContain(t, hook, "archived validator balances and active indices")
+}
+
+func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
+	svc, db := setupService(t)
+	defer dbutil.TeardownDB(t, db)
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
+	}
+	triggerNewHeadEvent(t, svc, [32]byte{})
+
+	currentEpoch := helpers.CurrentEpoch(headState)
+	startShard, err := helpers.StartShard(headState, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committeeCount, err := helpers.CommitteeCount(headState, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(headState, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := &ethpb.ArchivedCommitteeInfo{
+		Seed:           seed[:],
+		StartShard:     startShard,
+		CommitteeCount: committeeCount,
+	}
+
+	retrieved, err := svc.beaconDB.ArchivedCommitteeInfo(svc.ctx, helpers.CurrentEpoch(headState))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, retrieved) {
+		t.Errorf(
+			"Wanted committee info for epoch %d %v, retrieved %v",
+			helpers.CurrentEpoch(headState),
+			wanted,
 			retrieved,
 		)
 	}
@@ -150,9 +200,8 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 	}
 }
 
-func setupService(t *testing.T) *Service {
+func setupService(t *testing.T) (*Service, db.Database) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
 		beaconDB:        db,
@@ -160,7 +209,7 @@ func setupService(t *testing.T) *Service {
 		cancel:          cancel,
 		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
-	}
+	}, db
 }
 
 func triggerNewHeadEvent(t *testing.T, svc *Service, headRoot [32]byte) {
