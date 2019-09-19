@@ -35,9 +35,9 @@ const (
 
 // Config to set up the initial sync service.
 type Config struct {
-	P2P     p2p.P2P
-	DB      db.Database
-	Chain   blockchainService
+	P2P   p2p.P2P
+	DB    db.Database
+	Chain blockchainService
 }
 
 // InitialSync service.
@@ -52,8 +52,8 @@ type InitialSync struct {
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
-		chain:        cfg.Chain,
-		p2p:          cfg.P2P,
+		chain: cfg.Chain,
+		p2p:   cfg.P2P,
 	}
 }
 

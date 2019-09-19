@@ -35,12 +35,12 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:          context.Background(),
-		db:           cfg.DB,
-		p2p:          cfg.P2P,
-		operations:   cfg.Operations,
-		chain:        cfg.Chain,
-		initialSync:  cfg.InitialSync,
+		ctx:         context.Background(),
+		db:          cfg.DB,
+		p2p:         cfg.P2P,
+		operations:  cfg.Operations,
+		chain:       cfg.Chain,
+		initialSync: cfg.InitialSync,
 	}
 
 	r.registerRPCHandlers()
@@ -52,13 +52,13 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx              context.Context
-	p2p              p2p.P2P
-	db               db.Database
-	operations       *operations.Service
-	chain            blockchainService
-	chainStarted     bool
-	initialSync      Checker
+	ctx          context.Context
+	p2p          p2p.P2P
+	db           db.Database
+	operations   *operations.Service
+	chain        blockchainService
+	chainStarted bool
+	initialSync  Checker
 }
 
 // Start the regular sync service.

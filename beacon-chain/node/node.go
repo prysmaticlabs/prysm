@@ -386,8 +386,8 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		Chain:   chainService,
-		P2P:     b.fetchP2P(ctx),
+		Chain: chainService,
+		P2P:   b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(is)

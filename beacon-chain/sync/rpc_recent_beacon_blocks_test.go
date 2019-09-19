@@ -117,7 +117,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		ctx:          context.Background(),
+		ctx: context.Background(),
 	}
 
 	// Setup streams

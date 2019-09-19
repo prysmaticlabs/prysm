@@ -166,7 +166,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			State:               &pb.BeaconState{Slot: 5},
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
 		},
-		ctx:          context.Background(),
+		ctx: context.Background(),
 	}
 
 	r.Start()
@@ -251,7 +251,7 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		ctx:          context.Background(),
+		ctx: context.Background(),
 	}
 
 	// Setup streams
