@@ -27,7 +27,7 @@ func init() {
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	peerstatus.Clear()
-	
+
 	// TODO(3441): Fix ssz string length issue.
 	t.Skip("3441: SSZ is decoding a string with an unexpected length")
 	p1 := p2ptest.NewTestP2P(t)
