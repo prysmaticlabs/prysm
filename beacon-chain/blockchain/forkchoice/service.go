@@ -53,6 +53,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		attsQueue:       make(map[[32]byte]*ethpb.Attestation),
+		seenAtts:        make(map[[32]byte]bool),
 	}
 }
 

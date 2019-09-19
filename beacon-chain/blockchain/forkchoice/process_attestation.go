@@ -123,13 +123,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		s.attsQueueLock.Unlock()
 	}
 
-	r, err := hashutil.HashProto(a)
-	if err != nil {
+	if err := s.setSeenAtt(a); err != nil {
 		return 0, err
 	}
-	s.seenAttsLock.Lock()
-	s.seenAtts[r] = true
-	s.seenAttsLock.Unlock()
 
 	return tgtSlot, nil
 }
@@ -282,6 +278,20 @@ func (s *Store) updateAttVotes(
 			}
 		}
 	}
+	return nil
+}
+
+// setSeenAtt sets the attestation hash in seen attestation map to true.
+func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
+	s.seenAttsLock.Lock()
+	defer s.seenAttsLock.Unlock()
+
+	r, err := hashutil.HashProto(a)
+	if err != nil {
+		return err
+	}
+	s.seenAtts[r] = true
+
 	return nil
 }
 
