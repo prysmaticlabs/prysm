@@ -158,7 +158,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 			retrieved,
 		)
 	}
-	testutil.AssertLogsContain(t, hook, "archived validator balances and active indices")
+	testutil.AssertLogsContain(t, hook, "archived committee info")
 }
 
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {

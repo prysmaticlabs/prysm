@@ -212,6 +212,10 @@ func (s *Service) run() {
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
+			).Debug("Successfully archived committee info during epoch")
+			log.WithField(
+				"epoch",
+				helpers.CurrentEpoch(headState),
 			).Debug("Successfully archived active validator set changes during epoch")
 			log.WithField(
 				"epoch",
