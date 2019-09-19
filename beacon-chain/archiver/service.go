@@ -65,6 +65,11 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// We archive active validator set changes during the epoch.
+func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
+	return nil
+}
+
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(headState *pb.BeaconState) error {
@@ -73,6 +78,23 @@ func (s *Service) archiveParticipation(headState *pb.BeaconState) error {
 		return errors.Wrap(err, "could not compute participation")
 	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(s.ctx, helpers.SlotToEpoch(headState.Slot), participation)
+}
+
+// We archive validator balances and active indices.
+func (s *Service) archiveBalancesAndIndices(headState *pb.BeaconState) error {
+	balances := headState.Balances
+	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, currentEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not determine active indices")
+	}
+	if err := s.beaconDB.SaveArchivedBalances(s.ctx, currentEpoch, balances); err != nil {
+		return errors.Wrap(err, "could not archive balances")
+	}
+	if err := s.beaconDB.SaveArchivedActiveIndices(s.ctx, currentEpoch, activeIndices); err != nil {
+		return errors.Wrap(err, "could not archive active indices")
+	}
+	return nil
 }
 
 func (s *Service) run() {
@@ -86,9 +108,26 @@ func (s *Service) run() {
 			if !helpers.IsEpochEnd(headState.Slot) {
 				continue
 			}
+			if err := s.archiveActiveSetChanges(headState); err != nil {
+				log.WithError(err).Error("Could not archive active validator set changes")
+				continue
+			}
 			if err := s.archiveParticipation(headState); err != nil {
 				log.WithError(err).Error("Could not archive validator participation")
+				continue
 			}
+			if err := s.archiveBalancesAndIndices(headState); err != nil {
+				log.WithError(err).Error("Could not archive validator balances and active indices")
+				continue
+			}
+			log.WithField(
+				"epoch",
+				helpers.SlotToEpoch(headState.Slot),
+			).Debug("Successfully archived active validator set changes during epoch")
+			log.WithField(
+				"epoch",
+				helpers.SlotToEpoch(headState.Slot),
+			).Debug("Successfully archived validator balances and active indices during epoch")
 			log.WithField(
 				"epoch",
 				helpers.SlotToEpoch(headState.Slot),
