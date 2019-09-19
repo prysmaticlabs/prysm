@@ -106,6 +106,8 @@ func (r *RegularSync) chunkedHandler(stream libp2pcore.Stream, msg interface{}) 
 	return err
 }
 
+// HandleChunkedBlocks handles each response chunk that is sent by the
+// peer and converts it into a beacon block.
 func HandleChunkedBlocks(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
 	setStreamReadDeadline(stream, 10)
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
