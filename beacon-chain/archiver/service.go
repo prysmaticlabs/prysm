@@ -2,12 +2,14 @@ package archiver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,7 +23,7 @@ type Service struct {
 	beaconDB        db.Database
 	headFetcher     blockchain.HeadFetcher
 	newHeadNotifier blockchain.NewHeadNotifier
-	newHeadSlotChan chan uint64
+	newHeadRootChan chan [32]byte
 }
 
 // Config options for the archiver service.
@@ -40,7 +42,7 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:        cfg.BeaconDB,
 		headFetcher:     cfg.HeadFetcher,
 		newHeadNotifier: cfg.NewHeadNotifier,
-		newHeadSlotChan: make(chan uint64, 1),
+		newHeadRootChan: make(chan [32]byte, 1),
 	}
 }
 
@@ -65,8 +67,7 @@ func (s *Service) Status() error {
 
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
-func (s *Service) archiveParticipation() error {
-	headState := s.headFetcher.HeadState()
+func (s *Service) archiveParticipation(headState *pb.BeaconState) error {
 	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return errors.Wrap(err, "could not compute participation")
@@ -75,21 +76,22 @@ func (s *Service) archiveParticipation() error {
 }
 
 func (s *Service) run() {
-	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadSlotChan)
+	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadRootChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case slot := <-s.newHeadSlotChan:
-			log.WithField("headSlot", slot).Debug("New chain head event")
-			if !helpers.IsEpochEnd(slot) {
+		case r := <-s.newHeadRootChan:
+			log.WithField("headRoot", fmt.Sprintf("%#x", r)).Debug("New chain head event")
+			headState := s.headFetcher.HeadState()
+			if !helpers.IsEpochEnd(headState.Slot) {
 				continue
 			}
-			if err := s.archiveParticipation(); err != nil {
+			if err := s.archiveParticipation(headState); err != nil {
 				log.WithError(err).Error("Could not archive validator participation")
 			}
 			log.WithField(
 				"epoch",
-				helpers.SlotToEpoch(slot),
+				helpers.SlotToEpoch(headState.Slot),
 			).Debug("Successfully archived validator participation during epoch")
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
