@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -13,14 +14,6 @@ var goodByes = map[uint64]string{
 	2: "Fault/Error",
 }
 
-func (r *RegularSync) transformGoodbyeVal(num uint64) string {
-	reason, ok := goodByes[num]
-	if ok {
-		return reason
-	}
-	return "Unknown Goodbye Value Received"
-}
-
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
@@ -29,8 +22,16 @@ func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, st
 	setRPCStreamDeadlines(stream)
 
 	m := msg.(uint64)
-	log := log.WithField("Reason", r.transformGoodbyeVal(m))
+	log := log.WithField("Reason", goodbyeMessage(m))
 	log.Infof("Peer %s has sent a goodbye message", stream.Conn().RemotePeer())
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+func goodbyeMessage(num uint64) string {
+	reason, ok := goodByes[num]
+	if ok {
+		return reason
+	}
+	return fmt.Sprintf("Unknown Goodbye Value of %d Received", num)
 }
