@@ -9,7 +9,10 @@ go_library(
         "is_empty.go",
         "json_to_pb_converter.go",
         "log.go",
+        "random_bytes.go",
+        "spectest.go",
         "tempdir.go",
+        "wait_timeout.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
     visibility = ["//visibility:public"],
@@ -26,6 +29,8 @@ go_library(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
 

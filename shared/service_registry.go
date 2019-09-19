@@ -41,7 +41,7 @@ func (s *ServiceRegistry) StartAll() {
 	log.Infof("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
-		s.services[kind].Start()
+		go s.services[kind].Start()
 	}
 }
 

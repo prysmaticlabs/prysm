@@ -25,7 +25,6 @@ type validator struct {
 	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
-	beaconClient         pb.BeaconServiceClient
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
@@ -46,7 +45,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
@@ -59,7 +58,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
@@ -96,7 +95,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive validator activation from stream")
@@ -127,7 +126,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			log.WithFields(logrus.Fields{
 				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 				"status":    status.Status.Status.String(),
-			}).Info("Validator has been Activated")
+			}).Info("Validator has been activated")
 			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
@@ -169,7 +168,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	head, err := v.validatorClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		return 0, err
 	}

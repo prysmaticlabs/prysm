@@ -47,7 +47,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
 			cmd.RelayNode,
-			cmd.P2PPort,
+			cmd.P2PUDPPort,
+			cmd.P2PTCPPort,
 			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
 			cmd.EnableTracingFlag,
@@ -75,12 +76,13 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.NoCustomConfigFlag,
+			flags.InteropMockEth1DataVotesFlag,
+			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.Web3ProviderFlag,
 			flags.RPCPort,
 			flags.CertFlag,
 			flags.KeyFlag,
-			flags.EnableDBCleanup,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 		},
@@ -94,6 +96,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
+			cmd.P2PEncoding,
 		},
 	},
 	{
@@ -106,6 +109,23 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name:  "features",
 		Flags: featureconfig.BeaconChainFlags,
+	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropGenesisStateFlag,
+			flags.InteropGenesisTimeFlag,
+			flags.InteropNumValidatorsFlag,
+		},
+	},
+	{
+		Name: "archive",
+		Flags: []cli.Flag{
+			flags.ArchiveEnableFlag,
+			flags.ArchiveValidatorSetChangesFlag,
+			flags.ArchiveBlocksFlag,
+			flags.ArchiveAttestationsFlag,
+		},
 	},
 }
 

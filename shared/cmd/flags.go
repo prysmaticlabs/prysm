@@ -67,7 +67,7 @@ var (
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
-		Value: "/ip4/35.224.249.2/tcp/30001/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw",
+		Value: "",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = cli.StringFlag{
@@ -76,11 +76,17 @@ var (
 			"relay node and advertise their address via the relay node to other peers",
 		Value: "",
 	}
-	// P2PPort defines the port to be used by libp2p.
-	P2PPort = cli.IntFlag{
-		Name:  "p2p-port",
-		Usage: "The port used by libp2p.",
+	// P2PUDPPort defines the port to be used by discv5.
+	P2PUDPPort = cli.IntFlag{
+		Name:  "p2p-udp-port",
+		Usage: "The port used by discv5.",
 		Value: 12000,
+	}
+	// P2PTCPPort defines the port to be used by libp2p.
+	P2PTCPPort = cli.IntFlag{
+		Name:  "p2p-tcp-port",
+		Usage: "The port used by libp2p.",
+		Value: 13000,
 	}
 	// P2PHost defines the host IP to be used by libp2p.
 	P2PHost = cli.StringFlag{
@@ -106,6 +112,12 @@ var (
 		Usage: "The CIDR subnet for whitelisting peer connections. Example: 192.168.0.0/16 " +
 			"would whitelist connections to peers on your local network only. The default " +
 			"is to accept all connections.",
+	}
+	// P2PEncoding defines the encoding format for p2p messages.
+	P2PEncoding = cli.StringFlag{
+		Name:  "p2p-encoding",
+		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
+		Value: "ssz",
 	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
 	ClearDB = cli.BoolFlag{

@@ -44,3 +44,8 @@ message Person {
 message AddressBook {
   repeated Person people = 1;
 }
+
+message TestSimpleMessage {
+  bytes foo = 1;
+  uint64 bar = 2;
+}

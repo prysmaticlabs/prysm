@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
@@ -23,6 +22,10 @@ type mockSyncChecker struct {
 
 func (m *mockSyncChecker) Syncing() bool {
 	return m.syncing
+}
+
+func (m *mockSyncChecker) Status() error {
+	return nil
 }
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -48,36 +51,30 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 }
 
 func TestNodeServer_GetGenesis(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	addr := [20]byte{1, 2, 3, 4, 5, 6}
-	beaconDB.VerifyContractAddress(ctx, common.Address(addr))
-	beaconState := &pb.BeaconState{
-		Slot:        0,
-		GenesisTime: 0,
-	}
-	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
+	addr := common.Address{1, 2, 3}
+	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
-
 	ns := &NodeServer{
-		beaconDB: beaconDB,
+		beaconDB:           db,
+		genesisTimeFetcher: &mock.ChainService{},
 	}
-	res, err := ns.GetGenesis(ctx, &ptypes.Empty{})
+	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(res.DepositContractAddress, addr[:]) {
-		t.Errorf("Wanted GetGenesis().DepositContractAddress = %#x, received %#x", addr, res.DepositContractAddress)
+	if !bytes.Equal(res.DepositContractAddress, addr.Bytes()) {
+		t.Errorf("Wanted DepositContractAddress() = %#x, received %#x", addr.Bytes(), res.DepositContractAddress)
 	}
-	genesisTimestamp := time.Unix(0, 0)
-	protoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
+	pUnix, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(res.GenesisTime, protoTimestamp) {
-		t.Errorf("Wanted GetGenesis().GenesisTime = %v, received %v", protoTimestamp, res.GenesisTime)
+	if !res.GenesisTime.Equal(pUnix) {
+		t.Errorf("Wanted GenesisTime() = %v, received %v", pUnix, res.GenesisTime)
 	}
 }
 

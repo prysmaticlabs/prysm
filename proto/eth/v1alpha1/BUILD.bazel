@@ -6,11 +6,13 @@ load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
+        "archive.proto",
         "attestation.proto",
         "beacon_block.proto",
         "beacon_chain.proto",
         "node.proto",
         "validator.proto",
+        "slasher.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

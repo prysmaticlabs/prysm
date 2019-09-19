@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -25,7 +24,6 @@ type ValidatorService struct {
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
-	key                  *keystore.Key
 	keys                 map[string]*keystore.Key
 	logValidatorBalances bool
 }
@@ -34,8 +32,7 @@ type ValidatorService struct {
 type Config struct {
 	Endpoint             string
 	CertFlag             string
-	KeystorePath         string
-	Password             string
+	Keys                 map[string]*keystore.Key
 	LogValidatorBalances bool
 }
 
@@ -43,26 +40,12 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorFolder := cfg.KeystorePath
-	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
-	ks := keystore.NewKeystore(cfg.KeystorePath)
-	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
-	if err != nil {
-		cancel()
-		return nil, errors.Wrap(err, "could not get private key")
-	}
-	var key *keystore.Key
-	for _, v := range keys {
-		key = v
-		break
-	}
 	return &ValidatorService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
-		keys:                 keys,
-		key:                  key,
+		keys:                 cfg.Keys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
 }
@@ -97,7 +80,6 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
-		beaconClient:         pb.NewBeaconServiceClient(v.conn),
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),

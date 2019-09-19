@@ -1,303 +1,187 @@
-// Package initialsync is run by the beacon node when the local chain is
-// behind the network's longest chain. Initial sync works as follows:
-// The node requests for the slot number of the most recent finalized block.
-// The node then builds from the most recent finalized block by requesting for subsequent
-// blocks by slot number. Once the service detects that the local chain is caught up with
-// the network, the service hands over control to the regular sync service.
-// Note: The behavior of initialsync will likely change as the specification changes.
-// The most significant and highly probable change will be determining where to sync from.
-// The beacon chain may sync from a block in the pasts X months in order to combat long-range attacks
-// (see here: https://github.com/ethereum/wiki/wiki/Proof-of-Stake-FAQs#what-is-weak-subjectivity)
 package initialsync
 
 import (
 	"context"
-	"math/big"
-	"sort"
-	"sync"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	peer "github.com/libp2p/go-libp2p-peer"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-var log = logrus.WithField("prefix", "initial-sync")
+var _ = shared.Service(&InitialSync{})
 
-var (
-	// ErrCanonicalStateMismatch can occur when the node has processed all blocks
-	// from a peer, but arrived at a different state root.
-	ErrCanonicalStateMismatch = errors.New("canonical state did not match after syncing with peer")
+type blockchainService interface {
+	blockchain.BlockReceiver
+	blockchain.HeadFetcher
+	blockchain.ChainFeeds
+}
+
+const (
+	minHelloCount            = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
+	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
-// Config defines the configurable properties of InitialSync.
-//
+// Config to set up the initial sync service.
 type Config struct {
-	SyncPollingInterval    time.Duration
-	BatchedBlockBufferSize int
-	StateBufferSize        int
-	BeaconDB               *db.BeaconDB
-	P2P                    p2pAPI
-	SyncService            syncService
-	ChainService           chainService
-	PowChain               powChainService
+	P2P     p2p.P2P
+	DB      db.Database
+	Chain   blockchainService
+	RegSync sync.HelloTracker
 }
 
-// DefaultConfig provides the default configuration for a sync service.
-// SyncPollingInterval determines how frequently the service checks that initial sync is complete.
-// BlockBufferSize determines that buffer size of the `blockBuf` channel.
-// StateBufferSize determines the buffer size of the `stateBuf` channel.
-func DefaultConfig() *Config {
-	return &Config{
-		SyncPollingInterval:    time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BatchedBlockBufferSize: params.BeaconConfig().DefaultBufferSize,
-		StateBufferSize:        params.BeaconConfig().DefaultBufferSize,
-	}
-}
-
-type p2pAPI interface {
-	p2p.Sender
-	p2p.ReputationManager
-	p2p.Subscriber
-}
-
-type powChainService interface {
-	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
-}
-
-type chainService interface {
-	blockchain.BlockProcessor
-	blockchain.ForkChoice
-}
-
-// SyncService is the interface for the Sync service.
-// InitialSync calls `Start` when initial sync completes.
-type syncService interface {
-	Start()
-	ResumeSync()
-}
-
-// InitialSync defines the main class in this package.
-// See the package comments for a general description of the service's functions.
+// InitialSync service.
 type InitialSync struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	p2p                 p2pAPI
-	syncService         syncService
-	chainService        chainService
-	db                  *db.BeaconDB
-	powchain            powChainService
-	batchedBlockBuf     chan p2p.Message
-	stateBuf            chan p2p.Message
-	syncPollingInterval time.Duration
-	syncedFeed          *event.Feed
-	stateReceived       bool
-	mutex               *sync.Mutex
-	nodeIsSynced        bool
+	helloTracker sync.HelloTracker
+	chain        blockchainService
+	p2p          p2p.P2P
+	synced       bool
+	chainStarted bool
 }
 
-// NewInitialSyncService constructs a new InitialSyncService.
-// This method is normally called by the main node.
-func NewInitialSyncService(ctx context.Context,
-	cfg *Config,
-) *InitialSync {
-	ctx, cancel := context.WithCancel(ctx)
-
-	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
-	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
-
+// NewInitialSync configures the initial sync service responsible for bringing the node up to the
+// latest head of the blockchain.
+func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
-		ctx:                 ctx,
-		cancel:              cancel,
-		p2p:                 cfg.P2P,
-		syncService:         cfg.SyncService,
-		db:                  cfg.BeaconDB,
-		powchain:            cfg.PowChain,
-		chainService:        cfg.ChainService,
-		stateBuf:            stateBuf,
-		batchedBlockBuf:     batchedBlockBuf,
-		syncPollingInterval: cfg.SyncPollingInterval,
-		syncedFeed:          new(event.Feed),
-		stateReceived:       false,
-		mutex:               new(sync.Mutex),
+		helloTracker: cfg.RegSync,
+		chain:        cfg.Chain,
+		p2p:          cfg.P2P,
 	}
 }
 
-// Start begins the goroutine.
-func (s *InitialSync) Start(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
-	go s.run(chainHeadResponses)
-}
+// Start the initial sync service.
+func (s *InitialSync) Start() {
+	ch := make(chan time.Time)
+	sub := s.chain.StateInitializedFeed().Subscribe(ch)
+	defer sub.Unsubscribe()
 
-// Stop kills the initial sync goroutine.
-func (s *InitialSync) Stop() error {
-	log.Info("Stopping service")
-	s.cancel()
-	return nil
-}
+	// Wait until chain start.
+	genesis := <-ch
+	if genesis.After(roughtime.Now()) {
+		time.Sleep(roughtime.Until(genesis))
+	}
+	s.chainStarted = true
+	currentSlot := slotsSinceGenesis(genesis)
+	if helpers.SlotToEpoch(currentSlot) == 0 {
+		log.Info("Chain started within the last epoch. Not syncing.")
+		s.synced = true
+		return
+	}
 
-// NodeIsSynced checks that the node has been caught up with the network.
-func (s *InitialSync) NodeIsSynced() bool {
-	return s.nodeIsSynced
-}
+	// Are we already in sync, or close to it?
+	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
+		log.Info("Already synced to the current epoch.")
+		s.synced = true
+		return
+	}
 
-func (s *InitialSync) exitInitialSync(ctx context.Context, block *ethpb.BeaconBlock, chainHead *pb.ChainHeadResponse) error {
-	if s.nodeIsSynced {
-		return nil
-	}
-	parentRoot := bytesutil.ToBytes32(block.ParentRoot)
-	parent, err := s.db.Block(parentRoot)
-	if err != nil {
-		return err
-	}
-	state, err := s.db.HistoricalStateFromSlot(ctx, parent.Slot, parentRoot)
-	if err != nil {
-		return err
-	}
-	if err := s.chainService.VerifyBlockValidity(ctx, block, state); err != nil {
-		return err
-	}
-	if err := s.db.SaveBlock(block); err != nil {
-		return err
-	}
-	root, err := ssz.SigningRoot(block)
-	if err != nil {
-		return errors.Wrap(err, "failed to tree hash block")
-	}
-	if err := s.db.SaveAttestationTarget(ctx, &pb.AttestationTarget{
-		Slot:            block.Slot,
-		BeaconBlockRoot: root[:],
-		ParentRoot:      block.ParentRoot,
-	}); err != nil {
-		return errors.Wrap(err, "failed to save attestation target")
-	}
-	state, err = s.chainService.AdvanceState(ctx, state, block)
-	if err != nil {
-		log.Error("OH NO - looks like you synced with a bad peer, try restarting your node!")
-		switch err.(type) {
-		case *blockchain.BlockFailedProcessingErr:
-			// If the block fails processing, we delete it from our DB.
-			if err := s.db.DeleteBlock(block); err != nil {
-				return errors.Wrap(err, "could not delete bad block from db")
-			}
-			return errors.Wrap(err, "could not apply block state transition")
-		default:
-			return errors.Wrap(err, "could not apply block state transition")
+	// Every 5 sec, report handshake count.
+	for {
+		helloCount := len(s.helloTracker.Hellos())
+		log.WithField(
+			"hellos",
+			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
+		).Info("Waiting for enough peer handshakes before syncing.")
+
+		if helloCount >= minHelloCount {
+			break
 		}
-	}
-	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
-		return err
-	}
-	if err := s.db.UpdateChainHead(ctx, block, state); err != nil {
-		return err
+		time.Sleep(handshakePollingInterval)
 	}
 
-	stateRoot := s.db.HeadStateRoot()
+	pid, best := bestHello(s.helloTracker.Hellos())
 
-	if stateRoot != bytesutil.ToBytes32(chainHead.CanonicalStateRootHash32) {
-		log.Errorf(
-			"Canonical state root %#x does not match highest observed root from peer %#x",
-			stateRoot,
-			chainHead.CanonicalStateRootHash32,
-		)
+	var last *eth.BeaconBlock
+	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
+		req := &pb.BeaconBlocksRequest{
+			HeadSlot:      headSlot + 1,
+			HeadBlockRoot: s.chain.HeadRoot(),
+			Count:         64,
+			Step:          1,
+		}
 
-		return ErrCanonicalStateMismatch
-	}
-	log.WithField("canonicalStateSlot", state.Slot).Info("Exiting init sync and starting regular sync")
-	s.syncService.ResumeSync()
-	s.cancel()
-	s.nodeIsSynced = true
-	return nil
-}
+		log.WithField("data", fmt.Sprintf("%+v", req)).Info("Sending msg")
 
-// run is the main goroutine for the initial sync service.
-// delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
-// It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(chainHeadResponses map[peer.ID]*pb.ChainHeadResponse) {
-	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
-	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
-	defer func() {
-		beaconStateSub.Unsubscribe()
-		batchedBlocksub.Unsubscribe()
-		close(s.batchedBlockBuf)
-		close(s.stateBuf)
-	}()
+		strm, err := s.p2p.Send(context.Background(), req, pid)
+		if err != nil {
+			panic(err)
+		}
 
-	ctx := s.ctx
+		// Read status code.
+		code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
+		if err != nil {
+			panic(err)
+		}
+		if code != 0 {
+			log.Errorf("Request failed. Request was %+v", req)
+			panic(errMsg)
+		}
 
-	var peers []peer.ID
-	for k := range chainHeadResponses {
-		peers = append(peers, k)
-	}
-
-	// Sort peers in descending order based on their canonical slot.
-	sort.Slice(peers, func(i, j int) bool {
-		return chainHeadResponses[peers[i]].CanonicalSlot > chainHeadResponses[peers[j]].CanonicalSlot
-	})
-
-	for _, peer := range peers {
-		chainHead := chainHeadResponses[peer]
-		if err := s.syncToPeer(ctx, chainHead, peer); err != nil {
-			log.WithError(err).WithField("peer", peer.Pretty()).Warn("Failed to sync with peer, trying next best peer")
+		resp := make([]*eth.BeaconBlock, 0)
+		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
+			log.Error(err)
 			continue
 		}
-		log.Info("Synced!")
-		break
+
+		for _, blk := range resp {
+			if blk.Slot <= headSlot {
+				continue
+			}
+			if blk.Slot < helpers.StartSlot(best.FinalizedEpoch+1) {
+				if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
+					panic(err)
+				}
+			} else {
+				if err := s.chain.ReceiveBlockNoPubsub(context.Background(), blk); err != nil {
+					panic(err)
+				}
+			}
+			last = blk
+		}
+
+		headSlot = s.chain.HeadSlot()
 	}
 
-	if !s.nodeIsSynced {
-		log.Fatal("Failed to sync with anyone...")
+	// Force a fork choice update since fork choice was not run during initial sync.
+	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), last); err != nil {
+		panic(err)
 	}
+
+	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	s.synced = true
 }
 
-func (s *InitialSync) syncToPeer(ctx context.Context, chainHeadResponse *pb.ChainHeadResponse, peer peer.ID) error {
-	fields := logrus.Fields{
-		"peer":          peer.Pretty(),
-		"canonicalSlot": chainHeadResponse.CanonicalSlot,
+// Stop initial sync.
+func (s *InitialSync) Stop() error {
+	return nil
+}
+
+// Status of initial sync.
+func (s *InitialSync) Status() error {
+	if !s.synced && s.chainStarted {
+		return errors.New("syncing")
+	}
+	return nil
+}
+
+func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
+	for pid, hello := range data {
+		return pid, hello
 	}
 
-	log.WithFields(fields).Info("Requesting state from peer")
-	if err := s.requestStateFromPeer(ctx, bytesutil.ToBytes32(chainHeadResponse.FinalizedStateRootHash32S), peer); err != nil {
-		log.Errorf("Could not request state from peer %v", err)
-	}
+	return "", nil
+}
 
-	ctx, cancel := context.WithTimeout(s.ctx, 20*time.Second)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-
-			return ctx.Err()
-		case msg := <-s.stateBuf:
-			log.WithFields(fields).Info("Received state resp from peer")
-			if err := s.processState(msg, chainHeadResponse); err != nil {
-				return err
-			}
-		case msg := <-s.batchedBlockBuf:
-			if msg.Peer != peer {
-				continue
-			}
-			log.WithFields(fields).Info("Received batched blocks from peer")
-			if err := s.processBatchedBlocks(msg, chainHeadResponse); err != nil {
-				log.WithError(err).WithField("peer", peer).Error("Failed to sync with peer.")
-				s.p2p.Reputation(msg.Peer, p2p.RepPenalityInitialSyncFailure)
-				continue
-			}
-			if !s.nodeIsSynced {
-				return errors.New("node still not in sync after receiving batch blocks")
-			}
-			s.p2p.Reputation(msg.Peer, p2p.RepRewardValidBlock)
-			return nil
-		}
-	}
+func slotsSinceGenesis(genesisTime time.Time) uint64 {
+	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }

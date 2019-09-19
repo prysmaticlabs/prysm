@@ -5,20 +5,14 @@ go_library(
     srcs = [
         "doc.go",
         "slice.go",
-        "slice_generic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/sliceutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_pkg_errors//:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "slice_generic_test.go",
-        "slice_test.go",
-    ],
+    srcs = ["slice_test.go"],
     embed = [":go_default_library"],
-    deps = ["@com_github_prysmaticlabs_go_ssz//:go_default_library"],
 )

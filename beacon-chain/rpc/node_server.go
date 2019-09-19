@@ -3,9 +3,9 @@ package rpc
 import (
 	"context"
 	"sort"
-	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -19,9 +19,10 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type NodeServer struct {
-	syncChecker sync.Checker
-	server      *grpc.Server
-	beaconDB    *db.BeaconDB
+	syncChecker        sync.Checker
+	server             *grpc.Server
+	beaconDB           db.Database
+	genesisTimeFetcher blockchain.GenesisTimeFetcher
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -33,22 +34,18 @@ func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethp
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	beaconState, err := ns.beaconDB.FinalizedState()
+	contractAddr, err := ns.beaconDB.DepositContractAddress(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve beacon state: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not retrieve contract address from db: %v", err)
 	}
-	address, err := ns.beaconDB.DepositContractAddress(ctx)
+	genesisTime := ns.genesisTimeFetcher.GenesisTime()
+	gt, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve deposit contract address: %v", err)
-	}
-	genesisTimestamp := time.Unix(int64(beaconState.GenesisTime), 0)
-	genesisProtoTimestamp, err := ptypes.TimestampProto(genesisTimestamp)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto timestamp: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto: %v", err)
 	}
 	return &ethpb.Genesis{
-		DepositContractAddress: address,
-		GenesisTime:            genesisProtoTimestamp,
+		GenesisTime:            gt,
+		DepositContractAddress: contractAddr,
 	}, nil
 }
 

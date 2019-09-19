@@ -2,74 +2,65 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p              p2p.Broadcaster
-	beaconDB         *db.BeaconDB
-	operationService operationService
-	cache            *cache.AttestationCache
+	p2p               p2p.Broadcaster
+	beaconDB          db.Database
+	operationsHandler operations.Handler
+	attReceiver       blockchain.AttestationReceiver
+	headFetcher       blockchain.HeadFetcher
+	attestationCache  *cache.AttestationCache
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
-	if err := as.operationService.HandleAttestation(ctx, att); err != nil {
-		return nil, err
-	}
-
-	// Update attestation target for RPC server to run necessary fork choice.
-	// We need to retrieve the head block to get its parent root.
-	head, err := as.beaconDB.Block(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	root, err := ssz.SigningRoot(att)
 	if err != nil {
-		return nil, err
-	}
-	// If the head block is nil, we can't save the attestation target.
-	if head == nil {
-		return nil, fmt.Errorf("could not find head %#x in db", bytesutil.Trunc(att.Data.BeaconBlockRoot))
-	}
-	// TODO(#3088): Remove this when fork-choice is updated to the new one.
-	attestationSlot := att.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	attTarget := &pbp2p.AttestationTarget{
-		Slot:            attestationSlot,
-		BeaconBlockRoot: att.Data.BeaconBlockRoot,
-		ParentRoot:      head.ParentRoot,
-	}
-	if err := as.beaconDB.SaveAttestationTarget(ctx, attTarget); err != nil {
-		return nil, fmt.Errorf("could not save attestation target")
+		return nil, errors.Wrap(err, "failed to sign root attestation")
 	}
 
-	as.p2p.Broadcast(ctx, att)
+	go func() {
+		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
+		if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
+			log.WithError(err).Error("could not handle attestation in operations service")
+			return
+		}
+		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
+			log.WithError(err).Error("could not receive attestation in chain service")
+		}
+	}()
 
-	hash, err := hashutil.HashProto(att)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.AttestResponse{Root: hash[:]}, nil
+	return &pb.AttestResponse{Root: root[:]}, nil
 }
 
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
 // with a blank signature field, which the validator will then sign.
 func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
-	res, err := as.cache.Get(ctx, req)
+	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("slot", int64(req.Slot)),
+		trace.Int64Attribute("shard", int64(req.Shard)),
+	)
+	res, err := as.attestationCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +69,9 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return res, nil
 	}
 
-	if err := as.cache.MarkInProgress(req); err != nil {
+	if err := as.attestationCache.MarkInProgress(req); err != nil {
 		if err == cache.ErrAlreadyInProgress {
-			res, err := as.cache.Get(ctx, req)
+			res, err := as.attestationCache.Get(ctx, req)
 			if err != nil {
 				return nil, err
 			}
@@ -93,27 +84,13 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, err
 	}
 	defer func() {
-		if err := as.cache.MarkNotInProgress(req); err != nil {
+		if err := as.attestationCache.MarkNotInProgress(req); err != nil {
 			log.WithError(err).Error("Failed to mark cache not in progress")
 		}
 	}()
 
-	// Set the attestation data's beacon block root = hash_tree_root(head) where head
-	// is the validator's view of the head block of the beacon chain during the slot.
-	headBlock, err := as.beaconDB.ChainHead()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve chain head")
-	}
-	headRoot, err := ssz.SigningRoot(headBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash beacon block")
-	}
-
-	// Let head state be the state of head block processed through empty slots up to assigned slot.
-	headState, err := as.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch head state")
-	}
+	headState := as.headFetcher.HeadState()
+	headRoot := as.headFetcher.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
@@ -139,8 +116,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	}
 	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
 	if err != nil {
-		return nil, fmt.Errorf("could not tree hash crosslink for shard %d: %v",
-			req.Shard, err)
+		return nil, errors.Wrapf(err, "could not tree hash crosslink for shard %d", req.Shard)
 	}
 	res = &ethpb.AttestationData{
 		BeaconBlockRoot: headRoot[:],
@@ -158,7 +134,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		},
 	}
 
-	if err := as.cache.Put(ctx, req, res); err != nil {
+	if err := as.attestationCache.Put(ctx, req, res); err != nil {
 		return nil, err
 	}
 

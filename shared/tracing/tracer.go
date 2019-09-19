@@ -37,7 +37,7 @@ func Setup(serviceName, processName, endpoint string, sampleFraction float64, en
 				jaeger.StringTag("version", version.GetVersion()),
 			},
 		},
-		BufferMaxCount: 256 * 1e6, // 256Mb
+		BufferMaxCount: 10000,
 		OnError: func(err error) {
 			log.WithError(err).Error("Failed to process span")
 		},

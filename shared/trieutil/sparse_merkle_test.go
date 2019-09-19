@@ -2,6 +2,7 @@ package trieutil
 
 import (
 	"math/big"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -13,13 +14,49 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestMerkleTrie_BranchIndices(t *testing.T) {
-	indices := branchIndices(1024, 3 /* depth */)
-	expected := []int{1024, 512, 256}
-	for i := 0; i < len(indices); i++ {
-		if expected[i] != indices[i] {
-			t.Errorf("Expected %d, received %d", expected[i], indices[i])
-		}
+func TestMarshalDepositWithProof(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	m, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	proof, err := m.MerkleProof(2)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	if len(proof) != 33 {
+		t.Errorf("Received len %d, wanted 33", len(proof))
+	}
+	someRoot := [32]byte{1, 2, 3, 4}
+	someSig := [96]byte{1, 2, 3, 4}
+	someKey := [48]byte{1, 2, 3, 4}
+	dep := &ethpb.Deposit{
+		Proof: proof,
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             someKey[:],
+			WithdrawalCredentials: someRoot[:],
+			Amount:                32,
+			Signature:             someSig[:],
+		},
+	}
+	enc, err := ssz.Marshal(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec := &ethpb.Deposit{}
+	if err := ssz.Unmarshal(enc, &dec); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(dec, dep) {
+		t.Errorf("Wanted %v, received %v", dep, dec)
 	}
 }
 
@@ -72,31 +109,35 @@ func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
 func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	items := [][]byte{
 		[]byte("A"),
-		[]byte("BB"),
-		[]byte("CCC"),
-		[]byte("DDDD"),
-		[]byte("EEEEE"),
-		[]byte("FFFFFF"),
-		[]byte("GGGGGGG"),
+		[]byte("B"),
+		[]byte("C"),
+		[]byte("D"),
+		[]byte("E"),
+		[]byte("F"),
+		[]byte("G"),
+		[]byte("H"),
 	}
 	m, err := GenerateTrieFromItems(items, 32)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
-	proof, err := m.MerkleProof(2)
+	proof, err := m.MerkleProof(0)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
+	if len(proof) != 33 {
+		t.Errorf("Received len %d, wanted 33", len(proof))
+	}
 	root := m.Root()
-	if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
-		t.Error("Merkle proof did not verify")
+	if ok := VerifyMerkleProof(root[:], items[0], 0, proof); !ok {
+		t.Error("First Merkle proof did not verify")
 	}
 	proof, err = m.MerkleProof(3)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
 	if ok := VerifyMerkleProof(root[:], items[3], 3, proof); !ok {
-		t.Error("Merkle proof did not verify")
+		t.Error("Second Merkle proof did not verify")
 	}
 	if ok := VerifyMerkleProof(root[:], []byte("buzz"), 3, proof); ok {
 		t.Error("Item not in tree should fail to verify")

@@ -3,8 +3,17 @@ test --test_verbose_timeout_warnings
 
 # Only build test targets when running bazel test //...
 test --build_tests_only
+test --test_output=errors
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2
 test --host_force_python=PY2
 run --host_force_python=PY2
+
+# Networking is blocked for tests by default, add "requires-network" tag to your test if networking
+# is required within the sandbox. This flag is no longer experimental after 0.29.0.
+# Network sandboxing only works on linux.
+--experimental_sandbox_default_allow_network=false
+
+# Use minimal protobufs at runtime
+run --define ssz=minimal

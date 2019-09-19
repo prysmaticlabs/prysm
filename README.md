@@ -70,7 +70,7 @@ bazel build //validator:validator
 Bazel will automatically pull and install any dependencies as well, including Go and necessary compilers.
 
 ## Running an Ethereum 2.0 Beacon Node
-To understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/basic-architecture-overview).
+To understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical).
 
 ### Running via Docker
 
@@ -113,7 +113,7 @@ Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Go
 
 ### Activating Your Validator: Depositing 3.2 Goerli ETH 
 
-Using your validator deposit data from the previous step, follow the instructions found on https://alpha.prylabs.net/participate to make a deposit.
+Using your validator deposit data from the previous step, follow the instructions found on https://prylabs.net/participate to make a deposit.
 
 It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system. 
 

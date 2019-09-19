@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+
+// ArchivedActiveSetChanges represents the changes to the active validator registry
+// between epoch N and N-1. In particular, it keeps track of validator indices
+// which were newly activated, exited, or slashed, along with those particular
+// block operations.
+message ArchivedActiveSetChanges {
+    // Activated validator indices.
+    repeated uint64 activated = 1;
+
+    // Exited validator indices.
+    repeated uint64 exited = 2;
+
+    // Forcefully ejected validator indices (due to low balance).
+    repeated uint64 ejected = 3;
+
+    // Proposer indices slashed.
+    repeated uint64 proposers_slashed = 4;
+
+    // Attester indices slashed.
+    repeated uint64 attesters_slashed = 5;
+
+    // Voluntary exit objects corresponding 1-to-1 to the exited indices
+    // list in this same data structure.
+    repeated VoluntaryExit voluntary_exits = 6;
+
+    // Proposer slashing objects corresponding 1-to-1 to the slashed proposer indices
+    // list in this same data structure.
+    repeated ProposerSlashing proposer_slashings = 7;
+
+    // Attester slashing objects corresponding 1-to-1 to the slashed attester indices
+    // list in this same data structure.
+    repeated AttesterSlashing attester_slashings = 8;
+}
+
+// ArchivedCommitteeInfo representing the minimal data required to reconstruct
+// validator committee assignments for an epoch N.
+message ArchivedCommitteeInfo {
+    // Seed represents the random seed used in shuffling validators.
+    bytes seed = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+    // Current shard the seed should be used to shuffle validators into.
+    uint64 current_shard = 2;
+
+    // Committee count is the size the committee the shard should have.
+    uint64 committee_count = 3;
+}

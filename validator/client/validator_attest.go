@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	bitfield "github.com/prysmaticlabs/go-bitfield"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -69,11 +69,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 			slot, err)
 		return
 	}
-	committeeLength := mathutil.CeilDiv8(len(assignment.Committee))
 
-	// We set the custody bitfield to an slice of zero values as a stub for phase 0
-	// of length len(committee)+7 // 8.
-	custodyBitfield := make([]byte, committeeLength)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
@@ -150,5 +147,5 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
 
-	time.Sleep(time.Until(timeToBroadcast))
+	time.Sleep(roughtime.Until(timeToBroadcast))
 }

@@ -1,0 +1,59 @@
+test_cases:
+  # GHOST chooses b3 with the heaviest weight
+  - blocks:
+      - id: 'b0'
+        parent: 'b0'
+      - id: 'b1'
+        parent: 'b0'
+      - id: 'b2'
+        parent: 'b1'
+      - id: 'b3'
+        parent: 'b1'
+    weights:
+      b0: 0
+      b1: 0
+      b2: 5
+      b3: 10
+    head: 'b3'
+  # GHOST chooses b1 with the heaviest weight
+  - blocks:
+      - id: 'b0'
+        parent: 'b0'
+      - id: 'b1'
+        parent: 'b0'
+      - id: 'b2'
+        parent: 'b0'
+      - id: 'b3'
+        parent: 'b0'
+    weights:
+      b1: 5
+      b2: 4
+      b3: 3
+    head: 'b1'
+  # Equal weights children, GHOST chooses b2 because it is higher lexicographically than b3
+  - blocks:
+      - id: 'b0'
+        parent: 'b0'
+      - id: 'b1'
+        parent: 'b0'
+      - id: 'b2'
+        parent: 'b0'
+      - id: 'b3'
+        parent: 'b0'
+    weights:
+      b1: 5
+      b2: 6
+      b3: 6
+    head: 'b3'
+  # Equal weights children, GHOST chooses b2 because it is higher lexicographically than b1
+  - blocks:
+      - id: 'b0'
+        parent: 'b0'
+      - id: 'b1'
+        parent: 'b0'
+      - id: 'b2'
+        parent: 'b0'
+    weights:
+      b1: 0
+      b2: 0
+    head: 'b2'

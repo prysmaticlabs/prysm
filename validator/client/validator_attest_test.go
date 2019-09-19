@@ -10,11 +10,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	bitfield "github.com/prysmaticlabs/go-bitfield"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -140,6 +141,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
+	aggregationBitfield.SetBitAt(4, true)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -147,12 +151,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 			Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		},
-		CustodyBits: make([]byte, (len(committee)+7)/8),
+		AggregationBits: aggregationBitfield,
+		CustodyBits:     custodyBitfield,
 	}
-	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(4, true)
-
-	expectedAttestation.AggregationBits = aggregationBitfield
 
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
 		Data:       expectedAttestation.Data,
@@ -177,7 +178,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	validator.genesisTime = uint64(time.Now().Unix())
+	validator.genesisTime = uint64(roughtime.Now().Unix())
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AssignmentRequest{}),
@@ -213,7 +214,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(2)
 	defer wg.Wait()
 
-	validator.genesisTime = uint64(time.Now().Unix())
+	validator.genesisTime = uint64(roughtime.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{

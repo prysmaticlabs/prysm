@@ -1,11 +1,10 @@
 package helpers_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -13,13 +12,8 @@ import (
 )
 
 func TestAttestationDataSlot_OK(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-	beaconState, err := db.HeadState(context.Background())
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,13 +56,8 @@ func TestAttestationDataSlot_ReturnsErrorWithNilData(t *testing.T) {
 }
 
 func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-	beaconState, err := db.HeadState(context.Background())
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,13 +71,8 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 }
 
 func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
-	if err := db.InitializeState(context.Background(), uint64(0), deposits, &ethpb.Eth1Data{}); err != nil {
-		t.Fatalf("Could not initialize beacon state to disk: %v", err)
-	}
-	beaconState, err := db.HeadState(context.Background())
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}

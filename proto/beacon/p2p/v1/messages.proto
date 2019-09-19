@@ -2,145 +2,36 @@ syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
 
-import "proto/beacon/p2p/v1/types.proto";
-import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "google/protobuf/timestamp.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
-
-enum Topic {
-  UNKNOWN = 0;
-  BEACON_BLOCK_ANNOUNCE = 1;
-  BEACON_BLOCK_REQUEST = 2;
-  BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3;
-  BEACON_BLOCK_RESPONSE = 4;
-  BATCHED_BEACON_BLOCK_REQUEST = 5;
-  BATCHED_BEACON_BLOCK_RESPONSE = 6;
-  CHAIN_HEAD_REQUEST = 7;
-  CHAIN_HEAD_RESPONSE = 8;
-  BEACON_STATE_HASH_ANNOUNCE = 9;
-  BEACON_STATE_REQUEST = 10;
-  BEACON_STATE_RESPONSE = 11;
-  BEACON_ATTESTATION = 12;
+message Hello {
+  bytes fork_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 finalized_epoch = 3;
+  bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 5;
 }
 
-message Envelope {
-  bytes span_context = 1;
-  bytes payload = 2;
-  google.protobuf.Timestamp timestamp = 3;
+message Goodbye {
+  Reason reason = 1;
+
+  enum Reason {
+    UNKNOWN = 0;
+    CLIENT_SHUTDOWN = 1;
+    IRRELEVANT_NETWORK = 2;
+    GENERIC_ERROR = 3;
+
+    reserved 4 to 127;
+  }
 }
 
-message BeaconBlockAnnounce {
-  bytes hash = 1;
-  uint64 slot_number = 2;
+message BeaconBlocksRequest {
+  bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 2;
+  uint64 count = 3;
+  uint64 step = 4;
 }
 
-message BeaconBlockRequest {
-  bytes hash = 1;
-}
-
-message BeaconBlockRequestBySlotNumber {
-  uint64 slot_number = 1;
-}
-
-message BeaconBlockResponse {
-  ethereum.eth.v1alpha1.BeaconBlock block = 1;
-  ethereum.eth.v1alpha1.Attestation attestation = 2;
-}
-
-message BatchedBeaconBlockRequest {
-  uint64 start_slot = 1 [deprecated=true];
-  uint64 end_slot = 2 [deprecated=true];
-  bytes finalized_root = 3;
-  bytes canonical_root = 4;
-}
-
-message BatchedBeaconBlockResponse {
-  repeated ethereum.eth.v1alpha1.BeaconBlock batched_blocks = 1;
-}
-
-message ChainHeadRequest {}
-
-message ChainHeadResponse {
-  uint64 canonical_slot = 1;
-  bytes canonical_state_root_hash32 = 2;
-  bytes finalized_state_root_hash32s = 3;
-  bytes canonical_block_root = 4;
-  bytes finalized_block_root = 5;
-}
-
-message BeaconStateHashAnnounce {
-  bytes hash = 1;
-}
-
-message BeaconStateRequest {
-  bytes finalized_state_root_hash32s = 1;
-}
-
-message BeaconStateResponse {
-  BeaconState finalized_state = 1;
-  ethereum.eth.v1alpha1.BeaconBlock finalized_block = 2;
-}
-
-message FinalizedStateAnnounce {
-  bytes block_root = 1;
-  bytes state_root = 2;
-  uint64 slot = 3;
-}
-
-message ProposerSlashingAnnounce {
-  bytes hash = 1;
-}
-
-message ProposerSlashingRequest {
-  bytes hash = 1;
-}
-
-message ProposerSlashingResponse {
-  bytes hash = 1;
-  ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 2;
-}
-
-message AttesterSlashingAnnounce {
-  bytes hash = 1;
-}
-
-message AttesterSlashingRequest {
-  bytes hash = 1;
-}
-
-message AttesterSlashingResponse {
-  bytes hash = 1;
-  ethereum.eth.v1alpha1.AttesterSlashing Attester_slashing = 2;
-}
-
-message DepositAnnounce {
-  bytes hash = 1;
-}
-
-message DepositRequest {
-  bytes hash = 1;
-}
-
-message DepositResponse {
-  bytes hash = 1;
-  ethereum.eth.v1alpha1.Deposit deposit = 2;
-}
-
-message ExitAnnounce {
-  bytes hash = 1;
-}
-
-message ExitRequest {
-  bytes hash = 1;
-}
-
-message ExitResponse {
-  bytes hash = 1;
-  ethereum.eth.v1alpha1.VoluntaryExit voluntary_exit = 2;
-}
-
-message Handshake {
-  string deposit_contract_address = 1;
+message ErrorMessage {
+  string error_message = 1;
 }

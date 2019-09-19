@@ -14,7 +14,7 @@ import (
 
 // processDeposit is a copy of the core function of the same name which includes some optimizations
 // and removes the requirement to pass in beacon state. This is for determining genesis validators.
-func (w *Web3Service) processDeposit(
+func (s *Service) processDeposit(
 	eth1Data *ethpb.Eth1Data,
 	deposit *ethpb.Deposit,
 ) error {
@@ -23,7 +23,7 @@ func (w *Web3Service) processDeposit(
 	}
 	pubKey := bytesutil.ToBytes48(deposit.Data.PublicKey)
 	amount := deposit.Data.Amount
-	currBal, ok := w.depositedPubkeys[pubKey]
+	currBal, ok := s.depositedPubkeys[pubKey]
 	if !ok {
 		pub, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
@@ -41,20 +41,20 @@ func (w *Web3Service) processDeposit(
 		if !sig.Verify(root[:], pub, domain) {
 			return fmt.Errorf("deposit signature did not verify")
 		}
-		w.depositedPubkeys[pubKey] = amount
+		s.depositedPubkeys[pubKey] = amount
 
 		if amount >= params.BeaconConfig().MaxEffectiveBalance {
-			w.activeValidatorCount++
+			s.activeValidatorCount++
 		}
 	} else {
 		newBal := currBal + amount
-		w.depositedPubkeys[pubKey] = newBal
+		s.depositedPubkeys[pubKey] = newBal
 		// exit if the validator is already an active validator previously
 		if currBal >= params.BeaconConfig().MaxEffectiveBalance {
 			return nil
 		}
 		if newBal >= params.BeaconConfig().MaxEffectiveBalance {
-			w.activeValidatorCount++
+			s.activeValidatorCount++
 		}
 	}
 	return nil
