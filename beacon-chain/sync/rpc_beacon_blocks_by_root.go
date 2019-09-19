@@ -2,13 +2,11 @@ package sync
 
 import (
 	"context"
-	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -24,24 +22,11 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 		return err
 	}
 	for i := 0; i < len(blockRoots); i++ {
-		setStreamReadDeadline(stream, 10)
-		code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
-		if err == io.EOF {
-			return errors.New("reached the end of the stream")
-		}
+		blk, err := HandleChunkedBlocks(stream, r.p2p)
 		if err != nil {
+			log.WithError(err).Error("Unable to retrieve block from stream")
 			return err
 		}
-
-		if code != 0 {
-			return errors.New(errMsg)
-		}
-
-		blk := &eth.BeaconBlock{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, blk); err != nil {
-			return err
-		}
-
 		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
 			log.WithError(err).Error("Unable to process block")
 			return nil

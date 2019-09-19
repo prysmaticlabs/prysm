@@ -2,12 +2,16 @@ package sync
 
 import (
 	"context"
+	"errors"
+	"io"
 	"reflect"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
@@ -100,4 +104,25 @@ func (r *RegularSync) chunkedHandler(stream libp2pcore.Stream, msg interface{}) 
 	}
 	_, err := r.p2p.Encoding().EncodeWithLength(stream, msg)
 	return err
+}
+
+func HandleChunkedBlocks(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
+	setStreamReadDeadline(stream, 10)
+	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
+	if err == io.EOF {
+		return nil, errors.New("reached the end of the stream")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if code != 0 {
+		return nil, errors.New(errMsg)
+	}
+
+	blk := &eth.BeaconBlock{}
+	if err := p2p.Encoding().DecodeWithLength(stream, blk); err != nil {
+		return nil, err
+	}
+	return blk, nil
 }
