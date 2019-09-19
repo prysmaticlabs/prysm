@@ -36,11 +36,10 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	slots := r.sortedPendingSlots()
 
 	for _, s := range slots {
-		r.pendingQueueLock.Lock()
+		r.pendingQueueLock.RLock()
 		b := r.slotToPendingBlocks[uint64(s)]
-		r.pendingQueueLock.Unlock()
-
 		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)]
+		r.pendingQueueLock.RUnlock()
 
 		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		hasPeer := len(pids) != 0
@@ -51,7 +50,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 			log.WithFields(logrus.Fields{
 				"currentSlot": b.Slot,
 				"parentRoot": hex.EncodeToString(b.ParentRoot),
-			}).Debug("Requesting parent block")
+			}).Info("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				log.Errorf("Could not send recent block request: %v", err)
