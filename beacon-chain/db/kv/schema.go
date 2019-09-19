@@ -23,12 +23,13 @@ var (
 	archivedActiveIndicesBucket          = []byte("archived-active-indices")
 
 	// Key indices buckets.
-	blockParentRootIndicesBucket       = []byte("block-parent-root-indices")
-	blockSlotIndicesBucket             = []byte("block-slot-indices")
-	attestationParentRootIndicesBucket = []byte("attestation-parent-root-indices")
-	attestationShardIndicesBucket      = []byte("attestation-shard-indices")
-	attestationStartEpochIndicesBucket = []byte("attestation-start-epoch-indices")
-	attestationEndEpochIndicesBucket   = []byte("attestation-end-epoch-indices")
+	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
+	blockSlotIndicesBucket              = []byte("block-slot-indices")
+	attestationHeadBlockRootBucket      = []byte("attestation-head-block-root-indices")
+	attestationSourceRootIndicesBucket  = []byte("attestation-source-root-indices")
+	attestationSourceEpochIndicesBucket = []byte("attestation-source-epoch-indices")
+	attestationTargetRootIndicesBucket  = []byte("attestation-target-root-indices")
+	attestationTargetEpochIndicesBucket = []byte("attestation-target-epoch-indices")
 
 	// Specific item keys.
 	headBlockRootKey          = []byte("head-root")

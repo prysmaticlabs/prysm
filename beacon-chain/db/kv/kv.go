@@ -66,10 +66,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 			archivedValidatorParticipationBucket,
 			archivedActiveIndicesBucket,
 			// Indices buckets.
-			attestationShardIndicesBucket,
-			attestationParentRootIndicesBucket,
-			attestationStartEpochIndicesBucket,
-			attestationEndEpochIndicesBucket,
+			attestationHeadBlockRootBucket,
+			attestationSourceRootIndicesBucket,
+			attestationSourceEpochIndicesBucket,
+			attestationTargetRootIndicesBucket,
+			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 		)
