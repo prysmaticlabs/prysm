@@ -17,10 +17,11 @@ var _ = shared.Service(&RegularSync{})
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P        p2p.P2P
-	DB         db.Database
-	Operations *operations.Service
-	Chain      blockchainService
+	P2P         p2p.P2P
+	DB          db.Database
+	Operations  *operations.Service
+	Chain       blockchainService
+	InitialSync Checker
 }
 
 // This defines the interface for interacting with block chain service
@@ -41,6 +42,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		operations:   cfg.Operations,
 		chain:        cfg.Chain,
 		helloTracker: make(map[peer.ID]*pb.Hello),
+		initialSync:  cfg.InitialSync,
 	}
 
 	r.registerRPCHandlers()
@@ -60,6 +62,7 @@ type RegularSync struct {
 	helloTracker     map[peer.ID]*pb.Hello
 	helloTrackerLock sync.RWMutex
 	chainStarted     bool
+	initialSync      Checker
 }
 
 // Start the regular sync service.
@@ -76,12 +79,6 @@ func (r *RegularSync) Stop() error {
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
-}
-
-// Syncing returns true if the node is currently syncing with the network.
-func (r *RegularSync) Syncing() bool {
-	// TODO(3147): Use real value.
-	return false
 }
 
 // Hellos returns the map of hello messages received so far.

@@ -26,7 +26,8 @@ func propSlashingCacheKey(slashing *ethpb.ProposerSlashing) (string, error) {
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
 func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
-	if r.Syncing() {
+	// The head state will be too far away to validate any slashing.
+	if r.initialSync.Syncing() {
 		return false
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
@@ -97,6 +98,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	r := &RegularSync{
 		p2p:   p2p,
 		chain: &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if !r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
@@ -128,6 +130,7 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 	r := &RegularSync{
 		p2p:   p2p,
 		chain: &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/) {
@@ -150,9 +153,31 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	r := &RegularSync{
 		p2p:   p2p,
 		chain: &mock.ChainService{State: state},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
 		t.Error("slashing from the far distant future should have timed out and returned false")
+	}
+}
+
+func TestValidateAttesterSlashing_Syncing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+
+	r := &RegularSync{
+		p2p:   p2p,
+		chain: &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: true},
+	}
+
+	if r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+		t.Error("Passed validation")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
 	}
 }

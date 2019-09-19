@@ -174,6 +174,11 @@ func (s *InitialSync) Status() error {
 	return nil
 }
 
+// Syncing returns true if initial sync is still running.
+func (s *InitialSync) Syncing() bool {
+	return !s.synced
+}
+
 func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
 	for pid, hello := range data {
 		return pid, hello

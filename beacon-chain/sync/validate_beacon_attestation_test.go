@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -19,6 +20,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 
 	rs := &RegularSync{
 		db: db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -65,6 +67,7 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 
 	rs := &RegularSync{
 		db: db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	msg := &ethpb.Attestation{
@@ -89,6 +92,7 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 
 	rs := &RegularSync{
 		db: db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -115,5 +119,39 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 
 	if p.BroadcastCalled {
 		t.Error("Message was broadcast")
+	}
+}
+
+func TestValidateBeaconAttestation_Syncing(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	rs := &RegularSync{
+		db:          db,
+		initialSync: &mockSync.Sync{IsSyncing: true},
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 55,
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: blockRoot[:],
+		},
+	}
+
+	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
+		t.Error("Beacon attestation passed validation")
 	}
 }

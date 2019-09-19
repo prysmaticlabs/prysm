@@ -40,5 +40,11 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	if err == nil {
 		p.Broadcast(ctx, m)
 	}
-	return err == nil && !r.Syncing()
+
+	// We should not attempt to process blocks until fully synced, but propagation is OK.
+	if r.initialSync.Syncing() {
+		return false
+	}
+
+	return err == nil
 }

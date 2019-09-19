@@ -13,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 )
 
 func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
@@ -67,6 +68,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		chain: &mock.ChainService{
 			State: s,
 		},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if !r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/) {
@@ -100,9 +102,33 @@ func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {
 		chain: &mock.ChainService{
 			State: s,
 		},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if r.validateVoluntaryExit(ctx, exit, p2p, true /*fromSelf*/) {
+		t.Error("Validation should have failed")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
+	}
+}
+
+func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+
+	r := &RegularSync{
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
+		initialSync: &mockSync.Sync{IsSyncing: true},
+	}
+
+	if r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/) {
 		t.Error("Validation should have failed")
 	}
 

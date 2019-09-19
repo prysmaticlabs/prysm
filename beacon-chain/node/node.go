@@ -362,11 +362,17 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
+	var initSync *initialsync.InitialSync
+	if err := b.services.FetchService(&initSync); err != nil {
+		return err
+	}
+
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:         b.db,
-		P2P:        b.fetchP2P(ctx),
-		Operations: operationService,
-		Chain:      chainService,
+		DB:          b.db,
+		P2P:         b.fetchP2P(ctx),
+		Operations:  operationService,
+		Chain:       chainService,
+		InitialSync: initSync,
 	})
 
 	return b.services.RegisterService(rs)
@@ -410,7 +416,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *prysmsync.RegularSync
+	var syncService *initialsync.InitialSync
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
 	}
