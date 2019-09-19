@@ -193,12 +193,12 @@ func (s *Service) run() {
 			if !helpers.IsEpochEnd(headState.Slot) {
 				continue
 			}
-			if err := s.archiveActiveSetChanges(headState); err != nil {
-				log.WithError(err).Error("Could not archive active validator set changes")
-				continue
-			}
 			if err := s.archiveCommitteeInfo(headState); err != nil {
 				log.WithError(err).Error("Could not archive committee info")
+				continue
+			}
+			if err := s.archiveActiveSetChanges(headState); err != nil {
+				log.WithError(err).Error("Could not archive active validator set changes")
 				continue
 			}
 			if err := s.archiveParticipation(headState); err != nil {
@@ -211,15 +211,15 @@ func (s *Service) run() {
 			}
 			log.WithField(
 				"epoch",
-				helpers.CurrentEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState),
 			).Debug("Successfully archived active validator set changes during epoch")
 			log.WithField(
 				"epoch",
-				helpers.CurrentEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState),
 			).Debug("Successfully archived validator balances and active indices during epoch")
 			log.WithField(
 				"epoch",
-				helpers.CurrentEpoch(headState.Slot),
+				helpers.CurrentEpoch(headState),
 			).Debug("Successfully archived validator participation during epoch")
 		case <-s.ctx.Done():
 			log.Info("Context closed, exiting goroutine")
