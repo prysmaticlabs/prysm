@@ -145,9 +145,9 @@ func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
 	}
 
 	activeSetChanges := &ethpb.ArchivedActiveSetChanges{
-		Activated:        activations,
-		Exited:           exited,
-		ProposersSlashed: slashings,
+		Activated: activations,
+		Exited:    exited,
+		Slashed:   slashings,
 	}
 	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(s.ctx, currentEpoch, activeSetChanges); err != nil {
 		return errors.Wrap(err, "could not archive active validator set changes")

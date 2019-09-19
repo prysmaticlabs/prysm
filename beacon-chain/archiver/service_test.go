@@ -29,8 +29,8 @@ func init() {
 
 func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc, db := setupService(t)
-	defer dbutil.TeardownDB(t, db)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
@@ -42,8 +42,8 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc, db := setupService(t)
-	defer dbutil.TeardownDB(t, db)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	// The head state is NOT an epoch end.
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
@@ -64,8 +64,8 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
-	svc, db := setupService(t)
-	defer dbutil.TeardownDB(t, db)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -94,8 +94,8 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
-	svc, db := setupService(t)
-	defer dbutil.TeardownDB(t, db)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -120,8 +120,8 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
-	svc, db := setupService(t)
-	defer dbutil.TeardownDB(t, db)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -201,15 +201,15 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 }
 
 func setupService(t *testing.T) (*Service, db.Database) {
-	db := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		beaconDB:        db,
+		beaconDB:        beaconDB,
 		ctx:             ctx,
 		cancel:          cancel,
 		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
-	}, db
+	}, beaconDB
 }
 
 func triggerNewHeadEvent(t *testing.T, svc *Service, headRoot [32]byte) {
