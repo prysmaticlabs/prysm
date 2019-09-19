@@ -89,6 +89,7 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 	})
 }
 
+/*
 func copyValues(msg interface{}) interface{} {
 	switch t := msg.(type) {
 	case proto.Message:
@@ -100,4 +101,4 @@ func copyValues(msg interface{}) interface{} {
 	default:
 		return reflect.New(reflect.TypeOf(t).Elem())
 	}
-}
+}*/
