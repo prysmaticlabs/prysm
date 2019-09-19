@@ -14,10 +14,8 @@ import (
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
 func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
-	r.slotToPendingBlocksLock.Lock()
-	defer r.slotToPendingBlocksLock.Unlock()
-	r.seenPendingBlocksLock.Lock()
-	defer r.seenPendingBlocksLock.Unlock()
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -41,9 +39,14 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 		return err
 	}
 
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
 	for _, blk := range resp {
 		r.slotToPendingBlocks[blk.Slot] = blk
-		blkRoot, _ := ssz.SigningRoot(blk)
+		blkRoot, err := ssz.SigningRoot(blk)
+		if err != nil {
+			return err
+		}
 		r.seenPendingBlocks[blkRoot] = true
 	}
 

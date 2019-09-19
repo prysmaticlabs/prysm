@@ -30,11 +30,11 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
 		r.slotToPendingBlocksLock.Lock()
-		r.seenPendingBlocksLock.Lock()
+		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[block.Slot] = block
 		r.seenPendingBlocks[blockRoot] = true
 		r.slotToPendingBlocksLock.Unlock()
-		r.seenPendingBlocksLock.Unlock()
+		r.pendingQueueLock.Unlock()
 		return nil
 	}
 

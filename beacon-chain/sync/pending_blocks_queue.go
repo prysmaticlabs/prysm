@@ -2,12 +2,14 @@ package sync
 
 import (
 	"context"
+	"encoding/hex"
 	"sort"
 	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
@@ -34,13 +36,11 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	slots := r.sortedPendingSlots()
 
 	for _, s := range slots {
-		r.slotToPendingBlocksLock.RLock()
+		r.pendingQueueLock.Lock()
 		b := r.slotToPendingBlocks[uint64(s)]
-		r.slotToPendingBlocksLock.RUnlock()
+		r.pendingQueueLock.Unlock()
 
-		r.seenPendingBlocksLock.RLock()
 		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)]
-		r.seenPendingBlocksLock.RUnlock()
 
 		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		hasPeer := len(pids) != 0
@@ -48,7 +48,10 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		// Only request for missing parent block if it's not in DB, not in pending cache
 		// and has peer in the peer list.
 		if !inPendingQueue && !inDB && hasPeer {
-			log.Infof("Request parent of block %d", b.Slot)
+			log.WithFields(logrus.Fields{
+				"currentSlot": b.Slot,
+				"parentRoot": hex.EncodeToString(b.ParentRoot),
+			}).Debug("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
 				log.Errorf("Could not send recent block request: %v", err)
@@ -64,12 +67,10 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 			log.Errorf("Could not process block from slot %d: %v", b.Slot, err)
 		}
 
-		r.slotToPendingBlocksLock.Lock()
-		r.seenPendingBlocksLock.Lock()
+		r.pendingQueueLock.Lock()
 		delete(r.slotToPendingBlocks, uint64(s))
 		delete(r.seenPendingBlocks, bytesutil.ToBytes32(b.ParentRoot))
-		r.slotToPendingBlocksLock.Unlock()
-		r.seenPendingBlocksLock.Unlock()
+		r.pendingQueueLock.Unlock()
 
 		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
 	}
@@ -86,6 +87,9 @@ func (r *RegularSync) peerIDs() []peer.ID {
 }
 
 func (r *RegularSync) sortedPendingSlots() []int {
+	r.pendingQueueLock.RLock()
+	defer r.pendingQueueLock.RUnlock()
+
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
 	for s := range r.slotToPendingBlocks {
 		slots = append(slots, int(s))

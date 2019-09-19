@@ -55,18 +55,17 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx                     context.Context
-	p2p                     p2p.P2P
-	db                      db.Database
-	operations              *operations.Service
-	chain                   blockchainService
-	helloTracker            map[peer.ID]*pb.Hello
-	helloTrackerLock        sync.RWMutex
-	slotToPendingBlocks     map[uint64]*ethpb.BeaconBlock
-	slotToPendingBlocksLock sync.RWMutex
-	seenPendingBlocks       map[[32]byte]bool
-	seenPendingBlocksLock   sync.RWMutex
-	chainStarted            bool
+	ctx                 context.Context
+	p2p                 p2p.P2P
+	db                  db.Database
+	operations          *operations.Service
+	chain               blockchainService
+	helloTracker        map[peer.ID]*pb.Hello
+	helloTrackerLock    sync.RWMutex
+	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
+	seenPendingBlocks   map[[32]byte]bool
+	pendingQueueLock    sync.RWMutex
+	chainStarted        bool
 }
 
 // Start the regular sync service.
