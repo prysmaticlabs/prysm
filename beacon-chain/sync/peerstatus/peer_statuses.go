@@ -10,17 +10,17 @@ import (
 )
 
 var lock sync.RWMutex
-var peerStatuses = make(map[peer.ID]*pb.Hello)
+var peerStatuses = make(map[peer.ID]*pb.Status)
 
 // Get most recent status from peer in cache. Threadsafe.
-func Get(pid peer.ID) *pb.Hello {
+func Get(pid peer.ID) *pb.Status {
 	lock.RLock()
 	defer lock.RUnlock()
 	return peerStatuses[pid]
 }
 
 // Set most recent status from peer in cache. Threadsafe.
-func Set(pid peer.ID, status *pb.Hello) {
+func Set(pid peer.ID, status *pb.Status) {
 	lock.Lock()
 	defer lock.Unlock()
 	peerStatuses[pid] = status
@@ -51,5 +51,5 @@ func Keys() []peer.ID {
 
 // Clear the cache. This method should only be used for tests.
 func Clear() {
-	peerStatuses = make(map[peer.ID]*pb.Hello)
+	peerStatuses = make(map[peer.ID]*pb.Status)
 }
