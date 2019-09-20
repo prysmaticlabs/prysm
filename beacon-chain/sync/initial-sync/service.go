@@ -97,7 +97,7 @@ func (s *InitialSync) Start() {
 		time.Sleep(handshakePollingInterval)
 	}
 
-	pid, best := bestHello()
+	pid, best := bestStatus()
 
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
@@ -177,10 +177,9 @@ func (s *InitialSync) Syncing() bool {
 	return !s.synced
 }
 
-func bestStatus(data map[peer.ID]*pb.Status) (peer.ID, *pb.Status) {
-	for pid, status := range data {
-		return pid, status
-	}
+func bestStatus() (peer.ID, *pb.Status) {
+	keys := peerstatus.Keys()
+	return keys[0], peerstatus.Get(keys[0])
 }
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {
