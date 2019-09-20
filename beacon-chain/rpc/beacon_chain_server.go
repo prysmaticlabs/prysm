@@ -493,6 +493,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	case *ethpb.GetValidatorParticipationRequest_Epoch:
 		requestedEpoch = q.Epoch
 	default:
+		requestedEpoch = currentEpoch
 	}
 
 	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {

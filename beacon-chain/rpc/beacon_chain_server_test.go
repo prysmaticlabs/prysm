@@ -887,11 +887,19 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 			},
 		},
 	}
-	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch + 2}); err == nil {
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch + 2,
+		},
+	}); err == nil {
 		t.Error("Expected error when requesting future epoch, received nil")
 	}
 	// We request data from epoch 0, which we didn't archive, so we should expect an error.
-	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: 0}); err == nil {
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Genesis{
+			Genesis: true,
+		},
+	}); err == nil {
 		t.Error("Expected error when data from archive is not found, received nil")
 	}
 
@@ -900,7 +908,11 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 		Finalized:     true,
 		Participation: part,
 	}
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -959,7 +971,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		headFetcher: &mock.ChainService{State: s},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
