@@ -289,7 +289,7 @@ func setupService(t *testing.T) (*Service, db.Database) {
 func triggerNewHeadEvent(t *testing.T, svc *Service, headRoot [32]byte) {
 	exitRoutine := make(chan bool)
 	go func() {
-		svc.run()
+		svc.run(svc.ctx)
 		<-exitRoutine
 	}()
 

@@ -52,7 +52,7 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 // Start the archiver service event loop.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	go s.run()
+	go s.run(s.ctx)
 }
 
 // Stop the archiver service event loop.
@@ -69,7 +69,7 @@ func (s *Service) Status() error {
 }
 
 // We archive committee information pertaining to the head state's epoch.
-func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
+func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.BeaconState) error {
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	committeeCount, err := helpers.CommitteeCount(headState, currentEpoch)
 	if err != nil {
@@ -88,14 +88,14 @@ func (s *Service) archiveCommitteeInfo(headState *pb.BeaconState) error {
 		StartShard:     startShard,
 		CommitteeCount: committeeCount,
 	}
-	if err := s.beaconDB.SaveArchivedCommitteeInfo(s.ctx, currentEpoch, info); err != nil {
+	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {
 		return errors.Wrap(err, "could not archive committee info")
 	}
 	return nil
 }
 
 // We archive active validator set changes that happened during the epoch.
-func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
+func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState) error {
 	currentEpoch := helpers.CurrentEpoch(headState)
 	activations := make([]uint64, 0)
 	slashings := make([]uint64, 0)
@@ -149,7 +149,7 @@ func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
 		Exited:    exited,
 		Slashed:   slashings,
 	}
-	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(s.ctx, currentEpoch, activeSetChanges); err != nil {
+	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(ctx, currentEpoch, activeSetChanges); err != nil {
 		return errors.Wrap(err, "could not archive active validator set changes")
 	}
 	return nil
@@ -157,32 +157,32 @@ func (s *Service) archiveActiveSetChanges(headState *pb.BeaconState) error {
 
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
-func (s *Service) archiveParticipation(headState *pb.BeaconState) error {
+func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState) error {
 	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return errors.Wrap(err, "could not compute participation")
 	}
-	return s.beaconDB.SaveArchivedValidatorParticipation(s.ctx, helpers.SlotToEpoch(headState.Slot), participation)
+	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, helpers.SlotToEpoch(headState.Slot), participation)
 }
 
 // We archive validator balances and active indices.
-func (s *Service) archiveBalancesAndIndices(headState *pb.BeaconState) error {
+func (s *Service) archiveBalancesAndIndices(ctx context.Context, headState *pb.BeaconState) error {
 	balances := headState.Balances
 	currentEpoch := helpers.CurrentEpoch(headState)
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, currentEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not determine active indices")
 	}
-	if err := s.beaconDB.SaveArchivedBalances(s.ctx, currentEpoch, balances); err != nil {
+	if err := s.beaconDB.SaveArchivedBalances(ctx, currentEpoch, balances); err != nil {
 		return errors.Wrap(err, "could not archive balances")
 	}
-	if err := s.beaconDB.SaveArchivedActiveIndices(s.ctx, currentEpoch, activeIndices); err != nil {
+	if err := s.beaconDB.SaveArchivedActiveIndices(ctx, currentEpoch, activeIndices); err != nil {
 		return errors.Wrap(err, "could not archive active indices")
 	}
 	return nil
 }
 
-func (s *Service) run() {
+func (s *Service) run(ctx context.Context) {
 	sub := s.newHeadNotifier.HeadUpdatedFeed().Subscribe(s.newHeadRootChan)
 	defer sub.Unsubscribe()
 	for {
@@ -193,19 +193,19 @@ func (s *Service) run() {
 			if !helpers.IsEpochEnd(headState.Slot) {
 				continue
 			}
-			if err := s.archiveCommitteeInfo(headState); err != nil {
+			if err := s.archiveCommitteeInfo(ctx, headState); err != nil {
 				log.WithError(err).Error("Could not archive committee info")
 				continue
 			}
-			if err := s.archiveActiveSetChanges(headState); err != nil {
+			if err := s.archiveActiveSetChanges(ctx, headState); err != nil {
 				log.WithError(err).Error("Could not archive active validator set changes")
 				continue
 			}
-			if err := s.archiveParticipation(headState); err != nil {
+			if err := s.archiveParticipation(ctx, headState); err != nil {
 				log.WithError(err).Error("Could not archive validator participation")
 				continue
 			}
-			if err := s.archiveBalancesAndIndices(headState); err != nil {
+			if err := s.archiveBalancesAndIndices(ctx, headState); err != nil {
 				log.WithError(err).Error("Could not archive validator balances and active indices")
 				continue
 			}
