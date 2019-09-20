@@ -21,7 +21,7 @@ func (r *RegularSync) chunkWriter(stream libp2pcore.Stream, msg interface{}) err
 	return err
 }
 
-// HandleChunkedBlocks handles each response chunk that is sent by the
+// HandleChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
 func HandleChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
 	blk := &eth.BeaconBlock{}
