@@ -161,6 +161,56 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "archived committee info")
 }
 
+func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	delayedActEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	headState.Validators[4].ActivationEpoch = delayedActEpoch
+	headState.Validators[5].ActivationEpoch = delayedActEpoch
+	triggerNewHeadEvent(t, svc, [32]byte{})
+
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
+		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
+	}
+	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+}
+
+func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	delayedActEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	headState.Validators[4].ActivationEpoch = delayedActEpoch
+	headState.Validators[5].ActivationEpoch = delayedActEpoch
+	triggerNewHeadEvent(t, svc, [32]byte{})
+
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
+		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
+	}
+	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+}
+
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
