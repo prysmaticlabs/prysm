@@ -37,12 +37,12 @@ type Config struct {
 	P2P     p2p.P2P
 	DB      db.Database
 	Chain   blockchainService
-	RegSync sync.PeerTracker
+	RegSync sync.StatusTracker
 }
 
 // InitialSync service.
 type InitialSync struct {
-	statusTracker sync.PeerTracker
+	statusTracker sync.StatusTracker
 	chain         blockchainService
 	p2p           p2p.P2P
 	synced        bool
@@ -99,7 +99,7 @@ func (s *InitialSync) Start() {
 		time.Sleep(handshakePollingInterval)
 	}
 
-	pid, best := bestHello(s.statusTracker.PeerStatuses())
+	pid, best := bestStatus(s.statusTracker.PeerStatuses())
 
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
@@ -162,7 +162,7 @@ func (s *InitialSync) Status() error {
 	return nil
 }
 
-func bestHello(data map[peer.ID]*pb.Status) (peer.ID, *pb.Status) {
+func bestStatus(data map[peer.ID]*pb.Status) (peer.ID, *pb.Status) {
 	for pid, status := range data {
 		return pid, status
 	}
