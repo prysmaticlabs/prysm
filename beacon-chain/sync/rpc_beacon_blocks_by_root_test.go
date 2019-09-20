@@ -74,7 +74,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.recentBeaconBlocksRPCHandler(context.Background(), blkRoots, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -119,12 +119,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		statusTracker: make(map[peer.ID]*pb.Status),
+		ctx:           context.Background(),
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/recent_beacon_blocks/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

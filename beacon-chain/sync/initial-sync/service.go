@@ -37,25 +37,25 @@ type Config struct {
 	P2P     p2p.P2P
 	DB      db.Database
 	Chain   blockchainService
-	RegSync sync.HelloTracker
+	RegSync sync.StatusTracker
 }
 
 // InitialSync service.
 type InitialSync struct {
-	helloTracker sync.HelloTracker
-	chain        blockchainService
-	p2p          p2p.P2P
-	synced       bool
-	chainStarted bool
+	statusTracker sync.StatusTracker
+	chain         blockchainService
+	p2p           p2p.P2P
+	synced        bool
+	chainStarted  bool
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
-		helloTracker: cfg.RegSync,
-		chain:        cfg.Chain,
-		p2p:          cfg.P2P,
+		statusTracker: cfg.RegSync,
+		chain:         cfg.Chain,
+		p2p:           cfg.P2P,
 	}
 }
 
@@ -87,7 +87,7 @@ func (s *InitialSync) Start() {
 
 	// Every 5 sec, report handshake count.
 	for {
-		helloCount := len(s.helloTracker.Hellos())
+		helloCount := len(s.statusTracker.PeerStatuses())
 		log.WithField(
 			"hellos",
 			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
@@ -99,12 +99,12 @@ func (s *InitialSync) Start() {
 		time.Sleep(handshakePollingInterval)
 	}
 
-	pid, best := bestHello(s.helloTracker.Hellos())
+	pid, best := bestStatus(s.statusTracker.PeerStatuses())
 
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
-		req := &pb.BeaconBlocksRequest{
-			HeadSlot:      headSlot + 1,
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot:     headSlot + 1,
 			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
@@ -174,9 +174,9 @@ func (s *InitialSync) Status() error {
 	return nil
 }
 
-func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
-	for pid, hello := range data {
-		return pid, hello
+func bestStatus(data map[peer.ID]*pb.Status) (peer.ID, *pb.Status) {
+	for pid, status := range data {
+		return pid, status
 	}
 
 	return "", nil
