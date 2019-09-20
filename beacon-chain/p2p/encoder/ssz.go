@@ -96,14 +96,7 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	if err != nil {
 		return err
 	}
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
-	}
-	return ssz.Unmarshal(b, to)
+	return e.Decode(b, to)
 }
 
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
@@ -121,14 +114,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	if err != nil {
 		return err
 	}
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
-	}
-	return ssz.Unmarshal(b, to)
+	return e.Decode(b, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
