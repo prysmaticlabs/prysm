@@ -196,17 +196,40 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 		State: headState,
 	}
 	currentEpoch := helpers.CurrentEpoch(headState)
-	delayedActEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	headState.Validators[4].ActivationEpoch = delayedActEpoch
-	headState.Validators[5].ActivationEpoch = delayedActEpoch
+	headState.Validators[95].Slashed = true
+	headState.Validators[96].Slashed = true
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
-		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
+	if !reflect.DeepEqual(retrieved.Slashed, []uint64{95, 96}) {
+		t.Errorf("Wanted indices 95, 96 slashed, received %v", retrieved.Slashed)
+	}
+	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+}
+
+func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	svc.headFetcher = &mock.ChainService{
+		State: headState,
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	headState.Validators[95].ExitEpoch = currentEpoch + 1
+	headState.Validators[95].WithdrawableEpoch = currentEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	triggerNewHeadEvent(t, svc, [32]byte{})
+
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retrieved.Exited, []uint64{95}) {
+		t.Errorf("Wanted indices 95 exited, received %v", retrieved.Exited)
 	}
 	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
 }
@@ -216,8 +239,9 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
