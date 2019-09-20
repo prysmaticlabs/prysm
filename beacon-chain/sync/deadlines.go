@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-var defaultReadDuration time.Duration = 5
-var defaultWriteDuration time.Duration = 10
+const defaultReadDuration time.Duration = 5
+const defaultWriteDuration time.Duration = 10
 
 func setRPCStreamDeadlines(stream network.Stream) {
 	setStreamReadDeadline(stream, defaultReadDuration)

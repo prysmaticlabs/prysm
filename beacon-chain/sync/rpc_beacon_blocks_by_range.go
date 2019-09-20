@@ -52,7 +52,7 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 
 	for _, blk := range blks {
 		if blk != nil && (blk.Slot-startSlot)%m.Step == 0 {
-			if err := r.chunkedHandler(stream, blk); err != nil {
+			if err := r.chunkWriter(stream, blk); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
 				return err
 			}

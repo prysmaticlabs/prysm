@@ -2,16 +2,12 @@ package sync
 
 import (
 	"context"
-	"errors"
-	"io"
 	"reflect"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
@@ -19,11 +15,12 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
-var ttfbTimeout = 5 * time.Second
+const ttfbTimeout = 5 * time.Second
 
 // maxChunkSize would be the maximum allowed size that a request/response chunk can be.
-// any size beyond that would be rejected and the corresponding stream reset.
-var maxChunkSize = 1 << 20
+// any size beyond that would be rejected and the corresponding stream reset. This would
+// be 1048576 bytes or 1 MiB.
+const maxChunkSize = 1 << 20
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -95,36 +92,4 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 			}
 		}
 	})
-}
-
-func (r *RegularSync) chunkedHandler(stream libp2pcore.Stream, msg interface{}) error {
-	setStreamWriteDeadline(stream, defaultWriteDuration)
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
-	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, msg)
-	return err
-}
-
-// HandleChunkedBlocks handles each response chunk that is sent by the
-// peer and converts it into a beacon block.
-func HandleChunkedBlocks(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
-	setStreamReadDeadline(stream, 10)
-	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
-	if err == io.EOF {
-		return nil, errors.New("reached the end of the stream")
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if code != 0 {
-		return nil, errors.New(errMsg)
-	}
-
-	blk := &eth.BeaconBlock{}
-	if err := p2p.Encoding().DecodeWithLength(stream, blk); err != nil {
-		return nil, err
-	}
-	return blk, nil
 }

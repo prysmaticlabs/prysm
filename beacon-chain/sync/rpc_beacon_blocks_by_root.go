@@ -70,7 +70,7 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 			}
 			return err
 		}
-		if err := r.chunkedHandler(stream, blk); err != nil {
+		if err := r.chunkWriter(stream, blk); err != nil {
 			return err
 		}
 	}
