@@ -10,10 +10,7 @@ go_library(
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
-<<<<<<< HEAD
-=======
         "//proto/beacon/p2p/v1:go_default_library",
->>>>>>> 4ffef61e1dd193fbf17f576c45258af6ac6ef29b
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
     ],

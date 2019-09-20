@@ -881,6 +881,11 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 		headFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
 		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: epoch + 1,
+			},
+		},
 	}
 	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch + 2}); err == nil {
 		t.Error("Expected error when requesting future epoch, received nil")
@@ -890,12 +895,17 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 		t.Error("Expected error when data from archive is not found, received nil")
 	}
 
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch,
+		Finalized:     true,
+		Participation: part,
+	}
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(part, res.Participation) {
-		t.Errorf("Wanted %v, received %v", part, res)
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
 	}
 }
 
