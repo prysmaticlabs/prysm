@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -21,10 +20,6 @@ const invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
-
-func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
-	return errors.New("not implemented")
-}
 
 // validator should verify the contents of the message, propagate the message
 // as expected, and return true or false to continue the message processing

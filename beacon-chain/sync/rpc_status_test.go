@@ -62,7 +62,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -122,16 +122,16 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -142,7 +142,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -172,17 +172,17 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r.Start()
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 
-		resp := &pb.Hello{HeadSlot: 100, ForkVersion: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -220,7 +220,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 
 }
 
-func TestHelloRPCRequest_RequestSent(t *testing.T) {
+func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
@@ -255,28 +255,28 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCHelloRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {

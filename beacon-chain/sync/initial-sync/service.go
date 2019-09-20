@@ -101,8 +101,8 @@ func (s *InitialSync) Start() {
 
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
-		req := &pb.BeaconBlocksRequest{
-			HeadSlot:      headSlot + 1,
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot:     headSlot + 1,
 			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
@@ -177,10 +177,10 @@ func (s *InitialSync) Syncing() bool {
 	return !s.synced
 }
 
-// bestHello is a temporary stub for choosing the first peer.
-func bestHello() (peer.ID, *pb.Hello) {
-	keys := peerstatus.Keys()
-	return keys[0], peerstatus.Get(keys[0])
+func bestStatus(data map[peer.ID]*pb.Status) (peer.ID, *pb.Status) {
+	for pid, status := range data {
+		return pid, status
+	}
 }
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {

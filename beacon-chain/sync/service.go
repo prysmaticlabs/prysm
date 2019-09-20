@@ -63,7 +63,7 @@ type RegularSync struct {
 
 // Start the regular sync service.
 func (r *RegularSync) Start() {
-	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
+	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 }
 
@@ -84,7 +84,7 @@ type Checker interface {
 	Status() error
 }
 
-// HelloTracker interface for accessing the hello / handshake messages received so far.
-type HelloTracker interface {
-	Hellos() map[peer.ID]*pb.Hello
+// StatusTracker interface for accessing the status / handshake messages received so far.
+type StatusTracker interface {
+	PeerStatuses() map[peer.ID]*pb.Status
 }
