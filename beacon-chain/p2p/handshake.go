@@ -10,18 +10,18 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-var handshakes = make(map[peer.ID]*pb.Hello)
+var handshakes = make(map[peer.ID]*pb.Status)
 var handshakeLock sync.Mutex
 
 // AddHandshake to the local records for initial sync.
-func (s *Service) AddHandshake(pid peer.ID, hello *pb.Hello) {
+func (s *Service) AddHandshake(pid peer.ID, hello *pb.Status) {
 	handshakeLock.Lock()
 	defer handshakeLock.Unlock()
 	handshakes[pid] = hello
 }
 
 // Handshakes has not been implemented yet and it may be moved to regular sync...
-func (s *Service) Handshakes() map[peer.ID]*pb.Hello {
+func (s *Service) Handshakes() map[peer.ID]*pb.Status {
 	return nil
 }
 

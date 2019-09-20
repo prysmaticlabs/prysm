@@ -41,7 +41,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		p2p:                 cfg.P2P,
 		operations:          cfg.Operations,
 		chain:               cfg.Chain,
-		helloTracker:        make(map[peer.ID]*pb.Hello),
+		statusTracker:       make(map[peer.ID]*pb.Status),
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -60,8 +60,8 @@ type RegularSync struct {
 	db                  db.Database
 	operations          *operations.Service
 	chain               blockchainService
-	helloTracker        map[peer.ID]*pb.Hello
-	helloTrackerLock    sync.RWMutex
+	statusTracker       map[peer.ID]*pb.Status
+	statusTrackerLock   sync.RWMutex
 	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
@@ -70,7 +70,7 @@ type RegularSync struct {
 
 // Start the regular sync service.
 func (r *RegularSync) Start() {
-	r.p2p.AddConnectionHandler(r.sendRPCHelloRequest)
+	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
 }
@@ -91,11 +91,11 @@ func (r *RegularSync) Syncing() bool {
 	return false
 }
 
-// Hellos returns the map of hello messages received so far.
-func (r *RegularSync) Hellos() map[peer.ID]*pb.Hello {
-	r.helloTrackerLock.RLock()
-	defer r.helloTrackerLock.RUnlock()
-	return r.helloTracker
+// PeerStatuses returns the map of status messages received so far.
+func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Status {
+	r.statusTrackerLock.RLock()
+	defer r.statusTrackerLock.RUnlock()
+	return r.statusTracker
 }
 
 // ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
@@ -112,7 +112,7 @@ type Checker interface {
 	Status() error
 }
 
-// HelloTracker interface for accessing the hello / handshake messages received so far.
-type HelloTracker interface {
-	Hellos() map[peer.ID]*pb.Hello
+// StatusTracker interface for accessing the status / handshake messages received so far.
+type StatusTracker interface {
+	PeerStatuses() map[peer.ID]*pb.Status
 }
