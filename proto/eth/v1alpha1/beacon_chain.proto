@@ -403,8 +403,13 @@ message ValidatorAssignments {
 }
 
 message GetValidatorParticipationRequest {
-    // Epoch to request participation information.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Epoch to request participation information.
+        uint64 epoch = 1;
+
+        // Whether or not to query for the genesis information.
+        bool genesis = 2;
+    }
 }
 
 message ValidatorParticipationResponse {

@@ -484,27 +484,51 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	headState := bs.headFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
-	if req.Epoch > helpers.SlotToEpoch(headState.Slot) {
+
+	var requestedEpoch uint64
+	var isGenesis bool
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorParticipationRequest_Genesis:
+		isGenesis = q.Genesis
+	case *ethpb.GetValidatorParticipationRequest_Epoch:
+		requestedEpoch = q.Epoch
+	default:
+	}
+
+	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {
 		return nil, status.Errorf(
 			codes.FailedPrecondition,
-			"cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", req.Epoch, currentEpoch,
+			"cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", requestedEpoch, currentEpoch,
 		)
 	}
-	// If the request is from a past epoch, we look into our archived
+	// If the request is from genesis or another past epoch, we look into our archived
 	// data to find it and return it if it exists.
-	if req.Epoch < helpers.SlotToEpoch(headState.Slot) {
-		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, req.Epoch)
+	if isGenesis {
+		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, 0)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
-			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", req.Epoch)
+			return nil, status.Error(codes.NotFound, "could not find archival data for epoch 0")
+		}
+		return &ethpb.ValidatorParticipationResponse{
+			Epoch:         0,
+			Finalized:     true,
+			Participation: participation,
+		}, nil
+	} else if requestedEpoch < helpers.SlotToEpoch(headState.Slot) {
+		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+		}
+		if participation == nil {
+			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", requestedEpoch)
 		}
 		finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
 		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
-		finalized := req.Epoch <= finalizedEpoch
+		finalized := requestedEpoch <= finalizedEpoch
 		return &ethpb.ValidatorParticipationResponse{
-			Epoch:         req.Epoch,
+			Epoch:         requestedEpoch,
 			Finalized:     finalized,
 			Participation: participation,
 		}, nil
@@ -516,7 +540,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}
 	return &ethpb.ValidatorParticipationResponse{
-		Epoch:         req.Epoch,
+		Epoch:         currentEpoch,
 		Finalized:     false, // The current epoch can never be finalized.
 		Participation: participation,
 	}, nil
