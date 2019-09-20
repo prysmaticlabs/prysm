@@ -192,6 +192,34 @@ func BenchmarkProcessBlock(b *testing.B) {
 	cleanUp()
 }
 
+func BenchmarkBeaconProposerIndex(b *testing.B) {
+	beaconState, _ := createBeaconStateAndBlock(b)
+
+	b.N = 100
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := helpers.BeaconProposerIndex(beaconState)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	cleanUp()
+}
+
+func BenchmarkCrosslinkCommitee(b *testing.B) {
+	beaconState, _ := createBeaconStateAndBlock(b)
+
+	b.N = 100
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), 0)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	cleanUp()
+}
+
 func createFullBlock(b testing.TB, bState *pb.BeaconState) (*ethpb.BeaconBlock, []byte) {
 	currentSlot := bState.Slot
 	currentEpoch := helpers.CurrentEpoch(bState)
