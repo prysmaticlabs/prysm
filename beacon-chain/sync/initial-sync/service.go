@@ -118,7 +118,7 @@ func (s *InitialSync) Start() {
 		}
 
 		for i := req.StartSlot; i < req.StartSlot+(req.Count*req.Step); i += req.Step {
-			blk, err := sync.HandleChunkedBlock(strm, s.p2p)
+			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
 			if err != nil {
 				log.Error(err)
 				break
