@@ -31,7 +31,7 @@ func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
 	svc := &Service{
 		ctx:             ctx,
 		cancel:          cancel,
-		newHeadSlotChan: make(chan uint64, 0),
+		newHeadRootChan: make(chan [32]byte, 0),
 		newHeadNotifier: &mock.ChainService{},
 	}
 	svc.headFetcher = &mock.ChainService{
