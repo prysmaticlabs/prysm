@@ -80,19 +80,16 @@ func (s *Store) GenesisStore(
 	justifiedCheckpoint *ethpb.Checkpoint,
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
-	j := proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-	f := proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
-	s.justifiedCheckpt = j
-	s.finalizedCheckpt = f
-
-	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(j.Root))
+	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve last justified state")
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: j,
+		Checkpoint: s.justifiedCheckpt,
 		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
