@@ -35,6 +35,8 @@ func Delete(pid peer.ID) {
 
 // Count of peer statuses in cache. Threadsafe.
 func Count() int {
+	lock.RLock()
+	defer lock.RUnlock()
 	return len(peerStatuses)
 }
 
