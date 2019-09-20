@@ -31,14 +31,8 @@ message ArchivedActiveSetChanges {
     // Exited validator indices.
     repeated uint64 exited = 2;
 
-    // Forcefully ejected validator indices (due to low balance).
-    repeated uint64 ejected = 3;
-
     // Proposer indices slashed.
-    repeated uint64 proposers_slashed = 4;
-
-    // Attester indices slashed.
-    repeated uint64 attesters_slashed = 5;
+    repeated uint64 slashed = 4;
 
     // Voluntary exit objects corresponding 1-to-1 to the exited indices
     // list in this same data structure.
@@ -59,9 +53,9 @@ message ArchivedCommitteeInfo {
     // Seed represents the random seed used in shuffling validators.
     bytes seed = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
-    // Current shard the seed should be used to shuffle validators into.
-    uint64 current_shard = 2;
+    // Start shard for the shuffling at epoch N.
+    uint64 start_shard = 2;
 
-    // Committee count is the size the committee the shard should have.
+    // Committee count is the size the committees during epoch N.
     uint64 committee_count = 3;
 }
