@@ -18,7 +18,3 @@ message BeaconBlocksByRangeRequest {
   uint64 count = 3;
   uint64 step = 4;
 }
-
-message ErrorMessage {
-  string error_message = 1;
-}
