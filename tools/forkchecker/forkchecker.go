@@ -95,7 +95,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		logParticipation(endpt1, p)
+		logParticipation(endpt1, p.Participation)
 	}
 
 	for endpt2, client := range clients {
@@ -113,7 +113,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 				if err != nil {
 					log.Fatal(err)
 				}
-				logParticipation(endpt2, p)
+				logParticipation(endpt2, p.Participation)
 			}
 		}
 	}
@@ -131,11 +131,9 @@ func logHead(endpt string, head *pb.ChainHead) {
 		}).Info("Head from beacon node ", endpt)
 }
 
-func logParticipation(endpt string, p *pb.ValidatorParticipation) {
+func logParticipation(endpt string, p *pb.ArchivedValidatorParticipation) {
 	log.WithFields(
 		logrus.Fields{
-			"Finalized":         p.Finalized,
-			"Epoch":             p.Epoch,
 			"VotedEther":        p.VotedEther,
 			"TotalEther":        p.EligibleEther,
 			"ParticipationRate": p.GlobalParticipationRate,
