@@ -487,8 +487,8 @@ func TestBeaconChainServer_ListValidatorBalancesFromArchive(t *testing.T) {
 	}
 
 	req := &ethpb.GetValidatorBalancesRequest{
-		Epoch:   0,
-		Indices: []uint64{uint64(1)},
+		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{uint64(1)},
 	}
 	res, err := bs.ListValidatorBalances(context.Background(), req)
 	if err != nil {
@@ -532,8 +532,8 @@ func TestBeaconChainServer_ListValidatorBalancesFromArchive_NewValidatorNotFound
 	}
 
 	req := &ethpb.GetValidatorBalancesRequest{
-		Epoch:   0,
-		Indices: []uint64{1, 150, 161},
+		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{1, 150, 161},
 	}
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), ">= balance list") {
 		t.Errorf("Wanted out of range error for including newer validators in the arguments, received %v", err)

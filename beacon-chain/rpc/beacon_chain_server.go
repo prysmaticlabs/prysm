@@ -265,12 +265,12 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	if requestingGenesis {
 		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", req.Epoch)
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
 		}
 	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
 		balances, err = bs.beaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", req.Epoch)
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
 		}
 	} else {
 		balances = headState.Balances
