@@ -41,6 +41,7 @@ type Store struct {
 	attsQueueLock       sync.Mutex
 	seenAtts            map[[32]byte]bool
 	seenAttsLock        sync.Mutex
+	processBlockLock    sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -78,16 +79,20 @@ func (s *Store) GenesisStore(
 	ctx context.Context,
 	justifiedCheckpoint *ethpb.Checkpoint,
 	finalizedCheckpoint *ethpb.Checkpoint) error {
-	s.justifiedCheckpt = justifiedCheckpoint
-	s.finalizedCheckpt = finalizedCheckpoint
 
-	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+	j := proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+	f := proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+
+	s.justifiedCheckpt = j
+	s.finalizedCheckpt = f
+
+	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(j.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve last justified state")
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: s.justifiedCheckpt,
+		Checkpoint: j,
 		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
@@ -144,12 +149,12 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.justifiedCheckpt)
+	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.JustifiedCheckpt())
 	if err != nil {
 		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}
 	if lastJustifiedState == nil {
-		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.justifiedCheckpt.Epoch)
+		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.JustifiedCheckpt().Epoch)
 	}
 
 	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
@@ -204,10 +209,10 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.head")
 	defer span.End()
 
-	head := s.justifiedCheckpt.Root
+	head := s.JustifiedCheckpt().Root
 
 	for {
-		startSlot := s.justifiedCheckpt.Epoch * params.BeaconConfig().SlotsPerEpoch
+		startSlot := s.JustifiedCheckpt().Epoch * params.BeaconConfig().SlotsPerEpoch
 		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(startSlot)
 		children, err := s.db.BlockRoots(ctx, filter)
 		if err != nil {
@@ -242,7 +247,14 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	}
 }
 
+// JustifiedCheckpt returns the latest justified check point from fork choice store.
+func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
+	return proto.Clone(s.justifiedCheckpt).(*ethpb.Checkpoint)
+}
+
 // FinalizedCheckpt returns the latest finalized check point from fork choice store.
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
 	return proto.Clone(s.finalizedCheckpt).(*ethpb.Checkpoint)
 }
+
+
