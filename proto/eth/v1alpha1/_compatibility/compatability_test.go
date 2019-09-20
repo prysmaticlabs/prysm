@@ -145,7 +145,7 @@ func TestProtoCompatability(t *testing.T) {
 		},
 		{
 			a: &pb.ValidatorParticipationResponse{},
-			b: &upstreampb.ValidatorParticipation{},
+			b: &upstreampb.ValidatorParticipationResponse{},
 		},
 		{
 			a: &pb.AttestationPoolResponse{},
@@ -192,6 +192,10 @@ func TestProtoCompatability(t *testing.T) {
 		{
 			a: &pb.Validator{},
 			b: &upstreampb.Validator{},
+		},
+		{
+			a: &pb.ValidatorParticipation{},
+			b: &upstreampb.ValidatorParticipation{},
 		},
 	}
 
