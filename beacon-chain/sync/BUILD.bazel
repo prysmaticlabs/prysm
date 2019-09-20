@@ -66,7 +66,6 @@ go_test(
     srcs = [
         "error_test.go",
         "pending_blocks_queue_test.go",
-        "rpc_beacon_blocks_test.go",
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
         "rpc_goodbye_test.go",

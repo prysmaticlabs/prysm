@@ -82,7 +82,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 }
 
 func (r *RegularSync) peerIDs() []peer.ID {
-	hellos := r.Hellos()
+	hellos := r.PeerStatuses()
 	pids := make([]peer.ID, 0, len(hellos))
 	for pid := range hellos {
 		pids = append(pids, pid)
