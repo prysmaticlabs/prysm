@@ -237,11 +237,9 @@ func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) 
 	}, nil
 }
 
-// ListValidatorBalances retrieves the validator balances for a given set of public key at
-// a specific epoch in time.
-//
-// TODO(#3064): Implement balances for a specific epoch. Current implementation returns latest balances,
-// this is blocked by DB refactor.
+// ListValidatorBalances retrieves the validator balances for a given set of public keys.
+// An optional Epoch parameter is provided to request historical validator balances from
+// archived, persistent data.
 func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
@@ -249,12 +247,18 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	headState, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
-	}
-	balances := headState.Balances
+	var balances []uint64
+	var err error
+	headState := bs.headFetcher.HeadState()
 	validators := headState.Validators
+	if req.Epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.beaconDB.ArchivedBalances(ctx, req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve balances for epoch %d", req.Epoch)
+		}
+	} else {
+		balances = headState.Balances
+	}
 
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key
