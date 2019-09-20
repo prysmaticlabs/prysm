@@ -56,8 +56,7 @@ func TestComputeValidatorParticipation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
+	wanted := &ethpb.ArchivedValidatorParticipation{
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),

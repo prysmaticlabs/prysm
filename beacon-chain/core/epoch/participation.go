@@ -9,10 +9,8 @@ import (
 
 // ComputeValidatorParticipation by matching validator attestations during the epoch,
 // computing the attesting balance, and how much attested compared to the total balances.
-func ComputeValidatorParticipation(state *pb.BeaconState) (*ethpb.ValidatorParticipation, error) {
+func ComputeValidatorParticipation(state *pb.BeaconState) (*ethpb.ArchivedValidatorParticipation, error) {
 	currentEpoch := helpers.SlotToEpoch(state.Slot)
-	finalized := currentEpoch == state.FinalizedCheckpoint.Epoch
-
 	atts, err := MatchAttestations(state, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve head attestations")
@@ -25,9 +23,7 @@ func ComputeValidatorParticipation(state *pb.BeaconState) (*ethpb.ValidatorParti
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve total balances")
 	}
-	return &ethpb.ValidatorParticipation{
-		Epoch:                   currentEpoch,
-		Finalized:               finalized,
+	return &ethpb.ArchivedValidatorParticipation{
 		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
 		VotedEther:              attestedBalances,
 		EligibleEther:           totalBalances,

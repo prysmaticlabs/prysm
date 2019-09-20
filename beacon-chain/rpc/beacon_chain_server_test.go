@@ -867,9 +867,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	epoch := uint64(4)
-	part := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
-		Finalized:               true,
+	part := &ethpb.ArchivedValidatorParticipation{
 		GlobalParticipationRate: 1.0,
 		VotedEther:              20,
 		EligibleEther:           20,
@@ -896,7 +894,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(part, res) {
+	if !proto.Equal(part, res.Participation) {
 		t.Errorf("Wanted %v, received %v", part, res)
 	}
 }
@@ -956,14 +954,13 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		t.Fatal(err)
 	}
 
-	wanted := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
+	wanted := &ethpb.ArchivedValidatorParticipation{
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
 	}
 
-	if !reflect.DeepEqual(res, wanted) {
+	if !reflect.DeepEqual(res.Participation, wanted) {
 		t.Error("Incorrect validator participation respond")
 	}
 }

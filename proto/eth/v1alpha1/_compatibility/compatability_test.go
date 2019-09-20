@@ -144,7 +144,7 @@ func TestProtoCompatability(t *testing.T) {
 			b: &upstreampb.GetValidatorParticipationRequest{},
 		},
 		{
-			a: &pb.ValidatorParticipation{},
+			a: &pb.ValidatorParticipationResponse{},
 			b: &upstreampb.ValidatorParticipation{},
 		},
 		{

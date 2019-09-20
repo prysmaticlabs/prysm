@@ -480,7 +480,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 // rules based on their balance compared to the total active validator balance.
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
-) (*ethpb.ValidatorParticipation, error) {
+) (*ethpb.ValidatorParticipationResponse, error) {
 	headState := bs.headFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	if req.Epoch > helpers.SlotToEpoch(headState.Slot) {
@@ -499,7 +499,11 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		if participation == nil {
 			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", req.Epoch)
 		}
-		return participation, nil
+		return &ethpb.ValidatorParticipationResponse{
+			Epoch:         req.Epoch,
+			Finalized:     false,
+			Participation: participation,
+		}, nil
 	}
 	// Else if the request is for the current epoch, we compute validator participation
 	// right away and return the result based on the head state.
@@ -507,5 +511,9 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}
-	return participation, nil
+	return &ethpb.ValidatorParticipationResponse{
+		Epoch:         req.Epoch,
+		Finalized:     false,
+		Participation: participation,
+	}, nil
 }
