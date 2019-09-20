@@ -117,7 +117,9 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		ctx: context.Background(),
+		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
 	}
 
 	// Setup streams

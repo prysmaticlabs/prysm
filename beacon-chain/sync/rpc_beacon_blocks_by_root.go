@@ -7,14 +7,13 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
 func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
-	log := log.WithField("rpc", "beacon_blocks_by_root")
-
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -36,11 +35,16 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
 		return err
 	}
+
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
 	for _, blk := range resp {
-		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
-			log.WithError(err).Error("Unable to process block")
-			return nil
+		r.slotToPendingBlocks[blk.Slot] = blk
+		blkRoot, err := ssz.SigningRoot(blk)
+		if err != nil {
+			return err
 		}
+		r.seenPendingBlocks[blkRoot] = true
 	}
 
 	return nil
