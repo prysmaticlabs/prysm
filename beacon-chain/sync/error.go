@@ -18,7 +18,7 @@ var responseCodeServerError = byte(0x02)
 
 func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	if _, err := r.p2p.Encoding().EncodeWithLength(buf, reason); err != nil {
+	if _, err := r.p2p.Encoding().EncodeWithLength(buf, []byte(reason)); err != nil {
 		return nil, err
 	}
 
