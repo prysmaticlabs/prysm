@@ -117,11 +117,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSyncService(ctx); err != nil {
+	if err := beacon.registerInitialSyncService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerInitialSyncService(ctx); err != nil {
+	if err := beacon.registerSyncService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -362,11 +362,17 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
+	var initSync *initialsync.InitialSync
+	if err := b.services.FetchService(&initSync); err != nil {
+		return err
+	}
+
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:         b.db,
-		P2P:        b.fetchP2P(ctx),
-		Operations: operationService,
-		Chain:      chainService,
+		DB:          b.db,
+		P2P:         b.fetchP2P(ctx),
+		Operations:  operationService,
+		Chain:       chainService,
+		InitialSync: initSync,
 	})
 
 	return b.services.RegisterService(rs)
@@ -379,15 +385,9 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var regSync *prysmsync.RegularSync
-	if err := b.services.FetchService(&regSync); err != nil {
-		return err
-	}
-
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		Chain:   chainService,
-		RegSync: regSync,
-		P2P:     b.fetchP2P(ctx),
+		Chain: chainService,
+		P2P:   b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(is)
@@ -410,7 +410,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *prysmsync.RegularSync
+	var syncService *initialsync.InitialSync
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
 	}

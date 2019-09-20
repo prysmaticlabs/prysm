@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	protocol "github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -119,9 +119,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		chain:               &mock.ChainService{},
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		statusTracker:       make(map[peer.ID]*pb.Status),
 	}
-	r.statusTracker[peer.ID(1)] = &pb.Status{}
+	peerstatus.Set(p2.PeerID(), &pb.Status{})
 
 	b0 := &ethpb.BeaconBlock{}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {

@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -33,7 +33,7 @@ func (r *RegularSync) processPendingBlocksQueue() {
 
 // processes the block tree inside the queue
 func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
-	pids := r.peerIDs()
+	pids := peerstatus.Keys()
 	slots := r.sortedPendingSlots()
 
 	for _, s := range slots {
@@ -80,15 +80,6 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
 	}
 	return nil
-}
-
-func (r *RegularSync) peerIDs() []peer.ID {
-	hellos := r.PeerStatuses()
-	pids := make([]peer.ID, 0, len(hellos))
-	for pid := range hellos {
-		pids = append(pids, pid)
-	}
-	return pids
 }
 
 func (r *RegularSync) sortedPendingSlots() []int {
