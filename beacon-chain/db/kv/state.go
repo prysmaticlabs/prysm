@@ -2,10 +2,14 @@ package kv
 
 import (
 	"context"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
@@ -28,6 +32,59 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 		return err
 	})
 	return s, err
+}
+
+// GenerateStateFromSlot generates state from the last finalized epoch till the specified slot.
+func GenerateStateFromSlot(ctx context.Context, k *Store, slot uint64) (*pb.BeaconState, error) {
+	fCheckpoint, err := k.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	jCheckpoint, err := k.JustifiedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var root [32]byte
+	if slot < helpers.StartSlot(jCheckpoint.Epoch) {
+		copy(fCheckpoint.Root[:], root[0:32])
+	} else {
+		copy(jCheckpoint.Root[:], root[0:32])
+	}
+
+	savedState, err := k.State(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	if savedState.Slot > slot {
+		return nil, fmt.Errorf(
+			"savedState slot %d < current finalized beacon state slot %d",
+			savedState.Slot,
+			slot,
+		)
+	}
+
+	filter := filters.NewFilter()
+	filter.SetStartSlot(savedState.Slot)
+	filter.SetEndSlot(slot)
+	pBlocks, err := k.Blocks(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block: %v", err)
+	}
+
+	// run N state transitions to generate state
+	for i := savedState.Slot + 1; i <= slot; i++ {
+		savedState, err = state.ExecuteStateTransition(
+			ctx,
+			savedState,
+			pBlocks[i],
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute state transition %v", err)
+		}
+	}
+
+	return savedState, nil
 }
 
 // HeadState returns the latest canonical state in beacon chain.
