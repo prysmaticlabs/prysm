@@ -42,6 +42,7 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
 	powChainService       powchain.Chain
@@ -75,6 +76,7 @@ type Config struct {
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
+	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
 	MockEth1Votes         bool
 	OperationsHandler     operations.Handler
 	AttestationsPool      operations.Pool
@@ -94,6 +96,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
@@ -148,16 +151,6 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	beaconServer := &BeaconServer{
-		beaconDB:            s.beaconDB,
-		ctx:                 s.ctx,
-		chainStartFetcher:   s.chainStartFetcher,
-		headFetcher:         s.headFetcher,
-		stateFeedListener:   s.stateFeedListener,
-		incomingAttestation: s.incomingAttestation,
-		canonicalStateChan:  s.canonicalStateChan,
-		chainStartChan:      make(chan time.Time, 1),
-	}
 	proposerServer := &ProposerServer{
 		beaconDB:               s.beaconDB,
 		headFetcher:            s.headFetcher,
@@ -187,18 +180,22 @@ func (s *Service) Start() {
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
 		depositFetcher:     s.depositFetcher,
+		stateFeedListener:  s.stateFeedListener,
+		chainStartChan:     make(chan time.Time),
 	}
 	nodeServer := &NodeServer{
-		beaconDB:    s.beaconDB,
-		server:      s.grpcServer,
-		syncChecker: s.syncService,
+		beaconDB:           s.beaconDB,
+		server:             s.grpcServer,
+		syncChecker:        s.syncService,
+		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:    s.beaconDB,
-		pool:        s.attestationsPool,
-		headFetcher: s.headFetcher,
+		beaconDB:           s.beaconDB,
+		pool:               s.attestationsPool,
+		headFetcher:        s.headFetcher,
+		chainStartFetcher:  s.chainStartFetcher,
+		canonicalStateChan: s.canonicalStateChan,
 	}
-	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)

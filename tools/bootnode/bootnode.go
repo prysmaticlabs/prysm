@@ -16,8 +16,10 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/btcsuite/btcd/btcec"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -44,6 +46,13 @@ func main() {
 
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
+
+		// Geth specific logging.
+		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(false)))
+		glogger.Verbosity(gethlog.LvlTrace)
+		gethlog.Root().SetHandler(glogger)
+
+		log.Debug("Debug logging enabled.")
 	}
 	cfg := discover.Config{
 		PrivateKey: extractPrivateKey(),

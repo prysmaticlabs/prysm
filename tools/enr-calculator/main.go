@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"flag"
 	"io/ioutil"
 	"net"
@@ -17,7 +18,7 @@ import (
 )
 
 var (
-	privateKey = flag.String("private", "", "Base-64 encoded Private key to use for calculation of ENR")
+	privateKey = flag.String("private", "", "Hex encoded Private key to use for calculation of ENR")
 	udpPort    = flag.Int("udp-port", 0, "UDP Port to use for calculation of ENR")
 	tcpPort    = flag.Int("tcp-port", 0, "TCP Port to use for calculation of ENR")
 	ipAddr     = flag.String("ipAddress", "", "IP to use in calculation of ENR")
@@ -30,17 +31,15 @@ func main() {
 	if len(*privateKey) == 0 {
 		log.Fatal("No private key given")
 	}
-	decodedKey, err := crypto.ConfigDecodeKey(*privateKey)
+	dst, err := hex.DecodeString(*privateKey)
 	if err != nil {
-		log.Fatalf("Unable to decode private key: %v\n", err)
+		panic(err)
 	}
-
-	privatekey, err := crypto.UnmarshalPrivateKey(decodedKey)
+	unmarshalledKey, err := crypto.UnmarshalSecp256k1PrivateKey(dst)
 	if err != nil {
-		log.Fatalf("Unable to unmarshal private key: %v\n", err)
+		panic(err)
 	}
-
-	ecdsaPrivKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privatekey.(*crypto.Secp256k1PrivateKey)))
+	ecdsaPrivKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 
 	if net.ParseIP(*ipAddr).To4() == nil {
 		log.Fatalf("Invalid ipv4 address given: %v\n", err)

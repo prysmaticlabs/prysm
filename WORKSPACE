@@ -32,9 +32,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "e513c0ac6534810eb7a14bf025a0f159726753f97f74ab7863c650d26e01d677",
-    strip_prefix = "rules_docker-0.9.0",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.9.0.tar.gz",
+    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
+    strip_prefix = "rules_docker-0.10.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.10.1.tar.gz",
 )
 
 http_archive(
@@ -45,7 +45,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "bd93910450a0f041f5d34a4b97faffcabba21419",
+    commit = "1ec7e2d1b7e68b1089e7f2aa7c6d603ddd75917a",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -194,7 +194,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "8839d2f3b900530fbab26154740e8bded3932a86",
+    commit = "31f7cb1c214026485e7f04c7d0388410dc30c027",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -207,7 +207,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "9193cae6b7c3347054706b8466db139b8be90985",
+    commit = "977e011d625d95b2fe6daf74df06f34b60c5bc71",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -274,7 +274,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "64ffd94071a5bc58130ea88fd8404408aef993f2",  # v0.0.7
+    commit = "249ead2008065c476a2ee45e8e75e8b85d846a72",  # v0.0.8
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -304,7 +304,7 @@ go_repository(
 
 go_repository(
     name = "com_github_coreos_go_semver",
-    commit = "6e25b691b0ebe9657dd0ee60d73a9f8716f0c6f5",  # v0.3.0
+    commit = "e214231b295a8ea9479f11b70b35d5acf3556d9b",  # v0.3.0
     importpath = "github.com/coreos/go-semver",
 )
 
@@ -370,7 +370,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "05b4dd3047e5d6e86cb4e0477164b850cd896261",  # v0.1.0
+    commit = "6de4475307716de15b286880ff321c9547086fdd",  # v0.1.1
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -667,19 +667,19 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "31bed53e4047fd6c510e43a941f90cb31be0972a",  # v0.6.0
+    commit = "287d3e634a1e550c9e463dd7e5a75a422c614505",  # v0.7.0
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "00ec24a6a2d86e7074629c8384715dbb05adccd8",  # v0.0.4
+    commit = "499c85531f756d1129edd26485a5f73871eeb308",  # v0.0.5
     importpath = "github.com/prometheus/procfs",
 )
 
 go_repository(
     name = "com_github_beorn7_perks",
-    commit = "4ded152d4a3e2847f17f185a27b2041ae7b63979",  # v1.0.0
+    commit = "37c8de3658fcb183f997c4e13e8337516ab753e6",  # v1.0.1
     importpath = "github.com/beorn7/perks",
 )
 
@@ -735,7 +735,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "a12e621d84028a4e0f165da8e2ca6be4f5af0502",  # v0.2.0
+    commit = "e216d3cf6cfadfc91b8c3bec6ac9492ea40908d0",  # v0.2.1
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "ceeb313ad77b789a7fa5287b36a1d127b69b7093",  # v0.44.3
+    commit = "6e28f1c34522dae46e9c37119b78c54471b13ac8",  # v0.46.2
     importpath = "cloud.google.com/go",
 )
 
@@ -1011,7 +1011,7 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
-    commit = "c250d6563d4d4c20252cd865923440e829844f4e",  # v1.0.0
+    commit = "dd15ed025b6054e5253963e355991f3070d4e593",  # v1.1.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )
 
@@ -1259,7 +1259,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "11bc5ee7ad5de4bf1380f3103eebdd40db99a666",
+    commit = "10e0aa6523a7cf0804fb79096b41d7d8d7df37e5",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 

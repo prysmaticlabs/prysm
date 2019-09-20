@@ -8,7 +8,6 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -48,9 +47,7 @@ func (g *Gateway) Start() {
 	g.conn = conn
 
 	gwmux := gwruntime.NewServeMux()
-	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
-		pb.RegisterBeaconServiceHandler,
-	} {
+	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{} {
 		if err := f(ctx, gwmux, conn); err != nil {
 			log.WithError(err).Error("Failed to start gateway")
 			g.startFailure = err

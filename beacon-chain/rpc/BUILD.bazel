@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "attester_server.go",
         "beacon_chain_server.go",
-        "beacon_server.go",
         "node_server.go",
         "proposer_server.go",
         "service.go",
@@ -24,7 +23,6 @@ go_library(
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
-        "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/operations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
@@ -61,7 +59,6 @@ go_test(
     srcs = [
         "attester_server_test.go",
         "beacon_chain_server_test.go",
-        "beacon_server_test.go",
         "node_server_test.go",
         "proposer_server_test.go",
         "service_test.go",
@@ -94,6 +91,7 @@ go_test(
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "//shared/version:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",

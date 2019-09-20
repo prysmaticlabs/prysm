@@ -2,10 +2,9 @@ package sync
 
 import (
 	"context"
-	"errors"
+	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,12 +20,7 @@ var ttfbTimeout = 5 * time.Second
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
 // not be relayed to the peer.
-type rpcHandler func(context.Context, proto.Message, libp2pcore.Stream) error
-
-// TODO(3147): Delete after all handlers implemented.
-func notImplementedRPCHandler(_ context.Context, _ proto.Message, _ libp2pcore.Stream) error {
-	return errors.New("not implemented")
-}
+type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (r *RegularSync) registerRPCHandlers() {
@@ -47,13 +41,13 @@ func (r *RegularSync) registerRPCHandlers() {
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
-		&pb.RecentBeaconBlocksRequest{},
+		[][32]byte{},
 		r.recentBeaconBlocksRPCHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHandler) {
+func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
@@ -69,16 +63,28 @@ func (r *RegularSync) registerRPC(topic string, base proto.Message, handle rpcHa
 			return
 		}
 
-		// Clone the base message type so we have a newly initialized message as the decoding
-		// destination.
-		msg := proto.Clone(base)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
-			log.WithError(err).Error("Failed to decode stream message")
-			return
-		}
-		if err := handle(ctx, msg, stream); err != nil {
-			// TODO(3147): Update metrics
-			log.WithError(err).Error("Failed to handle p2p RPC")
+		// Given we have an input argument that can be pointer or [][32]byte, this gives us
+		// a way to check for its reflect.Kind and based on the result, we can decode
+		// accordingly.
+		t := reflect.TypeOf(base)
+		if t.Kind() == reflect.Ptr {
+			msg := reflect.New(t.Elem())
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
+		} else {
+			msg := reflect.New(t)
+			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+				log.WithError(err).Error("Failed to decode stream message")
+				return
+			}
+			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+				log.WithError(err).Error("Failed to handle p2p RPC")
+			}
 		}
 	})
 }

@@ -161,5 +161,4 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
 			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])
 	}
-
 }

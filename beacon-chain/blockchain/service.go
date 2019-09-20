@@ -29,10 +29,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ChainFeeds interface defines the methods of the Service which provide
-// information feeds.
+// ChainFeeds interface defines the methods of the Service which provide state related
+// information feeds to consumers.
 type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
+}
+
+// NewHeadNotifier defines a struct which can notify many consumers of a new,
+// canonical chain head event occuring in the node.
+type NewHeadNotifier interface {
+	HeadUpdatedFeed() *event.Feed
 }
 
 // Service represents a service that handles the internal
@@ -48,6 +54,7 @@ type Service struct {
 	chainStartChan       chan time.Time
 	genesisTime          time.Time
 	stateInitializedFeed *event.Feed
+	headUpdatedFeed      *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
 	headSlot             uint64
@@ -83,6 +90,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		forkChoiceStore:      store,
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
+		headUpdatedFeed:      new(event.Feed),
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
@@ -175,8 +183,8 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status always returns nil.
-// TODO(1202): Add service health checks.
+// Status always returns nil unless there is an error condition that causes
+// this service to be unhealthy.
 func (s *Service) Status() error {
 	if runtime.NumGoroutine() > int(s.maxRoutines) {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
@@ -188,6 +196,12 @@ func (s *Service) Status() error {
 // when the beacon state is first initialized.
 func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
+}
+
+// HeadUpdatedFeed is a feed containing the head block root and
+// is written to when a new head block is saved to DB.
+func (s *Service) HeadUpdatedFeed() *event.Feed {
+	return s.headUpdatedFeed
 }
 
 // This gets called to update canonical root mapping.
