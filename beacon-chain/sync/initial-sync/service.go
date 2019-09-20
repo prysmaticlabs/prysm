@@ -37,12 +37,12 @@ type Config struct {
 	P2P     p2p.P2P
 	DB      db.Database
 	Chain   blockchainService
-	RegSync sync.PeerTracker
+	RegSync sync.StatusTracker
 }
 
 // InitialSync service.
 type InitialSync struct {
-	statusTracker sync.PeerTracker
+	statusTracker sync.StatusTracker
 	chain         blockchainService
 	p2p           p2p.P2P
 	synced        bool

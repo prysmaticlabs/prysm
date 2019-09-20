@@ -99,6 +99,6 @@ type Checker interface {
 }
 
 // PeerTracker interface for accessing the status / handshake messages received so far.
-type PeerTracker interface {
+type StatusTracker interface {
 	PeerStatuses() map[peer.ID]*pb.Status
 }
