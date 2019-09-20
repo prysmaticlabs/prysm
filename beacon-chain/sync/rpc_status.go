@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -20,8 +21,8 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// return if status already exists
-	hello := r.statusTracker[id]
+	// return if hello already exists
+	hello := peerstatus.Get(id)
 	if hello != nil {
 		log.Debugf("Peer %s already exists", id)
 		return nil
@@ -52,17 +53,13 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
-	r.statusTrackerLock.Lock()
-	r.statusTracker[stream.Conn().RemotePeer()] = msg
-	r.statusTrackerLock.Unlock()
+	peerstatus.Set(stream.Conn().RemotePeer(), msg)
 
 	return r.validateStatusMessage(msg, stream)
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	r.statusTrackerLock.Lock()
-	delete(r.statusTracker, pid)
-	r.statusTrackerLock.Unlock()
+	peerstatus.Delete(pid)
 	return nil
 }
 
@@ -76,9 +73,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	log := log.WithField("handler", "status")
 
 	// return if hello already exists
-	r.statusTrackerLock.RLock()
-	hello := r.statusTracker[stream.Conn().RemotePeer()]
-	r.statusTrackerLock.RUnlock()
+	hello := peerstatus.Get(stream.Conn().RemotePeer())
 	if hello != nil {
 		log.Debugf("Peer %s already exists", stream.Conn().RemotePeer())
 		return nil
@@ -86,9 +81,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 
 	m := msg.(*pb.Status)
 
-	r.statusTrackerLock.Lock()
-	r.statusTracker[stream.Conn().RemotePeer()] = m
-	r.statusTrackerLock.Unlock()
+	peerstatus.Set(stream.Conn().RemotePeer(), m)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
 		originalErr := err
@@ -109,12 +102,6 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 		}
 		return originalErr
 	}
-
-	r.statusTrackerLock.Lock()
-	r.statusTracker[stream.Conn().RemotePeer()] = m
-	r.statusTrackerLock.Unlock()
-
-	r.p2p.AddHandshake(stream.Conn().RemotePeer(), m)
 
 	resp := &pb.Status{
 		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
