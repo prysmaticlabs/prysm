@@ -508,6 +508,38 @@ func TestBeaconChainServer_ListValidatorBalancesFromArchive(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_ListValidatorBalancesFromArchive_NewValidatorNotFound(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(0)
+	_, balances := setupValidators(t, db, 100)
+
+	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
+		t.Fatal(err)
+	}
+
+	newValidators, newBalances := setupValidators(t, db, 200)
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
+				Validators: newValidators,
+				Balances:   newBalances,
+			},
+		},
+	}
+
+	req := &ethpb.GetValidatorBalancesRequest{
+		Epoch:   0,
+		Indices: []uint64{1, 150, 161},
+	}
+	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), ">= balance list") {
+		t.Errorf("Wanted out of range error for including newer validators in the arguments, received %v", err)
+	}
+}
+
 func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)

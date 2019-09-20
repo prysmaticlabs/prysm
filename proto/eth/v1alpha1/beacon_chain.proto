@@ -238,15 +238,22 @@ message ChainHead {
 }
 
 message GetValidatorBalancesRequest {
-    // Retrieve validator balance at the given epoch.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Optional criteria to retrieve validators at a specific epoch.
+        // Omitting this field or setting it to zero will retrieve a response
+        // with the current list of balances.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve the genesis set of balances.
+        bool genesis = 2;
+    }
 
     // Validator 48 byte BLS public keys to filter validators for the given
     // epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
         
     // Validator indices to filter validators for the given epoch.
-    repeated uint64 indices = 3;
+    repeated uint64 indices = 4;
 }
 
 message ValidatorBalances {

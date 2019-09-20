@@ -247,14 +247,29 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
+	var requestingGenesis bool
+	var epoch uint64
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorBalancesRequest_Epoch:
+		epoch = q.Epoch
+	case *ethpb.GetValidatorBalancesRequest_Genesis:
+		requestingGenesis = q.Genesis
+	default:
+	}
+
 	var balances []uint64
 	var err error
 	headState := bs.headFetcher.HeadState()
 	validators := headState.Validators
-	if req.Epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.beaconDB.ArchivedBalances(ctx, req.Epoch)
+	if requestingGenesis {
+		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve balances for epoch %d", req.Epoch)
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", req.Epoch)
+		}
+	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.beaconDB.ArchivedBalances(ctx, epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", req.Epoch)
 		}
 	} else {
 		balances = headState.Balances
@@ -277,7 +292,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -290,7 +305,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
+			if epoch <= helpers.CurrentEpoch(headState) {
+				return nil, status.Errorf(codes.OutOfRange, "validator index %d does not exist in historical balances",
+					index)
+			}
+			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
