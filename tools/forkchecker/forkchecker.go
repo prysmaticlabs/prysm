@@ -131,7 +131,7 @@ func logHead(endpt string, head *pb.ChainHead) {
 		}).Info("Head from beacon node ", endpt)
 }
 
-func logParticipation(endpt string, p *pb.ArchivedValidatorParticipation) {
+func logParticipation(endpt string, p *pb.ValidatorParticipation) {
 	log.WithFields(
 		logrus.Fields{
 			"VotedEther":        p.VotedEther,

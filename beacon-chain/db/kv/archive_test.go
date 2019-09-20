@@ -176,7 +176,7 @@ func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	epoch := uint64(10)
-	part := &ethpb.ArchivedValidatorParticipation{
+	part := &ethpb.ValidatorParticipation{
 		GlobalParticipationRate: 0.99,
 		EligibleEther:           12202000,
 		VotedEther:              12079998,

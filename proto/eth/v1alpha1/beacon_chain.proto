@@ -411,7 +411,7 @@ message ValidatorParticipationResponse {
     bool finalized = 2;
 
     // The actual participation metrics.
-    ArchivedValidatorParticipation participation = 3;
+    ValidatorParticipation participation = 3;
 }
 
 message AttestationPoolResponse {

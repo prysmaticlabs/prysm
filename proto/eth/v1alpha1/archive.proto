@@ -7,19 +7,6 @@ import "proto/eth/v1alpha1/beacon_block.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
-// ArchivedValidatorParticipation stores participation metrics during a given epoch N.
-message ArchivedValidatorParticipation {
-    // Percentage of validator participation in the given epoch. This field
-    // contains a value between 0 and 1.
-    float global_participation_rate = 3;
-
-    // The total amount of ether, in gwei, that has been used in voting.
-    uint64 voted_ether = 4;
-
-    // The total amount of ether, in gwei, that is eligible for voting.
-    uint64 eligible_ether = 5;
-}
-
 // ArchivedActiveSetChanges represents the changes to the active validator registry
 // between epoch N and N-1. In particular, it keeps track of validator indices
 // which were newly activated, exited, or slashed, along with those particular

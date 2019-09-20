@@ -73,7 +73,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 
 	attestedBalance := uint64(1)
 	currentEpoch := helpers.CurrentEpoch(headState)
-	wanted := &ethpb.ArchivedValidatorParticipation{
+	wanted := &ethpb.ValidatorParticipation{
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),

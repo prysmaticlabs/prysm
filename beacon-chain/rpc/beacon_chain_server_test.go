@@ -867,7 +867,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	epoch := uint64(4)
-	part := &ethpb.ArchivedValidatorParticipation{
+	part := &ethpb.ValidatorParticipation{
 		GlobalParticipationRate: 1.0,
 		VotedEther:              20,
 		EligibleEther:           20,
@@ -964,7 +964,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		t.Fatal(err)
 	}
 
-	wanted := &ethpb.ArchivedValidatorParticipation{
+	wanted := &ethpb.ValidatorParticipation{
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),

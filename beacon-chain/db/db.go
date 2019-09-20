@@ -77,8 +77,8 @@ type Database interface {
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	ArchivedActiveIndices(ctx context.Context, epoch uint64) ([]uint64, error)
 	SaveArchivedActiveIndices(ctx context.Context, epoch uint64, indices []uint64) error
-	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ArchivedValidatorParticipation, error)
-	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ArchivedValidatorParticipation) error
+	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error)
+	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
