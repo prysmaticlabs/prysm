@@ -18,10 +18,11 @@ var _ = shared.Service(&RegularSync{})
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P        p2p.P2P
-	DB         db.Database
-	Operations *operations.Service
-	Chain      blockchainService
+	P2P         p2p.P2P
+	DB          db.Database
+	Operations  *operations.Service
+	Chain       blockchainService
+	InitialSync Checker
 }
 
 // This defines the interface for interacting with block chain service
@@ -36,12 +37,12 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:                 context.Background(),
-		db:                  cfg.DB,
-		p2p:                 cfg.P2P,
-		operations:          cfg.Operations,
-		chain:               cfg.Chain,
-		statusTracker:       make(map[peer.ID]*pb.Status),
+		ctx:         context.Background(),
+		db:          cfg.DB,
+		p2p:         cfg.P2P,
+		operations:  cfg.Operations,
+		chain:       cfg.Chain,
+		initialSync: cfg.InitialSync,
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -60,12 +61,11 @@ type RegularSync struct {
 	db                  db.Database
 	operations          *operations.Service
 	chain               blockchainService
-	statusTracker       map[peer.ID]*pb.Status
-	statusTrackerLock   sync.RWMutex
 	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool
+	initialSync Checker
 }
 
 // Start the regular sync service.
@@ -83,19 +83,6 @@ func (r *RegularSync) Stop() error {
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
-}
-
-// Syncing returns true if the node is currently syncing with the network.
-func (r *RegularSync) Syncing() bool {
-	// TODO(3147): Use real value.
-	return false
-}
-
-// PeerStatuses returns the map of status messages received so far.
-func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Status {
-	r.statusTrackerLock.RLock()
-	defer r.statusTrackerLock.RUnlock()
-	return r.statusTracker
 }
 
 // ClearPendingBlocks clears outstanding pending blocks waiting to be processed,

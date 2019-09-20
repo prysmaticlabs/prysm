@@ -3,27 +3,10 @@ package p2p
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
-
-var handshakes = make(map[peer.ID]*pb.Status)
-var handshakeLock sync.Mutex
-
-// AddHandshake to the local records for initial sync.
-func (s *Service) AddHandshake(pid peer.ID, hello *pb.Status) {
-	handshakeLock.Lock()
-	defer handshakeLock.Unlock()
-	handshakes[pid] = hello
-}
-
-// Handshakes has not been implemented yet and it may be moved to regular sync...
-func (s *Service) Handshakes() map[peer.ID]*pb.Status {
-	return nil
-}
 
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
