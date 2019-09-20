@@ -68,6 +68,8 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
+	// wait for chainstart to be sent
+	time.Sleep(400 * time.Millisecond)
 	if !r.chainStarted {
 		t.Fatal("Did not receive chain start event.")
 	}
