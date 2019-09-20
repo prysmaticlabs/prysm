@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -41,9 +43,12 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:       make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	}
 
 	domain := helpers.Domain(
@@ -99,8 +104,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: s},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if !r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
@@ -130,11 +136,52 @@ func TestValidateProposerSlashing_ValidSlashing_FromSelf(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mock.ChainService{State: s},
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
 	if r.validateProposerSlashing(ctx, slashing, p2p, true /*fromSelf*/) {
+		t.Error("Did not fail validation")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
+	}
+}
+
+func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+
+	slashing, state := setupValidProposerSlashing(t)
+	slashing.Header_1.Slot = 100000000
+
+	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+
+	r := &RegularSync{
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: state},
+		initialSync: &mockSync.Sync{IsSyncing: false},
+	}
+
+	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+		t.Error("slashing from the far distant future should have timed out and returned false")
+	}
+}
+
+func TestValidateProposerSlashing_Syncing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidProposerSlashing(t)
+
+	r := &RegularSync{
+		p2p:         p2p,
+		chain:       &mock.ChainService{State: s},
+		initialSync: &mockSync.Sync{IsSyncing: true},
+	}
+
+	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
 		t.Error("Did not fail validation")
 	}
 
