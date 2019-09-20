@@ -23,23 +23,28 @@ func (r *RegularSync) chunkWriter(stream libp2pcore.Stream, msg interface{}) err
 
 // HandleChunkedBlocks handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func HandleChunkedBlocks(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
-	setStreamReadDeadline(stream, 10 /* seconds */)
-	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
-	if err == io.EOF {
-		return nil, errors.New("reached the end of the stream")
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if code != 0 {
-		return nil, errors.New(errMsg)
-	}
-
+func HandleChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
 	blk := &eth.BeaconBlock{}
-	if err := p2p.Encoding().DecodeWithMaxLength(stream, blk, maxChunkSize); err != nil {
+	if err := readResponseChunk(stream, p2p, blk); err != nil {
 		return nil, err
 	}
 	return blk, nil
+}
+
+// readResponseChunk reads the response from the stream and decodes it into the
+// provided message type.
+func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) error {
+	setStreamReadDeadline(stream, 10 /* seconds */)
+	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
+	if err == io.EOF {
+		return errors.New("reached the end of the stream")
+	}
+	if err != nil {
+		return err
+	}
+
+	if code != 0 {
+		return errors.New(errMsg)
+	}
+	return p2p.Encoding().DecodeWithMaxLength(stream, to, maxChunkSize)
 }

@@ -22,7 +22,7 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 		return err
 	}
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := HandleChunkedBlocks(stream, r.p2p)
+		blk, err := HandleChunkedBlock(stream, r.p2p)
 		if err != nil {
 			log.WithError(err).Error("Unable to retrieve block from stream")
 			return err
