@@ -30,6 +30,7 @@ type BeaconChainServer struct {
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
 	headFetcher         blockchain.HeadFetcher
+	finalizationFetcher blockchain.FinalizationFetcher
 	stateFeedListener   blockchain.ChainFeeds
 	pool                operations.Pool
 	incomingAttestation chan *ethpb.Attestation
@@ -499,17 +500,72 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
-// it returns the information about validator's participation rate
-//
-// TODO(#3064): Implement validator participation for a specific epoch. Current implementation returns latest,
-// this is blocked by DB refactor.
+// it returns the information about validator's participation rate in voting on the proof of stake
+// rules based on their balance compared to the total active validator balance.
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
-) (*ethpb.ValidatorParticipation, error) {
+) (*ethpb.ValidatorParticipationResponse, error) {
 	headState := bs.headFetcher.HeadState()
+	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+
+	var requestedEpoch uint64
+	var isGenesis bool
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorParticipationRequest_Genesis:
+		isGenesis = q.Genesis
+	case *ethpb.GetValidatorParticipationRequest_Epoch:
+		requestedEpoch = q.Epoch
+	default:
+		requestedEpoch = currentEpoch
+	}
+
+	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", requestedEpoch, currentEpoch,
+		)
+	}
+	// If the request is from genesis or another past epoch, we look into our archived
+	// data to find it and return it if it exists.
+	if isGenesis {
+		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, 0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+		}
+		if participation == nil {
+			return nil, status.Error(codes.NotFound, "could not find archival data for epoch 0")
+		}
+		return &ethpb.ValidatorParticipationResponse{
+			Epoch:         0,
+			Finalized:     true,
+			Participation: participation,
+		}, nil
+	} else if requestedEpoch < helpers.SlotToEpoch(headState.Slot) {
+		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+		}
+		if participation == nil {
+			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", requestedEpoch)
+		}
+		finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
+		finalized := requestedEpoch <= finalizedEpoch
+		return &ethpb.ValidatorParticipationResponse{
+			Epoch:         requestedEpoch,
+			Finalized:     finalized,
+			Participation: participation,
+		}, nil
+	}
+	// Else if the request is for the current epoch, we compute validator participation
+	// right away and return the result based on the head state.
 	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}
-	return participation, nil
+	return &ethpb.ValidatorParticipationResponse{
+		Epoch:         currentEpoch,
+		Finalized:     false, // The current epoch can never be finalized.
+		Participation: participation,
+	}, nil
 }

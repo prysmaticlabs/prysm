@@ -6,6 +6,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
+import "proto/eth/v1alpha1/archive.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/validator.proto";
@@ -118,7 +119,7 @@ service BeaconChain {
     //
     // This method returns information about the global participation of 
     // validator attestations.
-    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipation) {
+    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/participation"
         };
@@ -239,15 +240,12 @@ message ChainHead {
 
 message GetValidatorBalancesRequest {
     oneof query_filter {
-        // Optional criteria to retrieve validators at a specific epoch.
-        // Omitting this field or setting it to zero will retrieve a response
-        // with the current list of balances.
+        // Optional criteria to retrieve balances at a specific epoch.
         uint64 epoch = 1;
 
-        // Optional criteria to retrieve the genesis set of balances.
+        // Optional criteria to retrieve the genesis list of balances.
         bool genesis = 2;
     }
-
     // Validator 48 byte BLS public keys to filter validators for the given
     // epoch.
     repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
@@ -405,26 +403,24 @@ message ValidatorAssignments {
 }
 
 message GetValidatorParticipationRequest {
-    // Epoch to request participation information.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Epoch to request participation information.
+        uint64 epoch = 1;
+
+        // Whether or not to query for the genesis information.
+        bool genesis = 2;
+    }
 }
 
-message ValidatorParticipation {
+message ValidatorParticipationResponse {
     // Epoch which this message is applicable.
     uint64 epoch = 1;
 
     // Whether or not epoch has been finalized.
     bool finalized = 2;
 
-    // Percentage of validator participation in the given epoch. This field
-    // contains a value between 0 and 1.
-    float global_participation_rate = 3;
-
-    // The total amount of ether, in gwei, that has been used in voting.
-    uint64 voted_ether = 4;
-
-    // The total amount of ether, in gwei, that is eligible for voting.
-    uint64 eligible_ether = 5;   
+    // The actual participation metrics.
+    ValidatorParticipation participation = 3;
 }
 
 message AttestationPoolResponse {

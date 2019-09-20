@@ -942,7 +942,66 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
+func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(4)
+	part := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: epoch + 1,
+			},
+		},
+	}
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch + 2,
+		},
+	}); err == nil {
+		t.Error("Expected error when requesting future epoch, received nil")
+	}
+	// We request data from epoch 0, which we didn't archive, so we should expect an error.
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Genesis{
+			Genesis: true,
+		},
+	}); err == nil {
+		t.Error("Expected error when data from archive is not found, received nil")
+	}
+
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch,
+		Finalized:     true,
+		Participation: part,
+	}
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -992,19 +1051,18 @@ func TestBeaconChainServer_GetValidatorsParticipation(t *testing.T) {
 		headFetcher: &mock.ChainService{State: s},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{Epoch: epoch})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wanted := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
 	}
 
-	if !reflect.DeepEqual(res, wanted) {
+	if !reflect.DeepEqual(res.Participation, wanted) {
 		t.Error("Incorrect validator participation respond")
 	}
 }
