@@ -16,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -96,30 +97,30 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
-	// Process aggregated attestation in the queue every `slot/2` duration,
-	// this allows the incoming attestation to aggregate and avoid
-	// excessively processing individual attestations.
-	if halfSlot(baseState.GenesisTime) {
-		s.attsQueueLock.Lock()
-		for root, a := range s.attsQueue {
-			log.WithFields(logrus.Fields{
-				"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
-				"Root":               fmt.Sprintf("%#x", root),
-			}).Debug("Updating latest votes")
+	s.attsQueueLock.Lock()
+	defer s.attsQueueLock.Unlock()
+	for root, a := range s.attsQueue {
+		log.WithFields(logrus.Fields{
+			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+			"Root":               fmt.Sprintf("%#x", root),
+		}).Debug("Updating latest votes")
 
-			// Use the target state to to validate attestation and calculate the committees.
-			indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
-			if err != nil {
-				return 0, err
-			}
-
-			// Update every validator's latest vote.
-			if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-				return 0, err
-			}
-			delete(s.attsQueue, root)
+		// Use the target state to to validate attestation and calculate the committees.
+		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+		if err != nil {
+			return 0, err
 		}
-		s.attsQueueLock.Unlock()
+
+		// Update every validator's latest vote.
+		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
+			return 0, err
+		}
+
+		// Mark attestation as seen we don't update votes when it appears in block.
+		if err := s.setSeenAtt(a); err != nil {
+			return 0, err
+		}
+		delete(s.attsQueue, root)
 	}
 
 	return tgtSlot, nil
@@ -273,6 +274,20 @@ func (s *Store) updateAttVotes(
 			}
 		}
 	}
+	return nil
+}
+
+// setSeenAtt sets the attestation hash in seen attestation map to true.
+func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
+	s.seenAttsLock.Lock()
+	defer s.seenAttsLock.Unlock()
+
+	r, err := hashutil.HashProto(a)
+	if err != nil {
+		return err
+	}
+	s.seenAtts[r] = true
+
 	return nil
 }
 
