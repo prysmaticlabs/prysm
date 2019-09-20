@@ -13,6 +13,7 @@ import (
 )
 
 const oneYear = 365 * 24 * time.Hour
+const pubsubMessageTimeout = 10 * time.Second
 
 // prefix to add to keys, so that we can represent invalid objects
 const invalid = "invalidObject"
@@ -101,7 +102,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				debug.PrintStack()
 			}
 		}()
-		ctx := context.Background()
+		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
