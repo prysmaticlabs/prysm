@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -35,12 +36,14 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:           context.Background(),
-		db:            cfg.DB,
-		p2p:           cfg.P2P,
-		operations:    cfg.Operations,
-		chain:         cfg.Chain,
-		statusTracker: make(map[peer.ID]*pb.Status),
+		ctx:                 context.Background(),
+		db:                  cfg.DB,
+		p2p:                 cfg.P2P,
+		operations:          cfg.Operations,
+		chain:               cfg.Chain,
+		statusTracker:       make(map[peer.ID]*pb.Status),
+		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
 	r.registerRPCHandlers()
@@ -52,20 +55,24 @@ func NewRegularSync(cfg *Config) *RegularSync {
 // RegularSync service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type RegularSync struct {
-	ctx               context.Context
-	p2p               p2p.P2P
-	db                db.Database
-	operations        *operations.Service
-	chain             blockchainService
-	statusTracker     map[peer.ID]*pb.Status
-	statusTrackerLock sync.RWMutex
-	chainStarted      bool
+	ctx                 context.Context
+	p2p                 p2p.P2P
+	db                  db.Database
+	operations          *operations.Service
+	chain               blockchainService
+	statusTracker       map[peer.ID]*pb.Status
+	statusTrackerLock   sync.RWMutex
+	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
+	seenPendingBlocks   map[[32]byte]bool
+	pendingQueueLock    sync.RWMutex
+	chainStarted        bool
 }
 
 // Start the regular sync service.
 func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
+	go r.processPendingBlocksQueue()
 }
 
 // Stop the regular sync service.
@@ -89,6 +96,13 @@ func (r *RegularSync) PeerStatuses() map[peer.ID]*pb.Status {
 	r.statusTrackerLock.RLock()
 	defer r.statusTrackerLock.RUnlock()
 	return r.statusTracker
+}
+
+// ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
+// this should be called during new finalization.
+func (r *RegularSync) ClearPendingBlocks() {
+	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
+	r.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
 // Checker defines a struct which can verify whether a node is currently
