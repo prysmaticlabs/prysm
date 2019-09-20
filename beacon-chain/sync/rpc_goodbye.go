@@ -29,7 +29,7 @@ func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, st
 
 	m := msg.(uint64)
 	log := log.WithField("Reason", goodbyeMessage(m))
-	log.Infof("Peer %s has sent a goodbye message", stream.Conn().RemotePeer())
+	log.WithField("peer", stream.Conn().RemotePeer()).Info("Peer has sent a goodbye message")
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())
 }
