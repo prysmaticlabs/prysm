@@ -119,7 +119,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		}
 
 		if !validate(ctx, msg, r.p2p, fromSelf) {
-			log.WithField("message", msg.String()).Debug("Message did not verify")
+			//log.WithField("message", msg.String()).Debug("Message did not verify")
 
 			// TODO(3147): Increment metrics.
 			return
