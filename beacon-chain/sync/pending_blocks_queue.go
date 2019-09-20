@@ -7,6 +7,7 @@ import (
 	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		if !inPendingQueue && !inDB && hasPeer {
 			log.WithFields(logrus.Fields{
 				"currentSlot": b.Slot,
-				"parentRoot": hex.EncodeToString(b.ParentRoot),
+				"parentRoot":  hex.EncodeToString(b.ParentRoot),
 			}).Info("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
@@ -68,7 +69,11 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 
 		r.pendingQueueLock.Lock()
 		delete(r.slotToPendingBlocks, uint64(s))
-		delete(r.seenPendingBlocks, bytesutil.ToBytes32(b.ParentRoot))
+		blkRoot, err := ssz.SigningRoot(b)
+		if err != nil {
+			return err
+		}
+		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
 		log.Infof("Processed ancestor block %d and cleared pending block cache", s)

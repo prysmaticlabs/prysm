@@ -2,11 +2,17 @@ package sync
 
 import (
 	"context"
+	"sync"
 	"testing"
 
+	"github.com/libp2p/go-libp2p-core/network"
+	protocol "github.com/libp2p/go-libp2p-core/protocol"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -83,13 +89,39 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("Expected peers to be connected")
+	}
+	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if code == 0 {
+			t.Error("Expected a non-zero code")
+		}
+		if errMsg != errWrongForkVersion.Error() {
+			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkVersion.Error()))
+			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
+		}
+	})
 
 	r := &RegularSync{
+		p2p:                 p1,
 		db:                  db,
 		chain:               &mock.ChainService{},
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
+		helloTracker:        make(map[peer.ID]*pb.Hello),
 	}
+	r.helloTracker[peer.ID(1)] = &pb.Hello{}
 
 	b0 := &ethpb.BeaconBlock{}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
@@ -136,9 +168,6 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if err := r.processPendingBlocks(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	for s := range r.seenPendingBlocks {
-		t.Log(s)
-	}
 	if len(r.slotToPendingBlocks) != 1 {
 		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
 	}
@@ -156,12 +185,10 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if err := r.processPendingBlocks(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	for s := range r.seenPendingBlocks {
-		t.Log(s)
-	}
 	if len(r.slotToPendingBlocks) != 0 {
 		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
 	}
+	t.Log(r.seenPendingBlocks)
 	if len(r.seenPendingBlocks) != 0 {
 		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
 	}
