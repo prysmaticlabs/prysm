@@ -42,6 +42,7 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	finalizationFetcher   blockchain.FinalizationFetcher
 	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
@@ -72,6 +73,7 @@ type Config struct {
 	BeaconDB              db.Database
 	StateFeedListener     blockchain.ChainFeeds
 	HeadFetcher           blockchain.HeadFetcher
+	FinalizationFetcher   blockchain.FinalizationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
@@ -96,6 +98,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		finalizationFetcher:   cfg.FinalizationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
@@ -190,11 +193,12 @@ func (s *Service) Start() {
 		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:           s.beaconDB,
-		pool:               s.attestationsPool,
-		headFetcher:        s.headFetcher,
-		chainStartFetcher:  s.chainStartFetcher,
-		canonicalStateChan: s.canonicalStateChan,
+		beaconDB:            s.beaconDB,
+		pool:                s.attestationsPool,
+		headFetcher:         s.headFetcher,
+		finalizationFetcher: s.finalizationFetcher,
+		chainStartFetcher:   s.chainStartFetcher,
+		canonicalStateChan:  s.canonicalStateChan,
 	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)

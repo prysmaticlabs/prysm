@@ -30,6 +30,7 @@ type BeaconChainServer struct {
 	ctx                 context.Context
 	chainStartFetcher   powchain.ChainStartFetcher
 	headFetcher         blockchain.HeadFetcher
+	finalizationFetcher blockchain.FinalizationFetcher
 	stateFeedListener   blockchain.ChainFeeds
 	pool                operations.Pool
 	incomingAttestation chan *ethpb.Attestation
@@ -499,9 +500,12 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 		if participation == nil {
 			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", req.Epoch)
 		}
+		finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
+		finalized := req.Epoch <= finalizedEpoch
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         req.Epoch,
-			Finalized:     false,
+			Finalized:     finalized,
 			Participation: participation,
 		}, nil
 	}
@@ -513,7 +517,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	}
 	return &ethpb.ValidatorParticipationResponse{
 		Epoch:         req.Epoch,
-		Finalized:     false,
+		Finalized:     false, // The current epoch can never be finalized.
 		Participation: participation,
 	}, nil
 }
