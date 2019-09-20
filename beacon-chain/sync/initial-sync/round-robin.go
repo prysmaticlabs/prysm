@@ -55,8 +55,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			}
 
 			// TODO: Abstract inner logic
+			// TODO: Requests in parallel.
 
-			// Read status code.
 			code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
 			if err != nil {
 				return err
@@ -83,6 +83,40 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}
+		}
+	}
+
+	// TODO: Step 2 - sync to head.
+	best := bestPeer()
+	root, _, _ := highestFinalized()
+	req := &p2ppb.BeaconBlocksByRangeRequest{
+		HeadBlockRoot:        root,
+		StartSlot:            s.chain.HeadSlot() + 1,
+		Count:                slotsSinceGenesis(genesis) - s.chain.HeadSlot(),
+		Step:                 1,
+	}
+
+	stream, err := s.p2p.Send(ctx, req, best)
+	if err != nil {
+		return err
+	}
+
+	code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		return errors.New(errMsg)
+	}
+
+	resp := make([]*eth.BeaconBlock, 0)
+	if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
+		return err
+	}
+
+	for _, blk := range resp {
+		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+			return err
 		}
 	}
 
@@ -128,4 +162,17 @@ func highestFinalized() ([]byte, uint64, []peer.ID) {
 	}
 
 	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
+}
+
+func bestPeer() peer.ID {
+	var best peer.ID
+	var bestSlot uint64
+	for _, k := range peerstatus.Keys() {
+		s := peerstatus.Get(k)
+		if s.HeadSlot > bestSlot {
+			bestSlot = s.HeadSlot
+			best = k
+		}
+	}
+	return best
 }
