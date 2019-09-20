@@ -131,23 +131,29 @@ message ListAttestationsRequest {
 
     oneof query_filter {
         // Filter attestations by a specific block root.
-        bytes block_root = 1;
+        bytes head_block_root = 1;
 
-        // Filter attestations by slot number.
-        uint64 slot = 2;
+        // Filter attestations by source epoch.
+        uint64 source_epoch = 2;
 
-        // Filter attestations by epoch number.
-        uint64 epoch = 3;
+        // Filter attestations by target root.
+        bytes source_root = 3;
+
+        // Filter attestations by target epoch.
+        uint64 target_epoch = 4;
+
+        // Filter attestations by target root.
+        bytes target_root = 5;
     }
 
     // The maximum number of Attestations to return in the response.
     // This field is optional.
-    int32 page_size = 4;
+    int32 page_size = 6;
 
     // A pagination token returned from a previous call to `ListAttestations`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 5;
+    string page_token = 7;
 }
 
 message ListAttestationsResponse {
@@ -169,23 +175,27 @@ message ListBlocksRequest {
 
         // Slot to lookup a block. If the slot is not yet finalized, this
         // criteria may yield multiple valid blocks if the node has seen blocks
-        // from another fork. 
-        uint64 slot = 2; 
+        // from another fork.
+        uint64 slot = 2;
 
-        // Epoch to lookup blocks. This method may return multiple blocks for a 
+        // Epoch to lookup blocks. This method may return multiple blocks for a
         // slot if the epoch has not been finalized and the node has seen blocks
         // from another fork.
         uint64 epoch = 3;
     }
 
+    // Optional criteria to include any non-canonical blocks matching the
+    // request.
+    bool include_noncanonical = 4;
+
     // The maximum number of Blocks to return in the response.
     // This field is optional.
-    int32 page_size = 4;
+    int32 page_size = 5;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 5;
+    string page_token = 6;
 }
 
 message ListBlocksResponse {
