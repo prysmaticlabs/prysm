@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -44,7 +43,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.goodbyeRPCHandler(context.Background(), &pb.Goodbye{Reason: pb.Goodbye_CLIENT_SHUTDOWN}, stream1)
+	err = r.goodbyeRPCHandler(context.Background(), codeClientShutdown, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
