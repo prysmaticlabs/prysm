@@ -122,6 +122,10 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		delete(s.attsQueue, root)
 	}
 
+	if err := s.saveNewAttestation(ctx, a); err != nil {
+		return 0, err
+	}
+
 	return tgtSlot, nil
 }
 
@@ -279,8 +283,31 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	return nil
 }
 
-// returns true when time is divisible with slot duration / 2.
-func halfSlot(genesisTime uint64) bool {
-	t := time.Unix(int64(genesisTime), 0)
-	return uint64(roughtime.Since(t).Seconds())%params.BeaconConfig().SecondsPerSlot/2 == 0
+// savesNewAttestation saves the new attestations to DB.
+func (s *Store) saveNewAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	r, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		return err
+	}
+	saved, err := s.db.Attestation(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	if saved == nil {
+		if err := s.db.SaveAttestation(ctx, att); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	aggregated, err := helpers.AggregateAttestation(saved, att)
+	if err != nil {
+		return err
+	}
+	if err := s.db.SaveAttestation(ctx, aggregated); err != nil {
+		return err
+	}
+
+	return nil
 }
