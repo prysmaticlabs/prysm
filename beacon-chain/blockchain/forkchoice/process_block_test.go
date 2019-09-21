@@ -231,7 +231,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	r1, _ := ssz.HashTreeRoot(a1.Data)
 	r2, _ := ssz.HashTreeRoot(a2.Data)
 
-	store.savesNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
 
 	saved, err := store.db.Attestation(ctx, r1)
 	if err != nil {
@@ -252,7 +252,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
 	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}}
 
-	store.savesNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
 
 	saved, err = store.db.Attestation(ctx, r1)
 	if err != nil {
