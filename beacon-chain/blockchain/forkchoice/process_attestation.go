@@ -2,7 +2,6 @@ package forkchoice
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -99,6 +98,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
+	log.Error(len(s.attsQueue))
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
 			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
@@ -236,13 +236,12 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	r , _ := ssz.HashTreeRoot(a.Data)
-	log.Error("Converted to index: ", hex.EncodeToString(r[:]))
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
+		log.Error(err)
 		return nil, errors.New("could not verify indexed attestation")
 	}
 	return indexedAtt, nil

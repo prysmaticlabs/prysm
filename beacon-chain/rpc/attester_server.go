@@ -43,6 +43,10 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 			log.WithError(err).Error("could not handle attestation in operations service")
 			return
 		}
+	}()
+
+	go func() {
+		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
 		}

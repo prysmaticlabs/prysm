@@ -128,8 +128,8 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 // the attestations are returned in slot ascending order and up to MaxAttestations
 // capacity. The attestations get deleted in DB after they have been retrieved.
 func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
-	s.attestationPoolLock.Lock()
-	defer s.attestationPoolLock.Unlock()
+	//s.attestationPoolLock.Lock()
+	//defer s.attestationPoolLock.Unlock()
 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
@@ -264,8 +264,8 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // removeAttestationsFromPool removes a list of attestations from the DB
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
-	s.attestationPoolLock.Lock()
-	defer s.attestationPoolLock.Unlock()
+	//s.attestationPoolLock.Lock()
+	//defer s.attestationPoolLock.Unlock()
 
 	for _, attestation := range attestations {
 		root, err := ssz.HashTreeRoot(attestation.Data)
@@ -274,15 +274,15 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 		}
 		log.Error("Remove ", hex.EncodeToString(root[:]))
 
-		lock := s.retrieveLock(root)
-		lock.Lock()
+		//lock := s.retrieveLock(root)
+		//lock.Lock()
 
 		_, ok := s.attestationPool[root]
 		if ok {
 			delete(s.attestationPool, root)
 			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
 		}
-		lock.Unlock()
+		//lock.Unlock()
 	}
 	return nil
 }
