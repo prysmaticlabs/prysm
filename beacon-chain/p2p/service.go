@@ -21,7 +21,9 @@ import (
 )
 
 var _ = shared.Service(&Service{})
+
 var pollingPeriod = 1 * time.Second
+var bootnodePingPeriod = 5 * time.Minute
 var ttl = 1 * time.Hour
 
 // Service for managing peer to peer (p2p) networking.
@@ -110,6 +112,7 @@ func (s *Service) Start() {
 		s.dv5Listener = listener
 
 		go s.listenForNewNodes()
+		go s.maintainBootnode()
 	}
 
 	s.started = true
@@ -196,7 +199,28 @@ func (s *Service) listenForNewNodes() {
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
+		}
+	}
+}
 
+// maintainBootnode connection by infrequently pinging the bootnode ENR. If the bootnode server has
+// restarted and this client pruned them from the local table, then a ping will reinsert this
+// clients' ENR into the table of the bootnode again.
+func (s *Service) maintainBootnode() {
+	if s.cfg.BootstrapNodeAddr == "" {
+		return
+	}
+	ticker := time.NewTicker(bootnodePingPeriod)
+	bootNode := enode.MustParse(s.cfg.BootstrapNodeAddr)
+	for {
+		select {
+		case <-ticker.C:
+			log.Debug("Pinging bootnode")
+			if err := s.dv5Listener.Ping(bootNode); err != nil {
+				log.WithError(err).Error("Failed to ping bootnode")
+			}
+		case <-s.ctx.Done():
+			return
 		}
 	}
 }
