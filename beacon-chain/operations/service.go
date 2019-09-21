@@ -198,10 +198,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	lock := s.retrieveLock(root)
-	lock.Lock()
-	defer lock.Unlock()
-
 	savedAtt, ok := s.attestationPool[root]
 	if !ok {
 		s.attestationPool[root] = attestation
