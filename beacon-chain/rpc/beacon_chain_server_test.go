@@ -453,7 +453,7 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
-	_, balances := setupValidators(t, db, 1)
+	setupValidators(t, db, 1)
 
 	headState, err := db.HeadState(context.Background())
 	if err != nil {
