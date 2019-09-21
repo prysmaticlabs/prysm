@@ -149,56 +149,29 @@ func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	if beaconState.Slot != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
+	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		return nil, fmt.Errorf(
-			"parent root %#x does not match the latest block header signing root in state %#x",
-			block.ParentRoot, parentRoot)
-	}
-
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
-	if err != nil {
-		return nil, err
-	}
-	emptySig := make([]byte, 96)
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  params.BeaconConfig().ZeroHash[:],
-		BodyRoot:   bodyRoot[:],
-		Signature:  emptySig,
-	}
-	// Verify proposer is not slashed.
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
 	}
 	proposer := beaconState.Validators[idx]
-	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
-	}
-
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block signature")
 	}
-
 	return beaconState, nil
 }
 
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
 // signature verification.
 //
-// // WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
+// WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
 // using a unsigned block.
 //
 // Spec pseudocode definition:
@@ -257,7 +230,6 @@ func ProcessBlockHeaderNoVerify(
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
-
 	return beaconState, nil
 }
 
@@ -299,6 +271,28 @@ func ProcessRandao(
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
+	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process randao")
+	}
+	return beaconState, nil
+}
+
+// ProcessRandaoNoVerify checks the block proposer's
+// randao commitment and generates a new randao mix to update
+// in the beacon state's latest randao mixes slice.
+//
+// Spec pseudocode definition:
+//     # Mix it in
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//         xor(get_randao_mix(state, get_current_epoch(state)),
+//             hash(body.randao_reveal))
+//     )
+func ProcessRandaoNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
@@ -1054,6 +1048,25 @@ func ProcessVoluntaryExits(
 		if err := VerifyExit(beaconState, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return beaconState, nil
+}
+
+// ProcessVoluntaryExitsNoVerify processes the spec defined
+// ProcessVoluntaryExits function but only runs the state modifying
+// parts of the code.
+func ProcessVoluntaryExitsNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	var err error
+	exits := body.VoluntaryExits
+
+	for _, exit := range exits {
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
 			return nil, err

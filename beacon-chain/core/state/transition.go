@@ -272,7 +272,7 @@ func processBlockNoVerify(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandao(state, block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
@@ -429,7 +429,7 @@ func processOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
