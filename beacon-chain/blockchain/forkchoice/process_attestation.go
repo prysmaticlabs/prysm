@@ -285,7 +285,7 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 
 // savesNewAttestation saves the new attestations to DB.
 func (s *Store) saveNewAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att)
+	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
 	}
