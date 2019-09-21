@@ -42,8 +42,8 @@ func setBenchmarkConfig() {
 		c.MaxAttesterSlashings = 1
 		c.MaxProposerSlashings = 1
 		c.MaxAttestations = 16
-		c.MaxDeposits = 2
-		c.MaxVoluntaryExits = 2
+		c.MaxDeposits = 1
+		c.MaxVoluntaryExits = 1
 	}
 	params.OverrideBeaconConfig(c)
 }
@@ -192,6 +192,20 @@ func BenchmarkProcessBlock(b *testing.B) {
 	cleanUp()
 }
 
+func BenchmarkExecuteStateTransition(b *testing.B) {
+	beaconState, block := createBeaconStateAndBlock(b)
+	cleanStates := createCleanStates(beaconState)
+
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := state.ExecuteStateTransitionNoVerify(context.Background(), cleanStates[i], block); err != nil {
+			b.Fatal(err)
+		}
+	}
+	cleanUp()
+}
+
 func BenchmarkBeaconProposerIndex(b *testing.B) {
 	beaconState, _ := createBeaconStateAndBlock(b)
 
@@ -220,6 +234,7 @@ func BenchmarkCrosslinkCommitee(b *testing.B) {
 	cleanUp()
 }
 
+// MAKE FULL BLOCK SIMULATOR
 func createFullBlock(b testing.TB, bState *pb.BeaconState) (*ethpb.BeaconBlock, []byte) {
 	currentSlot := bState.Slot
 	currentEpoch := helpers.CurrentEpoch(bState)
@@ -497,7 +512,6 @@ func getStateRoot(bState *pb.BeaconState, block *ethpb.BeaconBlock) ([]byte, err
 }
 
 func signBlockAndRandao(bState *pb.BeaconState, block *ethpb.BeaconBlock) error {
-	domain := helpers.Domain(bState, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainDeposit)
 	reveal, err := testutil.CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
 	if err != nil {
 		return err
@@ -520,7 +534,7 @@ func signBlockAndRandao(bState *pb.BeaconState, block *ethpb.BeaconBlock) error 
 	if err != nil {
 		return err
 	}
-	domain = helpers.Domain(bState, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(bState, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	return nil
 }
