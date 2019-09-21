@@ -252,5 +252,3 @@ func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
 	return proto.Clone(s.finalizedCheckpt).(*ethpb.Checkpoint)
 }
-
-
