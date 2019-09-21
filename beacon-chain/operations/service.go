@@ -3,7 +3,6 @@ package operations
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -55,7 +54,7 @@ type Service struct {
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	error                      error
 	attestationPool            map[[32]byte]*ethpb.Attestation
-	attestationPoolLock            sync.Mutex
+	attestationPoolLock        sync.Mutex
 	attestationLockCache       *ccache.Cache
 }
 
@@ -128,8 +127,8 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 // the attestations are returned in slot ascending order and up to MaxAttestations
 // capacity. The attestations get deleted in DB after they have been retrieved.
 func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
-	//s.attestationPoolLock.Lock()
-	//defer s.attestationPoolLock.Unlock()
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
@@ -151,8 +150,6 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		if err != nil {
 			return nil, err
 		}
-		lock := s.retrieveLock(root)
-		lock.Lock()
 
 		if _, err = blocks.ProcessAttestation(bState, att); err != nil {
 			delete(s.attestationPool, root)
@@ -166,7 +163,6 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		}
 
 		atts = append(atts, att)
-		lock.Unlock()
 	}
 	return atts, nil
 }
@@ -190,6 +186,9 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 
 // HandleAttestation processes a received attestation message.
 func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
 
@@ -203,22 +202,8 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	lock.Lock()
 	defer lock.Unlock()
 
-	bState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-
-	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if attestationSlot > bState.Slot {
-		bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
-		if err != nil {
-			return err
-		}
-	}
-
 	savedAtt, ok := s.attestationPool[root]
 	if !ok {
-		log.Error("Add ", hex.EncodeToString(root[:]))
 		s.attestationPool[root] = attestation
 		return nil
 	}
@@ -264,25 +249,20 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // removeAttestationsFromPool removes a list of attestations from the DB
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
-	//s.attestationPoolLock.Lock()
-	//defer s.attestationPoolLock.Unlock()
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
 
 	for _, attestation := range attestations {
 		root, err := ssz.HashTreeRoot(attestation.Data)
 		if err != nil {
 			return err
 		}
-		log.Error("Remove ", hex.EncodeToString(root[:]))
-
-		//lock := s.retrieveLock(root)
-		//lock.Lock()
 
 		_, ok := s.attestationPool[root]
 		if ok {
 			delete(s.attestationPool, root)
 			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
 		}
-		//lock.Unlock()
 	}
 	return nil
 }
