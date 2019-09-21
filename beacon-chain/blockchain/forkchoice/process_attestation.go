@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -235,6 +236,8 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+	r , _ := ssz.HashTreeRoot(a.Data)
+	log.Error("Converted to index: ", hex.EncodeToString(r[:]))
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")

@@ -3,8 +3,8 @@ package operations
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -54,6 +54,8 @@ type Service struct {
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	error                      error
+	attestationPool            map[[32]byte]*ethpb.Attestation
+	attestationPoolLock            sync.Mutex
 	attestationLockCache       *ccache.Cache
 }
 
@@ -72,6 +74,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:                   cfg.BeaconDB,
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
+		attestationPool:            make(map[[32]byte]*ethpb.Attestation),
 		attestationLockCache:       ccache.New(ccache.Configure()),
 	}
 }
@@ -125,11 +128,11 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 // the attestations are returned in slot ascending order and up to MaxAttestations
 // capacity. The attestations get deleted in DB after they have been retrieved.
 func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
-	var attestations []*ethpb.Attestation
-	atts, err := s.beaconDB.Attestations(ctx, nil /*filter*/)
-	if err != nil {
-		return nil, errors.New("could not retrieve attestations from DB")
-	}
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
 	bState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.New("could not retrieve attestations from DB")
@@ -142,20 +145,17 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		}
 	}
 
-	sort.Slice(atts, func(i, j int) bool {
-		return atts[i].Data.Target.Epoch < atts[j].Data.Target.Epoch
-	})
-
 	var validAttsCount uint64
-	for _, att := range atts {
+	for _, att := range s.attestationPool {
+		root, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return nil, err
+		}
+		lock := s.retrieveLock(root)
+		lock.Lock()
+
 		if _, err = blocks.ProcessAttestation(bState, att); err != nil {
-			hash, err := ssz.HashTreeRoot(att)
-			if err != nil {
-				return nil, err
-			}
-			if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
-				return nil, err
-			}
+			delete(s.attestationPool, root)
 			continue
 		}
 
@@ -164,9 +164,11 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		if validAttsCount == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, att)
+
+		atts = append(atts, att)
+		lock.Unlock()
 	}
-	return attestations, nil
+	return atts, nil
 }
 
 // HandleValidatorExits processes a validator exit operation.
@@ -214,23 +216,19 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		}
 	}
 
-	if s.beaconDB.HasAttestation(ctx, root) {
-		dbAtt, err := s.beaconDB.Attestation(ctx, root)
-		if err != nil {
-			return err
-		}
-		attestation, err = helpers.AggregateAttestation(dbAtt, attestation)
-		if err != nil {
-			return err
-		}
-		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
-			return err
-		}
-	} else {
-		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
-			return err
-		}
+	savedAtt, ok := s.attestationPool[root]
+	if !ok {
+		log.Error("Add ", hex.EncodeToString(root[:]))
+		s.attestationPool[root] = attestation
+		return nil
 	}
+
+	savedAtt, err = helpers.AggregateAttestation(savedAtt, attestation)
+	if err != nil {
+		return err
+	}
+	s.attestationPool[root] = savedAtt
+
 	return nil
 }
 
@@ -266,18 +264,25 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 // removeAttestationsFromPool removes a list of attestations from the DB
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
 	for _, attestation := range attestations {
 		root, err := ssz.HashTreeRoot(attestation.Data)
 		if err != nil {
 			return err
 		}
+		log.Error("Remove ", hex.EncodeToString(root[:]))
 
-		if s.beaconDB.HasAttestation(ctx, root) {
-			if err := s.beaconDB.DeleteAttestation(ctx, root); err != nil {
-				return err
-			}
+		lock := s.retrieveLock(root)
+		lock.Lock()
+
+		_, ok := s.attestationPool[root]
+		if ok {
+			delete(s.attestationPool, root)
 			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
 		}
+		lock.Unlock()
 	}
 	return nil
 }
