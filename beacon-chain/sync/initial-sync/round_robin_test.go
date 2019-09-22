@@ -31,13 +31,15 @@ func init() {
 func TestRoundRobinSync(t *testing.T) {
 
 	tests := []struct {
-		name        string
-		currentSlot uint64
-		peers       []*peerData
+		name               string
+		currentSlot        uint64
+		expectedBlockSlots []uint64
+		peers              []*peerData
 	}{
 		{
 			name:        "Single peer with all blocks",
 			currentSlot: 131,
+			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -49,6 +51,7 @@ func TestRoundRobinSync(t *testing.T) {
 		{
 			name:        "Multiple peers with all blocks",
 			currentSlot: 131,
+			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -75,6 +78,7 @@ func TestRoundRobinSync(t *testing.T) {
 		{
 			name:        "Multiple peers with failures",
 			currentSlot: 131,
+			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -85,7 +89,7 @@ func TestRoundRobinSync(t *testing.T) {
 					blocks:         makeSequence(1, 131),
 					finalizedEpoch: 1,
 					headSlot:       131,
-					failureSlots:   makeSequence(1, 131), // first epoch
+					failureSlots:   makeSequence(1, 64), // first epoch
 				},
 				{
 					blocks:         makeSequence(1, 131),
@@ -114,10 +118,11 @@ func TestRoundRobinSync(t *testing.T) {
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers)
 
+			mc :=  &mock.ChainService{
+				State: &p2ppb.BeaconState{},
+			} // no-op mock
 			s := &InitialSync{
-				chain: &mock.ChainService{
-					State: &p2ppb.BeaconState{},
-				}, // no-op mock
+				chain:mc,
 				p2p:          p,
 				synced:       false,
 				chainStarted: true,
@@ -129,6 +134,10 @@ func TestRoundRobinSync(t *testing.T) {
 			if s.chain.HeadSlot() != tt.currentSlot {
 				t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
 			}
+			if len(mc.BlocksReceived) != len(tt.expectedBlockSlots) {
+				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(mc.BlocksReceived))
+			}
+			// TODO: Verify block slots match.
 		})
 	}
 }

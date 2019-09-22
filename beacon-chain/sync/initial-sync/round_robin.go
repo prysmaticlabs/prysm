@@ -33,9 +33,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	ctx := context.Background()
 
 	var requestBlocks = func(req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
+		log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
 		stream, err := s.p2p.Send(ctx, req, pid)
 		if err != nil {
-			// TODO: Retry request in round robin with other peers, if possible.
 			return nil, errors.Wrap(err, "failed to send request to peer")
 		}
 
@@ -62,29 +62,47 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, _, peers := highestFinalized()
 
-		req := &p2ppb.BeaconBlocksByRangeRequest{
-			HeadBlockRoot: root,
-			StartSlot:     s.chain.HeadSlot() + 1,
-			Count:         blockBatchSize,
-			Step:          uint64(len(peers)),
-		}
-
 		var blocks []*eth.BeaconBlock
-		for _, pid := range peers {
-			log.WithField("req", req).WithField("peer", pid.Pretty()).Debug(
-				"Sending batch block request",
-			)
-
-			// TODO: Requests in parallel.
-
-			resp, err := requestBlocks(req, pid)
-			if err != nil {
-				return err
+		var request func(start uint64, step uint64, count uint64, peers []peer.ID) ([]*eth.BeaconBlock, error)
+		request = func(start uint64, step uint64, count uint64, peers []peer.ID) ([]*eth.BeaconBlock, error) {
+			if len(peers) == 0 {
+				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
 
-			blocks = append(blocks, resp...)
+			for i, pid := range peers {
+				start := start + uint64(i)*step
+				req := &p2ppb.BeaconBlocksByRangeRequest{
+					HeadBlockRoot: root,
+					StartSlot:     start,
+					Count:         count,
+					Step:          step * uint64(len(peers)),
+				}
 
-			req.StartSlot++
+				resp, err := requestBlocks(req, pid)
+				log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
+				if err != nil {
+					// try other peers
+					ps := append(peers[:i], peers[i+1:]...)
+					log.WithError(err).WithField("remaining peers", len(ps)).WithField("peer", pid.Pretty()).Debug("Request failed, trying to round robin with other peers")
+					resp, err = request(start, uint64(len(peers)), count/uint64(len(peers)), ps)
+					if err != nil {
+						return nil, err
+					}
+				}
+				blocks = append(blocks, resp...)
+			}
+
+			return blocks, nil
+		}
+
+		blocks, err := request(
+			s.chain.HeadSlot()+1, // start
+			1,                    // step
+			blockBatchSize,       // count
+			peers,
+		)
+		if err != nil {
+			return err
 		}
 
 		sort.Slice(blocks, func(i, j int) bool {
