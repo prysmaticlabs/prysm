@@ -21,6 +21,7 @@ type peerData struct {
 	blocks         []uint64 // slots that peer has blocks
 	finalizedEpoch uint64
 	headSlot       uint64
+	failureSlots   []uint64 // slots at which the peer will return an error
 }
 
 func init() {
@@ -32,16 +33,69 @@ func TestRoundRobinSync(t *testing.T) {
 	tests := []struct {
 		name        string
 		currentSlot uint64
-		peers       []peerData
+		peers       []*peerData
 	}{
 		{
 			name:        "Single peer with all blocks",
-			currentSlot: 130,
-			peers: []peerData{
+			currentSlot: 131,
+			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
 					finalizedEpoch: 1,
-					headSlot:       130,
+					headSlot:       131,
+				},
+			},
+		},
+		{
+			name:        "Multiple peers with all blocks",
+			currentSlot: 131,
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+			},
+		},
+		{
+			name:        "Multiple peers with failures",
+			currentSlot: 131,
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+					failureSlots:   makeSequence(1, 131), // first epoch
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
 				},
 			},
 		},
@@ -72,24 +126,42 @@ func TestRoundRobinSync(t *testing.T) {
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)
 			}
+			if s.chain.HeadSlot() != tt.currentSlot {
+				t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
+			}
 		})
 	}
 }
 
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
 // for each test peer.
-func connectPeers(t *testing.T, host *p2pt.TestP2P, data []peerData) {
+func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz"
 
-	for _, datum := range data {
+	for _, d := range data {
 		peer := p2pt.NewTestP2P(t)
+
+		// Copy pointer for callback scope.
+		var datum = d
+
 		peer.SetStreamHandler(topic, func(stream network.Stream) {
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
 			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
 				t.Error(err)
 			}
 
-			// TODO: error ranges.
+			requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step))
+
+			// Expected failure range
+			if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
+				if _, err := stream.Write([]byte{0x01}); err != nil {
+					t.Error(err)
+				}
+				if _, err := peer.Encoding().EncodeWithLength(stream, "bad"); err != nil {
+					t.Error(err)
+				}
+				return
+			}
 
 			// Write success response.
 			if _, err := stream.Write([]byte{0x00}); err != nil {
@@ -97,7 +169,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []peerData) {
 			}
 
 			// Determine the correct subset of blocks to return as dictated by the test scenario.
-			blocks := sliceutil.IntersectionUint64(datum.blocks, makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step)))
+			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
 			ret := make([]*eth.BeaconBlock, 0)
 			for _, slot := range blocks {
 				if slot%req.Step != 0 {

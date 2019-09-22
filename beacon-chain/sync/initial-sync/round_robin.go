@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -43,7 +43,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return nil, err
 		}
 
-		code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
+		code, errMsg, err := prysmsync.ReadStatusCode(stream, s.p2p.Encoding())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read response status")
 		}
