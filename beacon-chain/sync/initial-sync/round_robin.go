@@ -94,9 +94,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		HeadBlockRoot:        root,
 		StartSlot:            s.chain.HeadSlot() + 1,
-		Count:                slotsSinceGenesis(genesis) - s.chain.HeadSlot(),
+		Count:                slotsSinceGenesis(genesis) - s.chain.HeadSlot() + 1,
 		Step:                 1,
 	}
+
+	log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
+		"Sending batch block request",
+	)
 
 	stream, err := s.p2p.Send(ctx, req, best)
 	if err != nil {
@@ -171,7 +175,7 @@ func bestPeer() peer.ID {
 	var bestSlot uint64
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
-		if s.HeadSlot > bestSlot {
+		if s.HeadSlot >= bestSlot {
 			bestSlot = s.HeadSlot
 			best = k
 		}
