@@ -44,22 +44,22 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 		var blocks []*eth.BeaconBlock
 		for _, pid := range peers {
-
 			log.WithField("req", req).WithField("peer", pid.Pretty()).Debug(
 				"Sending batch block request",
 			)
 			stream, err := s.p2p.Send(ctx, req, pid)
 			if err != nil {
 				// TODO: Retry request in round robin with other peers, if possible.
-				return err
+				return errors.Wrap(err, "failed to send request to peer")
 			}
 
 			// TODO: Abstract inner logic
 			// TODO: Requests in parallel.
+			// TODO: Stream deadlines.
 
 			code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to read response status")
 			}
 			if code != 0 {
 				return errors.New(errMsg)
@@ -67,7 +67,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			resp := make([]*eth.BeaconBlock, 0)
 			if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-				return err
+				return errors.Wrap(err, "failed to decode response")
 			}
 
 			blocks = append(blocks, resp...)
@@ -86,6 +86,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		}
 	}
 
+	log.Debug("Synced to finalized epoch. Syncing blocks to head slot now.")
+
 	// TODO: Step 2 - sync to head.
 	best := bestPeer()
 	root, _, _ := highestFinalized()
@@ -98,12 +100,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	stream, err := s.p2p.Send(ctx, req, best)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to send request to peer")
 	}
 
 	code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to read status code")
 	}
 	if code != 0 {
 		return errors.New(errMsg)
@@ -111,7 +113,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	resp := make([]*eth.BeaconBlock, 0)
 	if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return err
+		return errors.Wrap(err, "failed to decode response")
 	}
 
 	for _, blk := range resp {

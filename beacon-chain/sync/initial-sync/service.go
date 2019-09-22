@@ -24,7 +24,7 @@ type blockchainService interface {
 }
 
 const (
-	minHelloCount            = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
+	minStatusCount           = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
@@ -80,13 +80,13 @@ func (s *InitialSync) Start() {
 
 	// Every 5 sec, report handshake count.
 	for {
-		helloCount := peerstatus.Count()
+		count := peerstatus.Count()
 		log.WithField(
 			"hellos",
-			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
+			fmt.Sprintf("%d/%d", count, minStatusCount),
 		).Info("Waiting for enough peer handshakes before syncing.")
 
-		if helloCount >= minHelloCount {
+		if count >= minStatusCount {
 			break
 		}
 		time.Sleep(handshakePollingInterval)

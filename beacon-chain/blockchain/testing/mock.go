@@ -30,6 +30,10 @@ func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.B
 
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+	if ms.State == nil {
+		ms.State = &pb.BeaconState{}
+	}
+	ms.State.Slot = block.Slot
 	return nil
 }
 
