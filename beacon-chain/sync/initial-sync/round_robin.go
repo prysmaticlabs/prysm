@@ -17,6 +17,7 @@ import (
 )
 
 const blockBatchSize = 64
+const readTimeout = 10 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer,
@@ -30,6 +31,32 @@ const blockBatchSize = 64
 // where step = 1.
 func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	ctx := context.Background()
+
+	var requestBlocks = func(req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
+		stream, err := s.p2p.Send(ctx, req, pid)
+		if err != nil {
+			// TODO: Retry request in round robin with other peers, if possible.
+			return nil, errors.Wrap(err, "failed to send request to peer")
+		}
+
+		if err := stream.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+			return nil, err
+		}
+
+		code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read response status")
+		}
+		if code != 0 {
+			return nil, errors.New(errMsg)
+		}
+
+		resp := make([]*eth.BeaconBlock, 0)
+		if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
+			return nil, errors.Wrap(err, "failed to decode response")
+		}
+		return resp, nil
+	}
 
 	// Sync to finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
@@ -47,27 +74,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			log.WithField("req", req).WithField("peer", pid.Pretty()).Debug(
 				"Sending batch block request",
 			)
-			stream, err := s.p2p.Send(ctx, req, pid)
-			if err != nil {
-				// TODO: Retry request in round robin with other peers, if possible.
-				return errors.Wrap(err, "failed to send request to peer")
-			}
 
-			// TODO: Abstract inner logic
 			// TODO: Requests in parallel.
-			// TODO: Stream deadlines.
 
-			code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
+			resp, err := requestBlocks(req, pid)
 			if err != nil {
-				return errors.Wrap(err, "failed to read response status")
-			}
-			if code != 0 {
-				return errors.New(errMsg)
-			}
-
-			resp := make([]*eth.BeaconBlock, 0)
-			if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-				return errors.Wrap(err, "failed to decode response")
+				return err
 			}
 
 			blocks = append(blocks, resp...)
@@ -92,32 +104,19 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	best := bestPeer()
 	root, _, _ := highestFinalized()
 	req := &p2ppb.BeaconBlocksByRangeRequest{
-		HeadBlockRoot:        root,
-		StartSlot:            s.chain.HeadSlot() + 1,
-		Count:                slotsSinceGenesis(genesis) - s.chain.HeadSlot() + 1,
-		Step:                 1,
+		HeadBlockRoot: root,
+		StartSlot:     s.chain.HeadSlot() + 1,
+		Count:         slotsSinceGenesis(genesis) - s.chain.HeadSlot() + 1,
+		Step:          1,
 	}
 
 	log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
 		"Sending batch block request",
 	)
 
-	stream, err := s.p2p.Send(ctx, req, best)
+	resp, err := requestBlocks(req, best)
 	if err != nil {
-		return errors.Wrap(err, "failed to send request to peer")
-	}
-
-	code, errMsg, err := sync.ReadStatusCode(stream, s.p2p.Encoding())
-	if err != nil {
-		return errors.Wrap(err, "failed to read status code")
-	}
-	if code != 0 {
-		return errors.New(errMsg)
-	}
-
-	resp := make([]*eth.BeaconBlock, 0)
-	if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return errors.Wrap(err, "failed to decode response")
+		return err
 	}
 
 	for _, blk := range resp {

@@ -20,7 +20,7 @@ import (
 type peerData struct {
 	blocks         []uint64 // slots that peer has blocks
 	finalizedEpoch uint64
-	headSlot uint64
+	headSlot       uint64
 }
 
 func init() {
@@ -39,9 +39,9 @@ func TestRoundRobinSync(t *testing.T) {
 			currentSlot: 130,
 			peers: []peerData{
 				{
-					blocks: makeSequence(1, 131),
+					blocks:         makeSequence(1, 131),
 					finalizedEpoch: 1,
-					headSlot: 130,
+					headSlot:       130,
 				},
 			},
 		},
