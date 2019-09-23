@@ -103,12 +103,6 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-		//{
-		//	name: "Single peer with skipped epochs",
-		//	peers: []peerData{
-		//		{blocks: makeSequence(100, 164)},
-		//	},
-		//},
 	}
 
 	for _, tt := range tests {

@@ -77,6 +77,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if count == 0 {
 					count = 1
 				}
+				// If the count was divided by an odd number of peers, there will be one block
+				// missing from the first request so we accommodate that scenario.
 				if i == 0 && len(peers)%2 == 1 && count%2 == 1 {
 					count++
 				}
@@ -133,8 +135,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	if s.chain.HeadSlot() == slotsSinceGenesis(genesis) {
 		return nil
 	}
-	
-	// TODO: Step 2 - sync to head.
+
+	// Step 2 - sync to head.
 	best := bestPeer()
 	root, _, _ := highestFinalized()
 	req := &p2ppb.BeaconBlocksByRangeRequest{
