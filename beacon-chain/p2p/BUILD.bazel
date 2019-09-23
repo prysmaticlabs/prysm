@@ -23,7 +23,10 @@ go_library(
         "watch_peers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//tools:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/p2p/encoder:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
