@@ -513,6 +513,7 @@ func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, e
 	epochStartShard := archivedInfo.StartShard
 	startSlot := helpers.StartSlot(epoch)
 	seed := bytesutil.ToBytes32(archivedInfo.Seed)
+	shardCount := params.BeaconConfig().ShardCount
 	validatorIndex := uint64(5)
 
 	var foundCommittee []uint64
@@ -523,7 +524,8 @@ func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, e
 		slotStartShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
 		for i := uint64(0); i < committeesPerSlot; i++ {
 			shard := (slotStartShard + i) % params.BeaconConfig().ShardCount
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, validatorIndex, committeeCount)
+			currentShard := (shard + shardCount - epochStartShard) % shardCount
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, currentShard, committeeCount)
 			if err != nil {
 				return err
 			}
