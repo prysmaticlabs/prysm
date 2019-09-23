@@ -8,6 +8,7 @@ import (
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -128,11 +129,11 @@ func (s *Service) Start() {
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
-			//recovery.StreamServerInterceptor(),
+			recovery.StreamServerInterceptor(),
 			grpc_prometheus.StreamServerInterceptor,
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
-			//recovery.UnaryServerInterceptor(),
+			recovery.UnaryServerInterceptor(),
 			grpc_prometheus.UnaryServerInterceptor,
 		)),
 	}
