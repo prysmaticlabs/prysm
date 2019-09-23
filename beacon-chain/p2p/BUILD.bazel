@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "addr_factory.go",
         "broadcaster.go",
         "config.go",
         "dial_relay_node.go",
@@ -19,6 +20,7 @@ go_library(
         "sender.go",
         "service.go",
         "utils.go",
+        "watch_peers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -38,6 +40,7 @@ go_library(
         "@com_github_ipfs_go_ipfs_addr//:go_default_library",
         "@com_github_karlseguin_ccache//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
+        "@com_github_libp2p_go_libp2p//config:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/host/routed:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
@@ -50,6 +53,7 @@ go_library(
         "@com_github_libp2p_go_libp2p_kad_dht//opts:go_default_library",
         "@com_github_libp2p_go_libp2p_peerstore//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
+        "@com_github_libp2p_go_maddr_filter//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -62,6 +66,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "addr_factory_test.go",
         "broadcaster_test.go",
         "dial_relay_node_test.go",
         "discovery_test.go",
