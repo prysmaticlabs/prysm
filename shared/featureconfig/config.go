@@ -27,7 +27,7 @@ var log = logrus.WithField("prefix", "flags")
 type FeatureFlagConfig struct {
 	NoGenesisDelay bool // NoGenesisDelay when processing a chain start genesis event.
 	DemoConfig     bool // DemoConfig with lower deposit thresholds.
-	WriteSSZStates bool // WriteSSZStates to tmp directory.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -66,9 +66,9 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(writeSSZStatesFlag.Name) {
-		log.Warn("Writing SSZ states after state transitions")
-		cfg.WriteSSZStates = true
+	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
+		log.Warn("Writing SSZ states and blocks after state transitions")
+		cfg.WriteSSZStateTransitions = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe active balance cache")

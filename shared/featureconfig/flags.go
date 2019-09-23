@@ -15,8 +15,8 @@ var (
 		Name:  "demo-config",
 		Usage: "Use demo config with lower deposit thresholds.",
 	}
-	writeSSZStatesFlag = cli.BoolFlag {
-		Name: "interop-write-ssz-states",
+	writeSSZStateTransitionsFlag = cli.BoolFlag {
+		Name: "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -65,7 +65,7 @@ var ValidatorFlags = []cli.Flag{
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,
 	DemoConfigFlag,
-	writeSSZStatesFlag,
+	writeSSZStateTransitionsFlag,
 	EnableActiveBalanceCacheFlag,
 	EnableAttestationCacheFlag,
 	EnableAncestorBlockCacheFlag,
