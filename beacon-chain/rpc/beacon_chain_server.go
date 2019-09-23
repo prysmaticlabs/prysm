@@ -326,30 +326,42 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 // GetValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
-//
-// TODO(#3064): Implement validator set for a specific epoch. Current implementation returns latest set,
-// this is blocked by DB refactor.
 func (bs *BeaconChainServer) GetValidators(
 	ctx context.Context,
-	req *ethpb.GetValidatorsRequest) (*ethpb.Validators, error) {
+	req *ethpb.GetValidatorsRequest,
+) (*ethpb.Validators, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get head state %v", err)
+	headState := bs.headFetcher.HeadState()
+	requestedEpoch := helpers.CurrentEpoch(headState)
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorsRequest_Genesis:
+		if q.Genesis {
+			requestedEpoch = 0
+		}
+	case *ethpb.GetValidatorsRequest_Epoch:
+		requestedEpoch = q.Epoch
 	}
 
-	validatorCount := len(headState.Validators)
+	finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+	validators := make([]*ethpb.Validator, 0)
+	if requestedEpoch < finalizedEpoch {
+		fmt.Println("hi")
+	} else {
+		validators = headState.Validators
+	}
+
+	validatorCount := len(validators)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &ethpb.Validators{
-		Validators:    headState.Validators[start:end],
+		Validators:    validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}
