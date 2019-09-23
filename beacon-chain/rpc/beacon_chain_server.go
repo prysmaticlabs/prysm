@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -419,12 +421,12 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		}
 	}
 
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
+	}
 	if len(filteredIndices) == 0 {
 		// If no filter was specified, return assignments from active validator indices with pagination.
-		activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
-		}
 		filteredIndices = activeIndices
 	}
 
@@ -433,14 +435,36 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		return nil, err
 	}
 
+	shouldFetchFromArchive := requestedEpoch < bs.finalizationFetcher.FinalizedCheckpt().Epoch
+
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= len(headState.Validators) {
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(headState, requestedEpoch, index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		var committee []uint64
+		var shard uint64
+		var slot uint64
+		var isProposer bool
+		if shouldFetchFromArchive {
+			archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"could not retrieve archived committee info for epoch %d",
+					requestedEpoch,
+				)
+			}
+			committee, shard, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
+			isProposer = archivedInfo.ProposerIndex == index
+		} else {
+			committee, shard, slot, isProposer, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
 		}
 
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
@@ -460,26 +484,19 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}, nil
 }
 
-func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, epoch uint64) error {
-	archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, epoch)
-	if err != nil {
-		return status.Errorf(codes.Internal, "could not retrieve archived committee info for epoch %d", epoch)
-	}
-	activeIndices, err := bs.beaconDB.ArchivedActiveIndices(ctx, epoch)
-	if err != nil {
-		return status.Errorf(codes.Internal, "could not retrieve archived active indices for epoch %d", epoch)
-	}
+func (bs *BeaconChainServer) archivedValidatorCommittee(
+	epoch uint64,
+	validatorIndex uint64,
+	archivedInfo *ethpb.ArchivedCommitteeInfo,
+	activeIndices []uint64,
+) ([]uint64, uint64, uint64, error) {
+	startSlot := helpers.StartSlot(epoch)
 	committeeCount := archivedInfo.CommitteeCount
 	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 	epochStartShard := archivedInfo.StartShard
-	startSlot := helpers.StartSlot(epoch)
 	seed := bytesutil.ToBytes32(archivedInfo.Seed)
 	shardCount := params.BeaconConfig().ShardCount
-	validatorIndex := uint64(5)
 
-	var foundCommittee []uint64
-	var foundShard uint64
-	var foundSlot uint64
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
 		slotStartShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
@@ -488,20 +505,16 @@ func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, e
 			currentShard := (shard + shardCount - epochStartShard) % shardCount
 			committee, err := helpers.ComputeCommittee(activeIndices, seed, currentShard, committeeCount)
 			if err != nil {
-				return err
+				return nil, 0, 0, errors.Wrap(err, "could not compute committee")
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					foundCommittee = committee
-					foundShard = shard
-					foundSlot = slot
-					break
+					return committee, shard, slot, nil
 				}
 			}
 		}
 	}
-	log.Info("Found validator committee %v, shard %d, and slot %d", foundCommittee, foundShard, foundSlot)
-	return nil
+	return nil, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
