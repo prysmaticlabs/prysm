@@ -43,7 +43,7 @@ import (
 var (
 	debug        = flag.Bool("debug", false, "Enable debug logging")
 	privateKey   = flag.String("private", "", "Private key to use for peer ID")
-	port         = flag.Int("port", 4000, "Port to listen for connections")
+	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
 	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
 	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
 	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
@@ -76,7 +76,7 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	listener := createListener(*externalIP, *port, cfg)
+	listener := createListener(*externalIP, *discv5port, cfg)
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
