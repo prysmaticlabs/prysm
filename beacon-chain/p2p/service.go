@@ -44,6 +44,7 @@ type Service struct {
 	pubsub        *pubsub.PubSub
 	exclusionList *ccache.Cache
 	privKey       *ecdsa.PrivateKey
+	dht           *kaddht.IpfsDHT
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -86,13 +87,13 @@ func NewService(cfg *Config) (*Service, error) {
 			),
 		}
 
-		dht, err := kaddht.New(ctx, h, dopts...)
+		s.dht, err = kaddht.New(ctx, h, dopts...)
 		if err != nil {
 			return nil, err
 		}
 		// Wrap host with a routed host so that peers can be looked up in the
 		// distributed hash table by their peer ID.
-		h = rhost.Wrap(h, dht)
+		h = rhost.Wrap(h, s.dht)
 	}
 	s.host = h
 
@@ -162,7 +163,11 @@ func (s *Service) Start() {
 				s.startupErr = err
 				return
 			}
-
+		}
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
+			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
 	}
 
