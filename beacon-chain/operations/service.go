@@ -201,19 +201,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	lock.Lock()
 	defer lock.Unlock()
 
-	bState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-
-	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if attestationSlot > bState.Slot {
-		bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
-		if err != nil {
-			return err
-		}
-	}
-
 	if s.beaconDB.HasAttestation(ctx, root) {
 		dbAtt, err := s.beaconDB.Attestation(ctx, root)
 		if err != nil {
