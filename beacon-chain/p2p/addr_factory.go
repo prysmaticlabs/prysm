@@ -5,7 +5,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-// withRelayAddrs returns an AddrFactory which will  return Multiaddr via
+// withRelayAddrs returns an AddrFactory which will return Multiaddr via
 // specified relay string in addition to existing MultiAddr.
 func withRelayAddrs(relay string) config.AddrsFactory {
 	return func(addrs []ma.Multiaddr) []ma.Multiaddr {
