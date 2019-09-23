@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
-	errorsWrap "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -295,7 +294,7 @@ func (s *Service) addBootNodesToExclusionList() error {
 func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	multiAddr, err := ma.NewMultiaddr(addr)
 	if err != nil {
-		return errorsWrap.Wrap(err, "could not get multiaddr")
+		return errors.Wrap(err, "could not get multiaddr")
 	}
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 	if err != nil {
