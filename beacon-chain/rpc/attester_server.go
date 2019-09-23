@@ -32,9 +32,9 @@ type AttesterServer struct {
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
-	root, err := ssz.SigningRoot(att)
+	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign root attestation")
+		return nil, errors.Wrap(err, "failed to hash tree root attestation")
 	}
 
 	go func() {
