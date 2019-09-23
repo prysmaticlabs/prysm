@@ -8,10 +8,14 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
 func WriteStateToDisk(state *pb.BeaconState) {
+	if !featureconfig.FeatureConfig().WriteSSZStateTransitions {
+		return
+	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot))
 	log.Warnf("Writing state to disk at %s", fp)
 	enc, err := ssz.Marshal(state)
