@@ -151,7 +151,6 @@ func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.
 		if err != nil {
 			return err
 		}
-		log.Error("check attestation seen ", hex.EncodeToString(r[:]))
 		if s.seenAtts[r] {
 			continue
 		}
@@ -171,10 +170,10 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 		return errors.Wrap(err, "could not get state for attestation tgt root")
 	}
 	if err := s.waitForAttInclDelay(ctx, att, baseState); err != nil {
-		return err
+		return errors.Wrap(err, "could not wait for attestation inclusion delay")
 	}
 	if err := s.verifyAttSlotTime(ctx, baseState, att.Data); err != nil {
-		return err
+		return errors.Wrap(err, "could not verify attestation slot time")
 	}
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
 	if err != nil {
