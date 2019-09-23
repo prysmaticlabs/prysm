@@ -25,8 +25,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	NoGenesisDelay bool // NoGenesisDelay when processing a chain start genesis event.
-	DemoConfig     bool // DemoConfig with lower deposit thresholds.
+	NoGenesisDelay bool   // NoGenesisDelay when processing a chain start genesis event.
+	DemoConfig     bool   // DemoConfig with lower deposit thresholds.
+	KademliaDHT    string // Kademlia DHT being utilised in prysm
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -92,6 +93,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe total balance cache")
 		cfg.EnableTotalBalanceCache = true
+	}
+	if ctx.GlobalString(KademliaBootStrapFlag.Name) != "" {
+		log.Warn("Using kademlia dht")
+		cfg.KademliaDHT = KademliaBootStrapFlag.Value
 	}
 	InitFeatureConfig(cfg)
 }

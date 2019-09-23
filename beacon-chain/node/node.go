@@ -228,19 +228,20 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
-		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
-		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeENR,
-		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
-		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
-		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
-		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
-		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
-		UDPPort:           ctx.GlobalUint(cmd.P2PUDPPort.Name),
-		MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
-		WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
-		EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
-		Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
+		NoDiscovery:           ctx.GlobalBool(cmd.NoDiscovery.Name),
+		StaticPeers:           sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
+		BootstrapNodeAddr:     bootnodeENR,
+		KademliaBootStrapAddr: featureconfig.FeatureConfig().KademliaDHT,
+		RelayNodeAddr:         ctx.GlobalString(cmd.RelayNode.Name),
+		DataDir:               ctx.GlobalString(cmd.DataDirFlag.Name),
+		HostAddress:           ctx.GlobalString(cmd.P2PHost.Name),
+		PrivateKey:            ctx.GlobalString(cmd.P2PPrivKey.Name),
+		TCPPort:               ctx.GlobalUint(cmd.P2PTCPPort.Name),
+		UDPPort:               ctx.GlobalUint(cmd.P2PUDPPort.Name),
+		MaxPeers:              ctx.GlobalUint(cmd.P2PMaxPeers.Name),
+		WhitelistCIDR:         ctx.GlobalString(cmd.P2PWhitelist.Name),
+		EnableUPnP:            ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
+		Encoding:              ctx.GlobalString(cmd.P2PEncoding.Name),
 	})
 	if err != nil {
 		return err

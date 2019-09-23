@@ -15,6 +15,11 @@ var (
 		Name:  "demo-config",
 		Usage: "Use demo config with lower deposit thresholds.",
 	}
+	KademliaBootStrapFlag = cli.StringFlag{
+		Name:  "kademlia-bootstrap",
+		Usage: "The multiaddress of the bootstrap node for the kademlia dht",
+		Value: "",
+	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-balance-cache",
@@ -68,4 +73,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableSeedCacheFlag,
 	EnableStartShardCacheFlag,
 	EnableTotalBalanceCacheFlag,
+	KademliaBootStrapFlag,
 }

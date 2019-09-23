@@ -3,19 +3,24 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/karlseguin/ccache"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -25,6 +30,8 @@ var _ = shared.Service(&Service{})
 var pollingPeriod = 1 * time.Second
 var bootnodePingPeriod = 5 * time.Minute
 var ttl = 1 * time.Hour
+
+const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -67,6 +74,21 @@ func NewService(cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create p2p host")
 		return nil, err
 	}
+
+	dopts := []dhtopts.Option{
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
+			protocol.ID(prysmProtocolPrefix + "/dht"),
+		),
+	}
+
+	dht, err := kaddht.New(ctx, h, dopts...)
+	if err != nil {
+		return nil, err
+	}
+	// Wrap host with a routed host so that peers can be looked up in the
+	// distributed hash table by their peer ID.
+	h = rhost.Wrap(h, dht)
 	s.host = h
 
 	// TODO(3147): Add gossip sub options
