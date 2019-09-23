@@ -64,10 +64,9 @@ var (
 		Usage: "Connect with this peer. This flag may be used multiple times.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
-	BootstrapNode = cli.StringFlag{
+	BootstrapNode = cli.StringSliceFlag{
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
-		Value: "",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = cli.StringFlag{

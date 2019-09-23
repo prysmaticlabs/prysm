@@ -384,7 +384,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx, 10)
+	want, _ := bs.pool.AttestationPoolNoVerify(ctx)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
@@ -683,11 +683,26 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
+	ctx := context.Background()
 	setupValidators(t, db, 1)
-	bs := &BeaconChainServer{beaconDB: db}
+	headState, err := db.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
-	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
+	if _, err := bs.ListValidatorAssignments(
+		context.Background(),
+		&ethpb.ListValidatorAssignmentsRequest{
+			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
@@ -697,8 +712,11 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
-	req := &ethpb.ListValidatorAssignmentsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListValidatorAssignments(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+	req := &ethpb.ListValidatorAssignmentsRequest{
+		PageToken: strconv.Itoa(0),
+		PageSize:  exceedsMax,
+	}
+	if _, err := bs.ListValidatorAssignments(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
@@ -743,9 +761,19 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
-	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0})
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -776,7 +804,120 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	count := 1000
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		// Mark the validators with index divisible by 3 inactive.
+		if i%3 == 0 {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+		} else {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		}
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pbp2p.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	// We tell the beacon chain server that our finalized epoch is 10 so that when
+	// we request assignments for epoch 0, it looks within the archived data.
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 10,
+			},
+		},
+	}
+
+	// We then store archived data into the DB.
+	currentEpoch := helpers.CurrentEpoch(s)
+	committeeCount, err := helpers.CommitteeCount(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startShard, err := helpers.StartShard(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposerIndex, err := helpers.BeaconProposerIndex(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
+		Seed:           seed[:],
+		StartShard:     startShard,
+		CommitteeCount: committeeCount,
+		ProposerIndex:  proposerIndex,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments
+	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
+
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	if !reflect.DeepEqual(res.Assignments, wanted) {
+		t.Error("Did not receive wanted assignments")
+	}
+}
+
+func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -812,9 +953,17 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
-	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
+	req := &ethpb.ListValidatorAssignmentsRequest{PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -846,7 +995,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -882,9 +1031,17 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
-	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
+	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -918,12 +1075,12 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {
-		t.Error("Did not receive wanted assignments")
+		t.Error("Did not get wanted assignments")
 	}
 
-	// Test the wrap around scenario
+	// Test the wrap around scenario.
 	assignments = nil
-	req = &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
+	req = &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
 	res, err = bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)

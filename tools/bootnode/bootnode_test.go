@@ -20,13 +20,14 @@ func TestBootnode_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	privKey, _ := extractPrivateKey()
 	cfg := discover.Config{
-		PrivateKey: extractPrivateKey(),
+		PrivateKey: privKey,
 	}
 	listener := createListener(ipAddr, 4000, cfg)
 	defer listener.Close()
 
-	cfg.PrivateKey = extractPrivateKey()
+	cfg.PrivateKey, _ = extractPrivateKey()
 	bootNode, err := enode.Parse(enode.ValidSchemes, listener.Self().String())
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +73,7 @@ func TestPrivateKey_ParsesCorrectly(t *testing.T) {
 	}
 	*privateKey = fmt.Sprintf("%x", pk)
 
-	extractedKey := extractPrivateKey()
+	extractedKey, _ := extractPrivateKey()
 
 	rawKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privKey.(*crypto.Secp256k1PrivateKey)))
 

@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -89,6 +89,8 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
 	if !helpers.IsEpochStart(attSlot) {
+		s.headLock.RLock()
+		defer s.headLock.RUnlock()
 		targetRoot, err := helpers.BlockRoot(s.headState, att.Data.Target.Epoch)
 		if err != nil {
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
