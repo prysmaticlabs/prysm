@@ -122,11 +122,8 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	headBlock := bs.headFetcher.HeadBlock()
-	if headBlock == nil {
-		return nil, status.Error(codes.Internal, "no head block found in db")
-	}
-	atts, err := bs.pool.AttestationPool(ctx, headBlock.Slot)
+
+	atts, err := bs.pool.AttestationPoolNoVerify(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
