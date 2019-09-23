@@ -7,8 +7,8 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 	filter "github.com/libp2p/go-maddr-filter"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 // buildOptions for the libp2p host.
@@ -46,7 +46,6 @@ func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 		return cfg.Apply(libp2p.Identity(convertedKey))
 	}
 }
-
 
 // whitelistSubnet adds a whitelist multiaddress filter for a given CIDR subnet.
 // Example: 192.168.0.0/16 may be used to accept only connections on your local

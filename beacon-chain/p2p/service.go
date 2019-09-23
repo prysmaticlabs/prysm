@@ -71,7 +71,6 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-
 	opts := buildOptions(s.cfg, ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
