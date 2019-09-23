@@ -169,6 +169,12 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
 	}
+	if err := s.waitForAttInclDelay(ctx, att, baseState); err != nil {
+		return errors.Wrap(err, "could not wait for attestation inclusion delay")
+	}
+	if err := s.verifyAttSlotTime(ctx, baseState, att.Data); err != nil {
+		return errors.Wrap(err, "could not verify attestation slot time")
+	}
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
@@ -178,7 +184,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
+		if vote == nil || tgt.Epoch > vote.Epoch {
 			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,

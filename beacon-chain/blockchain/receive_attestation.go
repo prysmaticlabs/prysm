@@ -35,7 +35,7 @@ func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	attRoot, err := ssz.HashTreeRoot(att)
+	attRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash attestation")
 	}
