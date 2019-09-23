@@ -262,7 +262,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "5b1de2f51ff2368d5ce94a659f15ef26be273cd0",  # v0.0.4
+    commit = "f96df18bf0c217c77f6cc0f9e810a178cea12f38",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -280,7 +280,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "bfc3909f54afa1cf5ac4fb4822108705f068f304",  # v0.2.1
+    commit = "4f59859086ea4bfd750cf40ff2598fe8e6256f78",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -298,7 +298,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "03491354d59e3025f1807236d55fe0ec7b82cd15",  # v0.1.1
+    commit = "0305622f3f146485f0ff6df0ae6c010787331ca7",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -340,7 +340,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "bd61b0499a3cfc893a8eb109c5669342b1671881",  # v0.0.1
+    commit = "a5c136c9742a7057dd70ba3af384a5bf0b9f17bc",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -389,7 +389,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "415627e90148700bf97890e54b193a42125c3b66",  # v0.1.0
+    commit = "4da01758afabe2347b015cc12d3478a384ebc909",  # v0.1.1
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -425,7 +425,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "3974bf3f84c52825588fdcc0fd0e0aa7953ab5ff",  # v0.0.3
+    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
@@ -557,7 +557,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "6efd965516262a6b6e46ea987b94904ef13e59bc",  # v0.1.0
+    commit = "78f94f4dc7b89e60f4ef983cc661f8e793e8c5ed",  # v0.1.1
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -1096,7 +1096,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_fmt",
-    commit = "7d8102a98552c80f8a5ccb9c01e670fac17fd6df",  # v0.0.1
+    commit = "113ed87ed03cfff94f29fd95236be3ccd933fd36",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-fmt",
 )
 
