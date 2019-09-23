@@ -343,23 +343,27 @@ message ValidatorQueue {
 }
 
 message ListValidatorAssignmentsRequest {
-    // Retrieve the validator assignments at the given epoch.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Epoch to validator assignments for.
+        uint64 epoch = 1;
 
+        // Whether or not to query for the genesis information.
+        bool genesis = 2;
+    }
     // 48 byte validator public keys to filter assignments for the given epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
         
     // Validator indicies to filter assignments for the given epoch.
-    repeated uint64 indices = 3;
+    repeated uint64 indices = 4;
 
     // The maximum number of ValidatorAssignments to return in the response.
     // This field is optional.
-    int32 page_size = 4;
+    int32 page_size = 5;
 
     // A pagination token returned from a previous call to `ListValidatorAssignments`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 5;
+    string page_token = 6;
 }
 
 message ValidatorAssignments {
