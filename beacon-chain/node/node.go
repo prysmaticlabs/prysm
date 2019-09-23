@@ -218,19 +218,21 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
-	if filepath.Ext(bootnodeENR) == ".enr" {
-		b, err := ioutil.ReadFile(bootnodeENR)
-		if err != nil {
-			return err
+	bootnodeAddrs := sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.BootstrapNode.Name))
+	for i, addr := range bootnodeAddrs {
+		if filepath.Ext(addr) == ".enr" {
+			b, err := ioutil.ReadFile(addr)
+			if err != nil {
+				return err
+			}
+			bootnodeAddrs[i] = string(b)
 		}
-		bootnodeENR = string(b)
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeENR,
+		BootstrapNodeAddr: bootnodeAddrs,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
@@ -443,6 +445,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
+		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		StateFeedListener:     chainService,
