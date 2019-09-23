@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
+	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -43,12 +45,13 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	if cfg.BootstrapNodeAddr != "" {
-		bootNode, err := enode.Parse(enode.ValidSchemes, cfg.BootstrapNodeAddr)
+	dv5Cfg.Bootnodes = []*enode.Node{}
+	for _, addr := range cfg.Discv5BootStrapAddr {
+		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		dv5Cfg.Bootnodes = []*enode.Node{bootNode}
+		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
 	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
@@ -79,6 +82,37 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 	node := listener.Self()
 	log.Infof("Started Discovery: %s", node.ID())
 	return listener, nil
+}
+
+// startDHTDiscovery supports discovery via DHT.
+func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
+	multiAddr, err := multiAddrFromString(bootstrapAddr)
+	if err != nil {
+		return err
+	}
+	peerInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return err
+	}
+	err = host.Connect(context.Background(), *peerInfo)
+	return err
+}
+
+func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
+	for _, addr := range addrs {
+		_, err := enode.Parse(enode.ValidSchemes, addr)
+		if err == nil {
+			discv5Nodes = append(discv5Nodes, addr)
+			continue
+		}
+		_, err = multiAddrFromString(addr)
+		if err == nil {
+			kadDHTNodes = append(kadDHTNodes, addr)
+			continue
+		}
+		log.Errorf("Invalid bootstrap address of %s provided", addr)
+	}
+	return discv5Nodes, kadDHTNodes
 }
 
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
