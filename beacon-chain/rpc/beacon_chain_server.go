@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -373,9 +375,6 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
 // optional validator indices or public keys may be included to filter validator assignments.
-//
-// TODO(#3045): Implement validator set for a specific epoch. Current implementation returns latest set,
-// this is blocked by DB refactor.
 func (bs *BeaconChainServer) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
@@ -384,14 +383,20 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	e := req.Epoch
-	s, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve current state: %v", err)
-	}
-
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
+	headState := bs.headFetcher.HeadState()
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]uint64, 0)
+	requestedEpoch := helpers.CurrentEpoch(headState)
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
+		if q.Genesis {
+			requestedEpoch = 0
+		}
+	case *ethpb.ListValidatorAssignmentsRequest_Epoch:
+		requestedEpoch = q.Epoch
+	}
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
@@ -400,83 +405,63 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
+			return nil, status.Errorf(codes.NotFound, "could not find validator index for public key  %#x not found", pubKey)
 		}
-
 		filtered[index] = true
-
-		if int(index) >= len(s.Validators) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
-				index, len(s.Validators))
-		}
-
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
-		}
-
-		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			CrosslinkCommittees: committee,
-			Shard:               shard,
-			Slot:                slot,
-			Proposer:            isProposer,
-			PublicKey:           pubKey,
-		})
+		filteredIndices = append(filteredIndices, index)
 	}
 
 	// Filter out assignments by validator indices.
 	for _, index := range req.Indices {
-		if int(index) >= len(s.Validators) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
-				index, len(s.Validators))
-		}
-
 		if !filtered[index] {
-			committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
-			}
-
-			res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
-				CrosslinkCommittees: committee,
-				Shard:               shard,
-				Slot:                slot,
-				Proposer:            isProposer,
-				PublicKey:           s.Validators[index].PublicKey,
-			})
+			filteredIndices = append(filteredIndices, index)
 		}
 	}
 
-	// Return filtered assignments with pagination.
-	if len(res) > 0 {
-		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(res))
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ValidatorAssignments{
-			Epoch:         e,
-			Assignments:   res[start:end],
-			NextPageToken: nextPageToken,
-			TotalSize:     int32(len(res)),
-		}, nil
-	}
-
-	// If no filter was specified, return assignments from active validator indices with pagination.
-	activeIndices, err := helpers.ActiveValidatorIndices(s, req.Epoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
 	}
+	if len(filteredIndices) == 0 {
+		// If no filter was specified, return assignments from active validator indices with pagination.
+		filteredIndices = activeIndices
+	}
 
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(filteredIndices))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, index := range activeIndices[start:end] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+	shouldFetchFromArchive := requestedEpoch < bs.finalizationFetcher.FinalizedCheckpt().Epoch
+
+	for _, index := range filteredIndices[start:end] {
+		if int(index) >= len(headState.Validators) {
+			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+				index, len(headState.Validators))
+		}
+		var committee []uint64
+		var shard uint64
+		var slot uint64
+		var isProposer bool
+		if shouldFetchFromArchive {
+			archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"could not retrieve archived committee info for epoch %d",
+					requestedEpoch,
+				)
+			}
+			committee, shard, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
+			isProposer = archivedInfo.ProposerIndex == index
+		} else {
+			committee, shard, slot, isProposer, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			}
 		}
 
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
@@ -484,16 +469,51 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			Shard:               shard,
 			Slot:                slot,
 			Proposer:            isProposer,
-			PublicKey:           s.Validators[index].PublicKey,
+			PublicKey:           headState.Validators[index].PublicKey,
 		})
 	}
 
 	return &ethpb.ValidatorAssignments{
-		Epoch:         e,
+		Epoch:         requestedEpoch,
 		Assignments:   res,
 		NextPageToken: nextPageToken,
-		TotalSize:     int32(len(res)),
+		TotalSize:     int32(len(filteredIndices)),
 	}, nil
+}
+
+// Computes validator assignments for an epoch and validator index using archived committee
+// information and a set of active validators.
+func (bs *BeaconChainServer) archivedValidatorCommittee(
+	epoch uint64,
+	validatorIndex uint64,
+	archivedInfo *ethpb.ArchivedCommitteeInfo,
+	activeIndices []uint64,
+) ([]uint64, uint64, uint64, error) {
+	startSlot := helpers.StartSlot(epoch)
+	committeeCount := archivedInfo.CommitteeCount
+	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
+	epochStartShard := archivedInfo.StartShard
+	seed := bytesutil.ToBytes32(archivedInfo.Seed)
+	shardCount := params.BeaconConfig().ShardCount
+
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
+		slotStartShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
+		for i := uint64(0); i < committeesPerSlot; i++ {
+			shard := (slotStartShard + i) % params.BeaconConfig().ShardCount
+			currentShard := (shard + shardCount - epochStartShard) % shardCount
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, currentShard, committeeCount)
+			if err != nil {
+				return nil, 0, 0, errors.Wrap(err, "could not compute committee")
+			}
+			for _, index := range committee {
+				if validatorIndex == index {
+					return committee, shard, slot, nil
+				}
+			}
+		}
+	}
+	return nil, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
