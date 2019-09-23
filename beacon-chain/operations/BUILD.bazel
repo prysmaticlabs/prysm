@@ -7,10 +7,10 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
-        "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/messagehandler:go_default_library",
