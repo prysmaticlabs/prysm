@@ -190,10 +190,14 @@ func (s *Service) Disconnect(pid peer.ID) error {
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	ticker := time.NewTicker(pollingPeriod)
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
 	for {
 		select {
 		case <-ticker.C:
-			nodes := s.dv5Listener.LookupRandom()
+			nodes := s.dv5Listener.Lookup(bootNode.ID())
 			multiAddresses := convertToMultiAddr(nodes)
 			s.connectWithAllPeers(multiAddresses)
 		case <-s.ctx.Done():

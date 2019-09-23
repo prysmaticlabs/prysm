@@ -39,13 +39,13 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "da72ea53fa1cb8ab5ef7781ba06b97259b7d579a431ce480476266bc81bdf21d",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.2/rules_nodejs-0.36.2.tar.gz"],
+    sha256 = "da217044d24abd16667324626a33581f3eaccabf80985b2688d6a08ed2f864be",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.37.1/rules_nodejs-0.37.1.tar.gz"],
 )
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "1ec7e2d1b7e68b1089e7f2aa7c6d603ddd75917a",
+    commit = "d4a7864b90733ee8ab51c32d0657b2d4868d2f70",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -108,9 +108,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "f6d65480241ec0fd7a0d01f432938b97d7395aeb8eefbe859bb877c9b4eafa56",
-    strip_prefix = "repo-infra-9f4571ad7242bf3ec4b47365062498c2528f9a5f",
-    url = "https://github.com/kubernetes/repo-infra/archive/9f4571ad7242bf3ec4b47365062498c2528f9a5f.tar.gz",
+    sha256 = "68aabfdac3d52d30ee03e16ff53aa6fd3d61f1d2502532b4ce792b0f47077800",
+    strip_prefix = "repo-infra-24cc8eb96f265a7dc0c05e78288a41bbfb0fef88",
+    url = "https://github.com/kubernetes/repo-infra/archive/24cc8eb96f265a7dc0c05e78288a41bbfb0fef88.tar.gz",
 )
 
 http_archive(
@@ -194,7 +194,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "e36fbe823b302313369711c4704b352710c3c510",
+    commit = "1c80f374f8d07774091c0574154bbef5b261d09d",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -877,7 +877,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_pflag",
-    commit = "298182f68c66c05229eb03ac171abe6e309ee79a",  # v1.0.3
+    commit = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab",  # v1.0.5
     importpath = "github.com/spf13/pflag",
 )
 
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "6e28f1c34522dae46e9c37119b78c54471b13ac8",  # v0.46.2
+    commit = "264def2dd949cdb8a803bb9f50fa29a67b798a6a",  # v0.46.3
     importpath = "cloud.google.com/go",
 )
 
