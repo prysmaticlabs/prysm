@@ -384,10 +384,20 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState := bs.headFetcher.HeadState()
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
+	headState := bs.headFetcher.HeadState()
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
+	requestedEpoch := helpers.CurrentEpoch(headState)
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
+		if q.Genesis {
+			requestedEpoch = 0
+		}
+	case *ethpb.ListValidatorAssignmentsRequest_Epoch:
+		requestedEpoch = q.Epoch
+	}
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
@@ -411,14 +421,14 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	if len(filteredIndices) == 0 {
 		// If no filter was specified, return assignments from active validator indices with pagination.
-		activeIndices, err := helpers.ActiveValidatorIndices(s, req.Epoch)
+		activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
 		}
 		filteredIndices = activeIndices
 	}
 
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(activeIndices))
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(filteredIndices))
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +438,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, e, index)
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(headState, requestedEpoch, index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 		}
@@ -443,7 +453,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}
 
 	return &ethpb.ValidatorAssignments{
-		Epoch:         req.Epoch,
+		Epoch:         requestedEpoch,
 		Assignments:   res,
 		NextPageToken: nextPageToken,
 		TotalSize:     int32(len(res)),
