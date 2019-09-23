@@ -34,8 +34,8 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 	return s, err
 }
 
-// GenerateStateFromSlot generates state from the last finalized epoch till the specified slot.
-func GenerateStateFromSlot(ctx context.Context, k *Store, slot uint64) (*pb.BeaconState, error) {
+// GenerateStateAtSlot generates state from the last finalized epoch till the specified slot.
+func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
 	fCheckpoint, err := k.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return nil, err
@@ -47,9 +47,9 @@ func GenerateStateFromSlot(ctx context.Context, k *Store, slot uint64) (*pb.Beac
 
 	var root [32]byte
 	if slot < helpers.StartSlot(jCheckpoint.Epoch) {
-		copy(fCheckpoint.Root[:], root[0:32])
+		copy(root[0:32], fCheckpoint.Root)
 	} else {
-		copy(jCheckpoint.Root[:], root[0:32])
+		copy(root[0:32], jCheckpoint.Root)
 	}
 
 	savedState, err := k.State(ctx, root)
@@ -63,9 +63,12 @@ func GenerateStateFromSlot(ctx context.Context, k *Store, slot uint64) (*pb.Beac
 			slot,
 		)
 	}
+	if savedState.Slot == slot {
+		return savedState, nil
+	}
 
 	filter := filters.NewFilter()
-	filter.SetStartSlot(savedState.Slot)
+	filter.SetStartSlot(savedState.Slot + 1)
 	filter.SetEndSlot(slot)
 	pBlocks, err := k.Blocks(ctx, filter)
 	if err != nil {
@@ -73,8 +76,8 @@ func GenerateStateFromSlot(ctx context.Context, k *Store, slot uint64) (*pb.Beac
 	}
 
 	// run N state transitions to generate state
-	for i := savedState.Slot + 1; i <= slot; i++ {
-		savedState, err = state.ExecuteStateTransition(
+	for i := 0; i < len(pBlocks); i++ {
+		savedState, err = state.ExecuteStateTransitionNoVerify(
 			ctx,
 			savedState,
 			pBlocks[i],
