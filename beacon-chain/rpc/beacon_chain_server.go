@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
@@ -499,8 +500,38 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}, nil
 }
 
-func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, epoch uint64) {
-
+func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, epoch uint64) error {
+	archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, epoch)
+	if err != nil {
+		return status.Errorf(codes.Internal, "could not retrieve archived committee info for epoch %d", epoch)
+	}
+	committeesPerSlot := archivedInfo.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	epochStartShard := archivedInfo.StartShard
+	startSlot := helpers.StartSlot(epoch)
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
+		slotStatShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
+		for i := uint64(0); i < committeesPerSlot; i++ {
+			shard := (slotStatShard + i) % params.BeaconConfig().ShardCount
+			committee, err := CrosslinkCommittee(state, epoch, shard)
+			if err != nil {
+				return nil, 0, 0, false, fmt.Errorf(
+					"could not get crosslink committee: %v", err)
+			}
+			for _, index := range committee {
+				if validatorIndex == index {
+					state.Slot = slot
+					proposerIndex, err := BeaconProposerIndex(state)
+					if err != nil {
+						return nil, 0, 0, false, fmt.Errorf(
+							"could not check proposer index: %v", err)
+					}
+					isProposer := proposerIndex == validatorIndex
+					return committee, shard, slot, isProposer, nil
+				}
+			}
+		}
+	}
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
