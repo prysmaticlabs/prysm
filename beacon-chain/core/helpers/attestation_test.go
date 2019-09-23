@@ -1,8 +1,10 @@
 package helpers_test
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -82,5 +84,32 @@ func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *
 	if err == nil {
 		t.Error("Expected an error, but received nil")
 		t.Logf("attestation slot=%v", s)
+	}
+}
+
+func TestAggregateAttestation(t *testing.T) {
+	tests := []struct {
+		a1   *ethpb.Attestation
+		a2   *ethpb.Attestation
+		want *ethpb.Attestation
+	}{
+		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
+			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
+			want: &ethpb.Attestation{AggregationBits: []byte{}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+	}
+	for _, tt := range tests {
+		got, err := helpers.AggregateAttestation(tt.a1, tt.a2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("AggregateAttestation() = %v, want %v", got, tt.want)
+		}
 	}
 }

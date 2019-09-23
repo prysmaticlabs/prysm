@@ -127,6 +127,8 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
+	// Save the unseen attestations from block to db.
+	s.saveNewBlockAttestations(ctx, b.Body.Attestations)
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
@@ -167,6 +169,12 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
 	}
+	if err := s.waitForAttInclDelay(ctx, att, baseState); err != nil {
+		return errors.Wrap(err, "could not wait for attestation inclusion delay")
+	}
+	if err := s.verifyAttSlotTime(ctx, baseState, att.Data); err != nil {
+		return errors.Wrap(err, "could not verify attestation slot time")
+	}
 	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
@@ -176,7 +184,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
+		if vote == nil || tgt.Epoch > vote.Epoch {
 			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
@@ -246,6 +254,16 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 		}
 	}
 	return nil
+}
+
+// saveNewBlockAttestations saves the new attestations in block to DB.
+func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Attestation) {
+	for _, att := range atts {
+		if err := s.saveNewAttestation(ctx, att); err != nil {
+			log.Error("Could not save new attestation in block")
+			continue
+		}
+	}
 }
 
 // clearSeenAtts clears seen attestations map, it gets called upon new finalization.

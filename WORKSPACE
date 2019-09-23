@@ -39,13 +39,13 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "da72ea53fa1cb8ab5ef7781ba06b97259b7d579a431ce480476266bc81bdf21d",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.36.2/rules_nodejs-0.36.2.tar.gz"],
+    sha256 = "da217044d24abd16667324626a33581f3eaccabf80985b2688d6a08ed2f864be",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.37.1/rules_nodejs-0.37.1.tar.gz"],
 )
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "1ec7e2d1b7e68b1089e7f2aa7c6d603ddd75917a",
+    commit = "d4a7864b90733ee8ab51c32d0657b2d4868d2f70",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -108,9 +108,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "f6d65480241ec0fd7a0d01f432938b97d7395aeb8eefbe859bb877c9b4eafa56",
-    strip_prefix = "repo-infra-9f4571ad7242bf3ec4b47365062498c2528f9a5f",
-    url = "https://github.com/kubernetes/repo-infra/archive/9f4571ad7242bf3ec4b47365062498c2528f9a5f.tar.gz",
+    sha256 = "68aabfdac3d52d30ee03e16ff53aa6fd3d61f1d2502532b4ce792b0f47077800",
+    strip_prefix = "repo-infra-24cc8eb96f265a7dc0c05e78288a41bbfb0fef88",
+    url = "https://github.com/kubernetes/repo-infra/archive/24cc8eb96f265a7dc0c05e78288a41bbfb0fef88.tar.gz",
 )
 
 http_archive(
@@ -194,7 +194,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "31f7cb1c214026485e7f04c7d0388410dc30c027",
+    commit = "1c80f374f8d07774091c0574154bbef5b261d09d",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -262,7 +262,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "5b1de2f51ff2368d5ce94a659f15ef26be273cd0",  # v0.0.4
+    commit = "f96df18bf0c217c77f6cc0f9e810a178cea12f38",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -280,7 +280,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "bfc3909f54afa1cf5ac4fb4822108705f068f304",  # v0.2.1
+    commit = "4f59859086ea4bfd750cf40ff2598fe8e6256f78",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -298,7 +298,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "03491354d59e3025f1807236d55fe0ec7b82cd15",  # v0.1.1
+    commit = "0305622f3f146485f0ff6df0ae6c010787331ca7",  # v0.1.3
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -340,7 +340,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "bd61b0499a3cfc893a8eb109c5669342b1671881",  # v0.0.1
+    commit = "a5c136c9742a7057dd70ba3af384a5bf0b9f17bc",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -389,7 +389,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "415627e90148700bf97890e54b193a42125c3b66",  # v0.1.0
+    commit = "4da01758afabe2347b015cc12d3478a384ebc909",  # v0.1.1
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -425,7 +425,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "3974bf3f84c52825588fdcc0fd0e0aa7953ab5ff",  # v0.0.3
+    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
@@ -557,7 +557,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "6efd965516262a6b6e46ea987b94904ef13e59bc",  # v0.1.0
+    commit = "78f94f4dc7b89e60f4ef983cc661f8e793e8c5ed",  # v0.1.1
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -877,7 +877,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_pflag",
-    commit = "298182f68c66c05229eb03ac171abe6e309ee79a",  # v1.0.3
+    commit = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab",  # v1.0.5
     importpath = "github.com/spf13/pflag",
 )
 
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "6e28f1c34522dae46e9c37119b78c54471b13ac8",  # v0.46.2
+    commit = "264def2dd949cdb8a803bb9f50fa29a67b798a6a",  # v0.46.3
     importpath = "cloud.google.com/go",
 )
 
@@ -1096,7 +1096,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_fmt",
-    commit = "7d8102a98552c80f8a5ccb9c01e670fac17fd6df",  # v0.0.1
+    commit = "113ed87ed03cfff94f29fd95236be3ccd933fd36",  # v0.1.0
     importpath = "github.com/multiformats/go-multiaddr-fmt",
 )
 
@@ -1259,7 +1259,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "10e0aa6523a7cf0804fb79096b41d7d8d7df37e5",
+    commit = "b39a0c15028a20e7ef54e666d92b8d7fd61f5f0e",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
