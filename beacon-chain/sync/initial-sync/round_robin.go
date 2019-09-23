@@ -77,6 +77,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if count == 0 {
 					count = 1
 				}
+				if i == 0 && len(peers)%2 == 1 && count%2 == 1 {
+					count++
+				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
 					StartSlot:     start,
@@ -127,6 +130,10 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	log.Debug("Synced to finalized epoch. Syncing blocks to head slot now.")
 
+	if s.chain.HeadSlot() == slotsSinceGenesis(genesis) {
+		return nil
+	}
+	
 	// TODO: Step 2 - sync to head.
 	best := bestPeer()
 	root, _, _ := highestFinalized()
