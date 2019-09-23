@@ -218,30 +218,31 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
-	if filepath.Ext(bootnodeENR) == ".enr" {
-		b, err := ioutil.ReadFile(bootnodeENR)
-		if err != nil {
-			return err
+	bootnodeAddrs := sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.BootstrapNode.Name))
+	for i, addr := range bootnodeAddrs {
+		if filepath.Ext(addr) == ".enr" {
+			b, err := ioutil.ReadFile(addr)
+			if err != nil {
+				return err
+			}
+			bootnodeAddrs[i] = string(b)
 		}
-		bootnodeENR = string(b)
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
-		NoDiscovery:           ctx.GlobalBool(cmd.NoDiscovery.Name),
-		StaticPeers:           sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr:     bootnodeENR,
-		KademliaBootStrapAddr: featureconfig.FeatureConfig().KademliaDHT,
-		RelayNodeAddr:         ctx.GlobalString(cmd.RelayNode.Name),
-		DataDir:               ctx.GlobalString(cmd.DataDirFlag.Name),
-		HostAddress:           ctx.GlobalString(cmd.P2PHost.Name),
-		PrivateKey:            ctx.GlobalString(cmd.P2PPrivKey.Name),
-		TCPPort:               ctx.GlobalUint(cmd.P2PTCPPort.Name),
-		UDPPort:               ctx.GlobalUint(cmd.P2PUDPPort.Name),
-		MaxPeers:              ctx.GlobalUint(cmd.P2PMaxPeers.Name),
-		WhitelistCIDR:         ctx.GlobalString(cmd.P2PWhitelist.Name),
-		EnableUPnP:            ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
-		Encoding:              ctx.GlobalString(cmd.P2PEncoding.Name),
+		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
+		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
+		BootstrapNodeAddr: bootnodeAddrs,
+		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
+		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
+		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
+		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
+		UDPPort:           ctx.GlobalUint(cmd.P2PUDPPort.Name),
+		MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
+		WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
+		EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
+		Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
 	})
 	if err != nil {
 		return err

@@ -21,6 +21,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
+	errorsWrap "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -28,7 +29,6 @@ import (
 var _ = shared.Service(&Service{})
 
 var pollingPeriod = 1 * time.Second
-var bootnodePingPeriod = 5 * time.Minute
 var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
@@ -60,6 +60,11 @@ func NewService(cfg *Config) (*Service, error) {
 		exclusionList: ccache.New(ccache.Configure()),
 	}
 
+	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
+
+	cfg.Discv5BootStrapAddr = dv5Nodes
+	cfg.KademliaBootStrapAddr = kadDHTNodes
+
 	ipAddr := ipAddr(s.cfg)
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
@@ -75,7 +80,7 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if cfg.KademliaBootStrapAddr != "" {
+	if len(cfg.KademliaBootStrapAddr) != 0 {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
@@ -119,7 +124,7 @@ func (s *Service) Start() {
 		return
 	}
 
-	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
+	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
 		ipAddr := ipAddr(s.cfg)
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
@@ -127,7 +132,7 @@ func (s *Service) Start() {
 			s.startupErr = err
 			return
 		}
-		err = s.addBootNodeToExclusionList()
+		err = s.addBootNodesToExclusionList()
 		if err != nil {
 			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
@@ -136,15 +141,21 @@ func (s *Service) Start() {
 		s.dv5Listener = listener
 
 		go s.listenForNewNodes()
-		go s.maintainBootnode()
 	}
 
-	if s.cfg.KademliaBootStrapAddr != "" && !s.cfg.NoDiscovery {
-		err := startDHTDiscovery(s.host, s.cfg.KademliaBootStrapAddr)
-		if err != nil {
-			log.WithError(err).Error("Could not connect to bootnode")
-			s.startupErr = err
-			return
+	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+		for _, addr := range s.cfg.KademliaBootStrapAddr {
+			err := startDHTDiscovery(s.host, addr)
+			if err != nil {
+				log.WithError(err).Error("Could not connect to bootnode")
+				s.startupErr = err
+				return
+			}
+			if err := s.addKadDHTNodesToExclusionList(addr); err != nil {
+				s.startupErr = err
+				return
+			}
+
 		}
 	}
 
@@ -223,7 +234,7 @@ func (s *Service) Disconnect(pid peer.ID) error {
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	ticker := time.NewTicker(pollingPeriod)
-	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr)
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.KademliaBootStrapAddr[0])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -236,28 +247,6 @@ func (s *Service) listenForNewNodes() {
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
-		}
-	}
-}
-
-// maintainBootnode connection by infrequently pinging the bootnode ENR. If the bootnode server has
-// restarted and this client pruned them from the local table, then a ping will reinsert this
-// clients' ENR into the table of the bootnode again.
-func (s *Service) maintainBootnode() {
-	if s.cfg.BootstrapNodeAddr == "" {
-		return
-	}
-	ticker := time.NewTicker(bootnodePingPeriod)
-	bootNode := enode.MustParse(s.cfg.BootstrapNodeAddr)
-	for {
-		select {
-		case <-ticker.C:
-			log.Debug("Pinging bootnode")
-			if err := s.dv5Listener.Ping(bootNode); err != nil {
-				log.WithError(err).Error("Failed to ping bootnode")
-			}
-		case <-s.ctx.Done():
-			return
 		}
 	}
 }
@@ -282,22 +271,38 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	}
 }
 
-func (s *Service) addBootNodeToExclusionList() error {
-	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr)
-	if err != nil {
-		return err
+func (s *Service) addBootNodesToExclusionList() error {
+	for _, addr := range s.cfg.Discv5BootStrapAddr {
+		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
+		if err != nil {
+			return err
+		}
+		multAddr, err := convertToSingleMultiAddr(bootNode)
+		if err != nil {
+			return err
+		}
+		addrInfo, err := peer.AddrInfoFromP2pAddr(multAddr)
+		if err != nil {
+			return err
+		}
+		// bootnode is never dialled, so ttl is tentatively 1 year
+		s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
 	}
-	multAddr, err := convertToSingleMultiAddr(bootNode)
+
+	return nil
+}
+
+func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
+	multiAddr, err := ma.NewMultiaddr(addr)
 	if err != nil {
-		return err
+		return errorsWrap.Wrap(err, "could not get multiaddr")
 	}
-	addrInfo, err := peer.AddrInfoFromP2pAddr(multAddr)
+	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 	if err != nil {
 		return err
 	}
 	// bootnode is never dialled, so ttl is tentatively 1 year
 	s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
-
 	return nil
 }
 

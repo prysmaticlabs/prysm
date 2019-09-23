@@ -5,8 +5,9 @@ package p2p
 type Config struct {
 	NoDiscovery           bool
 	StaticPeers           []string
-	BootstrapNodeAddr     string
-	KademliaBootStrapAddr string
+	BootstrapNodeAddr     []string
+	KademliaBootStrapAddr []string
+	Discv5BootStrapAddr   []string
 	RelayNodeAddr         string
 	HostAddress           string
 	PrivateKey            string
