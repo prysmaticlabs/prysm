@@ -97,7 +97,7 @@ func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	ip4 := node.IP().To4()
 	if ip4 == nil {
-		return nil, errors.New("node doesn't have an ip4 address")
+		return nil, errors.Errorf("node doesn't have an ip4 address, it's stated IP is %s", node.IP().String())
 	}
 	pubkey := node.Pubkey()
 	assertedKey := convertToInterfacePubkey(pubkey)
