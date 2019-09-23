@@ -731,7 +731,7 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	numEpochs := 100
+	numEpochs := 30
 	validators := make([]*ethpb.Validator, numEpochs)
 	for i := 0; i < numEpochs; i++ {
 		validators[i] = &ethpb.Validator{
@@ -765,18 +765,17 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 		t.Errorf("Wanted 1 validator at genesis, received %d", len(res.Validators))
 	}
 
-	defaultPageSize := params.BeaconConfig().DefaultPageSize
 	req = &ethpb.GetValidatorsRequest{
 		QueryFilter: &ethpb.GetValidatorsRequest_Epoch{
-			Epoch: uint64(defaultPageSize / 2),
+			Epoch: 20,
 		},
 	}
 	res, err = bs.GetValidators(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res.Validators, validators[:(defaultPageSize/2)]) {
-		t.Error("Incorrect number of validators")
+	if !reflect.DeepEqual(res.Validators, validators[:21]) {
+		t.Errorf("Incorrect number of validators, wanted %d received %d", 20, len(res.Validators))
 	}
 }
 

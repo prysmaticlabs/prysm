@@ -355,6 +355,7 @@ func (bs *BeaconChainServer) GetValidators(
 			// we know this validator is from the future relative to what the request wants.
 			if val.ActivationEpoch > requestedEpoch {
 				stopIdx = idx
+				break
 			}
 		}
 		validators = validators[:stopIdx]
@@ -366,12 +367,11 @@ func (bs *BeaconChainServer) GetValidators(
 		return nil, err
 	}
 
-	res := &ethpb.Validators{
+	return &ethpb.Validators{
 		Validators:    validators[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
-	}
-	return res, nil
+	}, nil
 }
 
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
