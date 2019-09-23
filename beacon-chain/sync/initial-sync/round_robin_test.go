@@ -131,7 +131,6 @@ func TestRoundRobinSync(t *testing.T) {
 			if len(mc.BlocksReceived) != len(tt.expectedBlockSlots) {
 				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(mc.BlocksReceived))
 			}
-			// TODO: Verify block slots match.
 			var receivedBlockSlots []uint64
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Slot)
