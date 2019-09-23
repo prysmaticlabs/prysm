@@ -238,11 +238,9 @@ func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) 
 	}, nil
 }
 
-// ListValidatorBalances retrieves the validator balances for a given set of public key at
-// a specific epoch in time.
-//
-// TODO(#3064): Implement balances for a specific epoch. Current implementation returns latest balances,
-// this is blocked by DB refactor.
+// ListValidatorBalances retrieves the validator balances for a given set of public keys.
+// An optional Epoch parameter is provided to request historical validator balances from
+// archived, persistent data.
 func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
@@ -250,12 +248,33 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	headState, err := bs.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
+	var requestingGenesis bool
+	var epoch uint64
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorBalancesRequest_Epoch:
+		epoch = q.Epoch
+	case *ethpb.GetValidatorBalancesRequest_Genesis:
+		requestingGenesis = q.Genesis
+	default:
 	}
-	balances := headState.Balances
+
+	var balances []uint64
+	var err error
+	headState := bs.headFetcher.HeadState()
 	validators := headState.Validators
+	if requestingGenesis {
+		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
+		}
+	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.beaconDB.ArchivedBalances(ctx, epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
+		}
+	} else {
+		balances = headState.Balances
+	}
 
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key
@@ -274,7 +293,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -287,7 +306,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= balance list %d",
+			if epoch <= helpers.CurrentEpoch(headState) {
+				return nil, status.Errorf(codes.OutOfRange, "validator index %d does not exist in historical balances",
+					index)
+			}
+			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
 				index, len(balances))
 		}
 

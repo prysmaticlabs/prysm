@@ -396,8 +396,14 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 
 	setupValidators(t, db, 100)
 
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		beaconDB:    db,
+		headFetcher: &mock.ChainService{State: headState},
 	}
 
 	tests := []struct {
@@ -447,16 +453,102 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
-	_, balances := setupValidators(t, db, 1)
+	setupValidators(t, db, 1)
+
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		beaconDB:    db,
+		headFetcher: &mock.ChainService{State: headState},
 	}
 
 	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
-	wanted := fmt.Sprintf("validator index %d >= balance list %d", 1, len(balances))
+	wanted := "does not exist"
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListValidatorBalancesFromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(0)
+	validators, balances := setupValidators(t, db, 100)
+
+	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
+		t.Fatal(err)
+	}
+
+	newerBalances := make([]uint64, len(balances))
+	for i := 0; i < len(newerBalances); i++ {
+		newerBalances[i] = balances[i] * 2
+	}
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
+				Validators: validators,
+				Balances:   newerBalances,
+			},
+		},
+	}
+
+	req := &ethpb.GetValidatorBalancesRequest{
+		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{uint64(1)},
+	}
+	res, err := bs.ListValidatorBalances(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We should expect a response containing the old balance from epoch 0,
+	// not the new balance from the current state.
+	want := []*ethpb.ValidatorBalances_Balance{
+		{
+			PublicKey: validators[1].PublicKey,
+			Index:     1,
+			Balance:   balances[1],
+		},
+	}
+	if !reflect.DeepEqual(want, res.Balances) {
+		t.Errorf("Wanted %v, received %v", want, res.Balances)
+	}
+}
+
+func TestBeaconChainServer_ListValidatorBalancesFromArchive_NewValidatorNotFound(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(0)
+	_, balances := setupValidators(t, db, 100)
+
+	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
+		t.Fatal(err)
+	}
+
+	newValidators, newBalances := setupValidators(t, db, 200)
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
+				Validators: newValidators,
+				Balances:   newBalances,
+			},
+		},
+	}
+
+	req := &ethpb.GetValidatorBalancesRequest{
+		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{1, 150, 161},
+	}
+	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("Wanted out of range error for including newer validators in the arguments, received %v", err)
 	}
 }
 
