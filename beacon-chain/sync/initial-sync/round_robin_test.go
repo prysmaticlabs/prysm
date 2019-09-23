@@ -77,29 +77,29 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:        "Multiple peers with failures",
-			currentSlot: 131,
-			expectedBlockSlots: makeSequence(1, 131),
+			currentSlot: 320, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
 					failureSlots:   makeSequence(1, 64), // first epoch
 				},
 				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
 				},
 			},
 		},
@@ -138,6 +138,13 @@ func TestRoundRobinSync(t *testing.T) {
 				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(mc.BlocksReceived))
 			}
 			// TODO: Verify block slots match.
+			var receivedBlockSlots []uint64
+			for _, blk := range mc.BlocksReceived {
+				receivedBlockSlots = append(receivedBlockSlots, blk.Slot)
+			}
+			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
+				t.Errorf("Missing blocks at slots %v", missing)
+			}
 		})
 	}
 }
@@ -181,10 +188,14 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
 			ret := make([]*eth.BeaconBlock, 0)
 			for _, slot := range blocks {
-				if slot%req.Step != 0 {
+				if (slot-req.StartSlot)%req.Step != 0 {
 					continue
 				}
 				ret = append(ret, &eth.BeaconBlock{Slot: slot})
+			}
+
+			if uint64(len(ret)) > req.Count {
+				ret = ret[:req.Count]
 			}
 
 			if _, err := peer.Encoding().EncodeWithLength(stream, ret); err != nil {

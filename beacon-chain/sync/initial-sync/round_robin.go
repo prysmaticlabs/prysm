@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"math"
 	"sort"
 	"time"
 
@@ -60,7 +61,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	// Sync to finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
-		root, _, peers := highestFinalized()
+		root, finalizedEpoch, peers := highestFinalized()
 
 		var blocks []*eth.BeaconBlock
 		var request func(start uint64, step uint64, count uint64, peers []peer.ID) ([]*eth.BeaconBlock, error)
@@ -71,11 +72,16 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			for i, pid := range peers {
 				start := start + uint64(i)*step
+				step := step * uint64(len(peers))
+				count := uint64(math.Min(float64(count), float64((helpers.StartSlot(finalizedEpoch+1)-start)/step)))
+				if count == 0 {
+					count = 1
+				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
 					StartSlot:     start,
 					Count:         count,
-					Step:          step * uint64(len(peers)),
+					Step:          step,
 				}
 
 				resp, err := requestBlocks(req, pid)
@@ -84,7 +90,10 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					// try other peers
 					ps := append(peers[:i], peers[i+1:]...)
 					log.WithError(err).WithField("remaining peers", len(ps)).WithField("peer", pid.Pretty()).Debug("Request failed, trying to round robin with other peers")
-					resp, err = request(start, uint64(len(peers)), count/uint64(len(peers)), ps)
+					if len(ps) == 0 {
+						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
+					}
+					_, err = request(start, uint64(len(peers)), count/uint64(len(ps)), ps)
 					if err != nil {
 						return nil, err
 					}
