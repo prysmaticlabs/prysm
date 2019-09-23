@@ -142,7 +142,7 @@ func (s *Service) Start() {
 	if s.cfg.KademliaBootStrapAddr != "" && !s.cfg.NoDiscovery {
 		err := startDHTDiscovery(s.host, s.cfg.KademliaBootStrapAddr)
 		if err != nil {
-			log.WithError(err).Error("Could not add bootnode to the exclusion list")
+			log.WithError(err).Error("Could not connect to bootnode")
 			s.startupErr = err
 			return
 		}

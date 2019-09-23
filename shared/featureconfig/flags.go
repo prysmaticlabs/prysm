@@ -18,7 +18,6 @@ var (
 	KademliaBootStrapFlag = cli.StringFlag{
 		Name:  "kademlia-bootstrap",
 		Usage: "The multiaddress of the bootstrap node for the kademlia dht",
-		Value: "",
 	}
 	// EnableActiveBalanceCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableActiveBalanceCacheFlag = cli.BoolFlag{

@@ -132,7 +132,7 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 		log.Fatalf("Failed to bootstrap DHT. %v", err)
 	}
 
-	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *port, host.ID().Pretty())
+	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *kademliaPort, host.ID().Pretty())
 
 }
 

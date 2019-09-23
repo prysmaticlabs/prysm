@@ -96,7 +96,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	}
 	if ctx.GlobalString(KademliaBootStrapFlag.Name) != "" {
 		log.Warn("Using kademlia dht")
-		cfg.KademliaDHT = KademliaBootStrapFlag.Value
+		cfg.KademliaDHT = ctx.GlobalString(KademliaBootStrapFlag.Name)
 	}
 	InitFeatureConfig(cfg)
 }
