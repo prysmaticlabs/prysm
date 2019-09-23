@@ -177,8 +177,6 @@ func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	ctx := context.Background()
 	epoch := uint64(10)
 	part := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
-		Finalized:               true,
 		GlobalParticipationRate: 0.99,
 		EligibleEther:           12202000,
 		VotedEther:              12079998,
