@@ -384,7 +384,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPool(ctx, 10)
+	want, _ := bs.pool.AttestationPoolNoVerify(ctx)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
