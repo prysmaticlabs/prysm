@@ -480,7 +480,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		Epoch:         requestedEpoch,
 		Assignments:   res,
 		NextPageToken: nextPageToken,
-		TotalSize:     int32(len(res)),
+		TotalSize:     int32(len(filteredIndices)),
 	}, nil
 }
 

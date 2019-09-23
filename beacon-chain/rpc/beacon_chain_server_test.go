@@ -962,7 +962,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {
-		t.Errorf("Did not receive wanted assignments, received %v, wanted %v", wantedRes, res)
+		t.Error("Did not get wanted assignments")
 	}
 
 	// Test the wrap around scenario.
