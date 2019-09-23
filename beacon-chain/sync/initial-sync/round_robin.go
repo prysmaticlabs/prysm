@@ -98,7 +98,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					if len(ps) == 0 {
 						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 					}
-					_, err = request(start, uint64(len(peers)), count/uint64(len(ps)), ps)
+					_, err = request(start, step /*step*/, count/uint64(len(ps)), ps)
 					if err != nil {
 						return nil, err
 					}

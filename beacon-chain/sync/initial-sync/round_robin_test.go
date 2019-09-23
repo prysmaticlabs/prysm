@@ -1,6 +1,7 @@
 package initialsync
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -103,6 +104,63 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "Multiple peers with multiple failures",
+			currentSlot: 320, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 320),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+			},
+		},
+		{
+			name:        "Multiple peers with different finalized epoch",
+			currentSlot: 320, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 320),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 256),
+					finalizedEpoch: 3,
+					headSlot:       256,
+				},
+				{
+					blocks:         makeSequence(1, 256),
+					finalizedEpoch: 3,
+					headSlot:       256,
+				},
+				{
+					blocks:         makeSequence(1, 192),
+					finalizedEpoch: 2,
+					headSlot:       192,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -172,13 +230,24 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 				return
 			}
 
+			// Determine the correct subset of blocks to return as dictated by the test scenario.
+			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
+
+			if len(blocks) == 0 {
+				if _, err := stream.Write([]byte{0x01}); err != nil {
+					t.Error(err)
+				}
+				if _, err := peer.Encoding().EncodeWithLength(stream, "i don't have those blocks"); err != nil {
+					t.Error(err)
+				}
+				return
+			}
+
 			// Write success response.
 			if _, err := stream.Write([]byte{0x00}); err != nil {
 				t.Error(err)
 			}
 
-			// Determine the correct subset of blocks to return as dictated by the test scenario.
-			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
 			ret := make([]*eth.BeaconBlock, 0)
 			for _, slot := range blocks {
 				if (slot-req.StartSlot)%req.Step != 0 {
@@ -200,7 +269,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 
 		peerstatus.Set(peer.PeerID(), &p2ppb.Status{
 			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:   []byte("finalized_root"),
+			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 			FinalizedEpoch:  datum.finalizedEpoch,
 			HeadRoot:        []byte("head_root"),
 			HeadSlot:        datum.headSlot,
