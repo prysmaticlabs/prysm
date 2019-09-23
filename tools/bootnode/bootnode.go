@@ -32,12 +32,11 @@ import (
 )
 
 var (
-	debug        = flag.Bool("debug", false, "Enable debug logging")
-	privateKey   = flag.String("private", "", "Private key to use for peer ID")
-	port         = flag.Int("port", 4000, "Port to listen for connections")
-	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
-	externalPeer = flag.String("external-peer", "", "")
+	debug       = flag.Bool("debug", false, "Enable debug logging")
+	privateKey  = flag.String("private", "", "Private key to use for peer ID")
+	port        = flag.Int("port", 4000, "Port to listen for connections")
+	metricsPort = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP  = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
 
 	log = logrus.WithField("prefix", "bootnode")
 )
@@ -63,13 +62,6 @@ func main() {
 	}
 	cfg := discover.Config{
 		PrivateKey: extractPrivateKey(),
-	}
-	if *externalPeer != "" {
-		extPeer, err := enode.Parse(enode.ValidSchemes, *externalPeer)
-		if err != nil {
-			log.Fatal(err)
-		}
-		cfg.Bootnodes = []*enode.Node{extPeer}
 	}
 	listener := createListener(*externalIP, *port, cfg)
 
