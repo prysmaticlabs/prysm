@@ -804,6 +804,119 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	count := 1000
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		// Mark the validators with index divisible by 3 inactive.
+		if i%3 == 0 {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+		} else {
+			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		}
+	}
+
+	blk := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pbp2p.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	// We tell the beacon chain server that our finalized epoch is 10 so that when
+	// we request assignments for epoch 0, it looks within the archived data.
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 10,
+			},
+		},
+	}
+
+	// We then store archived data into the DB.
+	currentEpoch := helpers.CurrentEpoch(s)
+	committeeCount, err := helpers.CommitteeCount(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startShard, err := helpers.StartShard(s, currentEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposerIndex, err := helpers.BeaconProposerIndex(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
+		Seed:           seed[:],
+		StartShard:     startShard,
+		CommitteeCount: committeeCount,
+		ProposerIndex:  proposerIndex,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments
+	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
+
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			CrosslinkCommittees: committee,
+			Shard:               shard,
+			Slot:                slot,
+			Proposer:            isProposer,
+			PublicKey:           s.Validators[index].PublicKey,
+		})
+	}
+
+	if !reflect.DeepEqual(res.Assignments, wanted) {
+		t.Error("Did not receive wanted assignments")
+	}
+}
+
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
