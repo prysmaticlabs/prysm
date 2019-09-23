@@ -31,6 +31,7 @@ var log = logrus.WithField("prefix", "operation")
 // a beacon block by a proposer.
 type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
+	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -124,8 +125,9 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 }
 
 // AttestationPool returns the attestations that have not seen on the beacon chain,
-// the attestations are returned in slot ascending order and up to MaxAttestations
-// capacity. The attestations get deleted in DB after they have been retrieved.
+// the attestations are returned in target epoch ascending order and up to MaxAttestations
+// capacity. The attestations returned will be verified against the head state up to requested slot.
+// When fails attestation, the attestation will be removed from the pool.
 func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
@@ -164,6 +166,20 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 
 		atts = append(atts, att)
 	}
+	return atts, nil
+}
+
+// AttestationPoolNoVerify returns every attestation from the attestation pool.
+func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error) {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
+	for _, att := range s.attestationPool {
+		atts = append(atts, att)
+	}
+
 	return atts, nil
 }
 
@@ -212,6 +228,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	if err != nil {
 		return err
 	}
+
 	s.attestationPool[root] = savedAtt
 
 	return nil
