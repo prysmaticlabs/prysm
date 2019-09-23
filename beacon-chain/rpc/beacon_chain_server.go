@@ -481,6 +481,8 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}, nil
 }
 
+// Computes validator assignments for an epoch and validator index using archived committee
+// information and a set of active validators.
 func (bs *BeaconChainServer) archivedValidatorCommittee(
 	epoch uint64,
 	validatorIndex uint64,
