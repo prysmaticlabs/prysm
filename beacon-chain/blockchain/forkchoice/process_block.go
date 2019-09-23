@@ -8,11 +8,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -91,6 +93,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
+	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
+		return errors.Wrap(err, "could not update votes for attestations in block")
+	}
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
@@ -100,15 +105,17 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
 		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
 		}
 	}
+
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -120,6 +127,8 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
+	// Save the unseen attestations from block to db.
+	s.saveNewBlockAttestations(ctx, b.Body.Attestations)
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
@@ -127,6 +136,57 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		reportEpochMetrics(postState)
 	}
 
+	return nil
+}
+
+// updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
+// the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
+func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
+	s.seenAttsLock.Lock()
+	defer s.seenAttsLock.Unlock()
+
+	for _, att := range atts {
+		// If we have not seen the attestation yet
+		r, err := hashutil.HashProto(att)
+		if err != nil {
+			return err
+		}
+		if s.seenAtts[r] {
+			continue
+		}
+		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
+			return err
+		}
+		s.seenAtts[r] = true
+	}
+	return nil
+}
+
+// updateBlockAttestationVotes checks the attestation to update validator's latest votes.
+func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
+	tgt := att.Data.Target
+	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get state for attestation tgt root")
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
+	if err != nil {
+		return errors.Wrap(err, "could not convert attestation to indexed attestation")
+	}
+	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+		vote, err := s.db.ValidatorLatestVote(ctx, i)
+		if err != nil {
+			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
+		}
+		if !s.db.HasValidatorLatestVote(ctx, i) || tgt.Epoch > vote.Epoch {
+			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+				Epoch: tgt.Epoch,
+				Root:  tgt.Root,
+			}); err != nil {
+				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
+			}
+		}
+	}
 	return nil
 }
 
@@ -188,6 +248,23 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 		}
 	}
 	return nil
+}
+
+// saveNewBlockAttestations saves the new attestations in block to DB.
+func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Attestation) {
+	for _, att := range atts {
+		if err := s.saveNewAttestation(ctx, att); err != nil {
+			log.Error("Could not save new attestation in block")
+			continue
+		}
+	}
+}
+
+// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
+func (s *Store) clearSeenAtts() {
+	s.seenAttsLock.Lock()
+	s.seenAttsLock.Unlock()
+	s.seenAtts = make(map[[32]byte]bool)
 }
 
 // verifyBlkSlotTime validates the input block slot is not from the future.

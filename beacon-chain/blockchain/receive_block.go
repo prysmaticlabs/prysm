@@ -41,7 +41,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) er
 	}
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
-	}).Info("Broadcasting block")
+	}).Debug("Broadcasting block")
 
 	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
 		return err

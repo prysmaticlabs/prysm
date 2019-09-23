@@ -8,12 +8,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,6 +26,8 @@ func init() {
 }
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
+	peerstatus.Clear()
+
 	// TODO(3441): Fix ssz string length issue.
 	t.Skip("3441: SSZ is decoding a string with an unexpected length")
 	p1 := p2ptest.NewTestP2P(t)
@@ -35,7 +37,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{p2p: p1, helloTracker: make(map[peer.ID]*pb.Hello)}
+	r := &RegularSync{p2p: p1}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -60,7 +62,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: []byte("fake")}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -75,6 +77,8 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 }
 
 func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
+	peerstatus.Clear()
+
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -109,7 +113,6 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
 	}
 
 	// Setup streams
@@ -119,16 +122,16 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -139,7 +142,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.helloRPCHandler(context.Background(), &pb.Hello{ForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -150,6 +153,8 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 }
 
 func TestHandshakeHandlers_Roundtrip(t *testing.T) {
+	peerstatus.Clear()
+
 	// Scenario is that p1 and p2 connect, exchange handshakes.
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
@@ -161,24 +166,23 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			State:               &pb.BeaconState{Slot: 5},
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		ctx: context.Background(),
 	}
 
 	r.Start()
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 
-		resp := &pb.Hello{HeadSlot: 100, ForkVersion: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -199,8 +203,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// Wait for stream buffer to be read.
 	time.Sleep(200 * time.Millisecond)
 
-	if len(r.helloTracker) != 1 {
-		t.Errorf("Expected 1 status in the tracker, got %d", len(r.helloTracker))
+	if peerstatus.Count() != 1 {
+		t.Errorf("Expected 1 status in the cache, got %d", peerstatus.Count())
 	}
 
 	if err := p2.Disconnect(p1.PeerID()); err != nil {
@@ -210,13 +214,13 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// Wait for disconnect event to trigger.
 	time.Sleep(200 * time.Millisecond)
 
-	if len(r.helloTracker) != 0 {
-		t.Errorf("Expected 0 status in the tracker, got %d", len(r.helloTracker))
+	if peerstatus.Count() != 0 {
+		t.Errorf("Expected 0 status in the tracker, got %d", peerstatus.Count())
 	}
 
 }
 
-func TestHelloRPCRequest_RequestSent(t *testing.T) {
+func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
@@ -247,33 +251,32 @@ func TestHelloRPCRequest_RequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		ctx: context.Background(),
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Hello{}
+		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		expected := &pb.Hello{
-			ForkVersion:    params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:       genesisState.Slot,
-			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
-			FinalizedRoot:  finalizedRoot[:],
+		expected := &pb.Status{
+			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCHelloRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {

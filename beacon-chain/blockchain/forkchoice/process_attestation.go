@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -96,30 +96,34 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
-	// Process aggregated attestation in the queue every `slot/2` duration,
-	// this allows the incoming attestation to aggregate and avoid
-	// excessively processing individual attestations.
-	if halfSlot(baseState.GenesisTime) {
-		s.attsQueueLock.Lock()
-		for root, a := range s.attsQueue {
-			log.WithFields(logrus.Fields{
-				"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
-				"Root":               fmt.Sprintf("%#x", root),
-			}).Debug("Updating latest votes")
+	s.attsQueueLock.Lock()
+	defer s.attsQueueLock.Unlock()
+	for root, a := range s.attsQueue {
+		log.WithFields(logrus.Fields{
+			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+			"Root":               fmt.Sprintf("%#x", root),
+		}).Debug("Updating latest votes")
 
-			// Use the target state to to validate attestation and calculate the committees.
-			indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
-			if err != nil {
-				return 0, err
-			}
-
-			// Update every validator's latest vote.
-			if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-				return 0, err
-			}
-			delete(s.attsQueue, root)
+		// Use the target state to to validate attestation and calculate the committees.
+		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+		if err != nil {
+			return 0, err
 		}
-		s.attsQueueLock.Unlock()
+
+		// Update every validator's latest vote.
+		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
+			return 0, err
+		}
+
+		// Mark attestation as seen we don't update votes when it appears in block.
+		if err := s.setSeenAtt(a); err != nil {
+			return 0, err
+		}
+		delete(s.attsQueue, root)
+	}
+
+	if err := s.saveNewAttestation(ctx, a); err != nil {
+		return 0, err
 	}
 
 	return tgtSlot, nil
@@ -202,23 +206,12 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 		return err
 	}
 
-	incomingAttBits := att.AggregationBits
 	if a, ok := s.attsQueue[root]; ok {
-		if !a.AggregationBits.Contains(incomingAttBits) {
-			newBits := a.AggregationBits.Or(incomingAttBits)
-			incomingSig, err := bls.SignatureFromBytes(att.Signature)
-			if err != nil {
-				return err
-			}
-			currentSig, err := bls.SignatureFromBytes(a.Signature)
-			if err != nil {
-				return err
-			}
-			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{currentSig, incomingSig})
-			a.Signature = aggregatedSig.Marshal()
-			a.AggregationBits = newBits
-			s.attsQueue[root] = a
+		a, err := helpers.AggregateAttestation(a, att)
+		if err != nil {
+			return nil
 		}
+		s.attsQueue[root] = a
 		return nil
 	}
 
@@ -276,8 +269,45 @@ func (s *Store) updateAttVotes(
 	return nil
 }
 
-// returns true when time is divisible with slot duration / 2.
-func halfSlot(genesisTime uint64) bool {
-	t := time.Unix(int64(genesisTime), 0)
-	return uint64(roughtime.Since(t).Seconds())%params.BeaconConfig().SecondsPerSlot/2 == 0
+// setSeenAtt sets the attestation hash in seen attestation map to true.
+func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
+	s.seenAttsLock.Lock()
+	defer s.seenAttsLock.Unlock()
+
+	r, err := hashutil.HashProto(a)
+	if err != nil {
+		return err
+	}
+	s.seenAtts[r] = true
+
+	return nil
+}
+
+// savesNewAttestation saves the new attestations to DB.
+func (s *Store) saveNewAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	r, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return err
+	}
+	saved, err := s.db.Attestation(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	if saved == nil {
+		if err := s.db.SaveAttestation(ctx, att); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	aggregated, err := helpers.AggregateAttestation(saved, att)
+	if err != nil {
+		return err
+	}
+	if err := s.db.SaveAttestation(ctx, aggregated); err != nil {
+		return err
+	}
+
+	return nil
 }

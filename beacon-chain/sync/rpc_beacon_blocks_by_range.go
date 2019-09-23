@@ -11,16 +11,17 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
-// beaconBlocksRPCHandler looks up the request blocks from the database from a given start block.
-func (r *RegularSync) beaconBlocksRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+// beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
+func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
+	log := log.WithField("handler", "beacon_blocks_by_range")
 
-	m := msg.(*pb.BeaconBlocksRequest)
+	m := msg.(*pb.BeaconBlocksByRangeRequest)
 
-	startSlot := m.HeadSlot
+	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * m.Count)
 
 	// TODO(3147): Update this with reasonable constraints.

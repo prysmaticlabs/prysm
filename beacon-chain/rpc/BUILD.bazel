@@ -78,7 +78,7 @@ go_test(
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/rpc/testing:go_default_library",
-        "//beacon-chain/sync/testing:go_default_library",
+        "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",

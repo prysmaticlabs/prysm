@@ -483,30 +483,10 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipation, error) {
-
 	headState := bs.headFetcher.HeadState()
-	currentEpoch := helpers.SlotToEpoch(headState.Slot)
-	finalized := currentEpoch == headState.FinalizedCheckpoint.Epoch
-
-	atts, err := epoch.MatchAttestations(headState, currentEpoch)
+	participation, err := epoch.ComputeValidatorParticipation(headState)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve head attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}
-	attestedBalances, err := epoch.AttestingBalance(headState, atts.Target)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve attested balances: %v", err)
-	}
-
-	totalBalances, err := helpers.TotalActiveBalance(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve total balances: %v", err)
-	}
-
-	return &ethpb.ValidatorParticipation{
-		Epoch:                   currentEpoch,
-		Finalized:               finalized,
-		GlobalParticipationRate: float32(attestedBalances) / float32(totalBalances),
-		VotedEther:              attestedBalances,
-		EligibleEther:           totalBalances,
-	}, nil
+	return participation, nil
 }
