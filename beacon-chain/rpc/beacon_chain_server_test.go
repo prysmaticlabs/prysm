@@ -557,8 +557,20 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	received, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
@@ -578,8 +590,20 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 	count := 100
 	setupValidators(t, db, count)
 
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	tests := []struct {
@@ -635,8 +659,20 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 
 	count := 1
 	validators, _ := setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -662,8 +698,20 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.GetValidatorsRequest{}
