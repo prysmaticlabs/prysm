@@ -66,7 +66,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(WriteSSZStatesFlag.Name) {
+	if ctx.GlobalBool(writeSSZStatesFlag.Name) {
 		log.Warn("Writing SSZ states after state transitions")
 		cfg.WriteSSZStates = true
 	}
