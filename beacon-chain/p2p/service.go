@@ -75,20 +75,22 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	dopts := []dhtopts.Option{
-		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-		dhtopts.Protocols(
-			protocol.ID(prysmProtocolPrefix + "/dht"),
-		),
-	}
+	if cfg.KademliaBootStrapAddr != "" {
+		dopts := []dhtopts.Option{
+			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+			dhtopts.Protocols(
+				protocol.ID(prysmProtocolPrefix + "/dht"),
+			),
+		}
 
-	dht, err := kaddht.New(ctx, h, dopts...)
-	if err != nil {
-		return nil, err
+		dht, err := kaddht.New(ctx, h, dopts...)
+		if err != nil {
+			return nil, err
+		}
+		// Wrap host with a routed host so that peers can be looked up in the
+		// distributed hash table by their peer ID.
+		h = rhost.Wrap(h, dht)
 	}
-	// Wrap host with a routed host so that peers can be looked up in the
-	// distributed hash table by their peer ID.
-	h = rhost.Wrap(h, dht)
 	s.host = h
 
 	// TODO(3147): Add gossip sub options
@@ -135,6 +137,15 @@ func (s *Service) Start() {
 
 		go s.listenForNewNodes()
 		go s.maintainBootnode()
+	}
+
+	if s.cfg.KademliaBootStrapAddr != "" && !s.cfg.NoDiscovery {
+		err := startDHTDiscovery(s.host, s.cfg.KademliaBootStrapAddr)
+		if err != nil {
+			log.WithError(err).Error("Could not add bootnode to the exclusion list")
+			s.startupErr = err
+			return
+		}
 	}
 
 	s.started = true

@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
+	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -79,6 +81,20 @@ func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*dis
 	node := listener.Self()
 	log.Infof("Started Discovery: %s", node.ID())
 	return listener, nil
+}
+
+// startDHTDiscovery supports discovery via DHT.
+func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
+	multiAddr, err := multiAddrFromString(bootstrapAddr)
+	if err != nil {
+		return err
+	}
+	peerInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return err
+	}
+	err = host.Connect(context.Background(), *peerInfo)
+	return err
 }
 
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
