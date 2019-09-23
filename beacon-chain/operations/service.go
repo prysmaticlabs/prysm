@@ -13,10 +13,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -156,6 +156,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			if err := s.beaconDB.DeleteAttestation(ctx, hash); err != nil {
 				return nil, err
 			}
+			continue
 		}
 
 		validAttsCount++
@@ -200,44 +201,17 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	lock.Lock()
 	defer lock.Unlock()
 
-	bState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-
-	attestationSlot := attestation.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if attestationSlot > bState.Slot {
-		bState, err = state.ProcessSlots(ctx, bState, attestationSlot)
-		if err != nil {
-			return err
-		}
-	}
-
-	incomingAttBits := attestation.AggregationBits
 	if s.beaconDB.HasAttestation(ctx, root) {
 		dbAtt, err := s.beaconDB.Attestation(ctx, root)
 		if err != nil {
 			return err
 		}
-
-		if !dbAtt.AggregationBits.Contains(incomingAttBits) {
-			newAggregationBits := dbAtt.AggregationBits.Or(incomingAttBits)
-			incomingAttSig, err := bls.SignatureFromBytes(attestation.Signature)
-			if err != nil {
-				return err
-			}
-			dbSig, err := bls.SignatureFromBytes(dbAtt.Signature)
-			if err != nil {
-				return err
-			}
-			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{dbSig, incomingAttSig})
-			dbAtt.Signature = aggregatedSig.Marshal()
-			dbAtt.AggregationBits = newAggregationBits
-			if err := s.beaconDB.SaveAttestation(ctx, dbAtt); err != nil {
-				return err
-			}
-		} else {
-			return nil
+		attestation, err = helpers.AggregateAttestation(dbAtt, attestation)
+		if err != nil {
+			return err
+		}
+		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
+			return err
 		}
 	} else {
 		if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {

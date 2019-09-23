@@ -2,11 +2,23 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
+
+const (
+	codeClientShutdown uint64 = iota
+	codeWrongNetwork
+	codeGenericError
+)
+
+var goodByes = map[uint64]string{
+	codeClientShutdown: "client shutdown",
+	codeWrongNetwork:   "irrelevant network",
+	codeGenericError:   "fault/error",
+}
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -15,9 +27,17 @@ func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, st
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
-	m := msg.(*pb.Goodbye)
-	log := log.WithField("Reason", m.Reason.String())
-	log.Infof("Peer %s has sent a goodbye message", stream.Conn().RemotePeer())
+	m := msg.(uint64)
+	log := log.WithField("Reason", goodbyeMessage(m))
+	log.WithField("peer", stream.Conn().RemotePeer()).Info("Peer has sent a goodbye message")
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+func goodbyeMessage(num uint64) string {
+	reason, ok := goodByes[num]
+	if ok {
+		return reason
+	}
+	return fmt.Sprintf("unknown goodbye value of %d Received", num)
 }
