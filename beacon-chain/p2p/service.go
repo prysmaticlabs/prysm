@@ -234,7 +234,7 @@ func (s *Service) Disconnect(pid peer.ID) error {
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	ticker := time.NewTicker(pollingPeriod)
-	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.KademliaBootStrapAddr[0])
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.Discv5BootStrapAddr[0])
 	if err != nil {
 		log.Fatal(err)
 	}

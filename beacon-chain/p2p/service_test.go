@@ -133,6 +133,7 @@ func TestListenForNewNodes(t *testing.T) {
 	bootNode := bootListener.Self()
 
 	cfg = &Config{
+		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		Encoding:            "ssz",
 	}
