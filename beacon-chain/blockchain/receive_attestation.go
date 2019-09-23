@@ -89,7 +89,9 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
 	if !helpers.IsEpochStart(attSlot) {
-		targetRoot, err := helpers.BlockRoot(s.HeadState(), att.Data.Target.Epoch)
+		s.headLock.RLock()
+		defer s.headLock.RUnlock()
+		targetRoot, err := helpers.BlockRoot(s.headState, att.Data.Target.Epoch)
 		if err != nil {
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
 		}
