@@ -10,6 +10,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
@@ -24,7 +25,15 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
+	logging "github.com/ipfs/go-log"
+	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/protocol"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
@@ -32,14 +41,17 @@ import (
 )
 
 var (
-	debug       = flag.Bool("debug", false, "Enable debug logging")
-	privateKey  = flag.String("private", "", "Private key to use for peer ID")
-	port        = flag.Int("port", 4000, "Port to listen for connections")
-	metricsPort = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP  = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
+	debug        = flag.Bool("debug", false, "Enable debug logging")
+	privateKey   = flag.String("private", "", "Private key to use for peer ID")
+	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
+	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
 
 	log = logrus.WithField("prefix", "bootnode")
 )
+
+const dhtProtocol = "/prysm/0.0.0/dht"
 
 type handler struct {
 	listener *discover.UDPv5
@@ -60,13 +72,16 @@ func main() {
 
 		log.Debug("Debug logging enabled.")
 	}
+	privKey, interfacePrivKey := extractPrivateKey()
 	cfg := discover.Config{
-		PrivateKey: extractPrivateKey(),
+		PrivateKey: privKey,
 	}
-	listener := createListener(*externalIP, *port, cfg)
+	listener := createListener(*externalIP, *discv5port, cfg)
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
+
+	startKademliaDHT(interfacePrivKey)
 
 	handler := &handler{
 		listener: listener,
@@ -79,6 +94,46 @@ func main() {
 	}
 
 	select {}
+}
+
+func startKademliaDHT(privKey crypto.PrivKey) {
+
+	if *debug {
+		logging.SetDebugLogging()
+	}
+
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", *externalIP, *kademliaPort))
+	if err != nil {
+		log.Fatalf("Failed to construct new multiaddress. %v", err)
+	}
+	opts := []libp2p.Option{
+		libp2p.ListenAddrs(listen),
+	}
+	opts = append(opts, libp2p.Identity(privKey))
+
+	ctx := context.Background()
+	host, err := libp2p.New(ctx, opts...)
+	if err != nil {
+		log.Fatalf("Failed to create new host. %v", err)
+	}
+
+	dopts := []dhtopts.Option{
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
+			protocol.ID(dhtProtocol),
+		),
+	}
+
+	dht, err := kaddht.New(ctx, host, dopts...)
+	if err != nil {
+		log.Fatalf("Failed to create new dht: %v", err)
+	}
+	if err := dht.Bootstrap(context.Background()); err != nil {
+		log.Fatalf("Failed to bootstrap DHT. %v", err)
+	}
+
+	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *kademliaPort, host.ID().Pretty())
+
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
@@ -136,8 +191,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	return localNode, nil
 }
 
-func extractPrivateKey() *ecdsa.PrivateKey {
+func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
 	var privKey *ecdsa.PrivateKey
+	var interfaceKey crypto.PrivKey
 	if *privateKey != "" {
 		dst, err := hex.DecodeString(*privateKey)
 		if err != nil {
@@ -147,6 +203,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
+		interfaceKey = unmarshalledKey
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 
 	} else {
@@ -154,6 +211,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
+		interfaceKey = privInterfaceKey
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
@@ -163,5 +221,5 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		log.Debugf("Private key %x", b)
 	}
 
-	return privKey
+	return privKey, interfaceKey
 }
