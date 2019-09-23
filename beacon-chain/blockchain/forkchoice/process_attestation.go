@@ -240,7 +240,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
-		return nil, errors.New("could not verify indexed attestation")
+		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil
 }

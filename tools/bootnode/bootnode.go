@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -31,13 +32,18 @@ import (
 )
 
 var (
-	debug      = flag.Bool("debug", false, "Enable debug logging")
-	privateKey = flag.String("private", "", "Private key to use for peer ID")
-	port       = flag.Int("port", 4000, "Port to listen for connections")
-	externalIP = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
+	debug       = flag.Bool("debug", false, "Enable debug logging")
+	privateKey  = flag.String("private", "", "Private key to use for peer ID")
+	port        = flag.Int("port", 4000, "Port to listen for connections")
+	metricsPort = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP  = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
 
 	log = logrus.WithField("prefix", "bootnode")
 )
+
+type handler struct {
+	listener *discover.UDPv5
+}
 
 func main() {
 	flag.Parse()
@@ -61,6 +67,16 @@ func main() {
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
+
+	handler := &handler{
+		listener: listener,
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/p2p", handler.httpHandler)
+
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
+		log.Fatalf("Failed to start server %v", err)
+	}
 
 	select {}
 }
@@ -88,6 +104,21 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 		log.Fatal(err)
 	}
 	return network
+}
+
+func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	allNodes := h.listener.AllNodes()
+	w.Write([]byte("Nodes stored in the table:\n"))
+	for i, n := range allNodes {
+		w.Write([]byte(fmt.Sprintf("Node %d\n", i)))
+		w.Write([]byte(n.String() + "\n"))
+		w.Write([]byte("Node ID: " + n.ID().String() + "\n"))
+		w.Write([]byte("IP: " + n.IP().String() + "\n"))
+		w.Write([]byte(fmt.Sprintf("UDP Port: %d", n.UDP()) + "\n"))
+		w.Write([]byte(fmt.Sprintf("TCP Port: %d", n.UDP()) + "\n\n"))
+	}
+
 }
 
 func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
