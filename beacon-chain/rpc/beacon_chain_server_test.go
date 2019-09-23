@@ -761,6 +761,14 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -832,6 +840,14 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
@@ -902,6 +918,14 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 
 	bs := &BeaconChainServer{
 		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: s,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
@@ -938,7 +962,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {
-		t.Error("Did not receive wanted assignments")
+		t.Errorf("Did not receive wanted assignments, received %v, wanted %v", wantedRes, res)
 	}
 
 	// Test the wrap around scenario.
