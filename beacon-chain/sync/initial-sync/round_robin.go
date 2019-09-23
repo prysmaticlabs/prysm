@@ -59,7 +59,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		return resp, nil
 	}
 
-	// Sync to finalized epoch.
+	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := highestFinalized()
 
