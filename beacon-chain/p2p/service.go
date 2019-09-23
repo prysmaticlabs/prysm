@@ -71,7 +71,7 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	// TODO(3147): Add host options
+
 	opts := buildOptions(s.cfg, ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
@@ -79,7 +79,13 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if len(cfg.KademliaBootStrapAddr) != 0 {
+	if cfg.RelayNodeAddr != "" {
+		if err := dialRelayNode(ctx, s.host, cfg.RelayNodeAddr); err != nil {
+			log.WithError(err).Errorf("Could not dial relay node")
+		}
+	}
+
+	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
