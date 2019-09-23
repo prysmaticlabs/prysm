@@ -499,6 +499,10 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}, nil
 }
 
+func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, epoch uint64) {
+
+}
+
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
