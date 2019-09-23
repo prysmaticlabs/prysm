@@ -504,20 +504,26 @@ func (bs *BeaconChainServer) archivedValidatorAssignments(ctx context.Context, e
 	if err != nil {
 		return status.Errorf(codes.Internal, "could not retrieve archived committee info for epoch %d", epoch)
 	}
-	committeesPerSlot := archivedInfo.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	activeIndices, err := bs.beaconDB.ArchivedActiveIndices(ctx, epoch)
+	if err != nil {
+		return status.Errorf(codes.Internal, "could not retrieve archived active indices for epoch %d", epoch)
+	}
+	committeeCount := archivedInfo.CommitteeCount
+	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 	epochStartShard := archivedInfo.StartShard
 	startSlot := helpers.StartSlot(epoch)
+	seed := bytesutil.ToBytes32(archivedInfo.Seed)
 	validatorIndex := uint64(5)
 
 	var foundCommittee []uint64
 	var foundShard uint64
-	var foundSlot uin64
+	var foundSlot uint64
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
 		slotStartShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
 		for i := uint64(0); i < committeesPerSlot; i++ {
 			shard := (slotStartShard + i) % params.BeaconConfig().ShardCount
-			committee, err := helpers.CrosslinkCommittee(state, epoch, shard)
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, validatorIndex, committeeCount)
 			if err != nil {
 				return err
 			}
