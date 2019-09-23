@@ -683,11 +683,26 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
+	ctx := context.Background()
 	setupValidators(t, db, 1)
-	bs := &BeaconChainServer{beaconDB: db}
+	headState, err := db.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
-	if _, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0}); !strings.Contains(err.Error(), wanted) {
+	if _, err := bs.ListValidatorAssignments(
+		context.Background(),
+		&ethpb.ListValidatorAssignmentsRequest{
+			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
@@ -697,8 +712,11 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
-	req := &ethpb.ListValidatorAssignmentsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListValidatorAssignments(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+	req := &ethpb.ListValidatorAssignmentsRequest{
+		PageToken: strconv.Itoa(0),
+		PageSize:  exceedsMax,
+	}
+	if _, err := bs.ListValidatorAssignments(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
@@ -745,7 +763,9 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		beaconDB: db,
 	}
 
-	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{Epoch: 0})
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -776,7 +796,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -814,7 +834,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
+	req := &ethpb.ListValidatorAssignmentsRequest{PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -846,7 +866,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndicesNoPage(t *testing.
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -884,7 +904,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
+	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -921,9 +941,9 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndicesWithPages(t *te
 		t.Error("Did not receive wanted assignments")
 	}
 
-	// Test the wrap around scenario
+	// Test the wrap around scenario.
 	assignments = nil
-	req = &ethpb.ListValidatorAssignmentsRequest{Epoch: 0, Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
+	req = &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
 	res, err = bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
