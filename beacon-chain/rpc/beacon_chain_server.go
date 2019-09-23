@@ -347,11 +347,17 @@ func (bs *BeaconChainServer) GetValidators(
 	}
 
 	finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
-	validators := make([]*ethpb.Validator, 0)
+	validators := headState.Validators
 	if requestedEpoch < finalizedEpoch {
-		fmt.Println("hi")
-	} else {
-		validators = headState.Validators
+		stopIdx := len(validators)
+		for idx, val := range validators {
+			// The first time we see a validator with an activation epoch > the requested epoch,
+			// we know this validator is from the future relative to what the request wants.
+			if val.ActivationEpoch > requestedEpoch {
+				stopIdx = idx
+			}
+		}
+		validators = validators[:stopIdx]
 	}
 
 	validatorCount := len(validators)
