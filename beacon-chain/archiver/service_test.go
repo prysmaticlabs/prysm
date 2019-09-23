@@ -140,10 +140,15 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	propIdx, err := helpers.BeaconProposerIndex(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wanted := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
 		StartShard:     startShard,
 		CommitteeCount: committeeCount,
+		ProposerIndex:  propIdx,
 	}
 
 	retrieved, err := svc.beaconDB.ArchivedCommitteeInfo(svc.ctx, helpers.CurrentEpoch(headState))
