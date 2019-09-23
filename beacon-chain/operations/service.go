@@ -228,6 +228,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	if err != nil {
 		return err
 	}
+
 	s.attestationPool[root] = savedAtt
 
 	return nil
