@@ -83,10 +83,15 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	if err != nil {
 		return errors.Wrap(err, "could not get start shard")
 	}
+	proposerIndex, err := helpers.BeaconProposerIndex(headState)
+	if err != nil {
+		return errors.Wrap(err, "could not get beacon proposer index")
+	}
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
 		StartShard:     startShard,
 		CommitteeCount: committeeCount,
+		ProposerIndex:  proposerIndex,
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {
 		return errors.Wrap(err, "could not archive committee info")

@@ -44,6 +44,7 @@ type Service struct {
 	pubsub        *pubsub.PubSub
 	exclusionList *ccache.Cache
 	privKey       *ecdsa.PrivateKey
+	dht           *kaddht.IpfsDHT
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -71,7 +72,6 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	// TODO(3147): Add host options
 	opts := buildOptions(s.cfg, ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
@@ -79,7 +79,7 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if len(cfg.KademliaBootStrapAddr) != 0 {
+	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
@@ -87,13 +87,13 @@ func NewService(cfg *Config) (*Service, error) {
 			),
 		}
 
-		dht, err := kaddht.New(ctx, h, dopts...)
+		s.dht, err = kaddht.New(ctx, h, dopts...)
 		if err != nil {
 			return nil, err
 		}
 		// Wrap host with a routed host so that peers can be looked up in the
 		// distributed hash table by their peer ID.
-		h = rhost.Wrap(h, dht)
+		h = rhost.Wrap(h, s.dht)
 	}
 	s.host = h
 
@@ -123,6 +123,14 @@ func (s *Service) Start() {
 		return
 	}
 
+	var peersToWatch []string
+	if s.cfg.RelayNodeAddr != "" {
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
+			log.WithError(err).Errorf("Could not dial relay node")
+		}
+	}
+
 	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
 		ipAddr := ipAddr(s.cfg)
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
@@ -144,6 +152,7 @@ func (s *Service) Start() {
 
 	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery {
 		for _, addr := range s.cfg.KademliaBootStrapAddr {
+			peersToWatch = append(peersToWatch, addr)
 			err := startDHTDiscovery(s.host, addr)
 			if err != nil {
 				log.WithError(err).Error("Could not connect to bootnode")
@@ -154,7 +163,11 @@ func (s *Service) Start() {
 				s.startupErr = err
 				return
 			}
-
+		}
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
+			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
 	}
 
@@ -168,6 +181,7 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
+	startPeerWatcher(s.ctx, s.host, peersToWatch...)
 	registerMetrics(s)
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)

@@ -45,4 +45,7 @@ message ArchivedCommitteeInfo {
 
     // Committee count is the size the committees during epoch N.
     uint64 committee_count = 3;
+
+    // Proposer index assigned to propose a beacon block during epoch N.
+    uint64 proposer_index = 4;
 }
