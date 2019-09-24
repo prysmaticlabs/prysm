@@ -15,7 +15,6 @@ go_library(
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
-        "@com_github_golang_protobuf//ptypes:go_default_library_gen",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
