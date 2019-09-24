@@ -473,12 +473,20 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 		activationQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
 
-	exitedIndices := 
+	exitedIndices, err := validators.ExitedValidatorIndices(headState)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not determine exited validator indices: %v", err)
+	}
+
+	exitQueueKeys := make([][]byte, len(exitedIndices))
+	for i, idx := range exitedIndices {
+		exitQueueKeys[i] = headState.Validators[idx].PublicKey
+	}
 
 	return &ethpb.ValidatorQueue{
 		ChurnLimit:           uint64(limit),
 		ActivationPublicKeys: activationQueueKeys,
-		ExitPublicKeys:       nil,
+		ExitPublicKeys:       exitQueueKeys,
 	}, nil
 }
 
