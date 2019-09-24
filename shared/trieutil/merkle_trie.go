@@ -1,6 +1,7 @@
 package trieutil
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -95,7 +96,7 @@ func MerkleTree(leaves [][]byte) [][]byte {
 func ConcatGeneralizedIndices(indices []int) int {
 	index := 1
 	for _, i := range indices {
-		index = index * PrevPowerOf2(i) + (i - PrevPowerOf2(i))
+		index = index*PrevPowerOf2(i) + (i - PrevPowerOf2(i))
 	}
 	return index
 }
@@ -110,4 +111,47 @@ func ConcatGeneralizedIndices(indices []int) int {
 //    return int(log2(index))
 func GeneralizedIndexLength(index int) int {
 	return int(math.Log2(float64(index)))
+}
+
+// GeneralizedIndexBit returns the given bit of a generalized index.
+//
+// Spec pseudocode definition:
+//   def get_generalized_index_bit(index: GeneralizedIndex, position: int) -> bool:
+//    """
+//    Return the given bit of a generalized index.
+//    """
+//    return (index & (1 << position)) > 0
+func GeneralizedIndexBit(index uint64, pos uint64) bool {
+	fmt.Println(1 << pos)
+	return (index & (1 << pos)) > 0
+}
+
+// GeneralizedIndexSibling returns the sibling of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_sibling(index: GeneralizedIndex) -> GeneralizedIndex:
+//    return GeneralizedIndex(index ^ 1)
+func GeneralizedIndexSibling(index int) int {
+	return index ^ 1
+}
+
+// GeneralizedIndexChild returns the child of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_child(index: GeneralizedIndex, right_side: bool) -> GeneralizedIndex:
+//    return GeneralizedIndex(index * 2 + right_side)
+func GeneralizedIndexChild(index int, rightSide bool) int {
+	if rightSide {
+		return index*2 + 1
+	}
+	return index * 2
+}
+
+// GeneralizedIndexParent returns the parent of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_parent(index: GeneralizedIndex) -> GeneralizedIndex:
+//    return GeneralizedIndex(index // 2)
+func GeneralizedIndexParent(index int) int {
+	return index / 2
 }
