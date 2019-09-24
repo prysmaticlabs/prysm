@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -38,8 +39,8 @@ func TestRoundRobinSync(t *testing.T) {
 		peers              []*peerData
 	}{
 		{
-			name:        "Single peer with all blocks",
-			currentSlot: 131,
+			name:               "Single peer with all blocks",
+			currentSlot:        131,
 			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
@@ -50,8 +51,8 @@ func TestRoundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:        "Multiple peers with all blocks",
-			currentSlot: 131,
+			name:               "Multiple peers with all blocks",
+			currentSlot:        131,
 			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
@@ -77,8 +78,8 @@ func TestRoundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:        "Multiple peers with failures",
-			currentSlot: 320, // 5 epochs
+			name:               "Multiple peers with failures",
+			currentSlot:        320, // 5 epochs
 			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
@@ -105,8 +106,8 @@ func TestRoundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:        "Multiple peers with multiple failures",
-			currentSlot: 320, // 5 epochs
+			name:               "Multiple peers with multiple failures",
+			currentSlot:        320, // 5 epochs
 			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
@@ -135,8 +136,8 @@ func TestRoundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:        "Multiple peers with different finalized epoch",
-			currentSlot: 320, // 5 epochs
+			name:               "Multiple peers with different finalized epoch",
+			currentSlot:        320, // 5 epochs
 			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
@@ -170,11 +171,11 @@ func TestRoundRobinSync(t *testing.T) {
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers)
 
-			mc :=  &mock.ChainService{
+			mc := &mock.ChainService{
 				State: &p2ppb.BeaconState{},
 			} // no-op mock
 			s := &InitialSync{
-				chain:mc,
+				chain:        mc,
 				p2p:          p,
 				synced:       false,
 				chainStarted: true,
@@ -243,11 +244,6 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 				return
 			}
 
-			// Write success response.
-			if _, err := stream.Write([]byte{0x00}); err != nil {
-				t.Error(err)
-			}
-
 			ret := make([]*eth.BeaconBlock, 0)
 			for _, slot := range blocks {
 				if (slot-req.StartSlot)%req.Step != 0 {
@@ -260,8 +256,10 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 				ret = ret[:req.Count]
 			}
 
-			if _, err := peer.Encoding().EncodeWithLength(stream, ret); err != nil {
-				t.Error(err)
+			for i := 0; i < len(ret); i++ {
+				if err := sync.WriteChunk(stream, peer.Encoding(), ret[i]); err != nil {
+					t.Error(err)
+				}
 			}
 		})
 

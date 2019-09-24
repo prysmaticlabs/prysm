@@ -5,6 +5,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -13,10 +14,16 @@ import (
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
 func (r *RegularSync) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	setStreamWriteDeadline(stream, defaultWriteDuration)
+	return WriteChunk(stream, r.p2p.Encoding(), msg)
+}
+
+// WriteChunk object to stream.
+// response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
+func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg interface {}) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, msg, maxChunkSize)
+	_, err := encoding.EncodeWithMaxLength(stream, msg, maxChunkSize)
 	return err
 }
 

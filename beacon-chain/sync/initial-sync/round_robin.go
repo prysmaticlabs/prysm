@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"io"
 	"math"
 	"sort"
 	"time"
@@ -40,22 +41,30 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return nil, errors.Wrap(err, "failed to send request to peer")
 		}
 
-		if err := stream.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-			return nil, err
+		//if err := stream.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+		//	return nil, err
+		//}
+
+		//code, errMsg, err := prysmsync.ReadStatusCode(stream, s.p2p.Encoding())
+		//if err != nil {
+		//	return nil, errors.Wrap(err, "failed to read response status")
+		//}
+		//if code != 0 {
+		//	return nil, errors.New(errMsg)
+		//}
+
+		resp := make([]*eth.BeaconBlock, 0, req.Count)
+		for {
+			blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to read chunked block")
+			}
+			resp = append(resp, blk)
 		}
 
-		code, errMsg, err := prysmsync.ReadStatusCode(stream, s.p2p.Encoding())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read response status")
-		}
-		if code != 0 {
-			return nil, errors.New(errMsg)
-		}
-
-		resp := make([]*eth.BeaconBlock, 0)
-		if err := s.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-			return nil, errors.Wrap(err, "failed to decode response")
-		}
 		return resp, nil
 	}
 

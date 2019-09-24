@@ -3,7 +3,6 @@ package initialsync
 import (
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
