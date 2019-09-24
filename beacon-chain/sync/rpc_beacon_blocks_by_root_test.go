@@ -82,6 +82,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
 
 	blockA := &ethpb.BeaconBlock{Slot: 111}
 	blockB := &ethpb.BeaconBlock{Slot: 40}
