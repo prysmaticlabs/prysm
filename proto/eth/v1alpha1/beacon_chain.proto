@@ -325,13 +325,11 @@ message ActiveSetChanges {
     // 48 byte validator public keys that have been activated in this epoch.
     repeated bytes activated_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 
-    // 48 byte validator public keys that have been voluntarily exited in this
-    // epoch.
+    // 48 byte validator public keys that have been voluntarily exited in this epoch.
     repeated bytes exited_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 
-    // 48 byte validator public keys that have been involuntarily ejected in 
-    // this epoch.
-    repeated bytes ejected_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    // 48 byte validator public keys that have been slashed in this epoch.
+    repeated bytes slashed_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 }
 
 message ValidatorQueue {

@@ -433,7 +433,7 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 		Epoch:               requestedEpoch,
 		ActivatedPublicKeys: activatedKeys,
 		ExitedPublicKeys:    exitedKeys,
-		EjectedPublicKeys:   slashedKeys,
+		SlashedPublicKeys:   slashedKeys,
 	}, nil
 }
 

@@ -779,6 +779,10 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
+
+}
+
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
