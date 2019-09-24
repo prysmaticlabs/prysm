@@ -143,6 +143,7 @@ func ActivatedValidatorIndices(state *pb.BeaconState) []uint64 {
 	return activations
 }
 
+// SlashedValidatorIndices determines the indices slashed during the current epoch.
 func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
 	currentEpoch := helpers.CurrentEpoch(state)
 	slashed := make([]uint64, 0)
@@ -156,6 +157,7 @@ func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
 	return slashed
 }
 
+// ExitedValidatorIndices determines the indices exited during the current epoch.
 func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
 	exited := make([]uint64, 0)
 	exitEpochs := make([]uint64, 0)
