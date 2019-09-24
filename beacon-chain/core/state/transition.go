@@ -63,6 +63,7 @@ func ExecuteStateTransition(
 		}
 	}
 
+	interop.WriteBlockToDisk(block)
 	interop.WriteStateToDisk(state)
 
 	postStateRoot, err := ssz.HashTreeRoot(state)
