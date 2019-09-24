@@ -415,8 +415,25 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 			return nil, status.Errorf(codes.Internal, "could not determine exited validator indices: %v", err)
 		}
 	}
+
+	// We retrieve the public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	for i, idx := range activatedIndices {
+		activatedKeys[i] = headState.Validators[idx].PublicKey
+	}
+	for i, idx := range slashedIndices {
+		slashedKeys[i] = headState.Validators[idx].PublicKey
+	}
+	for i, idx := range exitedIndices {
+		exitedKeys[i] = headState.Validators[idx].PublicKey
+	}
 	return &ethpb.ActiveSetChanges{
-		Epoch: requestedEpoch,
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ExitedPublicKeys:    exitedKeys,
+		EjectedPublicKeys:   slashedKeys,
 	}, nil
 }
 
