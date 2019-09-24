@@ -213,6 +213,8 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 		var datum = d
 
 		peer.SetStreamHandler(topic, func(stream network.Stream) {
+			defer stream.Close()
+
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
 			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
 				t.Error(err)

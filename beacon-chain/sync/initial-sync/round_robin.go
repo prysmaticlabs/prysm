@@ -40,6 +40,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to send request to peer")
 		}
+		defer stream.Close()
 
 		//if err := stream.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
 		//	return nil, err
