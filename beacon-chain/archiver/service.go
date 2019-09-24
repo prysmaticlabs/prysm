@@ -138,7 +138,6 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 	if err != nil {
 		return errors.Wrap(err, "could not get churn limit")
 	}
-
 	if uint64(exitQueueChurn) >= churn {
 		exitQueueEpoch++
 	}
