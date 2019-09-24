@@ -25,24 +25,24 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (r *RegularSync) registerRPCHandlers() {
 	r.registerRPC(
-		"/eth2/beacon_chain/req/hello/1",
-		&pb.Hello{},
-		r.helloRPCHandler,
+		"/eth2/beacon_chain/req/status/1",
+		&pb.Status{},
+		r.statusRPCHandler,
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/goodbye/1",
-		&pb.Goodbye{},
+		new(uint64),
 		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks/1",
-		&pb.BeaconBlocksRequest{},
-		r.beaconBlocksRPCHandler,
+		"/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+		&pb.BeaconBlocksByRangeRequest{},
+		r.beaconBlocksByRangeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
+		"/eth2/beacon_chain/req/beacon_blocks_by_root/1",
 		[][32]byte{},
-		r.recentBeaconBlocksRPCHandler,
+		r.beaconBlocksRootRPCHandler,
 	)
 }
 
@@ -86,5 +86,6 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 				log.WithError(err).Error("Failed to handle p2p RPC")
 			}
 		}
+
 	})
 }

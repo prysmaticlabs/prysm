@@ -75,8 +75,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 
 	bootNode := bootListener.Self()
 	cfg := &Config{
-		BootstrapNodeAddr: bootNode.String(),
-		Encoding:          "ssz",
+		Discv5BootStrapAddr: []string{bootNode.String()},
+		Encoding:            "ssz",
 	}
 
 	var listeners []*discover.UDPv5

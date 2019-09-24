@@ -55,13 +55,16 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() uint64 {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return s.headSlot
 }
 
 // HeadRoot returns the root of the head of the chain.
 func (s *Service) HeadRoot() []byte {
-	s.canonicalRootsLock.RLock()
-	defer s.canonicalRootsLock.RUnlock()
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
 
 	root := s.canonicalRoots[s.headSlot]
 	if len(root) != 0 {
@@ -73,18 +76,24 @@ func (s *Service) HeadRoot() []byte {
 
 // HeadBlock returns the head block of the chain.
 func (s *Service) HeadBlock() *ethpb.BeaconBlock {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return proto.Clone(s.headBlock).(*ethpb.BeaconBlock)
 }
 
 // HeadState returns the head state of the chain.
 func (s *Service) HeadState() *pb.BeaconState {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return proto.Clone(s.headState).(*pb.BeaconState)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
 func (s *Service) CanonicalRoot(slot uint64) []byte {
-	s.canonicalRootsLock.RLock()
-	defer s.canonicalRootsLock.RUnlock()
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
 
 	return s.canonicalRoots[slot]
 }

@@ -168,6 +168,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	opsSrv := NewService(ctx, &Config{
 		BeaconDB: beaconDB,
 	})
+	opsSrv.attestationPool = make(map[[32]byte]*ethpb.Attestation)
 
 	// First, we create a common attestation data.
 	data := &ethpb.AttestationData{
@@ -254,12 +255,9 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 	wg.Wait()
 
-	// We fetch the final attestation from the DB, which should be an aggregation of
+	// We fetch the final attestation from the attestation pool, which should be an aggregation of
 	// all committee members effectively.
-	aggAtt, err := beaconDB.Attestation(ctx, attDataRoot)
-	if err != nil {
-		t.Error(err)
-	}
+	aggAtt := opsSrv.attestationPool[attDataRoot]
 	b1 := aggAtt.AggregationBits.Bytes()
 	b2 := totalAggBits.Bytes()
 
@@ -278,11 +276,11 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	ctx := context.Background()
 	helpers.ClearAllCaches()
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
+	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 200)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
@@ -411,10 +409,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err != nil {
 		t.Error(err)
 	}
-	dbAtt, err := service.beaconDB.Attestation(ctx, attDataHash)
-	if err != nil {
-		t.Error(err)
-	}
+	dbAtt := service.attestationPool[attDataHash]
+
 	dbAttBits := dbAtt.AggregationBits.Bytes()
 	aggregatedBits := att1.AggregationBits.Or(att2.AggregationBits).Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
@@ -428,10 +424,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att2); err != nil {
 		t.Error(err)
 	}
-	dbAtt, err = service.beaconDB.Attestation(ctx, attDataHash)
-	if err != nil {
-		t.Error(err)
-	}
+	dbAtt = service.attestationPool[attDataHash]
+
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
 		t.Error("Expected aggregation bits to be equal.")
@@ -444,10 +438,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att3); err != nil {
 		t.Error(err)
 	}
-	dbAtt, err = service.beaconDB.Attestation(ctx, attDataHash)
-	if err != nil {
-		t.Error(err)
-	}
+	dbAtt = service.attestationPool[attDataHash]
+
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
 		t.Error("Expected aggregation bits to be equal.")
@@ -463,6 +455,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
 
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
@@ -524,9 +517,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 	att.Data.Crosslink.ParentRoot = encoded[:]
 	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-	if err := beaconDB.SaveAttestation(context.Background(), att); err != nil {
-		t.Fatal(err)
-	}
+
+	r, _ := ssz.HashTreeRoot(att.Data)
+	service.attestationPool[r] = att
 
 	headBlockRoot := [32]byte{1, 2, 3}
 	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {

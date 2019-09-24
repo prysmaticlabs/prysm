@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -61,7 +61,7 @@ type Service struct {
 	headBlock            *ethpb.BeaconBlock
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
-	canonicalRootsLock   sync.RWMutex
+	headLock             sync.RWMutex
 }
 
 // Config options for the service.
@@ -198,18 +198,20 @@ func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
 }
 
-// HeadUpdatedFeed is a feed that is written to when a new head block is saved to DB.
+// HeadUpdatedFeed is a feed containing the head block root and
+// is written to when a new head block is saved to DB.
 func (s *Service) HeadUpdatedFeed() *event.Feed {
 	return s.headUpdatedFeed
 }
 
 // This gets called to update canonical root mapping.
 func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
 	s.headSlot = b.Slot
 
-	s.canonicalRootsLock.Lock()
 	s.canonicalRoots[b.Slot] = r[:]
-	defer s.canonicalRootsLock.Unlock()
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
@@ -241,6 +243,9 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconSta
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconState) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
@@ -285,6 +290,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 
 // This gets called to initialize chain info variables using the head stored in DB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
 	headBlock, err := s.beaconDB.HeadBlock(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head block in db")
