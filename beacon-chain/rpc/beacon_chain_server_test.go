@@ -552,13 +552,25 @@ func TestBeaconChainServer_ListValidatorBalancesFromArchive_NewValidatorNotFound
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
+func TestBeaconChainServer_GetValidators_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	received, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
@@ -571,15 +583,27 @@ func TestBeaconChainServer_GetValidatorsNoPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
+func TestBeaconChainServer_GetValidators_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
 	count := 100
 	setupValidators(t, db, count)
 
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	tests := []struct {
@@ -629,14 +653,26 @@ func TestBeaconChainServer_GetValidatorsPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
+func TestBeaconChainServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
 	count := 1
 	validators, _ := setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -646,7 +682,7 @@ func TestBeaconChainServer_GetValidatorsPaginationOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
+func TestBeaconChainServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
 	bs := &BeaconChainServer{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
@@ -657,13 +693,25 @@ func TestBeaconChainServer_GetValidatorsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
+func TestBeaconChainServer_GetValidators_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 	}
 
 	req := &ethpb.GetValidatorsRequest{}
@@ -676,6 +724,58 @@ func TestBeaconChainServer_GetValidatorsDefaultPageSize(t *testing.T) {
 	j := params.BeaconConfig().DefaultPageSize
 	if !reflect.DeepEqual(res.Validators, validators[i:j]) {
 		t.Error("Incorrect respond of validators")
+	}
+}
+
+func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	numEpochs := 30
+	validators := make([]*ethpb.Validator, numEpochs)
+	for i := 0; i < numEpochs; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: uint64(i),
+		}
+	}
+
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Validators: validators,
+			},
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 200,
+			},
+		},
+	}
+
+	req := &ethpb.GetValidatorsRequest{
+		QueryFilter: &ethpb.GetValidatorsRequest_Genesis{
+			Genesis: true,
+		},
+	}
+	res, err := bs.GetValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Validators) != 1 {
+		t.Errorf("Wanted 1 validator at genesis, received %d", len(res.Validators))
+	}
+
+	req = &ethpb.GetValidatorsRequest{
+		QueryFilter: &ethpb.GetValidatorsRequest_Epoch{
+			Epoch: 20,
+		},
+	}
+	res, err = bs.GetValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(res.Validators, validators[:21]) {
+		t.Errorf("Incorrect number of validators, wanted %d received %d", 20, len(res.Validators))
 	}
 }
 
