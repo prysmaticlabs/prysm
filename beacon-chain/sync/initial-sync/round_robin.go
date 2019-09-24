@@ -74,6 +74,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			for i, pid := range peers {
 				start := start + uint64(i)*step
+				if start > helpers.StartSlot(finalizedEpoch+1) {
+					continue
+				}
 				step := step * uint64(len(peers))
 				count := uint64(math.Min(float64(count), float64((helpers.StartSlot(finalizedEpoch+1)-start)/step)))
 				// If the count was divided by an odd number of peers, there will be some blocks
