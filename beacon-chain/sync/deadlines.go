@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-const defaultReadDuration time.Duration = ttfbTimeout
-const defaultWriteDuration time.Duration = 10 * time.Second // RESP_TIMEOUT
+const defaultReadDuration = ttfbTimeout
+const defaultWriteDuration = 10 * time.Second // RESP_TIMEOUT
 
 func setRPCStreamDeadlines(stream network.Stream) {
 	setStreamReadDeadline(stream, defaultReadDuration)
