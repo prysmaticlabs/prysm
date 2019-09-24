@@ -388,7 +388,7 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 func (bs *BeaconChainServer) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	return nil, nil
 }
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
