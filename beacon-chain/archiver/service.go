@@ -171,18 +171,11 @@ func (s *Service) archiveParticipation(ctx context.Context, headState *pb.Beacon
 }
 
 // We archive validator balances and active indices.
-func (s *Service) archiveBalancesAndIndices(ctx context.Context, headState *pb.BeaconState) error {
+func (s *Service) archiveBalances(ctx context.Context, headState *pb.BeaconState) error {
 	balances := headState.Balances
 	currentEpoch := helpers.CurrentEpoch(headState)
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, currentEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not determine active indices")
-	}
 	if err := s.beaconDB.SaveArchivedBalances(ctx, currentEpoch, balances); err != nil {
 		return errors.Wrap(err, "could not archive balances")
-	}
-	if err := s.beaconDB.SaveArchivedActiveIndices(ctx, currentEpoch, activeIndices); err != nil {
-		return errors.Wrap(err, "could not archive active indices")
 	}
 	return nil
 }
