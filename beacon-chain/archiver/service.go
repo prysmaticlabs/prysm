@@ -203,7 +203,7 @@ func (s *Service) run(ctx context.Context) {
 				log.WithError(err).Error("Could not archive validator participation")
 				continue
 			}
-			if err := s.archiveBalancesAndIndices(ctx, headState); err != nil {
+			if err := s.archiveBalances(ctx, headState); err != nil {
 				log.WithError(err).Error("Could not archive validator balances and active indices")
 				continue
 			}
@@ -218,7 +218,7 @@ func (s *Service) run(ctx context.Context) {
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived validator balances and active indices during epoch")
+			).Debug("Successfully archived validator balances during epoch")
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
