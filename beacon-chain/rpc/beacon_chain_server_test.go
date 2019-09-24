@@ -781,19 +781,34 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 
 func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
 	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 5)
+	validators := make([]*ethpb.Validator, 6)
 	headState := &pbp2p.BeaconState{
 		Slot:       0,
 		Validators: validators,
 	}
 	for i := 0; i < len(validators); i++ {
 		activationEpoch := params.BeaconConfig().FarFutureEpoch
+		withdrawableEpoch := params.BeaconConfig().FarFutureEpoch
+		exitEpoch := params.BeaconConfig().FarFutureEpoch
+		slashed := false
+		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
 			activationEpoch = helpers.DelayedActivationExitEpoch(0)
+		} else if i%3 == 0 {
+			// Mark indices divisible by 3 as slashed.
+			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
+			slashed = true
+		} else if i%5 == 0 {
+			// Mark indices divisible by 5 as exited.
+			exitEpoch = 0
+			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
 		}
 		headState.Validators[i] = &ethpb.Validator{
-			ActivationEpoch: activationEpoch,
-			PublicKey:       []byte(strconv.Itoa(i)),
+			ActivationEpoch:   activationEpoch,
+			PublicKey:         []byte(strconv.Itoa(i)),
+			WithdrawableEpoch: withdrawableEpoch,
+			Slashed:           slashed,
+			ExitEpoch:         exitEpoch,
 		}
 	}
 	bs := &BeaconChainServer{
@@ -813,8 +828,20 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
 		[]byte("2"),
 		[]byte("4"),
 	}
-	if !reflect.DeepEqual(wantedActive, res.ActivatedPublicKeys) {
-		t.Errorf("Wanted %v, received %v", wantedActive, res.ActivatedPublicKeys)
+	wantedSlashed := [][]byte{
+		[]byte("3"),
+	}
+	wantedExited := [][]byte{
+		[]byte("5"),
+	}
+	wanted := &ethpb.ActiveSetChanges{
+		Epoch:               0,
+		ActivatedPublicKeys: wantedActive,
+		ExitedPublicKeys:    wantedExited,
+		SlashedPublicKeys:   wantedSlashed,
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 }
 
