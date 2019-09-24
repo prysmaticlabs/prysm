@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -19,7 +20,7 @@ import (
 )
 
 const blockBatchSize = 64
-const readTimeout = 10 * time.Second
+const counterSeconds = 20
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer,
@@ -34,6 +35,8 @@ const readTimeout = 10 * time.Second
 func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	ctx := context.Background()
 
+	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
+
 	var requestBlocks = func(req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
 		log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
 		stream, err := s.p2p.Send(ctx, req, pid)
@@ -41,18 +44,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return nil, errors.Wrap(err, "failed to send request to peer")
 		}
 		defer stream.Close()
-
-		//if err := stream.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-		//	return nil, err
-		//}
-
-		//code, errMsg, err := prysmsync.ReadStatusCode(stream, s.p2p.Encoding())
-		//if err != nil {
-		//	return nil, errors.Wrap(err, "failed to read response status")
-		//}
-		//if code != 0 {
-		//	return nil, errors.New(errMsg)
-		//}
 
 		resp := make([]*eth.BeaconBlock, 0, req.Count)
 		for {
@@ -134,6 +125,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		})
 
 		for _, blk := range blocks {
+			counter.Incr(1)
+			rate := float64(counter.Rate()) / counterSeconds
+			if rate == 0 {
+				rate = 1
+			}
+			log.Infof("Processing block %d/%d. %.1f blocks per second. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), rate, float64(slotsSinceGenesis(genesis)-blk.Slot)/rate)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}

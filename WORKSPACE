@@ -1275,3 +1275,9 @@ go_repository(
     commit = "51f6971f5f06ec101e5fbcabe5a49477708540f3",
     importpath = "roughtime.googlesource.com/roughtime.git",
 )
+
+go_repository(
+    name = "com_github_paulbellamy_ratecounter",
+    commit = "a803f0e4f07116687bb30965e8f7d0c32981b63c",
+    importpath = "github.com/paulbellamy/ratecounter",
+)
