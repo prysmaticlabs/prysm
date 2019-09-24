@@ -117,7 +117,7 @@ message AttestationDataRequest {
 
 // An Ethereum 2.0 validator.
 message Validator {
-    // 96 byte BLS public key used for the validator's activities.
+    // 48 byte BLS public key used for the validator's activities.
     bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
 
     // 32 byte hash of the withdrawal destination public key.

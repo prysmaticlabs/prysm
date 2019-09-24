@@ -36,6 +36,7 @@ type TestP2P struct {
 	Host            host.Host
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
+	DelaySend       bool
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -199,6 +200,10 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (netwo
 	// Close stream for writing.
 	if err := stream.Close(); err != nil {
 		return nil, err
+	}
+	// Delay returning the stream for testing purposes
+	if p.DelaySend {
+		time.Sleep(1 * time.Second)
 	}
 
 	return stream, nil
