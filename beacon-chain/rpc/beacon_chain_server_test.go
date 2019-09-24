@@ -780,7 +780,42 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 }
 
 func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
-
+	ctx := context.Background()
+	validators := make([]*ethpb.Validator, 5)
+	headState := &pbp2p.BeaconState{
+		Slot:       0,
+		Validators: validators,
+	}
+	for i := 0; i < len(validators); i++ {
+		activationEpoch := params.BeaconConfig().FarFutureEpoch
+		if i%2 == 0 {
+			activationEpoch = helpers.DelayedActivationExitEpoch(0)
+		}
+		headState.Validators[i] = &ethpb.Validator{
+			ActivationEpoch: activationEpoch,
+			PublicKey:       []byte(strconv.Itoa(i)),
+		}
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0},
+		},
+	}
+	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedActive := [][]byte{
+		[]byte("0"),
+		[]byte("2"),
+		[]byte("4"),
+	}
+	if !reflect.DeepEqual(wantedActive, res.ActivatedPublicKeys) {
+		t.Errorf("Wanted %v, received %v", wantedActive, res.ActivatedPublicKeys)
+	}
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
