@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math"
 	"sort"
@@ -130,7 +131,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if rate == 0 {
 				rate = 1
 			}
-			log.Infof("Processing block %d/%d. %.1f blocks per second. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), rate, float64(slotsSinceGenesis(genesis)-blk.Slot)/rate)
+			log.WithField("peers", fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys()))).Infof("Processing block %d/%d. %.1f blocks per second. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), rate, float64(slotsSinceGenesis(genesis)-blk.Slot)/rate)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}
