@@ -2,8 +2,7 @@ package slasher
 
 import (
 	"context"
-	"reflect"
-
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -30,22 +29,24 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attesta
 // IsSlashableBlock returns a proposer slashing if the block header submitted is
 // a slashable proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlashingRequest) (*ethpb.ProposerSlashingResponse, error) {
-	//TODO: add signature validation
-	ep := helpers.SlotToEpoch(psr.BlockHeader.Slot)
-	bha, err := ss.slasherDb.BlockHeader(ep, psr.ValidatorIndex)
+	//TODO(#3133): add signature validation
+	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
+	bha, err := ss.slasherDb.BlockHeader(epoch, psr.ValidatorIndex)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "slasher service error while trying to retrieve blocks")
 	}
 	pSlashingsResponse := &ethpb.ProposerSlashingResponse{}
+	presentInDb := false
 	for _, bh := range bha {
-		if reflect.DeepEqual(bh, psr.BlockHeader) {
+		if proto.Equal(bh, psr.BlockHeader) {
+			presentInDb = true
 			continue
 		}
 		pSlashingsResponse.ProposerSlashing = append(pSlashingsResponse.ProposerSlashing, &ethpb.ProposerSlashing{ProposerIndex: psr.ValidatorIndex, Header_1: psr.BlockHeader, Header_2: bh})
 	}
-	if len(pSlashingsResponse.ProposerSlashing) == 0 {
-		err = ss.slasherDb.SaveBlockHeader(ep, psr.ValidatorIndex, psr.BlockHeader)
+	if len(pSlashingsResponse.ProposerSlashing) == 0 && !presentInDb {
+		err = ss.slasherDb.SaveBlockHeader(epoch, psr.ValidatorIndex, psr.BlockHeader)
 		if err != nil {
 			return nil, err
 		}
