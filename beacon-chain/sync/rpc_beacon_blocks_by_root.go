@@ -2,13 +2,13 @@ package sync
 
 import (
 	"context"
+	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -23,37 +23,22 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	}
 	for i := 0; i < len(blockRoots); i++ {
 		blk, err := ReadChunkedBlock(stream, r.p2p)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.WithError(err).Error("Unable to retrieve block from stream")
 			return err
 		}
-		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
-			log.WithError(err).Error("Unable to process block")
-			return nil
-
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
-	if err != nil {
-		return err
-	}
-
-	if code != 0 {
-		return errors.New(errMsg)
-	}
-
-	resp := make([]*eth.BeaconBlock, 0)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return err
-	}
-
-	r.pendingQueueLock.Lock()
-	defer r.pendingQueueLock.Unlock()
-	for _, blk := range resp {
+		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[blk.Slot] = blk
 		blkRoot, err := ssz.SigningRoot(blk)
 		if err != nil {
 			return err
 		}
 		r.seenPendingBlocks[blkRoot] = true
+		r.pendingQueueLock.Unlock()
+
 	}
 	return nil
 }
