@@ -2,7 +2,6 @@ package sync
 
 import (
 	"errors"
-	"io"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -36,9 +35,6 @@ func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, 
 func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) error {
 	setStreamReadDeadline(stream, 10 /* seconds */)
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
-	if err == io.EOF {
-		return errors.New("reached the end of the stream")
-	}
 	if err != nil {
 		return err
 	}

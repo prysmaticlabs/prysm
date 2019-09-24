@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -117,6 +118,9 @@ func (s *InitialSync) Start() {
 
 		for i := req.StartSlot; i < req.StartSlot+(req.Count*req.Step); i += req.Step {
 			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				log.Error(err)
 				break
