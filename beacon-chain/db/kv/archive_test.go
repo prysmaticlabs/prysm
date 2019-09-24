@@ -15,16 +15,12 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 	ctx := context.Background()
 	activated := []uint64{3, 4, 5}
 	exited := []uint64{6, 7, 8}
-	ejected := []uint64{1, 2}
-	proposerSlashed := []uint64{1212}
-	attestersSlashed := []uint64{444444}
+	slashed := []uint64{1212}
 	someRoot := [32]byte{1, 2, 3}
 	changes := &ethpb.ArchivedActiveSetChanges{
-		Activated:        activated,
-		Exited:           exited,
-		Ejected:          ejected,
-		ProposersSlashed: proposerSlashed,
-		AttestersSlashed: attestersSlashed,
+		Activated: activated,
+		Exited:    exited,
+		Slashed:   slashed,
 		VoluntaryExits: []*ethpb.VoluntaryExit{
 			{
 				Epoch:          5,
@@ -123,7 +119,7 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	someSeed := [32]byte{1, 2, 3}
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           someSeed[:],
-		CurrentShard:   10,
+		StartShard:     10,
 		CommitteeCount: 4096,
 	}
 	epoch := uint64(10)
@@ -181,8 +177,6 @@ func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	ctx := context.Background()
 	epoch := uint64(10)
 	part := &ethpb.ValidatorParticipation{
-		Epoch:                   epoch,
-		Finalized:               true,
 		GlobalParticipationRate: 0.99,
 		EligibleEther:           12202000,
 		VotedEther:              12079998,

@@ -91,5 +91,6 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 				log.WithError(err).Error("Failed to handle p2p RPC")
 			}
 		}
+
 	})
 }

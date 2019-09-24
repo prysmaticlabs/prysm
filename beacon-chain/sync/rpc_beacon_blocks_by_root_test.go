@@ -8,14 +8,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -116,8 +114,9 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		statusTracker: make(map[peer.ID]*pb.Status),
-		ctx:           context.Background(),
+		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
 	}
 
 	// Setup streams

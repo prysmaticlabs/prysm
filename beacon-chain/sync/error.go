@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 const genericError = "internal service error"
@@ -19,7 +18,7 @@ var responseCodeServerError = byte(0x02)
 
 func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	if _, err := r.p2p.Encoding().EncodeWithLength(buf, &pb.ErrorMessage{ErrorMessage: reason}); err != nil {
+	if _, err := r.p2p.Encoding().EncodeWithLength(buf, []byte(reason)); err != nil {
 		return nil, err
 	}
 
