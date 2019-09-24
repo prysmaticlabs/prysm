@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gogo/protobuf/test/required"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
