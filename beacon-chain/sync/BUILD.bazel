@@ -12,6 +12,7 @@ go_library(
         "rpc.go",
         "rpc_beacon_blocks_by_range.go",
         "rpc_beacon_blocks_by_root.go",
+        "rpc_chunked_response.go",
         "rpc_goodbye.go",
         "rpc_status.go",
         "service.go",
