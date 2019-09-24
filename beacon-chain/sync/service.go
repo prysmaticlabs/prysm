@@ -66,6 +66,7 @@ type RegularSync struct {
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool
 	initialSync         Checker
+	validateBlockLock    sync.RWMutex
 }
 
 // Start the regular sync service.
