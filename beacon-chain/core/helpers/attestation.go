@@ -55,6 +55,7 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	baseAtt := a1
 	newAtt := a2
+
 	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
 		return baseAtt, nil
 	}
