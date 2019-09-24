@@ -3,9 +3,10 @@ package slasher
 import (
 	"context"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
 
-	ptypes "github.com/gogo/protobuf/types"
+	types "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -55,13 +56,13 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlash
 }
 
 // SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
-func (ss *Server) SlashableProposals(ctx context.Context, req *ptypes.Empty) (*ethpb.ProposerSlashing, error) {
+func (ss *Server) SlashableProposals(req *types.Empty, server ethpb.Slasher_SlashableProposalsServer) error {
 	// TODO(#3133): this should be a stream
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	return status.Error(codes.Unimplemented, "not implemented")
 }
 
 // SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
-func (ss *Server) SlashableAttestations(ctx context.Context, req *ptypes.Empty) (*ethpb.ProposerSlashing, error) {
+func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_SlashableAttestationsServer) error {
 	// TODO(#3133): this should be a stream
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	return status.Error(codes.Unimplemented, "not implemented")
 }

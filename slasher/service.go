@@ -4,15 +4,16 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"net"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/slasher/db"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -29,9 +30,11 @@ func init() {
 type Service struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
-	slasherDb       db.Database
+	slasherDb       *db.Store
 	grpcServer      *grpc.Server
 	port            string
+	withCert        string
+	withKey         string
 	listener        net.Listener
 	credentialError error
 }
@@ -41,7 +44,7 @@ type Config struct {
 	Port      string
 	CertFlag  string
 	KeyFlag   string
-	SlasherDb db.Database
+	SlasherDb *db.Store
 }
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
@@ -78,24 +81,24 @@ func (s *Service) Start() {
 	}
 	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
-	//if s.withCert != "" && s.withKey != "" {
-	//	creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
-	//	if err != nil {
-	//		log.Errorf("Could not load TLS keys: %s", err)
-	//		s.credentialError = err
-	//	}
-	//	opts = append(opts, grpc.Creds(creds))
-	//} else {
-	log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
-	//}
+	if s.withCert != "" && s.withKey != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
+		if err != nil {
+			log.Errorf("Could not load TLS keys: %s", err)
+			s.credentialError = err
+		}
+		opts = append(opts, grpc.Creds(creds))
+	} else {
+		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
+	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	// nodeServer := &rpc.NodeServer{
-	// 	beaconDB:    s.beaconDB,
-	// 	server:      s.grpcServer,
-	// 	syncChecker: s.syncService,
-	// }
-	// ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	slasherServer := Server{
+		slasherDb: s.slasherDb,
+		ctx:       s.ctx,
+	}
+
+	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
