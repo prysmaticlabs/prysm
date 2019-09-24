@@ -59,6 +59,7 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 		baseAtt = a2
 		newAtt = a1
 	}
+
 	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
 		return baseAtt, nil
 	}
