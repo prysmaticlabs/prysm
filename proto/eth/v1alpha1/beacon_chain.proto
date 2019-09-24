@@ -308,7 +308,13 @@ message Validators {
 
 
 message GetValidatorActiveSetChangesRequest {
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Optional criteria to retrieve balances at a specific epoch.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve the genesis list of balances.
+        bool genesis = 2;
+    }
 }
 
 message ActiveSetChanges {

@@ -363,7 +363,8 @@ func (bs *BeaconChainServer) GetValidators(
 func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+
+	return nil, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
