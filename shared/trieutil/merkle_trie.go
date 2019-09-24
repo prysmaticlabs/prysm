@@ -64,10 +64,12 @@ func MerkleTree(leaves [][]byte) [][]byte {
 		paddedLeaves[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	merkleTree := make([][]byte, 0, len(parents)+len(leaves)+len(paddedLeaves))
-	merkleTree = append(merkleTree, parents...)
-	merkleTree = append(merkleTree, leaves...)
-	merkleTree = append(merkleTree, paddedLeaves...)
+	merkleTree := make([][]byte, len(parents)+len(leaves)+len(paddedLeaves))
+	copy(merkleTree, parents)
+	l := len(parents)
+	copy(merkleTree[l:], leaves)
+	l += len(paddedLeaves)
+	copy(merkleTree[l:], paddedLeaves)
 
 	for i := len(paddedLeaves) - 1; i > 0; i-- {
 		a := append(merkleTree[2*i], merkleTree[2*i+1]...)

@@ -1,6 +1,7 @@
 package trieutil
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -109,5 +110,19 @@ func TestIntegerSquareRoot(t *testing.T) {
 		if tt.root != root {
 			t.Errorf("GeneralizedIndexLength() = %d, want %d", tt.root, root)
 		}
+	}
+}
+
+func BenchmarkMerkleTree_Generate(b *testing.B) {
+	leaves := make([][]byte, 1<<20)
+	for i := 0; i < len(leaves); i++ {
+		b := make([]byte, 32)
+		rand.Read(b)
+		leaves[i] = b
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		MerkleTree(leaves)
 	}
 }
