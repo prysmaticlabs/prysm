@@ -20,5 +20,5 @@ func setStreamReadDeadline(stream network.Stream, duration time.Duration) {
 }
 
 func setStreamWriteDeadline(stream network.Stream, duration time.Duration) {
-	stream.SetWriteDeadline(roughtime.Now().Add(duration * time.Second)) // RESP_TIMEOUT
+	stream.SetWriteDeadline(roughtime.Now().Add(duration))
 }
