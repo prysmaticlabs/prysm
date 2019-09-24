@@ -25,8 +25,8 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	NoGenesisDelay bool // NoGenesisDelay when processing a chain start genesis event.
-	DemoConfig     bool // DemoConfig with lower deposit thresholds.
+	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
+	DemoConfig               bool // DemoConfig with lower deposit thresholds.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 
 	// Cache toggles.
