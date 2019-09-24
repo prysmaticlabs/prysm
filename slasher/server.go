@@ -17,7 +17,7 @@ import (
 // Server defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Server struct {
-	slasherDb db.Store
+	slasherDb *db.Store
 	ctx       context.Context
 }
 
@@ -44,7 +44,12 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlash
 		}
 		pSlashingsResponse.ProposerSlashing = append(pSlashingsResponse.ProposerSlashing, &ethpb.ProposerSlashing{ProposerIndex: psr.ValidatorIndex, Header_1: psr.BlockHeader, Header_2: bh})
 	}
-
+	if len(pSlashingsResponse.ProposerSlashing) == 0 {
+		err = ss.slasherDb.SaveBlockHeader(ep, psr.ValidatorIndex, psr.BlockHeader)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return pSlashingsResponse, nil
 }
 

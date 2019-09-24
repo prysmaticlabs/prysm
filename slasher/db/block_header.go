@@ -76,7 +76,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 
 	// prune history to max size every 10th epoch
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.pruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		err = db.PruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
@@ -95,7 +95,8 @@ func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader
 	})
 }
 
-func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
+// PruneHistory leaves only records younger then history size.
+func (db *Store) PruneHistory(currentEpoch uint64, historySize uint64) error {
 	pruneTill := int64(currentEpoch) - int64(historySize)
 	if pruneTill <= 0 {
 		return nil
