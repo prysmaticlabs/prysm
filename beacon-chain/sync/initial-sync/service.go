@@ -116,7 +116,7 @@ func (s *InitialSync) Start() {
 			panic(err)
 		}
 
-		for i := req.StartSlot; i < req.StartSlot+(req.Count*req.Step); i += req.Step {
+		for i := 0; i < int(req.Count); i++ {
 			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
 			if err == io.EOF {
 				break
