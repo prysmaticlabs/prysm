@@ -66,8 +66,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		root, finalizedEpoch, peers := highestFinalized()
 
 		var blocks []*eth.BeaconBlock
-		var request func(start uint64, step uint64, count uint64, peers []peer.ID) ([]*eth.BeaconBlock, error)
-		request = func(start uint64, step uint64, count uint64, peers []peer.ID) ([]*eth.BeaconBlock, error) {
+		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error)
+		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error) {
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
@@ -76,13 +76,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				start := start + uint64(i)*step
 				step := step * uint64(len(peers))
 				count := uint64(math.Min(float64(count), float64((helpers.StartSlot(finalizedEpoch+1)-start)/step)))
+				// If the count was divided by an odd number of peers, there will be some blocks
+				// missing from the first requests so we accommodate that scenario.
+				if i < remainder {
+					count++
+				}
 				if count == 0 {
 					count = 1
-				}
-				// If the count was divided by an odd number of peers, there will be one block
-				// missing from the first request so we accommodate that scenario.
-				if i == 0 && len(peers)%2 == 1 && count%2 == 1 {
-					count++
 				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
@@ -100,7 +100,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					if len(ps) == 0 {
 						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 					}
-					_, err = request(start, step /*step*/, count/uint64(len(ps)), ps)
+					_, err = request(start, step /*step*/, count/uint64(len(ps)), ps, int(count)%len(ps))
 					if err != nil {
 						return nil, err
 					}
@@ -115,7 +115,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			s.chain.HeadSlot()+1, // start
 			1,                    // step
 			blockBatchSize,       // count
-			peers,
+			peers,                // peers
+			0,                    // remainder
 		)
 		if err != nil {
 			return err
