@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -36,5 +37,9 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		return nil
 	}
 
-	return r.chain.ReceiveBlockNoPubsub(ctx, block)
+	err = r.chain.ReceiveBlockNoPubsub(ctx, block)
+	if err != nil {
+		interop.WriteBlockToDisk(block, true /*failed*/)
+	}
+	return err
 }
