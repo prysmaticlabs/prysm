@@ -82,7 +82,7 @@ func (s *InitialSync) Start() {
 	for {
 		count := peerstatus.Count()
 		log.WithField(
-			"hellos",
+			"handshakes",
 			fmt.Sprintf("%d/%d", count, minStatusCount),
 		).Info("Waiting for enough peer handshakes before syncing.")
 
