@@ -55,12 +55,13 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		ctx:       ctx,
 		cancel:    cancel,
 		slasherDb: cfg.SlasherDb,
+		port:      cfg.Port,
 	}
 }
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	log.Info("Starting service")
+	log.Info("Starting service on port: %v", s.port)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
