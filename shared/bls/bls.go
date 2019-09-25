@@ -6,11 +6,15 @@ package bls
 import (
 	"encoding/binary"
 	"io"
+	"time"
 
+	"github.com/karlseguin/ccache"
 	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
+
+var pubkeyCache = ccache.New(ccache.Configure())
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
@@ -51,12 +55,18 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
+	cv := pubkeyCache.Get(string(pub))
+	if cv != nil && cv.Value() != nil {
+		return cv.Value().(*PublicKey).Copy(), nil
+	}
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	return &PublicKey{val: k}, nil
+	pk := &PublicKey{val: k}
+	pubkeyCache.Set(string(pub), pk.Copy(), 48 * time.Hour)
+	return pk, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
@@ -92,6 +102,11 @@ func (s *SecretKey) Marshal() []byte {
 func (p *PublicKey) Marshal() []byte {
 	k := p.val.Serialize()
 	return k[:]
+}
+
+// Copy the public key to a new pointer reference.
+func (p *PublicKey) Copy() *PublicKey {
+	return &PublicKey{val: p.val.Copy()}
 }
 
 // Aggregate two public keys.
