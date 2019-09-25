@@ -145,11 +145,6 @@ func (p *TestP2P) Disconnect(pid peer.ID) error {
 	return p.Host.Network().ClosePeer(pid)
 }
 
-// AddHandshake to the peer handshake records.
-func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Status) {
-	// TODO(3147): add this.
-}
-
 // PeerID returns the Peer ID of the local peer.
 func (p *TestP2P) PeerID() peer.ID {
 	return p.Host.ID()

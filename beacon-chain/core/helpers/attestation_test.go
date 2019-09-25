@@ -1,10 +1,10 @@
 package helpers_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -96,11 +96,11 @@ func TestAggregateAttestation(t *testing.T) {
 		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
 			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
 			want: &ethpb.Attestation{AggregationBits: []byte{}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
 		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
 			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
 			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
 	}
 	for _, tt := range tests {
@@ -108,7 +108,7 @@ func TestAggregateAttestation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(got, tt.want) {
+		if !ssz.DeepEqual(got, tt.want) {
 			t.Errorf("AggregateAttestation() = %v, want %v", got, tt.want)
 		}
 	}

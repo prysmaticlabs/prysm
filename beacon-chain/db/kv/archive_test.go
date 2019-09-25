@@ -153,24 +153,6 @@ func TestStore_ArchivedBalances(t *testing.T) {
 	}
 }
 
-func TestStore_ArchivedActiveIndices(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-	ctx := context.Background()
-	indices := []uint64{2, 3, 4, 5, 6, 7}
-	epoch := uint64(10)
-	if err := db.SaveArchivedActiveIndices(ctx, epoch, indices); err != nil {
-		t.Fatal(err)
-	}
-	retrieved, err := db.ArchivedActiveIndices(ctx, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(indices, retrieved) {
-		t.Errorf("Wanted %v, received %v", indices, retrieved)
-	}
-}
-
 func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
