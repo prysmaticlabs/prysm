@@ -4,19 +4,17 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/credentials"
 	"net"
-	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -37,6 +35,7 @@ type Service struct {
 	withKey         string
 	listener        net.Listener
 	credentialError error
+	failStatus      error
 }
 
 // Config options for the slasher server.
@@ -105,9 +104,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)
@@ -127,10 +123,13 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns nil or credentialError
+// Status returns nil, credentialError or fail status
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
+	}
+	if s.failStatus != nil {
+		return s.failStatus
 	}
 	return nil
 }
