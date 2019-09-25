@@ -39,7 +39,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
-		root, finalizedEpoch, peers := highestFinalized()
+		root, finalizedEpoch, peers := bestFinalized()
 
 		var blocks []*eth.BeaconBlock
 
@@ -116,19 +116,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		})
 
 		for _, blk := range blocks {
-			counter.Incr(1)
-			rate := float64(counter.Rate()) / counterSeconds
-			if rate == 0 {
-				rate = 1
-			}
-			timeRemaining := float64(slotsSinceGenesis(genesis)-blk.Slot) / rate
-			log.WithField(
-				"peers",
-				fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
-			).WithField(
-				"blocks per second",
-				fmt.Sprintf("%.1f", rate),
-			).Infof("Processing block %d/%d. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), timeRemaining)
+			logSyncStatus(genesis, blk, peers, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}
@@ -148,7 +136,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
 	best := bestPeer()
-	root, _, _ := highestFinalized()
+	root, _, _ := bestFinalized()
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		HeadBlockRoot: root,
 		StartSlot:     s.chain.HeadSlot() + 1,
@@ -166,6 +154,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	}
 
 	for _, blk := range resp {
+		logSyncStatus(genesis, blk, []peer.ID{best}, counter)
 		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 			return err
 		}
@@ -174,6 +163,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	return nil
 }
 
+// requestBlocks by range to a specific peer.
 func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
 	log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
 	stream, err := s.p2p.Send(ctx, req, pid)
@@ -200,20 +190,16 @@ func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocks
 // highestFinalizedEpoch as reported by peers. This is the absolute highest finalized epoch as
 // reported by peers.
 func highestFinalizedEpoch() uint64 {
-	var finalizedEpoch uint64
-	for _, k := range peerstatus.Keys() {
-		s := peerstatus.Get(k)
-		finalizedEpoch = mathutil.Max(s.FinalizedEpoch, finalizedEpoch)
-	}
-
-	return finalizedEpoch
+	_, epoch, _ := bestFinalized()
+	return epoch
 }
 
-// highestFinalized returns the highest finalized epoch that is agreed upon by the majority of
+// bestFinalized returns the highest finalized epoch that is agreed upon by the majority of
 // peers. This method may not return the absolute highest finalized, but the finalized epoch in
 // which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
 // epoch.
-func highestFinalized() ([]byte, uint64, []peer.ID) {
+// Returns the best finalized root, epoch number, and peers that agree.
+func bestFinalized() ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, k := range peerstatus.Keys() {
@@ -255,4 +241,26 @@ func bestPeer() peer.ID {
 		}
 	}
 	return best
+}
+
+// logSyncStatus and increment block processing counter.
+func logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, peers []peer.ID, counter *ratecounter.RateCounter) {
+	counter.Incr(1)
+	rate := float64(counter.Rate()) / counterSeconds
+	if rate == 0 {
+		rate = 1
+	}
+	timeRemaining := time.Duration(float64(slotsSinceGenesis(genesis)-blk.Slot)/rate) * time.Second
+	log.WithField(
+		"peers",
+		fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
+	).WithField(
+		"blocks per second",
+		fmt.Sprintf("%.1f", rate),
+	).Infof(
+		"Processing block %d/%d. Estimated %s remaining.",
+		blk.Slot,
+		slotsSinceGenesis(genesis),
+		timeRemaining,
+	)
 }
