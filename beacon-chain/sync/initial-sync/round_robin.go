@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"sort"
 	"time"
 
@@ -60,7 +59,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			for i, pid := range peers {
 				start := start + uint64(i)*step
 				step := step * uint64(len(peers))
-				count := uint64(math.Min(float64(count), float64((helpers.StartSlot(finalizedEpoch+1)-start)/step)))
+				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
 				if i < remainder {
