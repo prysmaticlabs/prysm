@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	testdb "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
-	dbs := testdb.SetupSlasherDB(t)
+	dbs := db.SetupSlasherDB(t)
 
-	defer testdb.TeardownSlasherDB(t, dbs)
+	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
