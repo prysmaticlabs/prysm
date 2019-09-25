@@ -1,4 +1,4 @@
-package slasher
+package rpc
 
 import (
 	"context"
@@ -15,7 +15,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
-		slasherDb: dbs,
+		SlasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -61,7 +61,7 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	defer db.TeardownSlasherDB(t, dbs)
 
 	slasherServer := &Server{
-		slasherDb: dbs,
+		SlasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -100,7 +100,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		slasherDb: dbs,
+		SlasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -131,7 +131,7 @@ func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		slasherDb: dbs,
+		SlasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{

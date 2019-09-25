@@ -1,4 +1,4 @@
-package slasher
+package rpc
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 // Server defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Server struct {
-	slasherDb *db.Store
+	SlasherDb *db.Store
 	ctx       context.Context
 }
 
@@ -31,8 +31,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attesta
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlashingRequest) (*ethpb.ProposerSlashingResponse, error) {
 	//TODO(#3133): add signature validation
 	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
-	blockHeaders, err := ss.slasherDb.BlockHeader(epoch, psr.ValidatorIndex)
-
+	blockHeaders, err := ss.SlasherDb.BlockHeader(epoch, psr.ValidatorIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "slasher service error while trying to retrieve blocks")
 	}
@@ -46,7 +45,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlash
 		pSlashingsResponse.ProposerSlashing = append(pSlashingsResponse.ProposerSlashing, &ethpb.ProposerSlashing{ProposerIndex: psr.ValidatorIndex, Header_1: psr.BlockHeader, Header_2: bh})
 	}
 	if len(pSlashingsResponse.ProposerSlashing) == 0 && !presentInDb {
-		err = ss.slasherDb.SaveBlockHeader(epoch, psr.ValidatorIndex, psr.BlockHeader)
+		err = ss.SlasherDb.SaveBlockHeader(epoch, psr.ValidatorIndex, psr.BlockHeader)
 		if err != nil {
 			return nil, err
 		}

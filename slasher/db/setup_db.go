@@ -11,7 +11,6 @@ import (
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
 func SetupSlasherDB(t testing.TB) *Store {
-
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)

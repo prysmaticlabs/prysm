@@ -3,6 +3,7 @@ package slasher
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"net"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -88,8 +89,8 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	slasherServer := Server{
-		slasherDb: s.slasherDb,
+	slasherServer := rpc.Server{
+		SlasherDb: s.slasherDb,
 	}
 
 	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
