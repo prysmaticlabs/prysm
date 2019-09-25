@@ -30,8 +30,8 @@ type FeatureFlagConfig struct {
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 }
 
 var featureConfig *FeatureFlagConfig
