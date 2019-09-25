@@ -139,6 +139,10 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
+// OnBlock is called whenever a block is received. It runs state transition on the block and
+func (s *Store) OnBlockNoverify(ctx context.Context, b *ethpb.BeaconBlock) error {
+	return nil
+}
 // updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
 // the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
 func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
