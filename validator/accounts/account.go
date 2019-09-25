@@ -99,7 +99,9 @@ func NewValidatorAccount(directory string, password string) error {
 	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
 ========================Raw Transaction Data=======================
+
 %#x
+
 ===========================================================
 `, tx.Data())
 	return nil
