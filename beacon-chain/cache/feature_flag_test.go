@@ -7,9 +7,6 @@ func init() {
 		EnableAttestationCache:   true,
 		EnableActiveBalanceCache: true,
 		EnableAncestorBlockCache: true,
-		EnableStartShardCache:    true,
-		EnableSeedCache:          true,
 		EnableEth1DataVoteCache:  true,
-		EnableTotalBalanceCache:  true,
 	})
 }

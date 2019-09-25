@@ -73,16 +73,6 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 	if balance != wanted {
 		t.Errorf("Incorrect TotalActiveBalance. Wanted: %d, got: %d", wanted, balance)
 	}
-
-	state.Validators[1].EffectiveBalance += 5
-	cacheHitBalance, err := TotalActiveBalance(state)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if cacheHitBalance != wanted {
-		t.Errorf("Incorrect Cached TotalActiveBalance. Wanted: %d, got: %d", wanted, cacheHitBalance)
-	}
 }
 
 func TestGetBalance_OK(t *testing.T) {
