@@ -152,7 +152,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block.
-	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
+	if err := s.forkChoiceStore.OnBlockNoVerify(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	root, err := ssz.SigningRoot(block)
