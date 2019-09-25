@@ -120,10 +120,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
-	}
-
-	if err := s.saveNewAttestation(ctx, a); err != nil {
-		return 0, err
+		if err := s.saveNewAttestation(ctx, a); err != nil {
+			return 0, err
+		}
 	}
 
 	return tgtSlot, nil
@@ -185,7 +184,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	}
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
 	if err := s.aggregateAttestation(ctx, a); err != nil {
@@ -200,7 +199,6 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
@@ -214,8 +212,7 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 		s.attsQueue[root] = a
 		return nil
 	}
-
-	s.attsQueue[root] = att
+	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
 }
 

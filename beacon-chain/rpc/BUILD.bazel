@@ -37,6 +37,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
         "//shared/version:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
