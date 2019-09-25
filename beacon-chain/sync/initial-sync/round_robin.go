@@ -38,29 +38,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 
-	var requestBlocks = func(req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
-		log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
-		stream, err := s.p2p.Send(ctx, req, pid)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to send request to peer")
-		}
-		defer stream.Close()
-
-		resp := make([]*eth.BeaconBlock, 0, req.Count)
-		for {
-			blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to read chunked block")
-			}
-			resp = append(resp, blk)
-		}
-
-		return resp, nil
-	}
-
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := highestFinalized()
@@ -101,7 +78,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					Step:          step,
 				}
 
-				resp, err := requestBlocks(req, pid)
+				resp, err := s.requestBlocks(ctx, req, pid)
 				log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 				if err != nil {
 					// fail over to other peers by splitting this requests evenly across them.
@@ -184,7 +161,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		"Sending batch block request",
 	)
 
-	resp, err := requestBlocks(req, best)
+	resp, err := s.requestBlocks(ctx, req, best)
 	if err != nil {
 		return err
 	}
@@ -196,6 +173,29 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	}
 
 	return nil
+}
+
+func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
+	log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
+	stream, err := s.p2p.Send(ctx, req, pid)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send request to peer")
+	}
+	defer stream.Close()
+
+	resp := make([]*eth.BeaconBlock, 0, req.Count)
+	for {
+		blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read chunked block")
+		}
+		resp = append(resp, blk)
+	}
+
+	return resp, nil
 }
 
 // highestFinalizedEpoch as reported by peers. This is the absolute highest finalized epoch as
