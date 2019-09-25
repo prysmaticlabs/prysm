@@ -5,7 +5,6 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -36,14 +35,6 @@ func TestTotalBalance_ReturnsOne(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
-		EnableActiveBalanceCache: true,
-	})
-	defer func() {
-		featureconfig.InitFeatureConfig(nil)
-	}()
-
 	state := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
