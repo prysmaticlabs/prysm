@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -6,8 +6,11 @@ go_library(
     srcs = ["setup_db.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db/testing",
     visibility = ["//slasher:__subpackages__"],
-    deps = [
-        "//shared/testutil:go_default_library",
-        "//slasher/db:go_default_library",
-    ],
+    deps = ["//slasher/db:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["setup_db_test.go"],
+    embed = [":go_default_library"],
 )

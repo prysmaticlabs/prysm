@@ -1,15 +1,13 @@
-package db
+package testing
 
 import (
 	"os"
 	"testing"
-
-	testdb "github.com/prysmaticlabs/prysm/slasher/db/testing"
 )
 
 func TestClearDB(t *testing.T) {
-	slasherDB := testdb.SetupSlasherDB(t)
-	defer testdb.TeardownSlasherDB(t, slasherDB)
+	slasherDB := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, slasherDB)
 	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)
 	}

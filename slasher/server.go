@@ -56,12 +56,10 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlash
 
 // SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
 func (ss *Server) SlashableProposals(req *types.Empty, server ethpb.Slasher_SlashableProposalsServer) error {
-	// TODO(#3133): this should be a stream
 	return status.Error(codes.Unimplemented, "not implemented")
 }
 
 // SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
 func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_SlashableAttestationsServer) error {
-	// TODO(#3133): this should be a stream
 	return status.Error(codes.Unimplemented, "not implemented")
 }

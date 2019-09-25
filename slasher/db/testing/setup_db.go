@@ -8,7 +8,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
 
@@ -19,7 +18,7 @@ func SetupSlasherDB(t testing.TB) *db.Store {
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
 	}
-	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	p := path.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
@@ -29,6 +28,17 @@ func SetupSlasherDB(t testing.TB) *db.Store {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
 	return db
+}
+
+// TempDir returns a directory path for temporary test storage.
+func TempDir() string {
+	d := os.Getenv("TEST_TMPDIR")
+
+	// If the test is not run via bazel, the environment var won't be set.
+	if d == "" {
+		return os.TempDir()
+	}
+	return d
 }
 
 // TeardownSlasherDB cleans up a test BeaconDB instance.
