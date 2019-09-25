@@ -30,9 +30,7 @@ type FeatureFlagConfig struct {
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 
 	// Cache toggles.
-	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAncestorBlockCache bool // EnableAncestorBlockCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 }
 
@@ -67,17 +65,9 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe active balance cache")
-		cfg.EnableActiveBalanceCache = true
-	}
 	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
-	}
-	if ctx.GlobalBool(EnableAncestorBlockCacheFlag.Name) {
-		log.Warn("Enabled unsafe ancestor block cache")
-		cfg.EnableAncestorBlockCache = true
 	}
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
