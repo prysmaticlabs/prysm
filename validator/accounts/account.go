@@ -90,6 +90,8 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to create simulated backend")
 	}
+	testAcc.TxOpts.GasLimit = 1000000
+
 	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
 	if err != nil {
 		return errors.Wrap(err, "unable to create deposit transaction")
