@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -115,23 +116,15 @@ func (s *InitialSync) Start() {
 			panic(err)
 		}
 
-		// Read status code.
-		code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
-		if err != nil {
-			panic(err)
-		}
-		if code != 0 {
-			log.Errorf("Request failed. Request was %+v", req)
-			panic(errMsg)
-		}
-
-		resp := make([]*eth.BeaconBlock, 0)
-		if err := s.p2p.Encoding().DecodeWithLength(strm, &resp); err != nil {
-			log.Error(err)
-			continue
-		}
-
-		for _, blk := range resp {
+		for i := 0; i < int(req.Count); i++ {
+			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Error(err)
+				break
+			}
 			if blk.Slot <= headSlot {
 				continue
 			}
@@ -146,7 +139,6 @@ func (s *InitialSync) Start() {
 			}
 			last = blk
 		}
-
 		headSlot = s.chain.HeadSlot()
 	}
 
