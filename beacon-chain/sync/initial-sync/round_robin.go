@@ -66,6 +66,14 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		root, finalizedEpoch, peers := highestFinalized()
 
 		var blocks []*eth.BeaconBlock
+
+		// request a range of blocks to be requested from multiple peers.
+		// Example:
+		//   - number of peers = 4
+		//   - range of block slots is 64...128
+		//   Four requests will be spread across the peers using step argument to distribute the load
+		//   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
+		//   65, 69, 73... and so on for other peers.
 		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error)
 		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error) {
 			if len(peers) == 0 {
@@ -81,6 +89,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if i < remainder {
 					count++
 				}
+				// asking for no blocks may cause the client to hang. This should never happen and
+				// the peer may return an error anyway, but we'll ask for at least one block.
 				if count == 0 {
 					count = 1
 				}
@@ -94,13 +104,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				resp, err := requestBlocks(req, pid)
 				log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 				if err != nil {
-					// try other peers
+					// fail over to other peers by splitting this requests evenly across them.
 					ps := append(peers[:i], peers[i+1:]...)
 					log.WithError(err).WithField("remaining peers", len(ps)).WithField("peer", pid.Pretty()).Debug("Request failed, trying to round robin with other peers")
 					if len(ps) == 0 {
 						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 					}
-					_, err = request(start, step /*step*/, count/uint64(len(ps)), ps, int(count)%len(ps))
+					_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
 					if err != nil {
 						return nil, err
 					}
@@ -122,6 +132,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return err
 		}
 
+		// Since the block responses were appended to the list, we must sort them in order to
+		// process sequentially. This method doesn't make much wall time compared to block
+		// processing.
 		sort.Slice(blocks, func(i, j int) bool {
 			return blocks[i].Slot < blocks[j].Slot
 		})
@@ -132,7 +145,14 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if rate == 0 {
 				rate = 1
 			}
-			log.WithField("peers", fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys()))).Infof("Processing block %d/%d. %.1f blocks per second. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), rate, float64(slotsSinceGenesis(genesis)-blk.Slot)/rate)
+			timeRemaining := float64(slotsSinceGenesis(genesis)-blk.Slot) / rate
+			log.WithField(
+				"peers",
+				fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
+			).WithField(
+				"blocks per second",
+				fmt.Sprintf("%.1f", rate),
+			).Infof("Processing block %d/%d. Estimated %.0f seconds remaining.", blk.Slot, slotsSinceGenesis(genesis), timeRemaining)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}
@@ -145,7 +165,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		return nil
 	}
 
-	// Step 2 - sync to head.
+	// Step 2 - sync to head from any single peer.
+	// This step might need to be improved for cases where there has been a long period since
+	// finality. This step is less important than syncing to finality in terms of threat
+	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
+	// we receive there after must build on the finalized chain or be considered invalid during
+	// fork choice resolution / block processing.
 	best := bestPeer()
 	root, _, _ := highestFinalized()
 	req := &p2ppb.BeaconBlocksByRangeRequest{
@@ -173,7 +198,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	return nil
 }
 
-// highestFinalizedEpoch as reported by peers.
+// highestFinalizedEpoch as reported by peers. This is the absolute highest finalized epoch as
+// reported by peers.
 func highestFinalizedEpoch() uint64 {
 	var finalizedEpoch uint64
 	for _, k := range peerstatus.Keys() {
@@ -184,6 +210,10 @@ func highestFinalizedEpoch() uint64 {
 	return finalizedEpoch
 }
 
+// highestFinalized returns the highest finalized epoch that is agreed upon by the majority of
+// peers. This method may not return the absolute highest finalized, but the finalized epoch in
+// which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
+// epoch.
 func highestFinalized() ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
@@ -214,6 +244,7 @@ func highestFinalized() ([]byte, uint64, []peer.ID) {
 	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
 }
 
+// bestPeer returns the peer ID of the peer reporting the highest head slot.
 func bestPeer() peer.ID {
 	var best peer.ID
 	var bestSlot uint64
