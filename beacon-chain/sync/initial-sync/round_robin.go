@@ -16,6 +16,7 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -123,8 +124,14 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-				return err
+			if featureconfig.FeatureConfig().InitSyncNoVerify {
+				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
+					return err
+				}
+			} else {
+				if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+					return err
+				}
 			}
 		}
 	}

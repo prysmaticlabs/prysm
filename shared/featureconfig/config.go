@@ -28,6 +28,7 @@ type FeatureFlagConfig struct {
 	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
 	DemoConfig               bool // DemoConfig with lower deposit thresholds.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -97,6 +98,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe total balance cache")
 		cfg.EnableTotalBalanceCache = true
+	}
+	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
+		log.Warn("Initial syncing without verifying block's contents")
+		cfg.InitSyncNoVerify = true
 	}
 	InitFeatureConfig(cfg)
 }

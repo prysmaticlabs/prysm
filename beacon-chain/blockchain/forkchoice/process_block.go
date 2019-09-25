@@ -172,7 +172,7 @@ func (s *Store) OnBlockNoVerify(ctx context.Context, b *ethpb.BeaconBlock) error
 	}
 
 	log.WithField("slot", b.Slot).Info("Executing state transition on block")
-	
+
 	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")

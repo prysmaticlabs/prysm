@@ -166,11 +166,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		return errors.Wrap(err, "could not save head")
 	}
 
-	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := s.cleanupBlockOperations(ctx, block); err != nil {
-		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
-	}
-
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(block.Slot)
 
