@@ -82,7 +82,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if err != nil {
 					// fail over to other peers by splitting this requests evenly across them.
 					ps := append(peers[:i], peers[i+1:]...)
-					log.WithError(err).WithField("remaining peers", len(ps)).WithField("peer", pid.Pretty()).Debug("Request failed, trying to round robin with other peers")
+					log.WithError(err).WithField(
+						"remaining peers",
+						len(ps),
+					).WithField(
+						"peer",
+						pid.Pretty(),
+					).Debug("Request failed, trying to round robin with other peers")
 					if len(ps) == 0 {
 						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 					}
