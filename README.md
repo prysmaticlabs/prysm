@@ -35,7 +35,7 @@ Prysm can be installed either with Docker **(recommended method)** or using our 
 
 **For Bazel installations:**
   - The latest release of [Bazel](https://docs.bazel.build/versions/master/install.html)
-  - A modern GNU/Linux operating system
+  - A modern UNIX operating system (MacOS included)
 
 ## Installation
 
