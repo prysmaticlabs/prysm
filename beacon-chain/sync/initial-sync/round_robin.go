@@ -23,7 +23,7 @@ const blockBatchSize = 64
 const counterSeconds = 20
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
-// finalized peer,
+// finalized peer.
 //
 // Step 1 - Sync to finalized epoch.
 // Sync with peers of lowest finalized root with epoch greater than head state.
