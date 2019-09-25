@@ -4,9 +4,10 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/credentials"
 	"net"
 	"time"
+
+	"google.golang.org/grpc/credentials"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"

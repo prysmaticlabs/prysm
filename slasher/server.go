@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 
 	"github.com/gogo/protobuf/proto"

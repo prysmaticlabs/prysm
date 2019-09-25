@@ -2,9 +2,10 @@ package db
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/go-ssz"
 	"reflect"
 	"sort"
+
+	"github.com/prysmaticlabs/go-ssz"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
