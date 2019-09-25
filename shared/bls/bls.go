@@ -104,6 +104,7 @@ func (p *PublicKey) Marshal() []byte {
 	return k[:]
 }
 
+// Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() *PublicKey {
 	return &PublicKey{val: p.val.Copy()}
 }
