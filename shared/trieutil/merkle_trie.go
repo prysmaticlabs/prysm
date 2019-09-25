@@ -1,7 +1,6 @@
 package trieutil
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
