@@ -50,8 +50,8 @@ func init() {
 }
 
 func TestNilDBHistoryIdxAtt(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
@@ -71,8 +71,8 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 }
 
 func TestSaveIdxAtt(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
 		err := db.SaveIndexedAttestation(tt.epoch, tt.iA)
@@ -93,8 +93,8 @@ func TestSaveIdxAtt(t *testing.T) {
 }
 
 func TestDeleteHistoryIdxAtt(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
 
@@ -134,8 +134,8 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 }
 
 func TestHasIdxAtt(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
 
@@ -159,8 +159,8 @@ func TestHasIdxAtt(t *testing.T) {
 }
 
 func TestPruneHistoryIdxAtt(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
 		err := db.SaveIndexedAttestation(tt.epoch, tt.iA)

@@ -118,7 +118,7 @@ func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.Inde
 	// prune history to max size every 10th epoch
 	if epoch%10 == 0 {
 		weakSubjectivityPeriod := uint64(54000)
-		err = db.pruneHistory(epoch, weakSubjectivityPeriod)
+		err = db.PruneHistory(epoch, weakSubjectivityPeriod)
 	}
 	return err
 }
