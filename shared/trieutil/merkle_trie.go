@@ -122,7 +122,6 @@ func GeneralizedIndexLength(index int) int {
 //    """
 //    return (index & (1 << position)) > 0
 func GeneralizedIndexBit(index uint64, pos uint64) bool {
-	fmt.Println(1 << pos)
 	return (index & (1 << pos)) > 0
 }
 
