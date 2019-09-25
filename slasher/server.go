@@ -31,14 +31,14 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attesta
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlashingRequest) (*ethpb.ProposerSlashingResponse, error) {
 	//TODO(#3133): add signature validation
 	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
-	bha, err := ss.slasherDb.BlockHeader(epoch, psr.ValidatorIndex)
+	blockHeaders, err := ss.slasherDb.BlockHeader(epoch, psr.ValidatorIndex)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "slasher service error while trying to retrieve blocks")
 	}
 	pSlashingsResponse := &ethpb.ProposerSlashingResponse{}
 	presentInDb := false
-	for _, bh := range bha {
+	for _, bh := range blockHeaders {
 		if proto.Equal(bh, psr.BlockHeader) {
 			presentInDb = true
 			continue
