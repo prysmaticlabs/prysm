@@ -194,7 +194,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "1c80f374f8d07774091c0574154bbef5b261d09d",
+    commit = "e72457320e5ab146ea573d01041a1b80b87e1489",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -207,7 +207,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "977e011d625d95b2fe6daf74df06f34b60c5bc71",
+    commit = "c54dc95f42bf03c9c35a4209b372af61d49f48c0",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -357,12 +357,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_whyrusleeping_mdns",
-    commit = "ef14215e6b30606f4ce84174ed7a644a05cb1af3",
-    importpath = "github.com/whyrusleeping/mdns",
-)
-
-go_repository(
     name = "com_github_btcsuite_btcd",
     commit = "306aecffea325e97f513b3ff0cf7895a5310651d",
     importpath = "github.com/btcsuite/btcd",
@@ -448,12 +442,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_libp2p_go_testutil",
-    commit = "9a5d4c55819de9fd3e07181003d1e722621f6b84",  # v0.1.0
-    importpath = "github.com/libp2p/go-testutil",
-)
-
-go_repository(
     name = "com_github_libp2p_go_maddr_filter",
     commit = "4d5679194bce9c87a81d3b9948a4b5edd5ddc094",  # v0.0.5
     importpath = "github.com/libp2p/go-maddr-filter",
@@ -481,12 +469,6 @@ go_repository(
     name = "com_github_whyrusleeping_timecache",
     commit = "cfcb2f1abfee846c430233aef0b630a946e0a5a6",
     importpath = "github.com/whyrusleeping/timecache",
-)
-
-go_repository(
-    name = "com_github_miekg_dns",
-    commit = "b13675009d59c97f3721247d9efa8914e1866a5b",  # v1.1.15
-    importpath = "github.com/miekg/dns",
 )
 
 go_repository(
@@ -601,12 +583,6 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
     commit = "da3b45205dfce3ef3926054ffd5dee76f5903382",  # v0.1.4
     importpath = "github.com/libp2p/go-libp2p-blankhost",
-)
-
-go_repository(
-    name = "com_github_steakknife_hamming",
-    commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
-    importpath = "github.com/steakknife/hamming",
 )
 
 go_repository(
@@ -956,12 +932,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_rjeczalik_notify",
-    commit = "69d839f37b13a8cb7a78366f7633a4071cb43be7",  # v0.9.2
-    importpath = "github.com/rjeczalik/notify",
-)
-
-go_repository(
     name = "com_github_edsrzf_mmap_go",
     commit = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c",  # v1.0.0
     importpath = "github.com/edsrzf/mmap-go",
@@ -977,12 +947,6 @@ go_repository(
     name = "in_gopkg_natefinch_npipe_v2",
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
-)
-
-go_repository(
-    name = "org_golang_x_exp",
-    commit = "438050ddec5e7f808979ed57d041cebbc8e2d8a9",
-    importpath = "golang.org/x/exp",
 )
 
 go_repository(
@@ -1141,12 +1105,6 @@ load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
 go_ssz_dependencies()
 
 go_repository(
-    name = "com_github_burntsushi_toml",
-    commit = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005",  # v0.3.1
-    importpath = "github.com/BurntSushi/toml",
-)
-
-go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
     commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
@@ -1178,27 +1136,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_gregjones_httpcache",
-    commit = "901d90724c7919163f472a9812253fb26761123d",
-    importpath = "github.com/gregjones/httpcache",
-)
-
-go_repository(
-    name = "com_github_peterbourgon_diskv",
-    commit = "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",  # v3.0.0
-    importpath = "github.com/peterbourgon/diskv",
-)
-
-go_repository(
     name = "com_github_googleapis_gnostic",
     commit = "ab0dd09aa10e2952b28e12ecd35681b20463ebab",  # v0.3.1
     importpath = "github.com/googleapis/gnostic",
-)
-
-go_repository(
-    name = "com_github_google_btree",
-    commit = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306",  # v1.0.0
-    importpath = "github.com/google/btree",
 )
 
 go_repository(
@@ -1274,4 +1214,10 @@ go_repository(
     build_file_generation = "on",
     commit = "51f6971f5f06ec101e5fbcabe5a49477708540f3",
     importpath = "roughtime.googlesource.com/roughtime.git",
+)
+
+go_repository(
+    name = "com_github_paulbellamy_ratecounter",
+    commit = "a803f0e4f07116687bb30965e8f7d0c32981b63c",
+    importpath = "github.com/paulbellamy/ratecounter",
 )

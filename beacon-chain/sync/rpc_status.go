@@ -12,21 +12,37 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
+
+const statusInterval = 6 * time.Minute // 60 slots.
+
+// maintainPeerStatuses by infrequently polling peers for their latest status.
+func (r *RegularSync) maintainPeerStatuses() {
+	ticker := time.NewTicker(statusInterval)
+	for {
+		ctx := context.Background()
+		select {
+		case <-ticker.C:
+			for _, pid := range peerstatus.Keys() {
+				// If the status hasn't been updated in the recent interval time.
+				if roughtime.Now().After(peerstatus.LastUpdated(pid).Add(statusInterval)) {
+					if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
+						log.WithError(err).Error("Failed to request peer status")
+					}
+				}
+			}
+
+		case <-r.ctx.Done():
+			return
+		}
+	}
+}
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
 func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
-	log := log.WithField("rpc", "status")
-
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-
-	// return if hello already exists
-	hello := peerstatus.Get(id)
-	if hello != nil {
-		log.Debugf("Peer %s already exists", id)
-		return nil
-	}
 
 	resp := &pb.Status{
 		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,

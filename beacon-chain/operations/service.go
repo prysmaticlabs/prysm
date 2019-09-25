@@ -214,10 +214,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	lock := s.retrieveLock(root)
-	lock.Lock()
-	defer lock.Unlock()
-
 	savedAtt, ok := s.attestationPool[root]
 	if !ok {
 		s.attestationPool[root] = attestation
@@ -244,8 +240,10 @@ func (s *Service) removeOperations() {
 		select {
 		case <-incomingBlockSub.Err():
 			log.Debug("Subscriber closed, exiting goroutine")
+			return
 		case <-s.ctx.Done():
 			log.Debug("operations service context closed, exiting remove goroutine")
+			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(ctx, s.handleProcessedBlock, block)
@@ -275,10 +273,14 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 			return err
 		}
 
-		_, ok := s.attestationPool[root]
+		retAtt, ok := s.attestationPool[root]
 		if ok {
-			delete(s.attestationPool, root)
-			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
+			// only delete if the processed attestation has included all the validators
+			// from the attestation pool for that attestation.
+			if attestation.AggregationBits.Contains(retAtt.AggregationBits) {
+				delete(s.attestationPool, root)
+				log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
+			}
 		}
 	}
 	return nil
