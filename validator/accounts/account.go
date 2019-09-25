@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -86,24 +86,18 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to generate deposit data")
 	}
-	testAcc, err := contract.Setup()
+	serializedData, err := ssz.Marshal(data)
 	if err != nil {
-		return errors.Wrap(err, "unable to create simulated backend")
+		return errors.Wrap(err, "could not serialize deposit data")
 	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
-	if err != nil {
-		return errors.Wrap(err, "unable to create deposit transaction")
-	}
-	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
+	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
-========================Raw Transaction Data=======================
+========================Deposit Data=======================
 
 %#x
 
 ===========================================================
-`, tx.Data())
+`, serializedData)
 	return nil
 }
 
