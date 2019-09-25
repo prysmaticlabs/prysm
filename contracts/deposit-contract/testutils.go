@@ -54,6 +54,7 @@ func Setup() (*TestAccount, error) {
 		return nil, err
 	}
 	backend.Commit()
+	txOpts.GasLimit = 1000000
 
 	return &TestAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
