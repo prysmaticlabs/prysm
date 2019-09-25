@@ -2,7 +2,6 @@
 package slasher
 
 import (
-	"context"
 	"fmt"
 	"net"
 
@@ -26,8 +25,6 @@ func init() {
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
 	port            string
@@ -48,11 +45,9 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewRPCService(cfg *Config) *Service {
+
 	return &Service{
-		ctx:       ctx,
-		cancel:    cancel,
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
 	}
@@ -95,7 +90,6 @@ func (s *Service) Start() {
 
 	slasherServer := Server{
 		slasherDb: s.slasherDb,
-		ctx:       s.ctx,
 	}
 
 	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
@@ -115,7 +109,6 @@ func (s *Service) Start() {
 // Stop the service.
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
-	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")

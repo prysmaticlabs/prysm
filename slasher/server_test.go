@@ -15,7 +15,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
-		ctx:       ctx,
 		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
@@ -60,9 +59,8 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 
 	defer db.TeardownSlasherDB(t, dbs)
-	ctx := context.Background()
+
 	slasherServer := &Server{
-		ctx:       ctx,
 		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
@@ -79,6 +77,7 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
+	ctx := context.Background()
 
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
