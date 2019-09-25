@@ -3,10 +3,13 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	_ "go.uber.org/automaxprocs"
@@ -17,44 +20,44 @@ func TestBootnode_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	privKey := extractPrivateKey()
-	listener := createListener(ipAddr, 4000, privKey)
+	privKey, _ := extractPrivateKey()
+	cfg := discover.Config{
+		PrivateKey: privKey,
+	}
+	listener := createListener(ipAddr, 4000, cfg)
 	defer listener.Close()
 
-	privKey = extractPrivateKey()
-	listener2 := createListener(ipAddr, 4001, privKey)
-	defer listener.Close()
-
-	err = listener.SetFallbackNodes([]*discv5.Node{listener2.Self()})
+	cfg.PrivateKey, _ = extractPrivateKey()
+	bootNode, err := enode.Parse(enode.ValidSchemes, listener.Self().String())
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = listener2.SetFallbackNodes([]*discv5.Node{listener.Self()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg.Bootnodes = []*enode.Node{bootNode}
+	listener2 := createListener(ipAddr, 4001, cfg)
+	defer listener2.Close()
 
 	// test that both the nodes have the other peer stored in their local table.
 	listenerNode := listener.Self()
 	listenerNode2 := listener2.Self()
 
-	nodes := listener.Lookup(listenerNode2.ID)
-	if len(nodes) != 2 {
-		t.Errorf("Length of nodes stored in table is not expected. Wanted %d but got %d", 2, len(nodes))
+	time.Sleep(1 * time.Second)
+
+	nodes := listener.Lookup(listenerNode2.ID())
+	if len(nodes) == 0 {
+		t.Fatalf("Length of nodes stored in table is not expected. Wanted to be more than %d but got %d", 0, len(nodes))
 
 	}
-	if nodes[0].ID != listenerNode2.ID {
-		t.Errorf("Wanted node ID of %s but got %s", listenerNode2.ID, nodes[1].ID)
+	if nodes[0].ID() != listenerNode2.ID() {
+		t.Errorf("Wanted node ID of %s but got %s", listenerNode2.ID(), nodes[1].ID())
 	}
 
-	nodes = listener2.Lookup(listenerNode.ID)
-	if len(nodes) != 2 {
-		t.Errorf("Length of nodes stored in table is not expected. Wanted %d but got %d", 2, len(nodes))
+	nodes = listener2.Lookup(listenerNode.ID())
+	if len(nodes) == 0 {
+		t.Errorf("Length of nodes stored in table is not expected. Wanted to be more than %d but got %d", 0, len(nodes))
 
 	}
-	if nodes[0].ID != listenerNode.ID {
-		t.Errorf("Wanted node ID of %s but got %s", listenerNode.ID, nodes[1].ID)
+	if nodes[0].ID() != listenerNode.ID() {
+		t.Errorf("Wanted node ID of %s but got %s", listenerNode.ID(), nodes[1].ID())
 	}
 }
 
@@ -63,14 +66,14 @@ func TestPrivateKey_ParsesCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	marshalledKey, err := crypto.MarshalPrivateKey(privKey)
+
+	pk, err := privKey.Raw()
 	if err != nil {
 		t.Fatal(err)
 	}
-	encodedKey := crypto.ConfigEncodeKey(marshalledKey)
-	*privateKey = encodedKey
+	*privateKey = fmt.Sprintf("%x", pk)
 
-	extractedKey := extractPrivateKey()
+	extractedKey, _ := extractPrivateKey()
 
 	rawKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privKey.(*crypto.Secp256k1PrivateKey)))
 

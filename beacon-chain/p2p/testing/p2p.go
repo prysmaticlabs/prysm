@@ -19,17 +19,15 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 
 // TopicMappings are the protocol ids for the different types of requests.
 var TopicMappings = map[reflect.Type]string{
-	reflect.TypeOf(&pb.Hello{}):                     "/eth2/beacon_chain/req/hello/1",
-	reflect.TypeOf(&pb.Goodbye{}):                   "/eth2/beacon_chain/req/goodbye/1",
-	reflect.TypeOf(&pb.BeaconBlocksRequest{}):       "/eth2/beacon_chain/req/beacon_blocks/1",
-	reflect.TypeOf(&pb.RecentBeaconBlocksRequest{}): "/eth2/beacon_chain/req/recent_beacon_blocks/1",
+	reflect.TypeOf(&pb.Status{}):                     "/eth2/beacon_chain/req/status/1",
+	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/goodbye/1",
+	reflect.TypeOf(&pb.BeaconBlocksByRangeRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+	reflect.TypeOf([][32]byte{}):                     "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -38,6 +36,7 @@ type TestP2P struct {
 	Host            host.Host
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
+	DelaySend       bool
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -83,7 +82,7 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	}
 	defer s.Close()
 
-	n, err := p.Encoding().Encode(s, msg)
+	n, err := p.Encoding().EncodeWithLength(s, msg)
 	if err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
@@ -147,7 +146,7 @@ func (p *TestP2P) Disconnect(pid peer.ID) error {
 }
 
 // AddHandshake to the peer handshake records.
-func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
+func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Status) {
 	// TODO(3147): add this.
 }
 
@@ -176,8 +175,20 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 	})
 }
 
+// AddDisconnectionHandler --
+func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+	p.Host.Network().Notify(&network.NotifyBundle{
+		DisconnectedF: func(net network.Network, conn network.Conn) {
+			// Must be handled in a goroutine as this callback cannot be blocking.
+			go func() {
+				f(context.Background(), conn.RemotePeer())
+			}()
+		},
+	})
+}
+
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (network.Stream, error) {
+func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (network.Stream, error) {
 	protocol := TopicMappings[reflect.TypeOf(msg)]
 	if protocol == "" {
 		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)
@@ -187,7 +198,7 @@ func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (net
 		return nil, err
 	}
 
-	if _, err := p.Encoding().Encode(stream, msg); err != nil {
+	if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
 		return nil, err
 	}
 
@@ -195,14 +206,12 @@ func (p *TestP2P) Send(ctx context.Context, msg proto.Message, pid peer.ID) (net
 	if err := stream.Close(); err != nil {
 		return nil, err
 	}
+	// Delay returning the stream for testing purposes
+	if p.DelaySend {
+		time.Sleep(1 * time.Second)
+	}
 
 	return stream, nil
-}
-
-// Subscribe to some topic. Not implemented.
-func (p *TestP2P) Subscribe(msg proto.Message, ch chan deprecatedp2p.Message) event.Subscription {
-	// TODO(3147): remove this.
-	return nil
 }
 
 // Started always returns true.

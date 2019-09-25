@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
 load("//tools:binary_targets.bzl", "binary_targets")
@@ -7,6 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = [
+        "interop.go",
         "main.go",
         "usage.go",
     ],
@@ -17,6 +18,7 @@ go_library(
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/interop:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
@@ -36,6 +38,7 @@ go_library(
 go_image(
     name = "image",
     srcs = [
+        "interop.go",
         "main.go",
         "usage.go",
     ],
@@ -52,6 +55,7 @@ go_image(
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/interop:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
@@ -101,3 +105,10 @@ go_binary(
     tags = ["manual"],
     visibility = ["//visibility:public"],
 ) for pair in binary_targets]
+
+go_test(
+    name = "go_default_test",
+    srcs = ["usage_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@com_github_urfave_cli//:go_default_library"],
+)

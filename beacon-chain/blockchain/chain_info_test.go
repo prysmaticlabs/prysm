@@ -5,7 +5,6 @@ import (
 	"context"
 	"reflect"
 	"testing"
-	"time"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -13,8 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Ensure ChainService implements chain info interface.
-var _ = ChainInfoRetriever(&ChainService{})
+// Ensure Service implements chain info interface.
+var _ = ChainInfoFetcher(&Service{})
+var _ = GenesisTimeFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	c := setupBeaconChain(t, nil)
@@ -47,7 +47,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
-	c := &ChainService{}
+	c := &Service{}
 	c.headSlot = 100
 	if c.HeadSlot() != 100 {
 		t.Errorf("Wanted head slot: %d, got: %d", 100, c.HeadSlot())
@@ -55,7 +55,7 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {
-	c := &ChainService{canonicalRoots: make(map[uint64][]byte)}
+	c := &Service{canonicalRoots: make(map[uint64][]byte)}
 	c.headSlot = 100
 	c.canonicalRoots[c.headSlot] = []byte{'A'}
 	if !bytes.Equal([]byte{'A'}, c.HeadRoot()) {
@@ -65,7 +65,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1}
-	c := &ChainService{headBlock: b}
+	c := &Service{headBlock: b}
 	if !reflect.DeepEqual(b, c.HeadBlock()) {
 		t.Error("incorrect head block received")
 	}
@@ -73,26 +73,18 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 
 func TestHeadState_CanRetrieve(t *testing.T) {
 	s := &pb.BeaconState{Slot: 2}
-	c := &ChainService{headState: s}
+	c := &Service{headState: s}
 	if !reflect.DeepEqual(s, c.HeadState()) {
 		t.Error("incorrect head state received")
 	}
 }
 
 func TestCanonicalRoot_CanRetrieve(t *testing.T) {
-	c := &ChainService{canonicalRoots: make(map[uint64][]byte)}
+	c := &Service{canonicalRoots: make(map[uint64][]byte)}
 	slot := uint64(123)
 	r := []byte{'B'}
 	c.canonicalRoots[slot] = r
 	if !bytes.Equal(r, c.CanonicalRoot(slot)) {
 		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.CanonicalRoot(slot))
-	}
-}
-
-func TestGenesisTime_CanRetrieve(t *testing.T) {
-	c := &ChainService{}
-	c.genesisTime = time.Unix(100, 0)
-	if c.GenesisTime() != time.Unix(100, 0) {
-		t.Error("incorrect genesis time received")
 	}
 }

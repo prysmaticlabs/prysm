@@ -1,7 +1,6 @@
 package validators
 
 import (
-	"reflect"
 	"strconv"
 	"testing"
 
@@ -98,38 +97,6 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	}
 }
 
-func TestExitValidator_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:      100, // epoch 2
-		Slashings: []uint64{0},
-		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, PublicKey: []byte{'B'}},
-		},
-	}
-	newState := ExitValidator(state, 0)
-
-	currentEpoch := helpers.CurrentEpoch(state)
-	wantedEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	if newState.Validators[0].ExitEpoch != wantedEpoch {
-		t.Errorf("Wanted exit slot %d, got %d",
-			wantedEpoch,
-			newState.Validators[0].ExitEpoch)
-	}
-}
-
-func TestExitValidator_AlreadyExited(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 1000,
-		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-		},
-	}
-	state = ExitValidator(state, 0)
-	if state.Validators[0].ExitEpoch != params.BeaconConfig().ActivationExitDelay {
-		t.Error("Expected exited validator to stay exited")
-	}
-}
-
 func TestSlashValidator_OK(t *testing.T) {
 	registry := make([]*ethpb.Validator, 0)
 	balances := make([]uint64, 0)
@@ -193,47 +160,5 @@ func TestSlashValidator_OK(t *testing.T) {
 	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-(state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
 		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
 			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])
-	}
-
-}
-
-func TestInitializeValidatoreStore(t *testing.T) {
-	registry := make([]*ethpb.Validator, 0)
-	indices := make([]uint64, 0)
-	validatorsLimit := 100
-	for i := 0; i < validatorsLimit; i++ {
-		registry = append(registry, &ethpb.Validator{
-			PublicKey:       []byte(strconv.Itoa(i)),
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-		})
-		indices = append(indices, uint64(i))
-	}
-
-	bState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       0,
-	}
-
-	if _, ok := VStore.activatedValidators[helpers.CurrentEpoch(bState)]; ok {
-		t.Fatalf("Validator store already has indices saved in this epoch")
-	}
-
-	InitializeValidatorStore(bState)
-	retrievedIndices := VStore.activatedValidators[helpers.CurrentEpoch(bState)]
-
-	if !reflect.DeepEqual(retrievedIndices, indices) {
-		t.Errorf("Saved active indices are not the same as the one in the validator store, got %v but expected %v", retrievedIndices, indices)
-	}
-}
-
-func TestInsertActivatedIndices_Works(t *testing.T) {
-	InsertActivatedIndices(100, []uint64{1, 2, 3})
-	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3}) {
-		t.Error("Activated validators aren't the same")
-	}
-	InsertActivatedIndices(100, []uint64{100})
-	if !reflect.DeepEqual(VStore.activatedValidators[100], []uint64{1, 2, 3, 100}) {
-		t.Error("Activated validators aren't the same")
 	}
 }

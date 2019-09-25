@@ -7,7 +7,6 @@ go_library(
         "block.go",
         "cache.go",
         "committee.go",
-        "eth1data.go",
         "randao.go",
         "rewards_penalties.go",
         "shuffle.go",
@@ -18,6 +17,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//slasher:__subpackages__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -42,7 +42,6 @@ go_test(
         "attestation_test.go",
         "block_test.go",
         "committee_test.go",
-        "eth1data_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "shuffle_test.go",
@@ -51,7 +50,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/internal:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",

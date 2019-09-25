@@ -2,7 +2,9 @@ package initialsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -11,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -22,7 +25,7 @@ var _ = shared.Service(&InitialSync{})
 
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadRetriever
+	blockchain.HeadFetcher
 	blockchain.ChainFeeds
 }
 
@@ -33,26 +36,25 @@ const (
 
 // Config to set up the initial sync service.
 type Config struct {
-	P2P     p2p.P2P
-	DB      db.Database
-	Chain   blockchainService
-	RegSync sync.HelloTracker
+	P2P   p2p.P2P
+	DB    db.Database
+	Chain blockchainService
 }
 
 // InitialSync service.
 type InitialSync struct {
-	helloTracker sync.HelloTracker
 	chain        blockchainService
 	p2p          p2p.P2P
+	synced       bool
+	chainStarted bool
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
-		helloTracker: cfg.RegSync,
-		chain:        cfg.Chain,
-		p2p:          cfg.P2P,
+		chain: cfg.Chain,
+		p2p:   cfg.P2P,
 	}
 }
 
@@ -67,21 +69,24 @@ func (s *InitialSync) Start() {
 	if genesis.After(roughtime.Now()) {
 		time.Sleep(roughtime.Until(genesis))
 	}
+	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch. Not syncing.")
+		s.synced = true
 		return
 	}
 
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current epoch.")
+		s.synced = true
 		return
 	}
 
 	// Every 5 sec, report handshake count.
 	for {
-		helloCount := len(s.helloTracker.Hellos())
+		helloCount := peerstatus.Count()
 		log.WithField(
 			"hellos",
 			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
@@ -93,12 +98,12 @@ func (s *InitialSync) Start() {
 		time.Sleep(handshakePollingInterval)
 	}
 
-	pid, best := bestHello(s.helloTracker.Hellos())
+	pid, best := bestStatus()
 
 	var last *eth.BeaconBlock
 	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
-		req := &pb.BeaconBlocksRequest{
-			HeadSlot:      headSlot,
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot:     headSlot + 1,
 			HeadBlockRoot: s.chain.HeadRoot(),
 			Count:         64,
 			Step:          1,
@@ -111,24 +116,15 @@ func (s *InitialSync) Start() {
 			panic(err)
 		}
 
-		// Read status code.
-		code, errMsg, err := sync.ReadStatusCode(strm, s.p2p.Encoding())
-		if err != nil {
-			panic(err)
-		}
-		if code != 0 {
-			log.Errorf("Request failed. Request was %+v", req)
-			panic(errMsg.ErrorMessage)
-		}
-
-		resp := &pb.BeaconBlocksResponse{}
-		if err := s.p2p.Encoding().Decode(strm, resp); err != nil {
-			panic(err)
-		}
-
-		log.Infof("Received %d blocks", len(resp.Blocks))
-
-		for _, blk := range resp.Blocks {
+		for i := 0; i < int(req.Count); i++ {
+			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Error(err)
+				break
+			}
 			if blk.Slot <= headSlot {
 				continue
 			}
@@ -143,7 +139,6 @@ func (s *InitialSync) Start() {
 			}
 			last = blk
 		}
-
 		headSlot = s.chain.HeadSlot()
 	}
 
@@ -153,6 +148,7 @@ func (s *InitialSync) Start() {
 	}
 
 	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	s.synced = true
 }
 
 // Stop initial sync.
@@ -162,15 +158,20 @@ func (s *InitialSync) Stop() error {
 
 // Status of initial sync.
 func (s *InitialSync) Status() error {
+	if !s.synced && s.chainStarted {
+		return errors.New("syncing")
+	}
 	return nil
 }
 
-func bestHello(data map[peer.ID]*pb.Hello) (peer.ID, *pb.Hello) {
-	for pid, hello := range data {
-		return pid, hello
-	}
+// Syncing returns true if initial sync is still running.
+func (s *InitialSync) Syncing() bool {
+	return !s.synced
+}
 
-	return "", nil
+func bestStatus() (peer.ID, *pb.Status) {
+	keys := peerstatus.Keys()
+	return keys[0], peerstatus.Get(keys[0])
 }
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {

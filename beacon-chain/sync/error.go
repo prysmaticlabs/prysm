@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 const genericError = "internal service error"
@@ -19,7 +18,7 @@ var responseCodeServerError = byte(0x02)
 
 func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	if _, err := r.p2p.Encoding().Encode(buf, &pb.ErrorMessage{ErrorMessage: reason}); err != nil {
+	if _, err := r.p2p.Encoding().EncodeWithLength(buf, []byte(reason)); err != nil {
 		return nil, err
 	}
 
@@ -27,21 +26,21 @@ func (r *RegularSync) generateErrorResponse(code byte, reason string) ([]byte, e
 }
 
 // ReadStatusCode response from a RPC stream.
-func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, *pb.ErrorMessage, error) {
+func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, string, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", err
 	}
 
 	if b[0] == responseCodeSuccess {
-		return 0, nil, nil
+		return 0, "", nil
 	}
 
-	msg := &pb.ErrorMessage{}
-	if err := encoding.Decode(stream, msg); err != nil {
-		return 0, nil, err
+	msg := make([]byte, 0)
+	if err := encoding.DecodeWithLength(stream, &msg); err != nil {
+		return 0, "", err
 	}
 
-	return uint8(b[0]), msg, nil
+	return uint8(b[0]), string(msg), nil
 }

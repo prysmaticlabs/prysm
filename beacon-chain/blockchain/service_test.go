@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -32,8 +32,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-// Ensure ChainService implements interfaces.
-var _ = ChainFeeds(&ChainService{})
+// Ensure Service implements interfaces.
+var _ = ChainFeeds(&Service{})
+var _ = NewHeadNotifier(&Service{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -176,7 +177,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
-func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconBlock) {
+func setupGenesisBlock(t *testing.T, cs *Service) ([32]byte, *ethpb.BeaconBlock) {
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := cs.beaconDB.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
@@ -188,13 +189,13 @@ func setupGenesisBlock(t *testing.T, cs *ChainService) ([32]byte, *ethpb.BeaconB
 	return parentHash, genesis
 }
 
-func setupBeaconChain(t *testing.T, beaconDB db.Database) *ChainService {
+func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
-	var web3Service *powchain.Web3Service
+	var web3Service *powchain.Service
 	var err error
 	client := &mockClient{}
-	web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          client,
@@ -206,17 +207,17 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *ChainService {
 	}
 
 	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       beaconDB,
-		DepositCache:   depositcache.NewDepositCache(),
-		Web3Service:    web3Service,
-		OpsPoolService: &mockOperationService{},
-		P2p:            &mockBroadcaster{},
+		BeaconBlockBuf:    0,
+		BeaconDB:          beaconDB,
+		DepositCache:      depositcache.NewDepositCache(),
+		ChainStartFetcher: web3Service,
+		OpsPoolService:    &mockOperationService{},
+		P2p:               &mockBroadcaster{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-	chainService, err := NewChainService(ctx, cfg)
+	chainService, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -360,7 +361,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		t.Fatal(err)
 	}
-	c := &ChainService{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}
+	c := &Service{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}

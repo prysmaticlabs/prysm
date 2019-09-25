@@ -1,5 +1,9 @@
 package sliceutil
 
+import (
+	"strings"
+)
+
 // SubsetUint64 returns true if the first array is
 // completely contained in the second array with time
 // complexity of approximately o(n).
@@ -258,4 +262,13 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 		inter = tmp
 	}
 	return inter
+}
+
+// SplitCommaSeparated values from the list. Example: []string{"a,b", "c,d"} becomes []string{"a", "b", "c", "d"}.
+func SplitCommaSeparated(arr []string) []string {
+	var result []string
+	for _, val := range arr {
+		result = append(result, strings.Split(val, ",")...)
+	}
+	return result
 }

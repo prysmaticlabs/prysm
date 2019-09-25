@@ -51,6 +51,10 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		s, err = createState(enc)
 		return err
 	})
+	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
+	if s != nil {
+		span.AddAttributes(trace.Int64Attribute("slot", int64(s.Slot)))
+	}
 	return s, err
 }
 

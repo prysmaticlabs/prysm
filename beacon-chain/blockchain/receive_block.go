@@ -26,7 +26,7 @@ type BlockReceiver interface {
 //   2. Validate block, apply state transition and update check points
 //   3. Apply fork choice to the processed block
 //   4. Save latest head info
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
@@ -36,14 +36,14 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 	}
 
 	// Broadcast the new block to the network.
-	if err := c.p2p.Broadcast(ctx, block); err != nil {
+	if err := s.p2p.Broadcast(ctx, block); err != nil {
 		return errors.Wrap(err, "could not broadcast block")
 	}
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
-	}).Info("Broadcasting block")
+	}).Debug("Broadcasting block")
 
-	if err := c.ReceiveBlockNoPubsub(ctx, block); err != nil {
+	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
 		return err
 	}
 
@@ -56,12 +56,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBloc
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
 
 	// Apply state transition on the new block.
-	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
+	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	root, err := ssz.SigningRoot(block)
@@ -71,11 +71,11 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	logStateTransitionData(block, root[:])
 
 	// Run fork choice after applying state transition on the new block.
-	headRoot, err := c.forkChoiceStore.Head(ctx)
+	headRoot, err := s.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
@@ -87,16 +87,22 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
 
 	// Save head info after running fork choice.
-	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+	if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.cleanupBlockOperations(ctx, block); err != nil {
+	if err := s.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	// Reports on block and fork choice metrics.
+	s.reportSlotMetrics(block.Slot)
+
 	processedBlkNoPubsub.Inc()
+
+	// We write the latest saved head root to a feed for consumption by other services.
+	s.headUpdatedFeed.Send(bytesutil.ToBytes32(headRoot))
 	return nil
 }
 
@@ -104,12 +110,12 @@ func (c *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.Be
 // that are preformed blocks that is received from initial sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Save latest head info
-func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block.
-	if err := c.forkChoiceStore.OnBlock(ctx, block); err != nil {
+	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 	root, err := ssz.SigningRoot(block)
@@ -119,15 +125,20 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 	logStateTransitionData(block, root[:])
 
 	// Save new block as head.
-	if err := c.saveHead(ctx, block, root); err != nil {
+	if err := s.saveHead(ctx, block, root); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := c.cleanupBlockOperations(ctx, block); err != nil {
+	if err := s.cleanupBlockOperations(ctx, block); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	// Reports on block and fork choice metrics.
+	s.reportSlotMetrics(block.Slot)
+
+	// We write the latest saved head root to a feed for consumption by other services.
+	s.headUpdatedFeed.Send(root)
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
@@ -136,15 +147,15 @@ func (c *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block
 // such as attestations, exits, and deposits. We update the latest seen attestation by validator
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
-func (c *ChainService) cleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) cleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
 	// Forward processed block to operation pool to remove individual operation from DB.
-	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
+	if s.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
 	}
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
-		c.depositCache.RemovePendingDeposit(ctx, dep)
+		s.depositCache.RemovePendingDeposit(ctx, dep)
 	}
 	return nil
 }

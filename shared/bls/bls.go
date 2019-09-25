@@ -5,13 +5,15 @@ package bls
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 
 	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
+
+// CurveOrder for the BLS12-381 curve.
+const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
@@ -37,11 +39,8 @@ func RandKey(r io.Reader) (*SecretKey, error) {
 	return &SecretKey{val: k}, nil
 }
 
-// SecretKeyFromBytes creates a BLS private key from a byte slice.
+// SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
-	if len(priv) != 32 {
-		return nil, fmt.Errorf("expected byte slice of length 32, received: %d", len(priv))
-	}
 	k := bytesutil.ToBytes32(priv)
 	val := g1.DeserializeSecretKey(k)
 	if val.GetFRElement() == nil {
@@ -50,7 +49,7 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	return &SecretKey{val}, nil
 }
 
-// PublicKeyFromBytes creates a BLS public key from a byte slice.
+// PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
@@ -60,7 +59,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	return &PublicKey{val: k}, nil
 }
 
-// SignatureFromBytes creates a BLS signature from a byte slice.
+// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
@@ -78,18 +77,18 @@ func (s *SecretKey) PublicKey() *PublicKey {
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
 	return &Signature{val: sig}
 }
 
-// Marshal a secret key into a byte slice.
+// Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
 	k := s.val.Serialize()
 	return k[:]
 }
 
-// Marshal a public key into a byte slice.
+// Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
 	k := p.val.Serialize()
 	return k[:]
@@ -105,7 +104,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
 }
 
@@ -121,7 +120,7 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 		keys = append(keys, v.val)
 	}
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return s.val.VerifyAggregateWithDomain(keys, msg, bytesutil.ToBytes8(b))
 }
 
@@ -137,11 +136,11 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 		keys = append(keys, v.val)
 	}
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, domain)
+	binary.LittleEndian.PutUint64(b, domain)
 	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
 }
 
-// Marshal a signature into a byte slice.
+// Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	k := s.val.Serialize()
 	return k[:]

@@ -14,6 +14,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -62,12 +63,15 @@ func ExecuteStateTransition(
 		}
 	}
 
+	interop.WriteBlockToDisk(block, false)
+	interop.WriteStateToDisk(state)
+
 	postStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
 	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
-		return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], block.StateRoot)
 	}
 
@@ -142,6 +146,8 @@ func ExecuteStateTransitionNoVerify(
 func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
+
 	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
@@ -517,6 +523,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
 
 	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
 	if err != nil {

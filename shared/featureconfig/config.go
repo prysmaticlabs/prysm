@@ -25,14 +25,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
-	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
-	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
-	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
-	UseNewP2P                     bool // UseNewP2P service.
-	UseNewSync                    bool // UseNewSync services.
-	UseNewDatabase                bool // UseNewDatabase service.
-	UseNewBlockChainService       bool // UseNewBlockChainService service.
+	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
+	DemoConfig               bool // DemoConfig with lower deposit thresholds.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 
 	// Cache toggles.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -63,33 +58,17 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	if ctx.GlobalBool(DisableHistoricalStatePruningFlag.Name) {
-		log.Info("Enabled historical state pruning")
-		cfg.DisableHistoricalStatePruning = true
-	}
-	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
-		log.Info("Disabled gossipsub, using floodsub")
-		cfg.DisableGossipSub = true
+	if ctx.GlobalBool(DemoConfigFlag.Name) {
+		log.Warn("Using demo config")
+		cfg.DemoConfig = true
 	}
 	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewP2PFlag.Name) {
-		log.Warn("Using new P2P service.")
-		cfg.UseNewP2P = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewSyncFlag.Name) {
-		log.Warn("Using new sync services.")
-		cfg.UseNewSync = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewDatabaseFlag.Name) {
-		log.Warn("Using new database service.")
-		cfg.UseNewDatabase = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewBlockChainFlag.Name) {
-		log.Warn("Using new blockchain service.")
-		cfg.UseNewBlockChainService = true
+	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
+		log.Warn("Writing SSZ states and blocks after state transitions")
+		cfg.WriteSSZStateTransitions = true
 	}
 	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
 		log.Warn("Enabled unsafe active balance cache")

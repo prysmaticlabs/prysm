@@ -1,18 +1,18 @@
 package sync
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
@@ -21,7 +21,6 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		ctx: context.Background(),
 		p2p: p2p,
 	}
-
 	topic := "/eth2/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -34,12 +33,47 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		wg.Done()
 		return nil
 	})
+	r.chainStarted = true
 
 	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
+}
+
+func TestSubscribe_WaitToSync(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	r := RegularSync{
+		ctx: context.Background(),
+		p2p: p2p,
+	}
+
+	r.chain = &mockChain.ChainService{}
+	topic := "/eth2/beacon_block"
+	r.registerSubscribers()
+	i := r.chain.StateInitializedFeed().Send(time.Now())
+	if i == 0 {
+		t.Fatal("didn't send genesis time to subscribers")
+	}
+	b := []byte("sk")
+	b32 := bytesutil.ToBytes32(b)
+	sk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+	}
+	p2p.ReceivePubSub(topic, msg)
+	// wait for chainstart to be sent
+	time.Sleep(400 * time.Millisecond)
+	if !r.chainStarted {
+		t.Fatal("Did not receive chain start event.")
+	}
+
 }
 
 func TestSubscribe_HandlesPanic(t *testing.T) {
@@ -57,38 +91,10 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		defer wg.Done()
 		panic("bad")
 	})
-
+	r.chainStarted = true
 	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-}
-
-func TestSubscribe_IgnoreMessageFromSelf(t *testing.T) {
-	hook := logTest.NewGlobal()
-	p2p := p2ptest.NewTestP2P(t)
-	r := RegularSync{
-		ctx: context.Background(),
-		p2p: p2p,
-	}
-
-	topic := "/eth2/voluntary_exit"
-	errorMsg := "Message entered into pipeline despite coming from same peer"
-
-	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
-		return errors.New(errorMsg)
-	})
-	buf := new(bytes.Buffer)
-	msg := &pb.VoluntaryExit{Epoch: 55}
-	if _, err := p2p.Encoding().Encode(buf, msg); err != nil {
-		t.Fatalf("Failed to encode message: %v", err)
-	}
-
-	if err := p2p.PubSub().Publish(topic+p2p.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
-		t.Fatalf("Failed to publish message; %v", err)
-	}
-	time.Sleep(100 * time.Millisecond)
-
-	testutil.AssertLogsDoNotContain(t, hook, errorMsg)
 }

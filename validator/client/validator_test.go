@@ -54,14 +54,14 @@ func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationRespons
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -87,14 +87,14 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -118,13 +118,13 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -139,13 +139,13 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -283,10 +283,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
@@ -300,10 +300,10 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),

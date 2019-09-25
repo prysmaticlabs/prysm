@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -25,42 +24,43 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
-	reported := false
-	for _, pkey := range v.pubkeys {
+	req := &pb.ValidatorPerformanceRequest{
+		Slot:       slot,
+		PublicKeys: v.pubkeys,
+	}
+	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
+	if err != nil {
+		return err
+	}
 
+	log.WithFields(logrus.Fields{
+		"slot":  slot,
+		"epoch": slot / params.BeaconConfig().SlotsPerEpoch,
+	}).Info("Start of a new epoch!")
+	log.WithFields(logrus.Fields{
+		"totalValidators":     resp.TotalValidators,
+		"numActiveValidators": resp.TotalActiveValidators,
+	}).Info("Validator registry information")
+	log.Info("Generating validator performance report from the previous epoch...")
+	avgBalance := resp.AverageActiveValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
+	log.WithField(
+		"averageEthBalance", fmt.Sprintf("%f", avgBalance),
+	).Info("Average eth balance per active validator in the beacon chain")
+
+	missingValidators := make(map[[48]byte]bool)
+	for _, val := range resp.MissingValidators {
+		missingValidators[bytesutil.ToBytes48(val)] = true
+	}
+	for i, pkey := range v.pubkeys {
+		tpk := hex.EncodeToString(pkey)[:12]
+		if missingValidators[bytesutil.ToBytes48(pkey)] {
+			log.WithField("pubKey", fmt.Sprintf("%#x", tpk)).Info("Validator not able to be retrieved from beacon node")
+			continue
+		}
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
-
-		req := &pb.ValidatorPerformanceRequest{
-			Slot:      slot,
-			PublicKey: pkey,
-		}
-		resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
-		if err != nil {
-			if strings.Contains(err.Error(), "could not get validator index") {
-				continue
-			}
-			return err
-		}
-		tpk := hex.EncodeToString(pkey)[:12]
-		if !reported {
-			log.WithFields(logrus.Fields{
-				"slot":  slot,
-				"epoch": slot / params.BeaconConfig().SlotsPerEpoch,
-			}).Info("Start of a new epoch!")
-			log.WithFields(logrus.Fields{
-				"totalValidators":     resp.TotalValidators,
-				"numActiveValidators": resp.TotalActiveValidators,
-			}).Info("Validator registry information")
-			log.Info("Generating validator performance report from the previous epoch...")
-			avgBalance := resp.AverageActiveValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
-			log.WithField(
-				"averageEthBalance", fmt.Sprintf("%f", avgBalance),
-			).Info("Average eth balance per active validator in the beacon chain")
-			reported = true
-		}
-		newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
+		newBalance := float64(resp.Balances[i]) / float64(params.BeaconConfig().GweiPerEth)
 
 		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
 			prevBalance := float64(v.prevBalance[bytesutil.ToBytes48(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
@@ -73,7 +73,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
 		}
-		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balance
+		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
 	}
 
 	return nil

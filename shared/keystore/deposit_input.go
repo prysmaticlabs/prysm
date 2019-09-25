@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -47,6 +48,6 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(withdrawalKey *Key) []byte {
-	h := Keccak256(withdrawalKey.PublicKey.Marshal())
-	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[0:]...)[:32]
+	h := hashutil.Hash(withdrawalKey.PublicKey.Marshal())
+	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }

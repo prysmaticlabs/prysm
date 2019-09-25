@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -318,28 +319,17 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 }
 
-func TestVerifyBitfield_OK(t *testing.T) {
+func TestVerifyBitfieldLength_OK(t *testing.T) {
 	bf := bitfield.Bitlist{0xFF, 0x01}
 	committeeSize := uint64(8)
-
-	isValidated, err := VerifyBitfield(bf, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !isValidated {
-		t.Error("bitfield is not validated when it was supposed to be")
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
+		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
 	}
 
 	bf = bitfield.Bitlist{0xFF, 0x07}
 	committeeSize = 10
-	isValidated, err = VerifyBitfield(bf, committeeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !isValidated {
-		t.Error("bitfield is not validated when it was supposed to be")
+	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
+		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
 	}
 }
 
@@ -597,7 +587,7 @@ func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
 	}
 }
 
-func TestVerifyAttestationBitfield_OK(t *testing.T) {
+func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -620,12 +610,13 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	tests := []struct {
 		attestation         *ethpb.Attestation
 		stateSlot           uint64
-		errorExists         bool
+		invalidCustodyBits  bool
 		verificationFailure bool
 	}{
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x05},
+				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
 					Crosslink: &ethpb.Crosslink{
 						Shard: 5,
@@ -639,6 +630,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					Crosslink: &ethpb.Crosslink{
 						Shard: 10,
@@ -651,6 +643,7 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					Crosslink: &ethpb.Crosslink{
 						Shard: 20,
@@ -662,7 +655,23 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		},
 		{
 			attestation: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0x06},
+				CustodyBits:     bitfield.Bitlist{0x10},
+				Data: &ethpb.AttestationData{
+					Crosslink: &ethpb.Crosslink{
+						Shard: 20,
+					},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			stateSlot:           20,
+			verificationFailure: true,
+			invalidCustodyBits:  true,
+		},
+		{
+			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
+				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
 					Crosslink: &ethpb.Crosslink{
 						Shard: 5,
@@ -670,12 +679,13 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 					Target: &ethpb.Checkpoint{},
 				},
 			},
-			stateSlot:   5,
-			errorExists: true,
+			stateSlot:           5,
+			verificationFailure: true,
 		},
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
+				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
 					Crosslink: &ethpb.Crosslink{
 						Shard: 20,
@@ -691,15 +701,14 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 	for i, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
-		verified, err := VerifyAttestationBitfield(state, tt.attestation)
-		if tt.errorExists {
-			if err == nil {
-				t.Error("error is nil, when verification is supposed to fail")
-			}
-			continue
-		}
+		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
-			if verified {
+			if tt.invalidCustodyBits {
+				if !strings.Contains(err.Error(), "custody bitfield") {
+					t.Errorf("%d expected custody bits to fail: %v", i, err)
+				}
+			}
+			if err == nil {
 				t.Error("verification succeeded when it was supposed to fail")
 			}
 			continue
@@ -707,9 +716,6 @@ func TestVerifyAttestationBitfield_OK(t *testing.T) {
 		if err != nil {
 			t.Errorf("%d Failed to verify bitfield: %v", i, err)
 			continue
-		}
-		if !verified {
-			t.Errorf("Bitfield isnt verified: %08b", tt.attestation.AggregationBits)
 		}
 	}
 }

@@ -2,24 +2,20 @@ package main
 
 import (
 	"bufio"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -32,6 +28,8 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+var log = logrus.WithField("prefix", "main")
+
 type unencryptedKeysContainer struct {
 	Keys []*unencryptedKeys `json:"keys"`
 }
@@ -42,33 +40,13 @@ type unencryptedKeys struct {
 }
 
 func startNode(ctx *cli.Context) error {
-	unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name)
-	if unencryptedKeys != "" {
-		pth, err := filepath.Abs(unencryptedKeys)
+	// Unsafe start from plain text keys.
+	if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
+		keys, err := loadUnencryptedKeys(unencryptedKeys)
 		if err != nil {
-			logrus.Fatal(err)
+			return err
 		}
-		r, err := os.Open(pth)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		validatorKeysUnecrypted, _, err := parseUnencryptedKeysFile(r)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		validatorKeys := make(map[string]*keystore.Key)
-		for _, item := range validatorKeysUnecrypted {
-			priv, err := bls.SecretKeyFromBytes(item)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			k, err := keystore.NewKeyFromBLS(priv)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			validatorKeys[hex.EncodeToString(priv.PublicKey().Marshal())] = k
-		}
-		validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
+		validatorClient, err := node.NewValidatorClient(ctx, keys)
 		if err != nil {
 			return err
 		}
@@ -77,32 +55,48 @@ func startNode(ctx *cli.Context) error {
 		return nil
 	}
 
+	// Interop start from generated keys.
+	if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
+		keys, err := interopValidatorKeys(ctx.GlobalUint64(flags.InteropStartIndex.Name), numValidatorKeys)
+		if err != nil {
+			return err
+		}
+		validatorClient, err := node.NewValidatorClient(ctx, keys)
+		if err != nil {
+			return err
+		}
+
+		validatorClient.Start()
+		return nil
+	}
+
+	// Normal production key start.
 	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(flags.PasswordFlag.Name)
 
 	exists, err := accounts.Exists(keystoreDirectory)
 	if err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 	if !exists {
 		// If an account does not exist, we create a new one and start the node.
 		keystoreDirectory, keystorePassword, err = createValidatorAccount(ctx)
 		if err != nil {
-			logrus.Fatalf("Could not create validator account: %v", err)
+			log.Fatalf("Could not create validator account: %v", err)
 		}
 	} else {
 		if keystorePassword == "" {
-			logrus.Info("Enter your validator account password:")
+			log.Info("Enter your validator account password:")
 			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 			if err != nil {
-				logrus.Fatalf("Could not read account password: %v", err)
+				log.Fatalf("Could not read account password: %v", err)
 			}
 			text := string(bytePassword)
 			keystorePassword = strings.Replace(text, "\n", "", -1)
 		}
 
 		if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
-			logrus.Info("No account found, creating new validator account...")
+			log.Info("No account found, creating new validator account...")
 		}
 	}
 
@@ -115,7 +109,7 @@ func startNode(ctx *cli.Context) error {
 
 	validatorKeys, err := accounts.DecryptKeysFromKeystore(keystoreDirectory, keystorePassword)
 	if err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 
 	validatorClient, err := node.NewValidatorClient(ctx, validatorKeys)
@@ -133,17 +127,17 @@ func createValidatorAccount(ctx *cli.Context) (string, string, error) {
 	if keystorePassword == "" {
 		reader := bufio.NewReader(os.Stdin)
 		logrus.Info("Create a new validator account for eth2")
-		logrus.Info("Enter a password:")
+		log.Info("Enter a password:")
 		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			logrus.Fatalf("Could not read account password: %v", err)
+			log.Fatalf("Could not read account password: %v", err)
 		}
 		text := string(bytePassword)
 		keystorePassword = strings.Replace(text, "\n", "", -1)
-		logrus.Infof("Keystore path to save your private keys (leave blank for default %s):", keystoreDirectory)
+		log.Infof("Keystore path to save your private keys (leave blank for default %s):", keystoreDirectory)
 		text, err = reader.ReadString('\n')
 		if err != nil {
-			logrus.Fatal(err)
+			log.Fatal(err)
 		}
 		text = strings.Replace(text, "\n", "", -1)
 		if text != "" {
@@ -175,8 +169,40 @@ func parseUnencryptedKeysFile(r io.Reader) ([][]byte, [][]byte, error) {
 	return validatorKeys, withdrawalKeys, nil
 }
 
+var appFlags = []cli.Flag{
+	flags.NoCustomConfigFlag,
+	flags.BeaconRPCProviderFlag,
+	flags.CertFlag,
+	flags.KeystorePathFlag,
+	flags.PasswordFlag,
+	flags.DisablePenaltyRewardLogFlag,
+	flags.UnencryptedKeysFlag,
+	flags.InteropStartIndex,
+	flags.InteropNumValidators,
+	cmd.VerbosityFlag,
+	cmd.DataDirFlag,
+	cmd.EnableTracingFlag,
+	cmd.TracingProcessNameFlag,
+	cmd.TracingEndpointFlag,
+	cmd.TraceSampleFractionFlag,
+	cmd.BootstrapNode,
+	cmd.MonitoringPortFlag,
+	cmd.LogFormat,
+	debug.PProfFlag,
+	debug.PProfAddrFlag,
+	debug.PProfPortFlag,
+	debug.MemProfileRateFlag,
+	debug.CPUProfileFlag,
+	debug.TraceFlag,
+	cmd.LogFileName,
+	cmd.EnableUPnPFlag,
+}
+
+func init() {
+	appFlags = append(appFlags, featureconfig.ValidatorFlags...)
+}
+
 func main() {
-	log := logrus.WithField("prefix", "main")
 	app := cli.NewApp()
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain,
@@ -200,41 +226,14 @@ contract in order to activate the validator client`,
 					},
 					Action: func(ctx *cli.Context) {
 						if keystoreDir, _, err := createValidatorAccount(ctx); err != nil {
-							logrus.Fatalf("Could not create validator at path: %s", keystoreDir)
+							log.Fatalf("Could not create validator at path: %s", keystoreDir)
 						}
 					},
 				},
 			},
 		},
 	}
-	app.Flags = []cli.Flag{
-		flags.NoCustomConfigFlag,
-		flags.BeaconRPCProviderFlag,
-		flags.CertFlag,
-		flags.KeystorePathFlag,
-		flags.PasswordFlag,
-		flags.DisablePenaltyRewardLogFlag,
-		flags.UnencryptedKeysFlag,
-		cmd.VerbosityFlag,
-		cmd.DataDirFlag,
-		cmd.EnableTracingFlag,
-		cmd.TracingProcessNameFlag,
-		cmd.TracingEndpointFlag,
-		cmd.TraceSampleFractionFlag,
-		cmd.BootstrapNode,
-		cmd.MonitoringPortFlag,
-		cmd.LogFormat,
-		debug.PProfFlag,
-		debug.PProfAddrFlag,
-		debug.PProfPortFlag,
-		debug.MemProfileRateFlag,
-		debug.CPUProfileFlag,
-		debug.TraceFlag,
-		cmd.LogFileName,
-		cmd.EnableUPnPFlag,
-	}
-
-	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
+	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.GlobalString(cmd.LogFormat.Name)

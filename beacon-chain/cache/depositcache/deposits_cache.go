@@ -22,6 +22,13 @@ var (
 	})
 )
 
+// DepositFetcher defines a struct which can retrieve deposit information from a store.
+type DepositFetcher interface {
+	AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit
+	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
+	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
+}
+
 // DepositCache stores all in-memory deposit objects. This
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
@@ -29,6 +36,7 @@ type DepositCache struct {
 	pendingDeposits       []*DepositContainer
 	deposits              []*DepositContainer
 	depositsLock          sync.RWMutex
+	chainStartDeposits    []*ethpb.Deposit
 	chainstartPubkeys     map[string]bool
 	chainstartPubkeysLock sync.RWMutex
 }
@@ -45,9 +53,10 @@ type DepositContainer struct {
 // NewDepositCache instantiates a new deposit cache
 func NewDepositCache() *DepositCache {
 	return &DepositCache{
-		pendingDeposits:   []*DepositContainer{},
-		deposits:          []*DepositContainer{},
-		chainstartPubkeys: make(map[string]bool),
+		pendingDeposits:    []*DepositContainer{},
+		deposits:           []*DepositContainer{},
+		chainstartPubkeys:  make(map[string]bool),
+		chainStartDeposits: make([]*ethpb.Deposit, 0),
 	}
 }
 

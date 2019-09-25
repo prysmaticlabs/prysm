@@ -110,15 +110,15 @@ func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]ui
 func ComputeCommittee(
 	validatorIndices []uint64,
 	seed [32]byte,
-	index uint64,
+	indexShard uint64,
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := SplitOffset(validatorCount, totalCommittees, index)
-	end := SplitOffset(validatorCount, totalCommittees, index+1)
+	start := SplitOffset(validatorCount, totalCommittees, indexShard)
+	end := SplitOffset(validatorCount, totalCommittees, indexShard+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func ComputeCommittee(
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
-		Index:           index,
+		Index:           indexShard,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
@@ -175,15 +175,15 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 	return indices, nil
 }
 
-// VerifyBitfield validates a bitfield with a given committee size.
-func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
+// VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
+func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	if bf.Len() != committeeSize {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			committeeSize,
 			bf.Len())
 	}
-	return true, nil
+	return nil
 }
 
 // CommitteeAssignment is used to query committee assignment from
@@ -357,18 +357,25 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 	return startShard, nil
 }
 
-// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
-// to the committees at that slot.
-func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
+// VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
+// a valid length matching the size of the committee.
+func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve crosslink committees at slot")
+		return errors.Wrap(err, "could not retrieve crosslink committees")
 	}
 
 	if committee == nil {
-		return false, fmt.Errorf("no committee exist for shard in the attestation")
+		return errors.New("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBits, uint64(len(committee)))
+
+	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+		return errors.Wrap(err, "failed to verify aggregation bitfield")
+	}
+	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
+		return errors.Wrap(err, "failed to verify custody bitfield")
+	}
+	return nil
 }
 
 // CompactCommitteesRoot returns the index root of a given epoch.
@@ -447,7 +454,6 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
-
 			}
 		}
 		return ssz.HashTreeRoot(compactCommArray)
@@ -473,6 +479,6 @@ func compressValidator(validator *ethpb.Validator, idx uint64) uint64 {
 	}
 	// Clear all bits except last 15.
 	compactBalance &= 0x7FFF // 0b01111111 0b11111111
-	compactValidator := compactIndex | uint64(slashedBit|compactBalance)
+	compactValidator := compactIndex | slashedBit | compactBalance
 	return compactValidator
 }

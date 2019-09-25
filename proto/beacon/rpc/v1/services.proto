@@ -37,21 +37,6 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
     consumes: "application/grpc-web-json";
 };
 
-
-service BeaconService {
-  rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
-  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-      summary: "Fetches block tree since last finalized block.";
-    };
-    option (google.api.http) = {
-      get: "/v1/beacon/blocktree";
-    };
-  }
-  rpc BlockTreeBySlots(TreeBlockSlotRequest) returns (BlockTreeResponse);
-}
-
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
   rpc SubmitAttestation(ethereum.eth.v1alpha1.Attestation) returns (AttestResponse);
@@ -70,6 +55,8 @@ service ValidatorService {
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+  rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
+  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
 }
 
 message BlockRequest {
@@ -94,14 +81,15 @@ message AttestResponse {
 
 message ValidatorPerformanceRequest {
   uint64 slot = 1;
-  bytes public_key = 2;
+  repeated bytes public_keys = 2;
 }
 
 message ValidatorPerformanceResponse {
-  uint64 balance = 1;
+  repeated uint64 balances = 1;
   uint64 total_validators = 2;
   uint64 total_active_validators = 3;
-  float average_active_validator_balance = 4;
+  repeated bytes missing_validators = 4;
+  float average_active_validator_balance = 5;
 }
 
 message ValidatorActivationRequest {
