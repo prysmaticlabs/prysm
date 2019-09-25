@@ -34,9 +34,6 @@ type FeatureFlagConfig struct {
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableAncestorBlockCache bool // EnableAncestorBlockCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSeedCache          bool // EnableSeedCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableStartShardCache    bool // EnableStartShardCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableTotalBalanceCache  bool // EnableTotalBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -85,18 +82,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
-	}
-	if ctx.GlobalBool(EnableSeedCacheFlag.Name) {
-		log.Warn("Enabled unsafe seed cache")
-		cfg.EnableSeedCache = true
-	}
-	if ctx.GlobalBool(EnableStartShardCacheFlag.Name) {
-		log.Warn("Enabled unsafe start shard cache")
-		cfg.EnableStartShardCache = true
-	}
-	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe total balance cache")
-		cfg.EnableTotalBalanceCache = true
 	}
 	InitFeatureConfig(cfg)
 }
