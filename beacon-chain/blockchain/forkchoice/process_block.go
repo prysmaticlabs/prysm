@@ -139,7 +139,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlock is called whenever a block is received. It runs state transition on the block and without
+// OnBlockNoVerify is called whenever a block is received. It runs state transition on the block and without
 // any verification.
 func (s *Store) OnBlockNoVerify(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
