@@ -1,4 +1,4 @@
-package testing
+package db
 
 import (
 	"os"
