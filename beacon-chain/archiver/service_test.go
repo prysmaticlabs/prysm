@@ -113,7 +113,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 			retrieved,
 		)
 	}
-	testutil.AssertLogsContain(t, hook, "archived validator balances and active indices")
+	testutil.AssertLogsContain(t, hook, "archived validator balances")
 }
 
 func TestArchiverService_SavesCommitteeInfo(t *testing.T) {

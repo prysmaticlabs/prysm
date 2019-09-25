@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -53,11 +54,10 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 
 // AggregateAttestation aggregates attestations a1 and a2 together.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
-	baseAtt := a1
-	newAtt := a2
-	if a2.AggregationBits.Count() > a1.AggregationBits.Count() {
-		baseAtt = a2
-		newAtt = a1
+	baseAtt := proto.Clone(a1).(*ethpb.Attestation)
+	newAtt := proto.Clone(a2).(*ethpb.Attestation)
+	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
+		baseAtt, newAtt = newAtt, baseAtt
 	}
 
 	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
