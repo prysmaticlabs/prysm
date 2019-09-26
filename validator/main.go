@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -40,6 +41,7 @@ type unencryptedKeys struct {
 }
 
 func startNode(ctx *cli.Context) error {
+	initializeConfig(ctx)
 	// Unsafe start from plain text keys.
 	if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
 		keys, err := loadUnencryptedKeys(unencryptedKeys)
@@ -167,6 +169,23 @@ func parseUnencryptedKeysFile(r io.Reader) ([][]byte, [][]byte, error) {
 		withdrawalKeys = append(withdrawalKeys, item.WithdrawalKey)
 	}
 	return validatorKeys, withdrawalKeys, nil
+}
+
+// initializeConfig sets the appropriate config params.
+func initializeConfig(ctx *cli.Context) {
+	featureconfig.ConfigureValidatorFeatures(ctx)
+
+	// Use custom config values if the --no-custom-config flag is set.
+	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
+		if featureconfig.FeatureConfig().MinimalConfig {
+			log.Warn("Using Minimal Config")
+			params.UseMinimalConfig()
+		} else {
+			log.Warn("Using Demo Config")
+			params.UseDemoBeaconConfig()
+		}
+	}
 }
 
 var appFlags = []cli.Flag{

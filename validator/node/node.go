@@ -55,7 +55,6 @@ func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*Valid
 		services: registry,
 		stop:     make(chan struct{}),
 	}
-	featureconfig.ConfigureValidatorFeatures(ctx)
 
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
