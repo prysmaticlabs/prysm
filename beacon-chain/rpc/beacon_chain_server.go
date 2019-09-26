@@ -503,7 +503,7 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 
 	// Get the public keys for the validators in the queues up to the allowed churn limits.
 	activationQueueKeys := make([][]byte, len(activationQ[:activationQueueChurn]))
-	exitQueueKeys := make([][]byte, len(exitQueueIndices))
+	exitQueueKeys := make([][]byte, len(exitQueueIndices[:exitQueueChurn]))
 	for i, idx := range activationQ[:activationQueueChurn] {
 		activationQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
