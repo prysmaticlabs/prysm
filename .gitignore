@@ -21,4 +21,8 @@ yarn-error.log
 .vscode/
 
 # Ignore password file
-password.txt 
+password.txt
+
+# go dependancy
+/go.mod
+/go.sum

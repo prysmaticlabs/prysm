@@ -8,8 +8,8 @@ import (
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
@@ -29,8 +29,8 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -72,8 +72,8 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 }
 
 func TestDeleteHistoryBlkHdr(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -130,8 +130,8 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 }
 
 func TestHasHistoryBlkHdr(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -179,8 +179,8 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 }
 
 func TestPruneHistoryBlkHdr(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := SetupSlasherDB(t)
+	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -230,7 +230,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(2)
-	err := db.pruneHistory(currentEpoch, historyToKeep)
+	err := db.PruneHistory(currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
