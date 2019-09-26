@@ -159,6 +159,9 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 	proposer := beaconState.Validators[idx]
+	if proposer.Slashed {
+		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
+	}
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
@@ -220,15 +223,6 @@ func ProcessBlockHeaderNoVerify(
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 		Signature:  emptySig,
-	}
-	// Verify proposer is not slashed.
-	idx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, err
-	}
-	proposer := beaconState.Validators[idx]
-	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 	return beaconState, nil
 }
@@ -909,6 +903,30 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
+// ProcessDepositsNoVerify is one of the operations performed on each processed
+// beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
+// into the beacon chain. This function does not verify the deposit.
+//
+// Spec pseudocode definition:
+//   For each deposit in block.body.deposits:
+//     process_deposit(state, deposit)
+func ProcessDepositsNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	var err error
+	deposits := body.Deposits
+
+	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	for _, deposit := range deposits {
+		beaconState, err = ProcessDepositNoVerify(beaconState, deposit, valIndexMap)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		}
+	}
+	return beaconState, nil
+}
+
 // ProcessDeposit takes in a deposit object and inserts it
 // into the registry as a new validator or balance change.
 //
@@ -955,13 +973,27 @@ func ProcessDeposits(
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
 func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
-	if err := verifyDeposit(beaconState, deposit); err != nil {
-		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+	// Verify Merkle proof of deposit and deposit trie root.
+	receiptRoot := beaconState.Eth1Data.DepositRoot
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not tree hash deposit data")
 	}
+	if ok := trieutil.VerifyMerkleProof(
+		receiptRoot,
+		leaf[:],
+		int(beaconState.Eth1DepositIndex),
+		deposit.Proof,
+	); !ok {
+		return nil, fmt.Errorf(
+			"deposit merkle branch of deposit root did not verify for root: %#x",
+			receiptRoot,
+		)
+	}
+
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
-	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	_, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -970,7 +1002,53 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
 			return beaconState, nil
 		}
+	}
 
+	beaconState, err = ProcessDepositNoVerify(beaconState, deposit, valIndexMap)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+
+	return beaconState, nil
+}
+
+// ProcessDepositNoVerify takes in a deposit object and inserts it
+// into the registry as a new validator or balance change. This function does not verify the deposit.
+//
+// Spec pseudocode definition:
+//   def process_deposit(state: BeaconState, deposit: Deposit) -> None:
+//     """
+//     Process an Eth1 deposit, registering a validator or increasing its balance.
+//     """
+//     # Deposits must be processed in order
+//     assert deposit.index == state.deposit_index
+//     state.deposit_index += 1
+//
+//     pubkey = deposit.data.pubkey
+//     amount = deposit.data.amount
+//     validator_pubkeys = [v.pubkey for v in state.validator_registry]
+//     if pubkey not in validator_pubkeys:
+//         # Add validator and balance entries
+//         state.validator_registry.append(Validator(
+//             pubkey=pubkey,
+//             withdrawal_credentials=deposit.data.withdrawal_credentials,
+//             activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//             activation_epoch=FAR_FUTURE_EPOCH,
+//             exit_epoch=FAR_FUTURE_EPOCH,
+//             withdrawable_epoch=FAR_FUTURE_EPOCH,
+//             effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//         ))
+//         state.balances.append(amount)
+//     else:
+//         # Increase balance by deposit amount
+//         index = validator_pubkeys.index(pubkey)
+//         increase_balance(state, index, amount)
+func ProcessDepositNoVerify(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+	beaconState.Eth1DepositIndex++
+	pubKey := deposit.Data.PublicKey
+	amount := deposit.Data.Amount
+	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	if !ok {
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
@@ -990,27 +1068,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	}
 
 	return beaconState, nil
-}
-
-func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
-	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.Eth1Data.DepositRoot
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash deposit data")
-	}
-	if ok := trieutil.VerifyMerkleProof(
-		receiptRoot,
-		leaf[:],
-		int(beaconState.Eth1DepositIndex),
-		deposit.Proof,
-	); !ok {
-		return fmt.Errorf(
-			"deposit merkle branch of deposit root did not verify for root: %#x",
-			receiptRoot,
-		)
-	}
-	return nil
 }
 
 // ProcessVoluntaryExits is one of the operations performed
@@ -1047,12 +1104,12 @@ func ProcessVoluntaryExits(
 		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 		validator := beaconState.Validators[exit.ValidatorIndex]
 		if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-			return nil, errors.Wrap(err, "could not verify voluntary exit signature")
+			return nil, errors.Wrapf(err, "could not verify voluntary exit signature at index %d", idx)
 		}
 
 		beaconState, err = ProcessVoluntaryExitNoVerify(beaconState, exit)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", i)
+			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", idx)
 		}
 	}
 	return beaconState, nil
