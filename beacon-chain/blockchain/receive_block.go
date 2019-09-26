@@ -144,14 +144,14 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	return nil
 }
 
-// ReceiveBlockNoVerify runs state transition on a input block without verifying the block's contents.
-// Depends on the security model, this would is the minimal work a node can do to sync the chain.
-// This assumes 100% trust with the syncing peer.
+// ReceiveBlockNoVerify runs state transition on a input block without verifying the block's BLS contents.
+// Depends on the security model, this is the "minimal" work a node can do to sync the chain.
+// It simulates light client behavior and assumes 100% trust with the syncing peer.
 func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
 
-	// Apply state transition on the incoming newly received block.
+	// Apply state transition on the incoming newly received block without verifying its BLS contents.
 	if err := s.forkChoiceStore.OnBlockNoVerifyStateTransition(ctx, block); err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}

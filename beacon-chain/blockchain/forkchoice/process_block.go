@@ -24,8 +24,8 @@ import (
 // Allow for blocks "from the future" within a certain tolerance.
 const timeShiftTolerance = 10 // ms
 
-// OnBlock is called whenever a block is received. It runs state transition on the block and
-// update fork choice store struct.
+// OnBlock is called when a gossip block is received. It runs regular state transition on the block and
+// update fork choice store.
 //
 // Spec pseudocode definition:
 //   def on_block(store: Store, block: BeaconBlock) -> None:
@@ -122,8 +122,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockNoVerifyStateTransition is called whenever a block is received. It runs state transition on the block and without
-// any verification.
+// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// It runs state transition on the block and without any BLS verification. The BLS verification
+// includes proposer signature, randao and attestation's aggregated signature.
 func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
