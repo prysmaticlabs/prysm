@@ -55,20 +55,19 @@ func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*Valid
 		services: registry,
 		stop:     make(chan struct{}),
 	}
+	featureconfig.ConfigureValidatorFeatures(ctx)
 
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		if featureconfig.FeatureConfig().DemoConfig {
-			log.Warn("Using Demo Config")
-			params.UseDemoBeaconConfig()
-		} else {
+		if featureconfig.FeatureConfig().MinimalConfig {
 			log.Warn("Using Minimal Config")
 			params.UseMinimalConfig()
+		} else {
+			log.Warn("Using Demo Config")
+			params.UseDemoBeaconConfig()
 		}
 	}
-
-	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

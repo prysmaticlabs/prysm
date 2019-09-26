@@ -26,7 +26,7 @@ var log = logrus.WithField("prefix", "flags")
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
 	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
-	DemoConfig               bool // DemoConfig with lower deposit thresholds.
+	MinimalConfig            bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 
@@ -54,10 +54,9 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	cfg.DemoConfig = true
-	if ctx.GlobalBool(DemoConfigFlag.Name) {
-		log.Warn("Using demo config")
-		cfg.DemoConfig = true
+	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
 	}
 	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
@@ -86,6 +85,9 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidatorFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	cfg.DemoConfig = true
+	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
+	}
 	InitFeatureConfig(cfg)
 }
