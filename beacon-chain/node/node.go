@@ -216,7 +216,8 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			lineInput := strings.ToUpper(string(line))
+			trimmedLine := strings.TrimSpace(string(line))
+			lineInput := strings.ToUpper(trimmedLine)
 			if lineInput != "Y" && lineInput != "N" {
 				log.Errorf("Invalid option of %s chosen, enter Y/N", line)
 				continue
