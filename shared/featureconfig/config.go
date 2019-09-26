@@ -54,6 +54,7 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
+	cfg.DemoConfig = true
 	if ctx.GlobalBool(DemoConfigFlag.Name) {
 		log.Warn("Using demo config")
 		cfg.DemoConfig = true
@@ -85,5 +86,6 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidatorFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
+	cfg.DemoConfig = true
 	InitFeatureConfig(cfg)
 }
