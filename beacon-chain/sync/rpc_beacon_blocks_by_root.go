@@ -2,13 +2,13 @@ package sync
 
 import (
 	"context"
+	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -21,32 +21,25 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err != nil {
 		return err
 	}
-
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
-	if err != nil {
-		return err
-	}
-
-	if code != 0 {
-		return errors.New(errMsg)
-	}
-
-	resp := make([]*eth.BeaconBlock, 0)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return err
-	}
-
-	r.pendingQueueLock.Lock()
-	defer r.pendingQueueLock.Unlock()
-	for _, blk := range resp {
+	for i := 0; i < len(blockRoots); i++ {
+		blk, err := ReadChunkedBlock(stream, r.p2p)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.WithError(err).Error("Unable to retrieve block from stream")
+			return err
+		}
+		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[blk.Slot] = blk
 		blkRoot, err := ssz.SigningRoot(blk)
 		if err != nil {
 			return err
 		}
 		r.seenPendingBlocks[blkRoot] = true
-	}
+		r.pendingQueueLock.Unlock()
 
+	}
 	return nil
 }
 
@@ -70,11 +63,13 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 		}
 		return errors.New("no block roots provided")
 	}
-	ret := make([]*eth.BeaconBlock, 0)
+
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
-		if err != nil {
-			log.WithError(err).Error("Failed to fetch block")
+		if err != nil || blk == nil {
+			if err != nil {
+				log.WithError(err).Error("Failed to fetch block")
+			}
 			resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
 				log.WithError(err).Error("Failed to generate a response error")
@@ -85,13 +80,9 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 			}
 			return err
 		}
-		// if block returned is nil, it appends nil to the slice
-		ret = append(ret, blk)
+		if err := r.chunkWriter(stream, blk); err != nil {
+			return err
+		}
 	}
-
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
-	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, ret)
-	return err
+	return nil
 }

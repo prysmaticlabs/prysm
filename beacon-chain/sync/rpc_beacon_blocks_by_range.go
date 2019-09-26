@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
@@ -37,7 +36,7 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 		return errors.New("invalid range or step")
 	}
 
-	// TODO(3147): Only return canonical blocks.
+	// TODO(3147): Only return blocks on the chain of the head root.
 	blks, err := r.db.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 	if err != nil {
 		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
@@ -50,17 +49,14 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 		}
 		return err
 	}
-	ret := []*ethpb.BeaconBlock{}
 
 	for _, blk := range blks {
-		if (blk.Slot-startSlot)%m.Step == 0 {
-			ret = append(ret, blk)
+		if blk != nil && (blk.Slot-startSlot)%m.Step == 0 {
+			if err := r.chunkWriter(stream, blk); err != nil {
+				log.WithError(err).Error("Failed to send a chunked response")
+				return err
+			}
 		}
 	}
-
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
-	}
-	_, err = r.p2p.Encoding().EncodeWithLength(stream, ret)
 	return err
 }

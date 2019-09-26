@@ -59,7 +59,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
-	tgt := a.Data.Target
+	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	// Verify beacon node has seen the target block before.
@@ -100,7 +100,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	defer s.attsQueueLock.Unlock()
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
-			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
 		}).Debug("Updating latest votes")
 
@@ -120,10 +120,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
-	}
-
-	if err := s.saveNewAttestation(ctx, a); err != nil {
-		return 0, err
+		if err := s.saveNewAttestation(ctx, a); err != nil {
+			return 0, err
+		}
 	}
 
 	return tgtSlot, nil
@@ -185,7 +184,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	}
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
 	if err := s.aggregateAttestation(ctx, a); err != nil {
@@ -200,7 +199,6 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
@@ -214,8 +212,7 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 		s.attsQueue[root] = a
 		return nil
 	}
-
-	s.attsQueue[root] = att
+	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
 }
 
@@ -240,7 +237,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
-		return nil, errors.New("could not verify indexed attestation")
+		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil
 }
@@ -257,7 +254,7 @@ func (s *Store) updateAttVotes(
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(ctx, i) || tgtEpoch > vote.Epoch {
+		if vote == nil || tgtEpoch > vote.Epoch {
 			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
