@@ -278,8 +278,7 @@ func ProcessRandao(
 	return beaconState, nil
 }
 
-// ProcessRandaoNoVerify checks the block proposer's
-// randao commitment and generates a new randao mix to update
+// ProcessRandaoNoVerify generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
