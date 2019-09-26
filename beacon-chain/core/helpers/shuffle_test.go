@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func TestShuffleList_InvalidValidatorCount(t *testing.T) {
@@ -179,6 +180,5 @@ func TestSplitIndicesAndOffset_OK(t *testing.T) {
 			t.Errorf("Want: %v got: %v", l[sliceutil.SplitOffset(uint64(len(l)), chunks, i):sliceutil.SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
 			break
 		}
-
 	}
 }
