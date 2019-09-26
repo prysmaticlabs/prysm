@@ -109,7 +109,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns nil, credentialError or fail status
+// Status returns nil, credentialError or fail status.
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
