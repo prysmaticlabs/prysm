@@ -489,9 +489,9 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 		activationQueueChurn = int(churnLimit)
 	}
 	if int(churnLimit) < exitQueueChurn {
-		// If we are above the churn limit, we simply increase the churn epoch
-		// to become the next epoch.
-		exitQueueChurn++
+		// If we are above the churn limit, we simply increase the churn by one.
+		exitQueueEpoch++
+		exitQueueChurn = int(churnLimit)
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
