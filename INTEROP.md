@@ -31,10 +31,10 @@ You can use `bazel run //tools/genesis-state-gen` to create a deterministic gene
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
 
 The example below creates 64 validator keys, instantiates a genesis state with those 64 validators and with genesis unix timestamp 1567542540,
-and finally writes a YAML encoded output to ~/Desktop/genesis.yaml. This file can be used to kickstart the beacon chain in the next section.
+and finally writes a ssz encoded output to ~/Desktop/genesis.ssz. This file can be used to kickstart the beacon chain in the next section.
 
 ```
-bazel run //tools/genesis-state-gen -- --output-yaml ~/Desktop/genesis.yaml --num-validators 64 --genesis-time 1567542540
+bazel run //tools/genesis-state-gen -- --output-ssz ~/Desktop/genesis.ssz --num-validators 64 --genesis-time 1567542540
 ```
 
 ## Launching a Beacon Node + Validator Client
