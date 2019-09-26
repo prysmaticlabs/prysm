@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -14,16 +13,13 @@ import (
 )
 
 const oneYear = 365 * 24 * time.Hour
+const pubsubMessageTimeout = 10 * time.Second
 
 // prefix to add to keys, so that we can represent invalid objects
 const invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
-
-func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
-	return errors.New("not implemented")
-}
 
 // validator should verify the contents of the message, propagate the message
 // as expected, and return true or false to continue the message processing
@@ -43,9 +39,9 @@ func (r *RegularSync) registerSubscribers() {
 		ch := make(chan time.Time)
 		sub := r.chain.StateInitializedFeed().Subscribe(ch)
 		defer sub.Unsubscribe()
+
 		// Wait until chain start.
 		genesis := <-ch
-
 		if genesis.After(roughtime.Now()) {
 			time.Sleep(roughtime.Until(genesis))
 		}
@@ -106,7 +102,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 				debug.PrintStack()
 			}
 		}()
-		ctx := context.Background()
+		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
@@ -123,8 +119,6 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		}
 
 		if !validate(ctx, msg, r.p2p, fromSelf) {
-			log.WithField("message", msg.String()).Debug("Message did not verify")
-
 			// TODO(3147): Increment metrics.
 			return
 		}

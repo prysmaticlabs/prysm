@@ -2,19 +2,18 @@ package sync
 
 import (
 	"context"
+	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
 func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
-	log := log.WithField("rpc", "recent_beacon_blocks")
-
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -22,37 +21,35 @@ func (r *RegularSync) sendRecentBeaconBlocksRequest(ctx context.Context, blockRo
 	if err != nil {
 		return err
 	}
-
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
-	if err != nil {
-		return err
-	}
-
-	if code != 0 {
-		return errors.New(errMsg)
-	}
-
-	resp := make([]*eth.BeaconBlock, 0)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, &resp); err != nil {
-		return err
-	}
-	for _, blk := range resp {
-		if err := r.chain.ReceiveBlock(ctx, blk); err != nil {
-			log.WithError(err).Error("Unable to process block")
-			return nil
+	for i := 0; i < len(blockRoots); i++ {
+		blk, err := ReadChunkedBlock(stream, r.p2p)
+		if err == io.EOF {
+			break
 		}
-	}
+		if err != nil {
+			log.WithError(err).Error("Unable to retrieve block from stream")
+			return err
+		}
+		r.pendingQueueLock.Lock()
+		r.slotToPendingBlocks[blk.Slot] = blk
+		blkRoot, err := ssz.SigningRoot(blk)
+		if err != nil {
+			return err
+		}
+		r.seenPendingBlocks[blkRoot] = true
+		r.pendingQueueLock.Unlock()
 
+	}
 	return nil
 }
 
-// recentBeaconBlocksRPCHandler looks up the request blocks from the database from the given block roots.
-func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+// beaconBlocksRootRPCHandler looks up the request blocks from the database from the given block roots.
+func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
-	log := log.WithField("handler", "recent_beacon_blocks")
+	log := log.WithField("handler", "beacon_blocks_by_root")
 
 	blockRoots := msg.([][32]byte)
 	if len(blockRoots) == 0 {
@@ -66,11 +63,13 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg inte
 		}
 		return errors.New("no block roots provided")
 	}
-	ret := make([]*eth.BeaconBlock, 0)
+
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
-		if err != nil {
-			log.WithError(err).Error("Failed to fetch block")
+		if err != nil || blk == nil {
+			if err != nil {
+				log.WithError(err).Error("Failed to fetch block")
+			}
 			resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
 				log.WithError(err).Error("Failed to generate a response error")
@@ -81,13 +80,9 @@ func (r *RegularSync) recentBeaconBlocksRPCHandler(ctx context.Context, msg inte
 			}
 			return err
 		}
-		// if block returned is nil, it appends nil to the slice
-		ret = append(ret, blk)
+		if err := r.chunkWriter(stream, blk); err != nil {
+			return err
+		}
 	}
-
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
-	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, ret)
-	return err
+	return nil
 }

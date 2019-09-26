@@ -24,10 +24,10 @@ import (
 
 // TopicMappings are the protocol ids for the different types of requests.
 var TopicMappings = map[reflect.Type]string{
-	reflect.TypeOf(&pb.Hello{}):               "/eth2/beacon_chain/req/hello/1",
-	reflect.TypeOf(&pb.Goodbye{}):             "/eth2/beacon_chain/req/goodbye/1",
-	reflect.TypeOf(&pb.BeaconBlocksRequest{}): "/eth2/beacon_chain/req/beacon_blocks/1",
-	reflect.TypeOf([][32]byte{}):              "/eth2/beacon_chain/req/recent_beacon_blocks/1",
+	reflect.TypeOf(&pb.Status{}):                     "/eth2/beacon_chain/req/status/1",
+	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/goodbye/1",
+	reflect.TypeOf(&pb.BeaconBlocksByRangeRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+	reflect.TypeOf([][32]byte{}):                     "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -36,6 +36,7 @@ type TestP2P struct {
 	Host            host.Host
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
+	DelaySend       bool
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -144,11 +145,6 @@ func (p *TestP2P) Disconnect(pid peer.ID) error {
 	return p.Host.Network().ClosePeer(pid)
 }
 
-// AddHandshake to the peer handshake records.
-func (p *TestP2P) AddHandshake(pid peer.ID, hello *pb.Hello) {
-	// TODO(3147): add this.
-}
-
 // PeerID returns the Peer ID of the local peer.
 func (p *TestP2P) PeerID() peer.ID {
 	return p.Host.ID()
@@ -204,6 +200,10 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (netwo
 	// Close stream for writing.
 	if err := stream.Close(); err != nil {
 		return nil, err
+	}
+	// Delay returning the stream for testing purposes
+	if p.DelaySend {
+		time.Sleep(1 * time.Second)
 	}
 
 	return stream, nil

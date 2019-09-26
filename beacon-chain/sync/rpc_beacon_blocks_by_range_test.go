@@ -25,14 +25,14 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 
-	req := &pb.BeaconBlocksRequest{
-		HeadSlot: 100,
-		Step:     4,
-		Count:    100,
+	req := &pb.BeaconBlocksByRangeRequest{
+		StartSlot: 100,
+		Step:      4,
+		Count:     100,
 	}
 
 	// Populate the database with blocks that would match the request.
-	for i := req.HeadSlot; i < req.HeadSlot+(req.Step*req.Count); i++ {
+	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i++ {
 		if err := d.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: i}); err != nil {
 			t.Fatal(err)
 		}
@@ -45,17 +45,14 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
-		res := make([]ethpb.BeaconBlock, 0)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
-			t.Error(err)
-		}
-		if uint64(len(res)) != req.Count {
-			t.Errorf("Received only %d blocks, expected %d", len(res), req.Count)
-		}
-		for _, blk := range res {
-			if (blk.Slot-req.HeadSlot)%req.Step != 0 {
-				t.Errorf("Received unexpected block slot %d", blk.Slot)
+		for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
+			expectSuccess(t, r, stream)
+			res := &ethpb.BeaconBlock{}
+			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+				t.Error(err)
+			}
+			if (res.Slot-req.StartSlot)%req.Step != 0 {
+				t.Errorf("Received unexpected block slot %d", res.Slot)
 			}
 		}
 	})
@@ -65,7 +62,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.beaconBlocksRPCHandler(context.Background(), req, stream1)
+	err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

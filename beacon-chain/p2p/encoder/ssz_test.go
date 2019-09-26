@@ -2,6 +2,8 @@ package encoder_test
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -69,5 +71,46 @@ func TestLighthouseBeaconBlockResponse(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
 	if err := e.Decode(b, &decoded); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
+	buf := new(bytes.Buffer)
+	msg := &testpb.TestSimpleMessage{
+		Foo: []byte("fooooo"),
+		Bar: 9001,
+	}
+	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	maxLength := uint64(5)
+	_, err := e.EncodeWithMaxLength(buf, msg, maxLength)
+	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	if err == nil {
+		t.Fatalf("wanted this error %s but got nothing", wanted)
+	}
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
+	}
+}
+
+func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
+	buf := new(bytes.Buffer)
+	msg := &testpb.TestSimpleMessage{
+		Foo: []byte("fooooo"),
+		Bar: 4242,
+	}
+	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	maxLength := uint64(5)
+	_, err := e.Encode(buf, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded := &testpb.TestSimpleMessage{}
+	err = e.DecodeWithMaxLength(buf, decoded, maxLength)
+	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	if err == nil {
+		t.Fatalf("wanted this error %s but got nothing", wanted)
+	}
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
 	}
 }

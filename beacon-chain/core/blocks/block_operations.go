@@ -313,7 +313,6 @@ func ProcessRandao(
 
 func ProcessRandaoNoVerify(
 	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)

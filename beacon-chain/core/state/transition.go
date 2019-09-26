@@ -44,7 +44,7 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	helpers.ClearStartShardCache()
+
 	b.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
@@ -63,6 +63,7 @@ func ExecuteStateTransition(
 		}
 	}
 
+	interop.WriteBlockToDisk(block, false)
 	interop.WriteStateToDisk(state)
 
 	postStateRoot, err := ssz.HashTreeRoot(state)
@@ -103,7 +104,6 @@ func ExecuteStateTransitionForStateRoot(
 	}
 
 	stateCopy := proto.Clone(state).(*pb.BeaconState)
-	helpers.ClearStartShardCache()
 	b.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()

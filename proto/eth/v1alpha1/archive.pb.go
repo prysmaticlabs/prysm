@@ -5,11 +5,10 @@ package eth
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -26,9 +25,7 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 type ArchivedActiveSetChanges struct {
 	Activated            []uint64            `protobuf:"varint,1,rep,packed,name=activated,proto3" json:"activated,omitempty"`
 	Exited               []uint64            `protobuf:"varint,2,rep,packed,name=exited,proto3" json:"exited,omitempty"`
-	Ejected              []uint64            `protobuf:"varint,3,rep,packed,name=ejected,proto3" json:"ejected,omitempty"`
-	ProposersSlashed     []uint64            `protobuf:"varint,4,rep,packed,name=proposers_slashed,json=proposersSlashed,proto3" json:"proposers_slashed,omitempty"`
-	AttestersSlashed     []uint64            `protobuf:"varint,5,rep,packed,name=attesters_slashed,json=attestersSlashed,proto3" json:"attesters_slashed,omitempty"`
+	Slashed              []uint64            `protobuf:"varint,4,rep,packed,name=slashed,proto3" json:"slashed,omitempty"`
 	VoluntaryExits       []*VoluntaryExit    `protobuf:"bytes,6,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty"`
 	ProposerSlashings    []*ProposerSlashing `protobuf:"bytes,7,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty"`
 	AttesterSlashings    []*AttesterSlashing `protobuf:"bytes,8,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty"`
@@ -84,23 +81,9 @@ func (m *ArchivedActiveSetChanges) GetExited() []uint64 {
 	return nil
 }
 
-func (m *ArchivedActiveSetChanges) GetEjected() []uint64 {
+func (m *ArchivedActiveSetChanges) GetSlashed() []uint64 {
 	if m != nil {
-		return m.Ejected
-	}
-	return nil
-}
-
-func (m *ArchivedActiveSetChanges) GetProposersSlashed() []uint64 {
-	if m != nil {
-		return m.ProposersSlashed
-	}
-	return nil
-}
-
-func (m *ArchivedActiveSetChanges) GetAttestersSlashed() []uint64 {
-	if m != nil {
-		return m.AttestersSlashed
+		return m.Slashed
 	}
 	return nil
 }
@@ -128,8 +111,9 @@ func (m *ArchivedActiveSetChanges) GetAttesterSlashings() []*AttesterSlashing {
 
 type ArchivedCommitteeInfo struct {
 	Seed                 []byte   `protobuf:"bytes,1,opt,name=seed,proto3" json:"seed,omitempty" ssz-size:"32"`
-	CurrentShard         uint64   `protobuf:"varint,2,opt,name=current_shard,json=currentShard,proto3" json:"current_shard,omitempty"`
+	StartShard           uint64   `protobuf:"varint,2,opt,name=start_shard,json=startShard,proto3" json:"start_shard,omitempty"`
 	CommitteeCount       uint64   `protobuf:"varint,3,opt,name=committee_count,json=committeeCount,proto3" json:"committee_count,omitempty"`
+	ProposerIndex        uint64   `protobuf:"varint,4,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -175,9 +159,9 @@ func (m *ArchivedCommitteeInfo) GetSeed() []byte {
 	return nil
 }
 
-func (m *ArchivedCommitteeInfo) GetCurrentShard() uint64 {
+func (m *ArchivedCommitteeInfo) GetStartShard() uint64 {
 	if m != nil {
-		return m.CurrentShard
+		return m.StartShard
 	}
 	return 0
 }
@@ -185,6 +169,13 @@ func (m *ArchivedCommitteeInfo) GetCurrentShard() uint64 {
 func (m *ArchivedCommitteeInfo) GetCommitteeCount() uint64 {
 	if m != nil {
 		return m.CommitteeCount
+	}
+	return 0
+}
+
+func (m *ArchivedCommitteeInfo) GetProposerIndex() uint64 {
+	if m != nil {
+		return m.ProposerIndex
 	}
 	return 0
 }
@@ -197,36 +188,35 @@ func init() {
 func init() { proto.RegisterFile("proto/eth/v1alpha1/archive.proto", fileDescriptor_afd178f87193e24d) }
 
 var fileDescriptor_afd178f87193e24d = []byte{
-	// 458 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0xcf, 0x6e, 0xd4, 0x30,
-	0x10, 0xc6, 0x15, 0xb2, 0xb4, 0x60, 0xfa, 0x87, 0x5a, 0x2a, 0x8a, 0x2a, 0xb4, 0xac, 0x16, 0xaa,
-	0xae, 0x84, 0x9a, 0xa8, 0xad, 0xb8, 0xc0, 0x69, 0xbb, 0xe2, 0xc0, 0x01, 0x09, 0x65, 0xa5, 0x1e,
-	0xb8, 0x44, 0x8e, 0x77, 0x1a, 0x07, 0x92, 0x38, 0xb2, 0x27, 0x51, 0xdb, 0x67, 0xe0, 0xad, 0xb8,
-	0x70, 0xe4, 0x09, 0x10, 0xda, 0x47, 0xe0, 0x09, 0x90, 0x9d, 0x78, 0xbb, 0x82, 0xc2, 0x2d, 0xf3,
-	0x7d, 0x3f, 0x7f, 0x33, 0xf1, 0x98, 0x8c, 0x6a, 0x25, 0x51, 0x46, 0x80, 0x22, 0x6a, 0x4f, 0x58,
-	0x51, 0x0b, 0x76, 0x12, 0x31, 0xc5, 0x45, 0xde, 0x42, 0x68, 0x2d, 0xba, 0x0f, 0x28, 0x40, 0x41,
-	0x53, 0x86, 0x80, 0x22, 0x74, 0xd0, 0xc1, 0x71, 0x96, 0xa3, 0x68, 0xd2, 0x90, 0xcb, 0x32, 0xca,
-	0x64, 0x26, 0x23, 0x4b, 0xa7, 0xcd, 0xa5, 0xad, 0xba, 0x54, 0xf3, 0xd5, 0xa5, 0x1c, 0x1c, 0xde,
-	0xd1, 0x27, 0x05, 0xc6, 0x65, 0x95, 0xa4, 0x85, 0xe4, 0x9f, 0x3b, 0x6c, 0xfc, 0xd5, 0x27, 0xc1,
-	0xb4, 0x6b, 0xbf, 0x98, 0x72, 0xcc, 0x5b, 0x98, 0x03, 0xce, 0x04, 0xab, 0x32, 0xd0, 0xf4, 0x29,
-	0x79, 0xc8, 0x8c, 0xc6, 0x10, 0x16, 0x81, 0x37, 0xf2, 0x27, 0x83, 0xf8, 0x56, 0xa0, 0x4f, 0xc8,
-	0x06, 0x5c, 0xe5, 0xc6, 0xba, 0x67, 0xad, 0xbe, 0xa2, 0x01, 0xd9, 0x84, 0x4f, 0xc0, 0x8d, 0xe1,
-	0x5b, 0xc3, 0x95, 0xf4, 0x25, 0xd9, 0xab, 0x95, 0xac, 0xa5, 0x06, 0xa5, 0x13, 0x5d, 0x30, 0x2d,
-	0x60, 0x11, 0x0c, 0x2c, 0xf3, 0x78, 0x65, 0xcc, 0x3b, 0xdd, 0xc0, 0x0c, 0x11, 0x34, 0xae, 0xc3,
-	0xf7, 0x3b, 0x78, 0x65, 0x38, 0xf8, 0x3d, 0xd9, 0x6d, 0x65, 0xd1, 0x54, 0xc8, 0xd4, 0x75, 0x62,
-	0xe6, 0xd0, 0xc1, 0xc6, 0xc8, 0x9f, 0x3c, 0x3a, 0x7d, 0x11, 0xde, 0x79, 0x9b, 0xe1, 0x85, 0xa3,
-	0xdf, 0x5e, 0xe5, 0x18, 0xef, 0xb4, 0xeb, 0xa5, 0xa6, 0x17, 0x84, 0xba, 0x79, 0xba, 0xd6, 0x79,
-	0x95, 0xe9, 0x60, 0xd3, 0x26, 0x1e, 0xfd, 0x23, 0xf1, 0x43, 0x7f, 0x60, 0xde, 0xf3, 0xf1, 0xea,
-	0x5f, 0x9d, 0x62, 0x73, 0xdd, 0xe8, 0x6b, 0xb9, 0x0f, 0xfe, 0x9b, 0x3b, 0xed, 0x0f, 0xdc, 0xe6,
-	0xb2, 0x3f, 0x14, 0x3d, 0xfe, 0xe2, 0x91, 0x7d, 0xb7, 0xc5, 0x99, 0x2c, 0xcb, 0x1c, 0x11, 0xe0,
-	0x5d, 0x75, 0x29, 0xe9, 0x21, 0x19, 0x68, 0xb0, 0xdb, 0xf3, 0x26, 0x5b, 0xe7, 0x7b, 0xbf, 0x7e,
-	0x3c, 0xdb, 0xd6, 0xfa, 0xe6, 0x58, 0xe7, 0x37, 0xf0, 0x7a, 0x7c, 0x76, 0x3a, 0x8e, 0xad, 0x4d,
-	0x9f, 0x93, 0x6d, 0xde, 0x28, 0x05, 0x15, 0x26, 0x5a, 0x30, 0x65, 0x56, 0xea, 0x4d, 0x06, 0xf1,
-	0x56, 0x2f, 0xce, 0x8d, 0x46, 0x8f, 0xc8, 0x2e, 0x77, 0xe1, 0x09, 0x97, 0x4d, 0x85, 0x81, 0x6f,
-	0xb1, 0x9d, 0x95, 0x3c, 0x33, 0xea, 0xf9, 0xec, 0xdb, 0x72, 0xe8, 0x7d, 0x5f, 0x0e, 0xbd, 0x9f,
-	0xcb, 0xa1, 0xf7, 0xf1, 0xd5, 0xda, 0xc3, 0xad, 0xd5, 0xb5, 0x2e, 0x19, 0xe6, 0xbc, 0x60, 0xa9,
-	0xee, 0xaa, 0xe8, 0xef, 0x87, 0xfa, 0x06, 0x50, 0xa4, 0x1b, 0x56, 0x3f, 0xfb, 0x1d, 0x00, 0x00,
-	0xff, 0xff, 0xd4, 0xeb, 0x1e, 0x09, 0x31, 0x03, 0x00, 0x00,
+	// 442 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0xc1, 0x6a, 0xdb, 0x40,
+	0x10, 0x86, 0x51, 0x2c, 0x9c, 0x76, 0xd3, 0x38, 0x64, 0x21, 0x45, 0x84, 0xe2, 0x18, 0x53, 0x13,
+	0x5f, 0x22, 0x91, 0x84, 0x5e, 0xda, 0x93, 0x63, 0x7a, 0xc8, 0xa1, 0x50, 0x64, 0xc8, 0xa1, 0x17,
+	0xb1, 0x92, 0x27, 0xda, 0xa5, 0x92, 0x56, 0xec, 0x8c, 0x84, 0x93, 0x97, 0xea, 0x6b, 0xf4, 0xd8,
+	0x27, 0x28, 0xc5, 0xb7, 0x5e, 0xfb, 0x04, 0x45, 0x2b, 0x2b, 0x49, 0xd3, 0xb4, 0x37, 0xfd, 0xdf,
+	0xff, 0xef, 0x3f, 0x68, 0x18, 0x36, 0x2a, 0x8d, 0x26, 0x1d, 0x00, 0xc9, 0xa0, 0x3e, 0x15, 0x59,
+	0x29, 0xc5, 0x69, 0x20, 0x4c, 0x22, 0x55, 0x0d, 0xbe, 0xb5, 0xf8, 0x01, 0x90, 0x04, 0x03, 0x55,
+	0xee, 0x03, 0x49, 0xbf, 0x0b, 0x1d, 0x9e, 0xa4, 0x8a, 0x64, 0x15, 0xfb, 0x89, 0xce, 0x83, 0x54,
+	0xa7, 0x3a, 0xb0, 0xe9, 0xb8, 0xba, 0xb6, 0xaa, 0x6d, 0x6d, 0xbe, 0xda, 0x96, 0xc3, 0xc9, 0x13,
+	0x73, 0x62, 0x10, 0x89, 0x2e, 0xa2, 0x38, 0xd3, 0xc9, 0xe7, 0x36, 0x36, 0xfe, 0xb9, 0xc5, 0xbc,
+	0x59, 0x3b, 0x7e, 0x39, 0x4b, 0x48, 0xd5, 0xb0, 0x00, 0x9a, 0x4b, 0x51, 0xa4, 0x80, 0xfc, 0x15,
+	0x7b, 0x2e, 0x1a, 0x26, 0x08, 0x96, 0x9e, 0x33, 0xea, 0x4d, 0xdd, 0xf0, 0x1e, 0xf0, 0x97, 0xac,
+	0x0f, 0x2b, 0xd5, 0x58, 0x5b, 0xd6, 0xda, 0x28, 0xee, 0xb1, 0x6d, 0xcc, 0x04, 0x4a, 0x58, 0x7a,
+	0xae, 0x35, 0x3a, 0xc9, 0x3f, 0xb0, 0xbd, 0x5a, 0x67, 0x55, 0x41, 0xc2, 0xdc, 0x44, 0x4d, 0x1a,
+	0xbd, 0xfe, 0xa8, 0x37, 0xdd, 0x39, 0x7b, 0xed, 0x3f, 0xf9, 0xcf, 0xfe, 0x55, 0x97, 0x7e, 0xbf,
+	0x52, 0x14, 0x0e, 0xea, 0x87, 0x12, 0xf9, 0x15, 0xe3, 0xa5, 0xd1, 0xa5, 0x46, 0x30, 0x91, 0x1d,
+	0xa1, 0x8a, 0x14, 0xbd, 0x6d, 0xdb, 0x78, 0xfc, 0x8f, 0xc6, 0x8f, 0x9b, 0x07, 0x8b, 0x4d, 0x3e,
+	0xdc, 0x2f, 0x1f, 0x11, 0xdb, 0x2b, 0x88, 0x00, 0xe9, 0x8f, 0xde, 0x67, 0xff, 0xed, 0x9d, 0x6d,
+	0x1e, 0xdc, 0xf7, 0x8a, 0x47, 0x04, 0xc7, 0x5f, 0x1c, 0x76, 0xd0, 0xed, 0x7a, 0xae, 0xf3, 0x5c,
+	0x11, 0x01, 0x5c, 0x16, 0xd7, 0x9a, 0x4f, 0x98, 0x8b, 0x60, 0x77, 0xec, 0x4c, 0x5f, 0x5c, 0xec,
+	0xff, 0xfa, 0x7e, 0xb4, 0x8b, 0x78, 0x7b, 0x82, 0xea, 0x16, 0xde, 0x8e, 0xcf, 0xcf, 0xc6, 0xa1,
+	0xb5, 0xf9, 0x11, 0xdb, 0x41, 0x12, 0x86, 0x22, 0x94, 0xc2, 0x34, 0x6b, 0x77, 0xa6, 0x6e, 0xc8,
+	0x2c, 0x5a, 0x34, 0x84, 0x1f, 0xb3, 0xbd, 0xa4, 0x2b, 0x8e, 0x12, 0x5d, 0x15, 0xe4, 0xf5, 0x6c,
+	0x68, 0x70, 0x87, 0xe7, 0x0d, 0xe5, 0x13, 0x36, 0xb8, 0x5b, 0x9d, 0x2a, 0x96, 0xb0, 0xf2, 0x5c,
+	0x9b, 0xdb, 0xed, 0xe8, 0x65, 0x03, 0x2f, 0xe6, 0x5f, 0xd7, 0x43, 0xe7, 0xdb, 0x7a, 0xe8, 0xfc,
+	0x58, 0x0f, 0x9d, 0x4f, 0x6f, 0x1e, 0x5c, 0x60, 0x69, 0x6e, 0x30, 0x17, 0xa4, 0x92, 0x4c, 0xc4,
+	0xd8, 0xaa, 0xe0, 0xef, 0x8b, 0x7b, 0x07, 0x24, 0xe3, 0xbe, 0xe5, 0xe7, 0xbf, 0x03, 0x00, 0x00,
+	0xff, 0xff, 0x82, 0x1f, 0xa7, 0x3d, 0xfa, 0x02, 0x00, 0x00,
 }
 
 func (m *ArchivedActiveSetChanges) Marshal() (dAtA []byte, err error) {
@@ -278,10 +268,10 @@ func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintArchive(dAtA, i, uint64(j3))
 		i += copy(dAtA[i:], dAtA4[:j3])
 	}
-	if len(m.Ejected) > 0 {
-		dAtA6 := make([]byte, len(m.Ejected)*10)
+	if len(m.Slashed) > 0 {
+		dAtA6 := make([]byte, len(m.Slashed)*10)
 		var j5 int
-		for _, num := range m.Ejected {
+		for _, num := range m.Slashed {
 			for num >= 1<<7 {
 				dAtA6[j5] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
@@ -290,44 +280,10 @@ func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
 			dAtA6[j5] = uint8(num)
 			j5++
 		}
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintArchive(dAtA, i, uint64(j5))
 		i += copy(dAtA[i:], dAtA6[:j5])
-	}
-	if len(m.ProposersSlashed) > 0 {
-		dAtA8 := make([]byte, len(m.ProposersSlashed)*10)
-		var j7 int
-		for _, num := range m.ProposersSlashed {
-			for num >= 1<<7 {
-				dAtA8[j7] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j7++
-			}
-			dAtA8[j7] = uint8(num)
-			j7++
-		}
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintArchive(dAtA, i, uint64(j7))
-		i += copy(dAtA[i:], dAtA8[:j7])
-	}
-	if len(m.AttestersSlashed) > 0 {
-		dAtA10 := make([]byte, len(m.AttestersSlashed)*10)
-		var j9 int
-		for _, num := range m.AttestersSlashed {
-			for num >= 1<<7 {
-				dAtA10[j9] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j9++
-			}
-			dAtA10[j9] = uint8(num)
-			j9++
-		}
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintArchive(dAtA, i, uint64(j9))
-		i += copy(dAtA[i:], dAtA10[:j9])
 	}
 	if len(m.VoluntaryExits) > 0 {
 		for _, msg := range m.VoluntaryExits {
@@ -392,15 +348,20 @@ func (m *ArchivedCommitteeInfo) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintArchive(dAtA, i, uint64(len(m.Seed)))
 		i += copy(dAtA[i:], m.Seed)
 	}
-	if m.CurrentShard != 0 {
+	if m.StartShard != 0 {
 		dAtA[i] = 0x10
 		i++
-		i = encodeVarintArchive(dAtA, i, uint64(m.CurrentShard))
+		i = encodeVarintArchive(dAtA, i, uint64(m.StartShard))
 	}
 	if m.CommitteeCount != 0 {
 		dAtA[i] = 0x18
 		i++
 		i = encodeVarintArchive(dAtA, i, uint64(m.CommitteeCount))
+	}
+	if m.ProposerIndex != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintArchive(dAtA, i, uint64(m.ProposerIndex))
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -437,23 +398,9 @@ func (m *ArchivedActiveSetChanges) Size() (n int) {
 		}
 		n += 1 + sovArchive(uint64(l)) + l
 	}
-	if len(m.Ejected) > 0 {
+	if len(m.Slashed) > 0 {
 		l = 0
-		for _, e := range m.Ejected {
-			l += sovArchive(uint64(e))
-		}
-		n += 1 + sovArchive(uint64(l)) + l
-	}
-	if len(m.ProposersSlashed) > 0 {
-		l = 0
-		for _, e := range m.ProposersSlashed {
-			l += sovArchive(uint64(e))
-		}
-		n += 1 + sovArchive(uint64(l)) + l
-	}
-	if len(m.AttestersSlashed) > 0 {
-		l = 0
-		for _, e := range m.AttestersSlashed {
+		for _, e := range m.Slashed {
 			l += sovArchive(uint64(e))
 		}
 		n += 1 + sovArchive(uint64(l)) + l
@@ -492,11 +439,14 @@ func (m *ArchivedCommitteeInfo) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovArchive(uint64(l))
 	}
-	if m.CurrentShard != 0 {
-		n += 1 + sovArchive(uint64(m.CurrentShard))
+	if m.StartShard != 0 {
+		n += 1 + sovArchive(uint64(m.StartShard))
 	}
 	if m.CommitteeCount != 0 {
 		n += 1 + sovArchive(uint64(m.CommitteeCount))
+	}
+	if m.ProposerIndex != 0 {
+		n += 1 + sovArchive(uint64(m.ProposerIndex))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -698,82 +648,6 @@ func (m *ArchivedActiveSetChanges) Unmarshal(dAtA []byte) error {
 			} else {
 				return fmt.Errorf("proto: wrong wireType = %d for field Exited", wireType)
 			}
-		case 3:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowArchive
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Ejected = append(m.Ejected, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowArchive
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthArchive
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthArchive
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Ejected) == 0 {
-					m.Ejected = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowArchive
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Ejected = append(m.Ejected, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ejected", wireType)
-			}
 		case 4:
 			if wireType == 0 {
 				var v uint64
@@ -791,7 +665,7 @@ func (m *ArchivedActiveSetChanges) Unmarshal(dAtA []byte) error {
 						break
 					}
 				}
-				m.ProposersSlashed = append(m.ProposersSlashed, v)
+				m.Slashed = append(m.Slashed, v)
 			} else if wireType == 2 {
 				var packedLen int
 				for shift := uint(0); ; shift += 7 {
@@ -826,8 +700,8 @@ func (m *ArchivedActiveSetChanges) Unmarshal(dAtA []byte) error {
 					}
 				}
 				elementCount = count
-				if elementCount != 0 && len(m.ProposersSlashed) == 0 {
-					m.ProposersSlashed = make([]uint64, 0, elementCount)
+				if elementCount != 0 && len(m.Slashed) == 0 {
+					m.Slashed = make([]uint64, 0, elementCount)
 				}
 				for iNdEx < postIndex {
 					var v uint64
@@ -845,86 +719,10 @@ func (m *ArchivedActiveSetChanges) Unmarshal(dAtA []byte) error {
 							break
 						}
 					}
-					m.ProposersSlashed = append(m.ProposersSlashed, v)
+					m.Slashed = append(m.Slashed, v)
 				}
 			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposersSlashed", wireType)
-			}
-		case 5:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowArchive
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.AttestersSlashed = append(m.AttestersSlashed, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowArchive
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthArchive
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthArchive
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.AttestersSlashed) == 0 {
-					m.AttestersSlashed = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowArchive
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.AttestersSlashed = append(m.AttestersSlashed, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field AttestersSlashed", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Slashed", wireType)
 			}
 		case 6:
 			if wireType != 2 {
@@ -1118,9 +916,9 @@ func (m *ArchivedCommitteeInfo) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentShard", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field StartShard", wireType)
 			}
-			m.CurrentShard = 0
+			m.StartShard = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowArchive
@@ -1130,7 +928,7 @@ func (m *ArchivedCommitteeInfo) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.CurrentShard |= uint64(b&0x7F) << shift
+				m.StartShard |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1150,6 +948,25 @@ func (m *ArchivedCommitteeInfo) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.CommitteeCount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ProposerIndex", wireType)
+			}
+			m.ProposerIndex = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowArchive
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ProposerIndex |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

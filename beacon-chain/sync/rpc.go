@@ -15,7 +15,12 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
-var ttfbTimeout = 5 * time.Second
+const ttfbTimeout = 5 * time.Second
+
+// maxChunkSize would be the maximum allowed size that a request/response chunk can be.
+// any size beyond that would be rejected and the corresponding stream reset. This would
+// be 1048576 bytes or 1 MiB.
+const maxChunkSize = 1 << 20
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -25,24 +30,24 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (r *RegularSync) registerRPCHandlers() {
 	r.registerRPC(
-		"/eth2/beacon_chain/req/hello/1",
-		&pb.Hello{},
-		r.helloRPCHandler,
+		"/eth2/beacon_chain/req/status/1",
+		&pb.Status{},
+		r.statusRPCHandler,
 	)
 	r.registerRPC(
 		"/eth2/beacon_chain/req/goodbye/1",
-		&pb.Goodbye{},
+		new(uint64),
 		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks/1",
-		&pb.BeaconBlocksRequest{},
-		r.beaconBlocksRPCHandler,
+		"/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+		&pb.BeaconBlocksByRangeRequest{},
+		r.beaconBlocksByRangeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/recent_beacon_blocks/1",
+		"/eth2/beacon_chain/req/beacon_blocks_by_root/1",
 		[][32]byte{},
-		r.recentBeaconBlocksRPCHandler,
+		r.beaconBlocksRootRPCHandler,
 	)
 }
 
@@ -86,5 +91,6 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 				log.WithError(err).Error("Failed to handle p2p RPC")
 			}
 		}
+
 	})
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // P2P represents the full p2p interface composed of all of the sub-interfaces.
@@ -18,7 +17,6 @@ type P2P interface {
 	EncodingProvider
 	PubSubProvider
 	PeerManager
-	HandshakeManager
 	Sender
 	ConnectionHandler
 }
@@ -53,11 +51,6 @@ type PubSubProvider interface {
 type PeerManager interface {
 	Disconnect(peer.ID) error
 	PeerID() peer.ID
-}
-
-// HandshakeManager abstracts certain methods regarding handshake records.
-type HandshakeManager interface {
-	AddHandshake(peer.ID, *pb.Hello)
 }
 
 // Sender abstracts the sending functionality from libp2p.
