@@ -1031,6 +1031,49 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *tes
 	}
 }
 
+func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 3,
+				PublicKey:                  []byte("3"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 2,
+				PublicKey:                  []byte("2"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 1,
+				PublicKey:                  []byte("1"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We verify the keys are properly sorted.
+	wanted := [][]byte{
+		[]byte("1"),
+		[]byte("2"),
+		[]byte("3"),
+	}
+	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
+	}
+}
+
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
