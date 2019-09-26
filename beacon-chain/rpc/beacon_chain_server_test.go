@@ -979,8 +979,13 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *testing.T) {
 	activeValidatorCount := uint64(100)
 	validators := make([]*ethpb.Validator, activeValidatorCount)
+	// We create a bunch of active validators.
 	for i := uint64(0); i < activeValidatorCount; i++ {
-		validators[i] = &ethpb.Validator{}
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: 0,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PublicKey:       []byte(strconv.Itoa(int(i))),
+		}
 	}
 	headState := &pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
