@@ -6,7 +6,6 @@ go_test(
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/keystore:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/accounts:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
