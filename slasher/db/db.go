@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "beacondb")
+var log = logrus.WithField("prefix", "slasherDB")
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
