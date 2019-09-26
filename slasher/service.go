@@ -19,7 +19,7 @@ import (
 var log logrus.FieldLogger
 
 func init() {
-	log = logrus.WithField("prefix", "rpc")
+	log = logrus.WithField("prefix", "slasherRPC")
 }
 
 // Service defining an RPC server for the slasher service.
