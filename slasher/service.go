@@ -19,7 +19,7 @@ import (
 var log logrus.FieldLogger
 
 func init() {
-	log = logrus.WithField("prefix", "rpc")
+	log = logrus.WithField("prefix", "slasherRPC")
 }
 
 // Service defining an RPC server for the slasher service.
@@ -45,7 +45,6 @@ type Config struct {
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
 func NewRPCService(cfg *Config) *Service {
-
 	return &Service{
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
@@ -109,7 +108,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns nil, credentialError or fail status
+// Status returns nil, credentialError or fail status.
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
