@@ -100,7 +100,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	defer s.attsQueueLock.Unlock()
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
-			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
 		}).Debug("Updating latest votes")
 
