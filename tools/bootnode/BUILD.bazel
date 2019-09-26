@@ -38,7 +38,6 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
     pure = "on",
     race = "off",
-    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
