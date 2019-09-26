@@ -461,6 +461,9 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 	sort.Slice(activationQ, func(i, j int) bool {
 		return headState.Validators[i].ActivationEligibilityEpoch < headState.Validators[j].ActivationEligibilityEpoch
 	})
+	sort.Slice(awaitingExit, func(i, j int) bool {
+		return headState.Validators[i].ActivationEligibilityEpoch < headState.Validators[j].ActivationEligibilityEpoch
+	})
 
 	// Only activate just enough validators according to the activation churn limit.
 	activationQueueChurn := len(activationQ)

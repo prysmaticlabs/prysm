@@ -1035,19 +1035,19 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
-				ActivationEligibilityEpoch: 3,
-				PublicKey:                  []byte("3"),
+				ActivationEpoch: 0,
+				ExitEpoch:       0,
+				PublicKey:       []byte("3"),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
-				ActivationEligibilityEpoch: 2,
-				PublicKey:                  []byte("2"),
+				ActivationEpoch: 0,
+				ExitEpoch:       0,
+				PublicKey:       []byte("2"),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
-				ActivationEligibilityEpoch: 1,
-				PublicKey:                  []byte("1"),
+				ActivationEpoch: 0,
+				ExitEpoch:       0,
+				PublicKey:       []byte("1"),
 			},
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{
@@ -1069,8 +1069,8 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		[]byte("2"),
 		[]byte("3"),
 	}
-	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
-		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
+	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
 	}
 }
 
