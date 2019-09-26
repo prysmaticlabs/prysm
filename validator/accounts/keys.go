@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-
-	_ "go.uber.org/automaxprocs"
 )
 
 type unencryptedKeysContainer struct {
