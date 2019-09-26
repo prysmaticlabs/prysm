@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,7 +59,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
-	tgt := a.Data.Target
+	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	// Verify beacon node has seen the target block before.
@@ -121,6 +120,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
+		if err := s.saveNewAttestation(ctx, a); err != nil {
+			return 0, err
+		}
 	}
 
 	return tgtSlot, nil
@@ -182,7 +184,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	}
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
 	if err := s.aggregateAttestation(ctx, a); err != nil {
@@ -197,33 +199,20 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
 	}
 
-	incomingAttBits := att.AggregationBits
 	if a, ok := s.attsQueue[root]; ok {
-		if !a.AggregationBits.Contains(incomingAttBits) {
-			newBits := a.AggregationBits.Or(incomingAttBits)
-			incomingSig, err := bls.SignatureFromBytes(att.Signature)
-			if err != nil {
-				return err
-			}
-			currentSig, err := bls.SignatureFromBytes(a.Signature)
-			if err != nil {
-				return err
-			}
-			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{currentSig, incomingSig})
-			a.Signature = aggregatedSig.Marshal()
-			a.AggregationBits = newBits
-			s.attsQueue[root] = a
+		a, err := helpers.AggregateAttestation(a, att)
+		if err != nil {
+			return nil
 		}
+		s.attsQueue[root] = a
 		return nil
 	}
-
-	s.attsQueue[root] = att
+	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
 }
 
@@ -248,7 +237,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
-		return nil, errors.New("could not verify indexed attestation")
+		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil
 }
@@ -265,7 +254,7 @@ func (s *Store) updateAttVotes(
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(ctx, i) || tgtEpoch > vote.Epoch {
+		if vote == nil || tgtEpoch > vote.Epoch {
 			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
@@ -291,8 +280,31 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	return nil
 }
 
-// returns true when time is divisible with slot duration / 2.
-func halfSlot(genesisTime uint64) bool {
-	t := time.Unix(int64(genesisTime), 0)
-	return uint64(roughtime.Since(t).Seconds())%params.BeaconConfig().SecondsPerSlot/2 == 0
+// savesNewAttestation saves the new attestations to DB.
+func (s *Store) saveNewAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	r, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return err
+	}
+	saved, err := s.db.Attestation(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	if saved == nil {
+		if err := s.db.SaveAttestation(ctx, att); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	aggregated, err := helpers.AggregateAttestation(saved, att)
+	if err != nil {
+		return err
+	}
+	if err := s.db.SaveAttestation(ctx, aggregated); err != nil {
+		return err
+	}
+
+	return nil
 }

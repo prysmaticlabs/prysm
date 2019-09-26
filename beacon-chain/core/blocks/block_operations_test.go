@@ -904,7 +904,6 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	helpers.ClearActiveIndicesCache()
 	helpers.ClearActiveCountCache()
-	helpers.ClearStartShardCache()
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

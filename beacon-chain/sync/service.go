@@ -37,12 +37,12 @@ type blockchainService interface {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *RegularSync {
 	r := &RegularSync{
-		ctx:         context.Background(),
-		db:          cfg.DB,
-		p2p:         cfg.P2P,
-		operations:  cfg.Operations,
-		chain:       cfg.Chain,
-		initialSync: cfg.InitialSync,
+		ctx:                 context.Background(),
+		db:                  cfg.DB,
+		p2p:                 cfg.P2P,
+		operations:          cfg.Operations,
+		chain:               cfg.Chain,
+		initialSync:         cfg.InitialSync,
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -65,7 +65,8 @@ type RegularSync struct {
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool
-	initialSync Checker
+	initialSync         Checker
+	validateBlockLock   sync.RWMutex
 }
 
 // Start the regular sync service.
@@ -73,6 +74,7 @@ func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
+	go r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.

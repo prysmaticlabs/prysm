@@ -17,6 +17,11 @@ func (op *Operations) AttestationPool(ctx context.Context, requestedSlot uint64)
 	return op.Attestations, nil
 }
 
+// AttestationPoolNoVerify --
+func (op *Operations) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return op.Attestations, nil
+}
+
 // HandleAttestation --
 func (op *Operations) HandleAttestation(context.Context, proto.Message) error {
 	return nil
