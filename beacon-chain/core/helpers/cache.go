@@ -9,21 +9,6 @@ func ClearShuffledValidatorCache() {
 	shuffledIndicesCache = cache.NewShuffledIndicesCache()
 }
 
-// ClearStartShardCache clears the start shard cache from scratch.
-func ClearStartShardCache() {
-	startShardCache = cache.NewStartShardCache()
-}
-
-// ClearTotalActiveBalanceCache restarts the total active validator balance cache from scratch.
-func ClearTotalActiveBalanceCache() {
-	totalActiveBalanceCache = cache.NewActiveBalanceCache()
-}
-
-// ClearCurrentEpochSeed clears the current epoch seed.
-func ClearCurrentEpochSeed() {
-	currentEpochSeed = cache.NewSeedCache()
-}
-
 // ClearActiveCountCache restarts the active validator count cache from scratch.
 func ClearActiveCountCache() {
 	activeCountCache = cache.NewActiveCountCache()
@@ -43,8 +28,5 @@ func ActiveIndicesKeys() []string {
 func ClearAllCaches() {
 	ClearActiveIndicesCache()
 	ClearActiveCountCache()
-	ClearStartShardCache()
 	ClearShuffledValidatorCache()
-	ClearTotalActiveBalanceCache()
-	ClearCurrentEpochSeed()
 }
