@@ -272,7 +272,7 @@ func processBlockNoVerify(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandao(state, block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}

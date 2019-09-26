@@ -49,6 +49,10 @@ func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
+func (s *store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+	return nil
+}
+
 func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
 	return 0, nil
 }
