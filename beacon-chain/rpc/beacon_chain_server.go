@@ -482,8 +482,8 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if churnLimit < uint64(exitQueueChurn) {
-		exitQueueEpoch = churnLimit
+	if int(churnLimit) < exitQueueChurn {
+		exitQueueChurn = int(churnLimit)
 	}
 	if int(churnLimit) < activationQueueChurn {
 		activationQueueChurn = int(churnLimit)
@@ -498,13 +498,13 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 		}
 	}
 
-	// Get the public keys for the validators in the queues.
+	// Get the public keys for the validators in the queues up to the allowed churn limits.
 	activationQueueKeys := make([][]byte, len(activationQ[:activationQueueChurn]))
 	exitQueueKeys := make([][]byte, len(exitQueueIndices))
 	for i, idx := range activationQ[:activationQueueChurn] {
 		activationQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
-	for i, idx := range exitQueueIndices {
+	for i, idx := range exitQueueIndices[:exitQueueChurn] {
 		exitQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
 

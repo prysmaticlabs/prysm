@@ -185,8 +185,8 @@ func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
-	if uint64(exitQueueChurn) >= churn {
-		exitQueueEpoch++
+	if churn < uint64(exitQueueChurn) {
+		exitQueueEpoch = churn
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range state.Validators {
