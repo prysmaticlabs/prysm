@@ -74,6 +74,7 @@ func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
+	go r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.

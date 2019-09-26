@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -381,7 +382,59 @@ func (bs *BeaconChainServer) GetValidators(
 func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	headState := bs.headFetcher.HeadState()
+	requestedEpoch := helpers.CurrentEpoch(headState)
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
+		if q.Genesis {
+			requestedEpoch = 0
+		}
+	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
+		requestedEpoch = q.Epoch
+	}
+
+	activatedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	exitedIndices := make([]uint64, 0)
+	finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+	var err error
+
+	if requestedEpoch < finalizedEpoch {
+		archivedChanges, err := bs.beaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not fetch archived active validator changes: %v", err)
+		}
+		activatedIndices = archivedChanges.Activated
+		slashedIndices = archivedChanges.Slashed
+		exitedIndices = archivedChanges.Exited
+	} else {
+		activatedIndices = validators.ActivatedValidatorIndices(headState)
+		slashedIndices = validators.SlashedValidatorIndices(headState)
+		exitedIndices, err = validators.ExitedValidatorIndices(headState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not determine exited validator indices: %v", err)
+		}
+	}
+
+	// We retrieve the public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	for i, idx := range activatedIndices {
+		activatedKeys[i] = headState.Validators[idx].PublicKey
+	}
+	for i, idx := range slashedIndices {
+		slashedKeys[i] = headState.Validators[idx].PublicKey
+	}
+	for i, idx := range exitedIndices {
+		exitedKeys[i] = headState.Validators[idx].PublicKey
+	}
+	return &ethpb.ActiveSetChanges{
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ExitedPublicKeys:    exitedKeys,
+		SlashedPublicKeys:   slashedKeys,
+	}, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
@@ -467,6 +520,13 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				return nil, status.Errorf(
 					codes.Internal,
 					"could not retrieve archived committee info for epoch %d",
+					requestedEpoch,
+				)
+			}
+			if archivedInfo == nil {
+				return nil, status.Errorf(
+					codes.NotFound,
+					"no archival committee info found for epoch %d",
 					requestedEpoch,
 				)
 			}

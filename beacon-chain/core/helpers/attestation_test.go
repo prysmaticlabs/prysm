@@ -1,10 +1,10 @@
 package helpers_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -108,7 +108,7 @@ func TestAggregateAttestation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(got, tt.want) {
+		if !ssz.DeepEqual(got, tt.want) {
 			t.Errorf("AggregateAttestation() = %v, want %v", got, tt.want)
 		}
 	}

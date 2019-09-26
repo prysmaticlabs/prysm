@@ -1,6 +1,8 @@
 package trieutil
 
 import (
+	"math"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -76,4 +78,78 @@ func MerkleTree(leaves [][]byte) [][]byte {
 	}
 
 	return merkleTree
+}
+
+// ConcatGeneralizedIndices concats the generalized indices together.
+//
+// Spec pseudocode definition:
+//   def concat_generalized_indices(*indices: GeneralizedIndex) -> GeneralizedIndex:
+//    """
+//    Given generalized indices i1 for A -> B, i2 for B -> C .... i_n for Y -> Z, returns
+//    the generalized index for A -> Z.
+//    """
+//    o = GeneralizedIndex(1)
+//    for i in indices:
+//        o = GeneralizedIndex(o * get_previous_power_of_two(i) + (i - get_previous_power_of_two(i)))
+//    return o
+func ConcatGeneralizedIndices(indices []int) int {
+	index := 1
+	for _, i := range indices {
+		index = index*PrevPowerOf2(i) + (i - PrevPowerOf2(i))
+	}
+	return index
+}
+
+// GeneralizedIndexLength returns the generalized index length from a given index.
+//
+// Spec pseudocode definition:
+//   def get_generalized_index_length(index: GeneralizedIndex) -> int:
+//    """
+//    Return the length of a path represented by a generalized index.
+//    """
+//    return int(log2(index))
+func GeneralizedIndexLength(index int) int {
+	return int(math.Log2(float64(index)))
+}
+
+// GeneralizedIndexBit returns the given bit of a generalized index.
+//
+// Spec pseudocode definition:
+//   def get_generalized_index_bit(index: GeneralizedIndex, position: int) -> bool:
+//    """
+//    Return the given bit of a generalized index.
+//    """
+//    return (index & (1 << position)) > 0
+func GeneralizedIndexBit(index uint64, pos uint64) bool {
+	return (index & (1 << pos)) > 0
+}
+
+// GeneralizedIndexSibling returns the sibling of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_sibling(index: GeneralizedIndex) -> GeneralizedIndex:
+//    return GeneralizedIndex(index ^ 1)
+func GeneralizedIndexSibling(index int) int {
+	return index ^ 1
+}
+
+// GeneralizedIndexChild returns the child of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_child(index: GeneralizedIndex, right_side: bool) -> GeneralizedIndex:
+//    return GeneralizedIndex(index * 2 + right_side)
+func GeneralizedIndexChild(index int, rightSide bool) int {
+	if rightSide {
+		return index*2 + 1
+	}
+	return index * 2
+}
+
+// GeneralizedIndexParent returns the parent of a generalized index.
+//
+// Spec pseudocode definition:
+//   def generalized_index_parent(index: GeneralizedIndex) -> GeneralizedIndex:
+//    return GeneralizedIndex(index // 2)
+func GeneralizedIndexParent(index int) int {
+	return index / 2
 }
