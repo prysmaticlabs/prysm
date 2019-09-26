@@ -45,7 +45,6 @@ type Config struct {
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
 func NewRPCService(cfg *Config) *Service {
-
 	return &Service{
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
