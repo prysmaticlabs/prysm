@@ -30,10 +30,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	defer span.End()
 
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
-
-	span.AddAttributes(
-		trace.StringAttribute("validator", tpk),
-	)
+	span.AddAttributes(trace.StringAttribute("pubKey", tpk))
+	log := log.WithField("pubKey", tpk)
 
 	v.waitToSlotMidpoint(ctx, slot)
 
@@ -98,9 +96,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to sign attestation data and custody bit")
+		log.WithError(err).Error("Failed to sign attestation data and custody bit")
 		return
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
@@ -123,7 +119,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
-		"pubKey":      tpk,
 	}).Info("Attested latest head")
 
 	span.AddAttributes(
