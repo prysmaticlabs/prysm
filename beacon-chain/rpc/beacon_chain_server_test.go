@@ -999,12 +999,15 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *tes
 	}
 
 	pendingActiveCount := churnLimit * 2
+	wantedKeys := make([][]byte, int(churnLimit*2))
 	for i := uint64(0); i < pendingActiveCount; i++ {
-		validators = append(validators, &ethpb.Validator{
+		val := &ethpb.Validator{
 			ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
 			ActivationEligibilityEpoch: i + 1,
 			PublicKey:                  []byte(strconv.Itoa(len(validators))),
-		})
+		}
+		validators = append(validators, val)
+		wantedKeys[i] = val.PublicKey
 	}
 	headState.Validators = validators
 	bs := &BeaconChainServer{
@@ -1016,11 +1019,16 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range res.ActivationPublicKeys {
-		fmt.Printf("%v\n", key)
+	if len(res.ActivationPublicKeys) > int(churnLimit) {
+		t.Errorf(
+			"Expected to clip queued activations below churn limit %d, received %d in queue",
+			churnLimit,
+			len(res.ActivationPublicKeys),
+		)
 	}
-	fmt.Println(churnLimit)
-	t.Error("no")
+	if !reflect.DeepEqual(res.ActivationPublicKeys, wantedKeys[:churnLimit]) {
+		t.Errorf("Received %v, wanted %v", res.ActivationPublicKeys, wantedKeys[:churnLimit])
+	}
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
