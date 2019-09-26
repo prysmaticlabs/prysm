@@ -10,6 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -153,8 +154,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start := SplitOffset(validatorCount, committeeCount, shard)
-	end := SplitOffset(validatorCount, committeeCount, shard+1)
+	start := sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end := sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee5) {
 		t.Error("committee has different shuffled indices")
@@ -166,8 +167,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start = SplitOffset(validatorCount, committeeCount, shard)
-	end = SplitOffset(validatorCount, committeeCount, shard+1)
+	start = sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end = sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee9) {
 		t.Error("committee has different shuffled indices")

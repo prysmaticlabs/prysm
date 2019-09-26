@@ -11,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -113,8 +114,8 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := SplitOffset(validatorCount, totalCommittees, indexShard)
-	end := SplitOffset(validatorCount, totalCommittees, indexShard+1)
+	start := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard)
+	end := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])
