@@ -485,11 +485,13 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if int(churnLimit) < exitQueueChurn {
-		exitQueueChurn = int(churnLimit)
-	}
 	if int(churnLimit) < activationQueueChurn {
 		activationQueueChurn = int(churnLimit)
+	}
+	if int(churnLimit) < exitQueueChurn {
+		// If we are above the churn limit, we simply increase the churn epoch
+		// to become the next epoch.
+		exitQueueChurn++
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
