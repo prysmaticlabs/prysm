@@ -29,7 +29,6 @@ func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.B
 	return nil
 }
 
-
 // ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil

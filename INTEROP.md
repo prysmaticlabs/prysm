@@ -2,9 +2,6 @@
 
 This README details how to setup Prysm for interop testing for usage with other Ethereum 2.0 clients.
 
-**WARNING**: The tool can only generate up to 190 private keys at the moment, as there is a BLS bug that
-prevents deterministically generating more keys than those. 
-
 ## Installation & Setup
 
 1. Install [Bazel](https://docs.bazel.build/versions/master/install.html) **(Recommended)**
