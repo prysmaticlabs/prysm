@@ -2,7 +2,6 @@
 package node
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -196,7 +194,6 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
-	var clearDB bool
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
 	d, err := db.NewDB(dbPath)
@@ -204,41 +201,9 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		reader := bufio.NewReader(os.Stdin)
-
-		log.Warn("This will delete all the chain data stored in your data directory. " +
-			"Do you want to proceed ?(Y/N)")
-
-		for {
-			fmt.Print(">> ")
-
-			line, _, err := reader.ReadLine()
-			if err != nil {
-				return err
-			}
-			trimmedLine := strings.TrimSpace(string(line))
-			lineInput := strings.ToUpper(trimmedLine)
-			if lineInput != "Y" && lineInput != "N" {
-				log.Errorf("Invalid option of %s chosen, enter Y/N", line)
-				continue
-			}
-			if lineInput == "Y" {
-				log.Warn("Deleting all chain data from data directory")
-				clearDB = true
-				break
-			}
-			log.Info("Not deleting chain data, the db will be initialized" +
-				" with the currently saved chain data in the data directory")
-			break
-		}
-		if clearDB {
-			if err := d.ClearDB(); err != nil {
-				return err
-			}
-			d, err = db.NewDB(dbPath)
-			if err != nil {
-				return err
-			}
+		d, err = confirmDelete(d, dbPath)
+		if err != nil {
+			return err
 		}
 	}
 
