@@ -779,6 +779,160 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
+	ctx := context.Background()
+	validators := make([]*ethpb.Validator, 6)
+	headState := &pbp2p.BeaconState{
+		Slot:       0,
+		Validators: validators,
+	}
+	for i := 0; i < len(validators); i++ {
+		activationEpoch := params.BeaconConfig().FarFutureEpoch
+		withdrawableEpoch := params.BeaconConfig().FarFutureEpoch
+		exitEpoch := params.BeaconConfig().FarFutureEpoch
+		slashed := false
+		// Mark indices divisible by two as activated.
+		if i%2 == 0 {
+			activationEpoch = helpers.DelayedActivationExitEpoch(0)
+		} else if i%3 == 0 {
+			// Mark indices divisible by 3 as slashed.
+			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
+			slashed = true
+		} else if i%5 == 0 {
+			// Mark indices divisible by 5 as exited.
+			exitEpoch = 0
+			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
+		}
+		headState.Validators[i] = &ethpb.Validator{
+			ActivationEpoch:   activationEpoch,
+			PublicKey:         []byte(strconv.Itoa(i)),
+			WithdrawableEpoch: withdrawableEpoch,
+			Slashed:           slashed,
+			ExitEpoch:         exitEpoch,
+		}
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0},
+		},
+	}
+	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedActive := [][]byte{
+		[]byte("0"),
+		[]byte("2"),
+		[]byte("4"),
+	}
+	wantedSlashed := [][]byte{
+		[]byte("3"),
+	}
+	wantedExited := [][]byte{
+		[]byte("5"),
+	}
+	wanted := &ethpb.ActiveSetChanges{
+		Epoch:               0,
+		ActivatedPublicKeys: wantedActive,
+		ExitedPublicKeys:    wantedExited,
+		SlashedPublicKeys:   wantedSlashed,
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	validators := make([]*ethpb.Validator, 6)
+	headState := &pbp2p.BeaconState{
+		Slot:       0,
+		Validators: validators,
+	}
+	activatedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	exitedIndices := make([]uint64, 0)
+	for i := 0; i < len(validators); i++ {
+		// Mark indices divisible by two as activated.
+		if i%2 == 0 {
+			activatedIndices = append(activatedIndices, uint64(i))
+		} else if i%3 == 0 {
+			// Mark indices divisible by 3 as slashed.
+			slashedIndices = append(slashedIndices, uint64(i))
+		} else if i%5 == 0 {
+			// Mark indices divisible by 5 as exited.
+			exitedIndices = append(exitedIndices, uint64(i))
+		}
+		headState.Validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+	}
+	archivedChanges := &ethpb.ArchivedActiveSetChanges{
+		Activated: activatedIndices,
+		Exited:    exitedIndices,
+		Slashed:   slashedIndices,
+	}
+	// We store the changes during the genesis epoch.
+	if err := db.SaveArchivedActiveValidatorChanges(ctx, 0, archivedChanges); err != nil {
+		t.Fatal(err)
+	}
+	// We store the same changes during epoch 5 for further testing.
+	if err := db.SaveArchivedActiveValidatorChanges(ctx, 5, archivedChanges); err != nil {
+		t.Fatal(err)
+	}
+	bs := &BeaconChainServer{
+		beaconDB: db,
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+		finalizationFetcher: &mock.ChainService{
+			// Pick an epoch far in the future so that we trigger fetching from the archive.
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100},
+		},
+	}
+	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
+		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedActive := [][]byte{
+		[]byte("0"),
+		[]byte("2"),
+		[]byte("4"),
+	}
+	wantedSlashed := [][]byte{
+		[]byte("3"),
+	}
+	wantedExited := [][]byte{
+		[]byte("5"),
+	}
+	wanted := &ethpb.ActiveSetChanges{
+		Epoch:               0,
+		ActivatedPublicKeys: wantedActive,
+		ExitedPublicKeys:    wantedExited,
+		SlashedPublicKeys:   wantedSlashed,
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+	res, err = bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
+		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{Epoch: 5},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted.Epoch = 5
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)

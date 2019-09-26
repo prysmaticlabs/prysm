@@ -31,13 +31,8 @@ type FeatureFlagConfig struct {
 	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 
 	// Cache toggles.
-	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAncestorBlockCache bool // EnableAncestorBlockCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSeedCache          bool // EnableSeedCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableStartShardCache    bool // EnableStartShardCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableTotalBalanceCache  bool // EnableTotalBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -71,33 +66,13 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe active balance cache")
-		cfg.EnableActiveBalanceCache = true
-	}
 	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
 	}
-	if ctx.GlobalBool(EnableAncestorBlockCacheFlag.Name) {
-		log.Warn("Enabled unsafe ancestor block cache")
-		cfg.EnableAncestorBlockCache = true
-	}
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
-	}
-	if ctx.GlobalBool(EnableSeedCacheFlag.Name) {
-		log.Warn("Enabled unsafe seed cache")
-		cfg.EnableSeedCache = true
-	}
-	if ctx.GlobalBool(EnableStartShardCacheFlag.Name) {
-		log.Warn("Enabled unsafe start shard cache")
-		cfg.EnableStartShardCache = true
-	}
-	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe total balance cache")
-		cfg.EnableTotalBalanceCache = true
 	}
 	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
 		log.Warn("Initial syncing without verifying block's contents")
