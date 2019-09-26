@@ -305,28 +305,6 @@ func ProcessRandaoNoVerify(
 	return beaconState, nil
 }
 
-// ProcessRandaoNoVerify generates a new randao mix to update
-// in the beacon state's latest randao mixes slice.
-func ProcessRandaoNoVerify(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
-
-	// If block randao passed verification, we XOR the state's latest randao mix with the block's
-	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
-	for i, x := range blockRandaoReveal {
-		latestMixSlice[i] ^= x
-	}
-	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
-	return beaconState, nil
-}
-
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
 // slashing conditions if any slashable events occurred.
@@ -1067,20 +1045,22 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := VerifyExit(beaconState, exit); err != nil {
-			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
+		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+		validator := beaconState.Validators[exit.ValidatorIndex]
+		if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
+			return nil, errors.Wrap(err, "could not verify voluntary exit signature")
 		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+
+		beaconState, err = ProcessVoluntaryExitNoVerify(beaconState, exit)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", i)
 		}
 	}
 	return beaconState, nil
 }
 
-// ProcessVoluntaryExitsNoVerify processes the spec defined
-// ProcessVoluntaryExits function but only runs the state modifying
-// parts of the code.
+// ProcessVoluntaryExitsNoVerify processes all the voluntary exits in
+// a block body, without verifying their BLS signatures.
 func ProcessVoluntaryExitsNoVerify(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
@@ -1088,16 +1068,17 @@ func ProcessVoluntaryExitsNoVerify(
 	var err error
 	exits := body.VoluntaryExits
 
-	for _, exit := range exits {
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+	for i, exit := range exits {
+		beaconState, err = ProcessVoluntaryExitNoVerify(beaconState, exit)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", i)
 		}
 	}
 	return beaconState, nil
 }
 
-// VerifyExit implements the spec defined validation for voluntary exits.
+// ProcessVoluntaryExitNoVerify implements the spec defined validation for voluntary exits.
+// Except with it's BLS verification removed.
 //
 // Spec pseudocode definition:
 //   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
@@ -1113,43 +1094,43 @@ func ProcessVoluntaryExitsNoVerify(
 //    assert get_current_epoch(state) >= exit.epoch
 //    # Verify the validator has been active long enough
 //    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
-//    # Verify signature
-//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
-//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
+func ProcessVoluntaryExitNoVerify(
+	beaconState *pb.BeaconState,
+	exit *ethpb.VoluntaryExit,
+) (*pb.BeaconState, error) {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
-		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
+		return nil, fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
 
 	validator := beaconState.Validators[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidator(validator, currentEpoch) {
-		return errors.New("non-active validator cannot exit")
+		return nil, errors.New("non-active validator cannot exit")
 	}
 	// Verify the validator has not yet exited.
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+		return nil, fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
-		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
+		return nil, fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-		return errors.Wrap(err, "could not verify voluntary exit signature")
+	beaconState, err := v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return beaconState, nil
 }
 
 // ProcessTransfers is one of the operations performed

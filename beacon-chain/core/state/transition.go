@@ -415,10 +415,10 @@ func ProcessOperations(
 }
 
 // processOperationsNoVerify processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not validate the attestation signature
+// with the operations in block. It does not verify attestation signatures or voluntary exit signatures.
 //
-// WARNING: This method does not verify attestation signature. This is used for proposer to compute state root
-// using a unsigned block.
+// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
+// This is used to perform the block operations as fast as possible.
 //
 // Spec pseudocode definition:
 //
