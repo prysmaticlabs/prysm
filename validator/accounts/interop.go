@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
-// LoadUnencryptedKeys loads the unencrypted keys from the given filepath
+// LoadUnencryptedKeys loads the unencrypted keys from the given file path.
 func LoadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
 	log.Warn("Loading encrypted keys from disk. Do not do this in production!")
 
