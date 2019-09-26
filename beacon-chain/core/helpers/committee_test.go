@@ -748,6 +748,8 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 }
 
 func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
+	ClearAllCaches()
+
 	valiatorCount := 1000
 	validators := make([]*ethpb.Validator, valiatorCount)
 	indices := make([]uint64, valiatorCount)
