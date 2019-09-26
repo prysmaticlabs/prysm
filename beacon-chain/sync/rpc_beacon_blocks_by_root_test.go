@@ -52,17 +52,14 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
-		res := make([]*ethpb.BeaconBlock, 0)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
-			t.Error(err)
-		}
-		if len(res) != len(blkRoots) {
-			t.Errorf("Received only %d blocks, expected %d", len(res), len(blkRoots))
-		}
-		for i, blk := range res {
-			if blk.Slot != uint64(i+1) {
-				t.Errorf("Received unexpected block slot %d but wanted %d", blk.Slot, i+1)
+		for i := range blkRoots {
+			expectSuccess(t, r, stream)
+			res := &ethpb.BeaconBlock{}
+			if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
+				t.Error(err)
+			}
+			if res.Slot != uint64(i+1) {
+				t.Errorf("Received unexpected block slot %d but wanted %d", res.Slot, i+1)
 			}
 		}
 	})
@@ -85,6 +82,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
 
 	blockA := &ethpb.BeaconBlock{Slot: 111}
 	blockB := &ethpb.BeaconBlock{Slot: 40}
@@ -135,13 +133,15 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		if !reflect.DeepEqual(out, expectedRoots) {
 			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out, expectedRoots)
 		}
-		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-			t.Fatalf("Failed to write to stream: %v", err)
-		}
 		response := []*ethpb.BeaconBlock{blockB, blockA}
-		_, err := p2.Encoding().EncodeWithLength(stream, response)
-		if err != nil {
-			t.Errorf("Could not send response back: %v ", err)
+		for _, blk := range response {
+			if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+				t.Fatalf("Failed to write to stream: %v", err)
+			}
+			_, err := p2.Encoding().EncodeWithLength(stream, blk)
+			if err != nil {
+				t.Errorf("Could not send response back: %v ", err)
+			}
 		}
 	})
 

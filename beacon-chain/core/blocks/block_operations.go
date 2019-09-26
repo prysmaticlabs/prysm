@@ -311,6 +311,28 @@ func ProcessRandao(
 	return beaconState, nil
 }
 
+// ProcessRandaoNoVerify generates a new randao mix to update
+// in the beacon state's latest randao mixes slice.
+func ProcessRandaoNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
+
+	// If block randao passed verification, we XOR the state's latest randao mix with the block's
+	// randao and update the state's corresponding latest randao mix value.
+	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
+	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
+	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
+	for i, x := range blockRandaoReveal {
+		latestMixSlice[i] ^= x
+	}
+	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
+	return beaconState, nil
+}
+
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
 // slashing conditions if any slashable events occurred.
