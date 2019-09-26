@@ -933,6 +933,23 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 	}
 }
 
+func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{},
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
