@@ -10,7 +10,7 @@ var (
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 	}
-	// MinimalConfigGlag enables the minimal configuration.
+	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
