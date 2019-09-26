@@ -95,8 +95,17 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
-	if err := s.db.SaveState(ctx, postState, root); err != nil {
-		return errors.Wrap(err, "could not save state")
+
+	savingInterval := params.BeaconConfig().SavingInterval
+	nextSavingSlot := (preState.Slot + savingInterval) - (preState.Slot+savingInterval)%savingInterval
+	if postState.Slot%savingInterval == 0 {
+		if err := s.db.SaveState(ctx, postState, root); err != nil {
+			return errors.Wrap(err, "could not save state")
+		}
+	} else if preState.Slot < nextSavingSlot && nextSavingSlot < postState.Slot {
+		if err := s.db.SaveState(ctx, postState, root); err != nil {
+			return errors.Wrap(err, "could not save state")
+		}
 	}
 
 	// Update justified check point.
@@ -118,7 +127,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return errors.Wrap(err, "could not save new validators")
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

@@ -120,7 +120,7 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
-func TestGenerateStateAtSlot(b *testing.T) {
+func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
 	c := params.BeaconConfig()
 	c.MaxAttestations = 2
 	c.MaxAttesterSlashings = 0
@@ -130,69 +130,52 @@ func TestGenerateStateAtSlot(b *testing.T) {
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
-	db := setupDB(b)
-	defer teardownDB(b, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
-	deposits, privs := testutil.SetupInitialDeposits(b, 128)
-	eth1Data := testutil.GenerateEth1Data(b, deposits)
+	deposits, privs := testutil.SetupInitialDeposits(t, 128)
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
-	genesisState.Slot = 1
+	genesisState.Slot = 7
 
-	root, err := ssz.HashTreeRoot(genesisState)
+	blocks := make([]*ethpb.BeaconBlock, 6)
+	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	root, err := ssz.SigningRoot(firstBlock)
 	if err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
-
 	if err := db.SaveState(context.Background(), genesisState, root); err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
 
-	checkPoint := &ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  root[:],
-	}
-	if err := db.SaveFinalizedCheckpoint(context.Background(), checkPoint); err != nil {
-		b.Fatal(err)
-	}
-
-	checkPoint = &ethpb.Checkpoint{
-		Epoch: 1,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}
-	if err := db.SaveJustifiedCheckpoint(context.Background(), checkPoint); err != nil {
-		b.Fatal(err)
-	}
-
-	blocks := make([]*ethpb.BeaconBlock, 8)
-	block := testutil.GenerateFullBlock(b, genesisState, privs)
-	newState, err := state.ExecuteStateTransition(context.Background(), genesisState, block)
+	blocks[0] = firstBlock
+	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
 	if err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
-	blocks[0] = block
 	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(b, newState, privs)
+		block := testutil.GenerateFullBlock(t, newState, privs)
 		blocks[i] = block
-		newState, err = state.ExecuteStateTransition(context.Background(), newState, block)
+		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
-			b.Fatal(err)
+			t.Fatal(err)
 		}
 	}
 	if err := db.SaveBlocks(context.Background(), blocks); err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
 
-	// Slot after 8 blocks should be 9
-	generatedState, err := db.GenerateStateAtSlot(context.Background(), 9)
+	// Slot after 6 blocks should be 7
+	generatedState, err := db.GenerateStateAtSlot(context.Background(), 7)
 	if err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
 
 	if generatedState.Slot != newState.Slot {
-		b.Fatalf(
+		t.Fatalf(
 			"expected generated state slot %d to equal actual state slot %d",
 			generatedState.Slot,
 			newState.Slot,
@@ -200,15 +183,19 @@ func TestGenerateStateAtSlot(b *testing.T) {
 	}
 
 	if !bytes.Equal(generatedState.LatestBlockHeader.StateRoot, newState.LatestBlockHeader.StateRoot) {
-		b.Fatalf(
+		t.Fatalf(
 			"expected generated state slot %d to equal actual state slot %d",
 			generatedState.Slot,
 			newState.Slot,
 		)
 	}
+
+	if !ssz.DeepEqual(generatedState, newState) {
+		t.Fatal("expected generated state to deep equal actual state")
+	}
 }
 
-func BenchmarkGenerateStateAtSlot(b *testing.B) {
+func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 	c := params.BeaconConfig()
 	c.MaxAttestations = 2
 	c.MaxAttesterSlashings = 0
@@ -218,10 +205,121 @@ func BenchmarkGenerateStateAtSlot(b *testing.B) {
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	deposits, privs := testutil.SetupInitialDeposits(t, 128)
+	eth1Data := testutil.GenerateEth1Data(t, deposits)
+	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState.Slot = 1
+
+	blocks := make([]*ethpb.BeaconBlock, 6)
+	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	root, err := ssz.SigningRoot(firstBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), genesisState, root); err != nil {
+		t.Fatal(err)
+	}
+
+	blocks[0] = firstBlock
+	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i < len(blocks); i++ {
+		block := testutil.GenerateFullBlock(t, newState, privs)
+		blocks[i] = block
+		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.SaveBlocks(context.Background(), blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	// Slot at this point is 7, so we generate 2 blocks but only save the second one to simulate that the saving slot was skipped.
+	skipBlock := testutil.GenerateFullBlock(t, newState, privs)
+	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, skipBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := testutil.GenerateFullBlock(t, newState, privs)
+	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%d\n", newState.Slot)
+	root, err = ssz.SigningRoot(block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = db.SaveState(context.Background(), newState, root); err != nil {
+		t.Fatal(err)
+	}
+
+	blocks = make([]*ethpb.BeaconBlock, 6)
+	blocks[0] = block
+	for i := 1; i < len(blocks); i++ {
+		block := testutil.GenerateFullBlock(t, newState, privs)
+		blocks[i] = block
+		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.SaveBlocks(context.Background(), blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	// Slot starting from 2, after 6 blocks, a slot skipped, and
+	// 6 more blocks, state slot should be 15.
+	t.Logf("%d\n", newState.Slot)
+	generatedState, err := db.GenerateStateAtSlot(context.Background(), 14)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if generatedState.Slot != newState.Slot {
+		t.Fatalf(
+			"expected generated state slot %d to equal actual state slot %d",
+			generatedState.Slot,
+			newState.Slot,
+		)
+	}
+
+	if !bytes.Equal(generatedState.LatestBlockHeader.StateRoot, newState.LatestBlockHeader.StateRoot) {
+		t.Fatalf(
+			"expected generated state slot %d to equal actual state slot %d",
+			generatedState.Slot,
+			newState.Slot,
+		)
+	}
+
+	if !ssz.DeepEqual(generatedState, newState) {
+		t.Fatal("expected generated state to deep equal actual state")
+	}
+}
+
+func BenchmarkGenerateStateAtSlot(b *testing.B) {
+	defer params.OverrideBeaconConfig(params.BeaconConfig())
+	c := params.BeaconConfig()
+	c.MaxAttestations = 4
+	c.MaxAttesterSlashings = 0
+	c.MaxProposerSlashings = 0
+	c.MaxDeposits = 0
+	c.MaxVoluntaryExits = 0
+	params.OverrideBeaconConfig(c)
+
 	db := setupDB(b)
 	defer teardownDB(b, db)
 
-	deposits, privs := testutil.SetupInitialDeposits(b, 128)
+	deposits, privs := testutil.SetupInitialDeposits(b, 256)
 	eth1Data := testutil.GenerateEth1Data(b, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
@@ -229,42 +327,25 @@ func BenchmarkGenerateStateAtSlot(b *testing.B) {
 	}
 	genesisState.Slot = 1
 
-	root, err := ssz.HashTreeRoot(genesisState)
+	blocks := make([]*ethpb.BeaconBlock, 6)
+	firstBlock := testutil.GenerateFullBlock(b, genesisState, privs)
+	root, err := ssz.SigningRoot(firstBlock)
 	if err != nil {
 		b.Fatal(err)
 	}
-
 	if err := db.SaveState(context.Background(), genesisState, root); err != nil {
 		b.Fatal(err)
 	}
 
-	checkPoint := &ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  root[:],
-	}
-	if err := db.SaveFinalizedCheckpoint(context.Background(), checkPoint); err != nil {
-		b.Fatal(err)
-	}
-
-	checkPoint = &ethpb.Checkpoint{
-		Epoch: 1,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}
-	if err := db.SaveJustifiedCheckpoint(context.Background(), checkPoint); err != nil {
-		b.Fatal(err)
-	}
-
-	blocks := make([]*ethpb.BeaconBlock, 16)
-	block := testutil.GenerateFullBlock(b, genesisState, privs)
-	newState, err := state.ExecuteStateTransition(context.Background(), genesisState, block)
+	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		b.Fatal(err)
 	}
-	blocks[0] = block
+	blocks[0] = firstBlock
 	for i := 1; i < len(blocks); i++ {
 		block := testutil.GenerateFullBlock(b, newState, privs)
 		blocks[i] = block
-		newState, err = state.ExecuteStateTransition(context.Background(), newState, block)
+		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -277,7 +358,7 @@ func BenchmarkGenerateStateAtSlot(b *testing.B) {
 	b.N = 10
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := db.GenerateStateAtSlot(context.Background(), genesisState.Slot+12)
+		_, err := db.GenerateStateAtSlot(context.Background(), 7)
 		if err != nil {
 			b.Fatal(err)
 		}

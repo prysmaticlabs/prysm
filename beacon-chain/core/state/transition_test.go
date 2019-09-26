@@ -76,7 +76,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 		},
 	}
 
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	stateRootCandidate, err := state.ExecuteStateTransitionForStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}

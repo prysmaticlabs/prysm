@@ -3,7 +3,9 @@ package kv
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -36,58 +38,76 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 
 // GenerateStateAtSlot generates state from the last finalized epoch till the specified slot.
 func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
-	fCheckpoint, err := k.FinalizedCheckpoint(ctx)
-	if err != nil {
-		return nil, err
-	}
-	jCheckpoint, err := k.JustifiedCheckpoint(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var root [32]byte
-	if slot < helpers.StartSlot(jCheckpoint.Epoch) {
-		copy(root[0:32], fCheckpoint.Root)
-	} else {
-		copy(root[0:32], jCheckpoint.Root)
-	}
-
-	savedState, err := k.State(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	if savedState.Slot > slot {
-		return nil, fmt.Errorf(
-			"savedState slot %d < current finalized beacon state slot %d",
-			savedState.Slot,
-			slot,
-		)
-	}
-	if savedState.Slot == slot {
-		return savedState, nil
-	}
-
+	// Filtering from the slot we know we have a saved state for to
 	filter := filters.NewFilter()
-	filter.SetStartSlot(savedState.Slot + 1)
+	filter.SetStartSlot(slot - (slot % params.BeaconConfig().SavingInterval))
 	filter.SetEndSlot(slot)
 	pBlocks, err := k.Blocks(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve block: %v", err)
 	}
 
+	savedRoot, err := ssz.SigningRoot(pBlocks[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get signing root of block")
+	}
+	savedState, err := k.State(ctx, savedRoot)
+	if err != nil {
+		return nil, err
+	}
+
 	// run N state transitions to generate state
-	for i := 0; i < len(pBlocks); i++ {
+	for i := 1; i < len(pBlocks); i++ {
 		savedState, err = state.ExecuteStateTransitionNoVerify(
 			ctx,
 			savedState,
 			pBlocks[i],
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition %v", err)
+			return nil, errors.Wrap(err, "could not execute state transition")
 		}
 	}
 
 	return savedState, nil
+}
+
+// PruneSavedStates starts from the passed in previous finalized epoch, and
+// deletes the state for all slots until just before the current finalized epoch.
+func (k *Store) PruneSavedStates(
+	ctx context.Context,
+	prevFinalizedEpoch uint64,
+	finalizedEpoch uint64,
+) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.PruneSavedStates")
+	defer span.End()
+
+	startSlot := helpers.StartSlot(prevFinalizedEpoch)
+	endSlot := helpers.StartSlot(finalizedEpoch) - params.BeaconConfig().SavingInterval
+	filter := filters.NewFilter()
+	filter.SetStartSlot(startSlot)
+	filter.SetEndSlot(endSlot)
+	blockRoots, err := k.BlockRoots(ctx, filter)
+	if err != nil {
+		return errors.Wrap(err, "could not get block roots")
+	}
+
+	var root [32]byte
+	for i := startSlot; i < endSlot; i += params.BeaconConfig().SavingInterval {
+		copy(root[:], blockRoots[i-startSlot])
+		if err := k.DeleteState(ctx, root); err != nil {
+			return errors.Wrap(err, "could not delete saved state")
+		}
+	}
+	return nil
+}
+
+func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
+	defer span.End()
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateBucket)
+		return bkt.Delete(blockRoot[:])
+	})
 }
 
 // HeadState returns the latest canonical state in beacon chain.

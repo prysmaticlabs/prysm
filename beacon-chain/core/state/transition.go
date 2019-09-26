@@ -77,7 +77,7 @@ func ExecuteStateTransition(
 	return state, nil
 }
 
-// ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
+// ExecuteStateTransitionForStateRoot defines the procedure for a state transition function.
 // This does not validate state root, The use case of such is for state root calculation, the proposer
 // should first run state transition on an unsigned block containing a stub for the state root and signature.
 // This does not modify state.
@@ -93,7 +93,7 @@ func ExecuteStateTransition(
 //    process_block(state, block)
 //    # Return post-state
 //    return state
-func ExecuteStateTransitionNoVerify(
+func ExecuteStateTransitionForStateRoot(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
@@ -117,13 +117,68 @@ func ExecuteStateTransitionNoVerify(
 
 	// Execute per block transition.
 	if block != nil {
-		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
+		stateCopy, err = processBlockForStateRoot(ctx, stateCopy, block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
 	return stateCopy, nil
+}
+
+// ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
+// This does not validate the proposer signature, randao or attestations.
+//
+// WARNING: This method does not validate the proposer signature, randao or attestation
+// signatures. This is purely to perform a state transition as quickly as possible for usage with state generation.
+//
+// Spec pseudocode definition:
+//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//    # Process slots (including those with no blocks) since block
+//    process_slots(state, block.slot)
+//    # Process block
+//    process_block(state, block)
+//    # Return post-state
+//    return state
+func ExecuteStateTransitionNoVerify(
+	ctx context.Context,
+	state *pb.BeaconState,
+	block *ethpb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	helpers.ClearStartShardCache()
+	b.ClearEth1DataVoteCache()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
+	defer span.End()
+	var err error
+
+	// Execute per slots transition.
+	state, err = ProcessSlots(ctx, state, block.Slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	if block != nil {
+		state, err = processBlockNoVerify(ctx, state, block)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block")
+		}
+	}
+
+	postStateRoot, err := ssz.HashTreeRoot(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not tree hash processed state")
+	}
+	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
+		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+			postStateRoot[:], block.StateRoot)
+	}
+
+	return state, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -244,7 +299,7 @@ func ProcessBlock(
 	return state, nil
 }
 
-// processBlockNoVerify creates a new, modified beacon state by applying block operation
+// processBlockForStateRoot creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // block signature.
 //
@@ -259,12 +314,12 @@ func ProcessBlock(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func processBlockNoVerify(
+func processBlockForStateRoot(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
 	defer span.End()
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, block)
@@ -275,6 +330,37 @@ func processBlockNoVerify(
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify and process randao")
+	}
+
+	state, err = b.ProcessEth1DataInBlock(state, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process eth1 data")
+	}
+
+	state, err = processOperationsNoVerify(ctx, state, block.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block operation")
+	}
+
+	return state, nil
+}
+
+func processBlockNoVerify(
+	ctx context.Context,
+	state *pb.BeaconState,
+	block *ethpb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerify")
+	defer span.End()
+
+	state, err := b.ProcessBlockHeaderNoVerify(state, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	state, err = b.ProcessRandaoNoVerify(state, block.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)

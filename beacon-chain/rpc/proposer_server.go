@@ -176,7 +176,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 
-	s, err := state.ExecuteStateTransitionNoVerify(
+	s, err := state.ExecuteStateTransitionForStateRoot(
 		ctx,
 		beaconState,
 		block,

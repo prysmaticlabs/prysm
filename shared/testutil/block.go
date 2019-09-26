@@ -83,7 +83,7 @@ func GenerateFullBlock(
 		},
 	}
 
-	s, err := state.ExecuteStateTransitionNoVerify(context.Background(), bState, block)
+	s, err := state.ExecuteStateTransitionForStateRoot(context.Background(), bState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
