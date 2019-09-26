@@ -65,7 +65,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
 	pk := &PublicKey{val: k}
-	pubkeyCache.Set(string(pub), pk.Copy(), 48 * time.Hour)
+	pubkeyCache.Set(string(pub), pk.Copy(), 48*time.Hour)
 	return pk, nil
 }
 
