@@ -155,7 +155,7 @@ func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.
 			continue
 		}
 		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
-			return err
+			log.WithError(err).Warn("Attestation failed to update vote")
 		}
 		s.seenAtts[r] = true
 	}
