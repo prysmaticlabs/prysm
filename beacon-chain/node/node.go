@@ -85,10 +85,14 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		if featureconfig.FeatureConfig().MinimalConfig {
-			log.Info("Using minimal config")
+			log.WithField(
+				"config", "minimal-spec",
+			).Info("Using custom chain parameters")
 			params.UseMinimalConfig()
 		} else {
-			log.Info("Using demo config")
+			log.WithField(
+				"config", "demo",
+			).Info("Using custom chain parameters")
 			params.UseDemoBeaconConfig()
 		}
 	}
@@ -210,7 +214,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		}
 	}
 
-	log.WithField("path", dbPath).Info("Checking db")
+	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
 	return nil

@@ -81,7 +81,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start an beacon block operation pool service's main event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.removeOperations()
 }
 

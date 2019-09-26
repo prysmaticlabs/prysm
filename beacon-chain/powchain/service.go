@@ -202,8 +202,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": s.endpoint,
-	}).Info("Starting service")
-
+	}).Info("Connected to eth1 proof-of-work chain")
 	go s.run(s.ctx.Done())
 }
 

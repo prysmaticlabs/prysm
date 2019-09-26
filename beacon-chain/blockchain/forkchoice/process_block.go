@@ -66,7 +66,14 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	log.WithField("slot", b.Slot).Info("Executing state transition on block")
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+	}
+	log.WithFields(logrus.Fields{
+		"slot": b.Slot,
+		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
+	}).Info("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
@@ -78,10 +85,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-	}
-	root, err := ssz.SigningRoot(b)
-	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
 		return errors.Wrap(err, "could not save state")

@@ -84,7 +84,7 @@ func (s *InitialSync) Start() {
 		log.WithField(
 			"handshakes",
 			fmt.Sprintf("%d/%d", count, minStatusCount),
-		).Info("Waiting for enough peer handshakes before syncing.")
+		).Info("Waiting for enough peer handshakes before syncing")
 
 		if count >= minStatusCount {
 			break

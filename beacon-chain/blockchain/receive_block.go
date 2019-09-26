@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -81,9 +82,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		return errors.Wrap(err, "could not compute state from block head")
 	}
 	log.WithFields(logrus.Fields{
-		"headSlot": headBlk.Slot,
-		"headRoot": hex.EncodeToString(headRoot),
-	}).Info("Finished applying fork choice for block")
+		"slot":      headBlk.Slot,
+		"blockRoot": fmt.Sprintf("0x%s...", hex.EncodeToString(headRoot)[:8]),
+	}).Info("Ran fork choice for block")
 
 	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
 

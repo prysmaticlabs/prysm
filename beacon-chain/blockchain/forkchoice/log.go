@@ -12,10 +12,9 @@ var log = logrus.WithField("prefix", "forkchoice")
 func logEpochData(beaconState *pb.BeaconState) {
 	log.WithFields(logrus.Fields{
 		"epoch":                  beaconState.Slot / params.BeaconConfig().SlotsPerEpoch,
-		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint.Epoch,
-		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint.Epoch,
-		"finalizedEpoch":         beaconState.FinalizedCheckpoint.Epoch,
-		"depositIndex":           beaconState.Eth1DepositIndex,
 		"numValidators":          len(beaconState.Validators),
+		"finalizedEpoch":         beaconState.FinalizedCheckpoint.Epoch,
+		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint.Epoch,
+		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint.Epoch,
 	}).Info("Starting next epoch")
 }

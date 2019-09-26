@@ -50,7 +50,6 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 
 // Start the archiver service event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.run(s.ctx)
 }
 

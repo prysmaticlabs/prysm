@@ -96,7 +96,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 
 // Start the prometheus service.
 func (s *Service) Start() {
-	log.WithField("endpoint", s.server.Addr).Info("Starting service")
+	log.WithField("endpoint", s.server.Addr).Info("Collecting metrics at endpoint")
 	go func() {
 		err := s.server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
