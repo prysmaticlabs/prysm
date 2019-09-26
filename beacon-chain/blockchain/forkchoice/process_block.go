@@ -68,8 +68,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 	log.WithField("slot", b.Slot).Info("Executing state transition on block")
 
-	// Apply new state transition for the block to the store.
-	// Make block root as bad to reject in sync.
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
