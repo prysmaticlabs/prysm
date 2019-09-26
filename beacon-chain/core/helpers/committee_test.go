@@ -153,8 +153,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start := SplitOffset(validatorCount, committeeCount, shard)
-	end := SplitOffset(validatorCount, committeeCount, shard+1)
+	start := sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end := sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee5) {
 		t.Error("committee has different shuffled indices")
@@ -166,8 +166,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start = SplitOffset(validatorCount, committeeCount, shard)
-	end = SplitOffset(validatorCount, committeeCount, shard+1)
+	start = sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end = sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee9) {
 		t.Error("committee has different shuffled indices")

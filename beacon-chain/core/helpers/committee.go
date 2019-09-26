@@ -113,8 +113,8 @@ func ComputeCommittee(
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := SplitOffset(validatorCount, totalCommittees, indexShard)
-	end := SplitOffset(validatorCount, totalCommittees, indexShard+1)
+	start := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard)
+	end := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])

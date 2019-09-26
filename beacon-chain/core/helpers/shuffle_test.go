@@ -175,36 +175,10 @@ func TestSplitIndicesAndOffset_OK(t *testing.T) {
 	chunks := uint64(6)
 	split := SplitIndices(l, chunks)
 	for i := uint64(0); i < chunks; i++ {
-		if !reflect.DeepEqual(split[i], l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)]) {
-			t.Errorf("Want: %v got: %v", l[SplitOffset(uint64(len(l)), chunks, i):SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
+		if !reflect.DeepEqual(split[i], l[sliceutil.SplitOffset(uint64(len(l)), chunks, i):sliceutil.SplitOffset(uint64(len(l)), chunks, i+1)]) {
+			t.Errorf("Want: %v got: %v", l[sliceutil.SplitOffset(uint64(len(l)), chunks, i):sliceutil.SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
 			break
 		}
 
 	}
-}
-
-func TestSplitOffset_OK(t *testing.T) {
-	testCases := []struct {
-		listSize uint64
-		chunks   uint64
-		index    uint64
-		offset   uint64
-	}{
-		{30, 3, 2, 20},
-		{1000, 10, 60, 6000},
-		{2482, 10, 70, 17374},
-		{323, 98, 56, 184},
-		{273, 8, 6, 204},
-		{3274, 98, 256, 8552},
-		{23, 3, 2, 15},
-		{23, 3, 9, 69},
-	}
-	for _, tt := range testCases {
-		result := SplitOffset(tt.listSize, tt.chunks, tt.index)
-		if result != tt.offset {
-			t.Errorf("got %d, want %d", result, tt.offset)
-		}
-
-	}
-
 }
