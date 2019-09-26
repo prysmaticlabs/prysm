@@ -2,17 +2,17 @@ package kv
 
 import (
 	"context"
-	"fmt"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -36,17 +36,9 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 	return s, err
 }
 
-// GenerateStateAtSlot generates state from the last finalized epoch till the specified slot.
+// GenerateStateAtSlot generates state from the latest saved slot till the specified slot.
 func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
-	// Filtering from the slot we know we have a saved state for to
-	filter := filters.NewFilter()
-	filter.SetStartSlot(slot - (slot % params.BeaconConfig().SavingInterval))
-	filter.SetEndSlot(slot)
-	pBlocks, err := k.Blocks(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve block: %v", err)
-	}
-
+	pBlocks, err := k.savedBlocks(ctx, slot)
 	savedRoot, err := ssz.SigningRoot(pBlocks[0])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root of block")
@@ -69,6 +61,33 @@ func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.Beaco
 	}
 
 	return savedState, nil
+}
+
+func (k *Store) savedBlocks(ctx context.Context, slot uint64) ([]*ethpb.BeaconBlock, error) {
+	savingInterval := params.BeaconConfig().SavingInterval
+	// Filtering from the slot we know we have a saved state for.
+	currentSlot := slot - (slot % savingInterval)
+	savedSlot := slot
+	var err error
+	var pBlocks []*ethpb.BeaconBlock
+	for savedSlot == slot {
+		// Looping through recursively until we find a state we have saved.
+		filter := filters.NewFilter()
+		filter.SetStartSlot(currentSlot)
+		filter.SetEndSlot(slot)
+		pBlocks, err = k.Blocks(ctx, filter)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve block")
+		}
+		if pBlocks[0].Slot < savedSlot {
+			savedSlot = pBlocks[0].Slot
+		} else if currentSlot != 0 {
+			currentSlot = currentSlot - savingInterval
+		} else {
+			return nil, errors.New("could not find a saved state")
+		}
+	}
+	return pBlocks, nil
 }
 
 // PruneSavedStates starts from the passed in previous finalized epoch, and

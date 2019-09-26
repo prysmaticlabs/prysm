@@ -117,7 +117,7 @@ func ExecuteStateTransitionForStateRoot(
 
 	// Execute per block transition.
 	if block != nil {
-		stateCopy, err = processBlockForStateRoot(ctx, stateCopy, block)
+		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process block")
 		}
@@ -299,9 +299,9 @@ func ProcessBlock(
 	return state, nil
 }
 
-// processBlockForStateRoot creates a new, modified beacon state by applying block operation
+// processBlockNoVerify creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
-// block signature.
+// any signatures in the block to ensure the transition occurs as fast as possible.
 //
 //
 // WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
@@ -314,37 +314,6 @@ func ProcessBlock(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func processBlockForStateRoot(
-	ctx context.Context,
-	state *pb.BeaconState,
-	block *ethpb.BeaconBlock,
-) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
-	defer span.End()
-
-	state, err := b.ProcessBlockHeaderNoVerify(state, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block header")
-	}
-
-	state, err = b.ProcessRandao(state, block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	state, err = b.ProcessEth1DataInBlock(state, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	state, err = processOperationsNoVerify(ctx, state, block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block operation")
-	}
-
-	return state, nil
-}
-
 func processBlockNoVerify(
 	ctx context.Context,
 	state *pb.BeaconState,
