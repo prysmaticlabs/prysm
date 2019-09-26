@@ -29,6 +29,11 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
+	InitSyncNoVerifyFlag = cli.BoolFlag{
+		Name:  "init-sync-no-verify",
+		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -43,4 +48,5 @@ var BeaconChainFlags = []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
+	InitSyncNoVerifyFlag,
 }

@@ -24,6 +24,12 @@ func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlo
 	return nil
 }
 
+// ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
+func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
+	return nil
+}
+
+
 // ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil

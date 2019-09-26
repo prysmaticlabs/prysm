@@ -24,8 +24,8 @@ import (
 // Allow for blocks "from the future" within a certain tolerance.
 const timeShiftTolerance = 10 // ms
 
-// OnBlock is called whenever a block is received. It runs state transition on the block and
-// update fork choice store struct.
+// OnBlock is called when a gossip block is received. It runs regular state transition on the block and
+// update fork choice store.
 //
 // Spec pseudocode definition:
 //   def on_block(store: Store, block: BeaconBlock) -> None:
@@ -59,36 +59,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
-	// Verify incoming block has a valid pre state.
-	preState, err := s.verifyBlkPreState(ctx, b)
+	// Retrieve incoming block's pre state.
+	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		return err
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	// Verify block slot time is not from the feature.
-	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
-		return err
-	}
-
-	// Verify block is a descendent of a finalized block.
-	root, err := ssz.SigningRoot(b)
-	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
-	}
-	if err := s.verifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot), b.Slot); err != nil {
-		return err
-	}
-
-	// Verify block is later than the finalized epoch slot.
-	if err := s.verifyBlkFinalizedSlot(b); err != nil {
-		return err
-	}
-
 	log.WithField("slot", b.Slot).Info("Executing state transition on block")
 
-	// Apply new state transition for the block to the store.
-	// Make block root as bad to reject in sync.
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -99,6 +78,10 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+	}
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
 		return errors.Wrap(err, "could not save state")
@@ -137,6 +120,101 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	return nil
+}
+
+// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// It runs state transition on the block and without any BLS verification. The BLS verification
+// includes proposer signature, randao and attestation's aggregated signature.
+func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
+	defer span.End()
+
+	// Retrieve incoming block's pre state.
+	preState, err := s.getBlockPreState(ctx, b)
+	if err != nil {
+		return err
+	}
+	preStateValidatorCount := len(preState.Validators)
+
+	log.WithField("slot", b.Slot).Info("Executing state transition on block")
+
+	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
+	if err != nil {
+		return errors.Wrap(err, "could not execute state transition")
+	}
+
+	if err := s.db.SaveBlock(ctx, b); err != nil {
+		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+	}
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+	}
+	if err := s.db.SaveState(ctx, postState, root); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+
+	// Update justified check point.
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
+		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save justified checkpoint")
+		}
+	}
+
+	// Update finalized check point.
+	// Prune the block cache and helper caches on every new finalized epoch.
+	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		s.clearSeenAtts()
+		helpers.ClearAllCaches()
+		s.finalizedCheckpt = postState.FinalizedCheckpoint
+		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
+	}
+
+	// Update validator indices in database as needed.
+	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
+		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+	// Save the unseen attestations from block to db.
+	s.saveNewBlockAttestations(ctx, b.Body.Attestations)
+
+	// Epoch boundary bookkeeping such as logging epoch summaries.
+	if helpers.IsEpochStart(postState.Slot) {
+		logEpochData(postState)
+		reportEpochMetrics(postState)
+	}
+
+	return nil
+}
+
+// getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
+// to retrieve the state in DB. It verifies the pre state's validity and the incoming block
+// is in the correct time window.
+func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	// Verify incoming block has a valid pre state.
+	preState, err := s.verifyBlkPreState(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify block slot time is not from the feature.
+	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
+		return nil, err
+	}
+
+	// Verify block is a descendent of a finalized block.
+	if err := s.verifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot), b.Slot); err != nil {
+		return nil, err
+	}
+
+	// Verify block is later than the finalized epoch slot.
+	if err := s.verifyBlkFinalizedSlot(b); err != nil {
+		return nil, err
+	}
+
+	return preState, nil
 }
 
 // updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,

@@ -28,6 +28,7 @@ type FeatureFlagConfig struct {
 	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
 	DemoConfig               bool // DemoConfig with lower deposit thresholds.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -72,6 +73,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
+	}
+	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
+		log.Warn("Initial syncing without verifying block's contents")
+		cfg.InitSyncNoVerify = true
 	}
 	InitFeatureConfig(cfg)
 }
