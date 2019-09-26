@@ -1006,6 +1006,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *tes
 			PublicKey:                  []byte(strconv.Itoa(len(validators))),
 		})
 	}
+	headState.Validators = validators
 	bs := &BeaconChainServer{
 		headFetcher: &mock.ChainService{
 			State: headState,
@@ -1015,7 +1016,11 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(res.ActivationPublicKeys)
+	for _, key := range res.ActivationPublicKeys {
+		fmt.Printf("%v\n", key)
+	}
+	fmt.Println(churnLimit)
+	t.Error("no")
 }
 
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
