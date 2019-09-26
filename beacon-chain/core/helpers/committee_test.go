@@ -747,6 +747,48 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 	}
 }
 
+func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
+	valiatorCount := 1000
+	validators := make([]*ethpb.Validator, valiatorCount)
+	indices := make([]uint64, valiatorCount)
+	for i := 0; i < valiatorCount; i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		indices[i] = uint64(i)
+	}
+	state := &pb.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+	// Test for current epoch
+	shuffledIndices, err := ShuffledIndices(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shuffledIndices) != valiatorCount {
+		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
+			valiatorCount, len(shuffledIndices))
+	}
+	if reflect.DeepEqual(indices, shuffledIndices) {
+		t.Error("Shuffling did not happen")
+	}
+
+	// Test for next epoch
+	shuffledIndices, err = ShuffledIndices(state, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shuffledIndices) != valiatorCount {
+		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
+			valiatorCount, len(shuffledIndices))
+	}
+	if reflect.DeepEqual(indices, shuffledIndices) {
+		t.Error("Shuffling did not happen")
+	}
+}
+
 func TestCompressValidator(t *testing.T) {
 	tests := []struct {
 		validator *ethpb.Validator
