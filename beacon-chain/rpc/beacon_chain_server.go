@@ -443,12 +443,19 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 ) (*ethpb.ValidatorQueue, error) {
 	headState := bs.headFetcher.HeadState()
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
-	var activationQ []uint64
+	// Additionally, determine those validators queued to exit
+	awaitingExit := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	activationQ := make([]uint64, 0)
 	for idx, validator := range headState.Validators {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
 		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpoint.Epoch)
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
+		}
+		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, validator.ExitEpoch)
+			awaitingExit = append(awaitingExit, uint64(idx))
 		}
 	}
 	sort.Slice(activationQ, func(i, j int) bool {
@@ -456,35 +463,53 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	limit := len(activationQ)
+	activationQueueChurn := len(activationQ)
 	churnLimit, err := helpers.ValidatorChurnLimit(headState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+	exitQueueChurn := 0
+	for _, val := range headState.Validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
 	// Prevent churn limit from causing index out of bound issues.
-	if int(churnLimit) < limit {
-		limit = int(churnLimit)
+	if churnLimit < uint64(exitQueueChurn) {
+		exitQueueEpoch++
+	}
+	if int(churnLimit) < activationQueueChurn {
+		activationQueueChurn = int(churnLimit)
 	}
 
-	// Get the public keys for the validators in the queue.
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	minEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	exitQueueIndices := make([]uint64, 0)
+	for _, valIdx := range awaitingExit {
+		if headState.Validators[valIdx].WithdrawableEpoch < minEpoch {
+			exitQueueIndices = append(exitQueueIndices, valIdx)
+		}
+	}
+
+	// Get the public keys for the validators in the queues.
 	activationQueueKeys := make([][]byte, len(activationQ))
+	exitQueueKeys := make([][]byte, len(exitQueueIndices))
 	for i, idx := range activationQ {
 		activationQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
-
-	exitedIndices, err := validators.ExitedValidatorIndices(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not determine exited validator indices: %v", err)
-	}
-
-	exitQueueKeys := make([][]byte, len(exitedIndices))
-	for i, idx := range exitedIndices {
+	for i, idx := range exitQueueIndices {
 		exitQueueKeys[i] = headState.Validators[idx].PublicKey
 	}
 
 	return &ethpb.ValidatorQueue{
-		ChurnLimit:           uint64(limit),
+		ChurnLimit:           churnLimit,
 		ActivationPublicKeys: activationQueueKeys,
 		ExitPublicKeys:       exitQueueKeys,
 	}, nil
