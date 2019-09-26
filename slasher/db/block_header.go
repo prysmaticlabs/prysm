@@ -23,7 +23,7 @@ func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
 // BlockHeader accepts an epoch and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
 func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
-	var bha []*ethpb.BeaconBlockHeader
+	var blockHeaders []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		prefix := encodeEpochValidatorID(epoch, validatorID)
@@ -32,11 +32,11 @@ func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconB
 			if err != nil {
 				return err
 			}
-			bha = append(bha, bh)
+			blockHeaders = append(blockHeaders, bh)
 		}
 		return nil
 	})
-	return bha, err
+	return blockHeaders, err
 }
 
 // HasBlockHeader accepts an epoch and validator id and returns true if the block header exists.
@@ -76,7 +76,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 
 	// prune history to max size every 10th epoch
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.pruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		err = db.PruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
@@ -95,7 +95,8 @@ func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader
 	})
 }
 
-func (db *Store) pruneHistory(currentEpoch uint64, historySize uint64) error {
+// PruneHistory leaves only records younger then history size.
+func (db *Store) PruneHistory(currentEpoch uint64, historySize uint64) error {
 	pruneTill := int64(currentEpoch) - int64(historySize)
 	if pruneTill <= 0 {
 		return nil
