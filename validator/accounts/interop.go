@@ -1,4 +1,4 @@
-package main
+package accounts
 
 import (
 	"encoding/hex"
@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
-func loadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
+// LoadUnencryptedKeys loads the unencrypted keys from the given file path.
+func LoadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
 	log.Warn("Loading encrypted keys from disk. Do not do this in production!")
 
 	pth, err := filepath.Abs(path)
@@ -41,7 +42,9 @@ func loadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
 	return validatorKeys, nil
 }
 
-func interopValidatorKeys(idx, count uint64) (map[string]*keystore.Key, error) {
+// InteropValidatorKeys deterministically generate the required amount of validator keys
+// according to thr given index and count.
+func InteropValidatorKeys(idx, count uint64) (map[string]*keystore.Key, error) {
 	log.Warn("Using interop deterministic generated validator keys.")
 	sks, _, err := interop.DeterministicallyGenerateKeys(idx, count)
 	if err != nil {
