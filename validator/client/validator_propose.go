@@ -27,11 +27,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
-	span.AddAttributes(trace.StringAttribute("pubKey", tpk))
-	log := log.WithField("pubKey", tpk)
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
+	span.AddAttributes(trace.StringAttribute("validator", tpk))
+	log := log.WithField("pubKey", tpk[:12])
 
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
