@@ -21,6 +21,7 @@ go_library(
         "//shared/interop:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/logutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/flags:go_default_library",
