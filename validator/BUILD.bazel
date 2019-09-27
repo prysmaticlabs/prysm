@@ -39,7 +39,6 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/validator",
     pure = "on",
     race = "off",
-    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [

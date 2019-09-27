@@ -38,6 +38,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 
+	var lastEmptyRequests int
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
@@ -56,6 +57,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
+
+			// Handle block large block ranges of skipped slots.
+			start += count * uint64(lastEmptyRequests*len(peers))
 
 			for i, pid := range peers {
 				start := start + uint64(i)*step
@@ -133,6 +137,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					return err
 				}
 			}
+		}
+		// If there were no blocks in the last request range, increment the counter so the same
+		// range isn't requested again on the next loop as the headSlot didn't change.
+		if len(blocks) == 0 {
+			lastEmptyRequests++
+		} else {
+			lastEmptyRequests = 0
 		}
 	}
 
