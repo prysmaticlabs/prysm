@@ -112,40 +112,6 @@ func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances
 	})
 }
 
-// ArchivedActiveIndices retrieval by epoch.
-func (k *Store) ArchivedActiveIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedActiveIndices")
-	defer span.End()
-
-	buf := uint64ToBytes(epoch)
-	var target []uint64
-	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(archivedActiveIndicesBucket)
-		enc := bkt.Get(buf)
-		if enc == nil {
-			return nil
-		}
-		target = make([]uint64, 0)
-		return ssz.Unmarshal(enc, &target)
-	})
-	return target, err
-}
-
-// SaveArchivedActiveIndices by epoch.
-func (k *Store) SaveArchivedActiveIndices(ctx context.Context, epoch uint64, indices []uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveIndices")
-	defer span.End()
-	buf := uint64ToBytes(epoch)
-	enc, err := ssz.Marshal(indices)
-	if err != nil {
-		return err
-	}
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedActiveIndicesBucket)
-		return bucket.Put(buf, enc)
-	})
-}
-
 // ArchivedValidatorParticipation retrieval by epoch.
 func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedValidatorParticipation")

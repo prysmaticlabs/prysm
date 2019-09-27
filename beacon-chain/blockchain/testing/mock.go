@@ -16,10 +16,16 @@ type ChainService struct {
 	Block               *ethpb.BeaconBlock
 	FinalizedCheckPoint *ethpb.Checkpoint
 	StateFeed           *event.Feed
+	BlocksReceived      []*ethpb.BeaconBlock
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	return nil
+}
+
+// ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
+func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -30,6 +36,11 @@ func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.B
 
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+	if ms.State == nil {
+		ms.State = &pb.BeaconState{}
+	}
+	ms.State.Slot = block.Slot
+	ms.BlocksReceived = append(ms.BlocksReceived, block)
 	return nil
 }
 

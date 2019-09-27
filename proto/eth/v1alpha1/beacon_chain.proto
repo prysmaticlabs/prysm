@@ -118,7 +118,7 @@ service BeaconChain {
     //
     // This method returns information about the global participation of 
     // validator attestations.
-    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipation) {
+    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/participation"
         };
@@ -238,15 +238,19 @@ message ChainHead {
 }
 
 message GetValidatorBalancesRequest {
-    // Retrieve validator balance at the given epoch.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Optional criteria to retrieve balances at a specific epoch.
+        uint64 epoch = 1;
 
+        // Optional criteria to retrieve the genesis list of balances.
+        bool genesis = 2;
+    }
     // Validator 48 byte BLS public keys to filter validators for the given
     // epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
         
     // Validator indices to filter validators for the given epoch.
-    repeated uint64 indices = 3;
+    repeated uint64 indices = 4;
 }
 
 message ValidatorBalances {
@@ -304,7 +308,13 @@ message Validators {
 
 
 message GetValidatorActiveSetChangesRequest {
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Optional criteria to retrieve balances at a specific epoch.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve the genesis list of balances.
+        bool genesis = 2;
+    }
 }
 
 message ActiveSetChanges {
@@ -315,13 +325,14 @@ message ActiveSetChanges {
     // 48 byte validator public keys that have been activated in this epoch.
     repeated bytes activated_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 
-    // 48 byte validator public keys that have been voluntarily exited in this
-    // epoch.
+    // 48 byte validator public keys that have been voluntarily exited in this epoch.
     repeated bytes exited_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 
-    // 48 byte validator public keys that have been involuntarily ejected in 
-    // this epoch.
-    repeated bytes ejected_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    // 48 byte validator public keys that have been slashed in this epoch.
+    repeated bytes slashed_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+
+    // 48 byte validator public keys that have been involuntarily ejected in this epoch.
+    repeated bytes ejected_public_keys = 5 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 }
 
 message ValidatorQueue {
@@ -339,23 +350,27 @@ message ValidatorQueue {
 }
 
 message ListValidatorAssignmentsRequest {
-    // Retrieve the validator assignments at the given epoch.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Epoch to validator assignments for.
+        uint64 epoch = 1;
 
+        // Whether or not to query for the genesis information.
+        bool genesis = 2;
+    }
     // 48 byte validator public keys to filter assignments for the given epoch.
-    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
         
     // Validator indicies to filter assignments for the given epoch.
-    repeated uint64 indices = 3;
+    repeated uint64 indices = 4;
 
     // The maximum number of ValidatorAssignments to return in the response.
     // This field is optional.
-    int32 page_size = 4;
+    int32 page_size = 5;
 
     // A pagination token returned from a previous call to `ListValidatorAssignments`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 5;
+    string page_token = 6;
 }
 
 message ValidatorAssignments {
@@ -398,26 +413,24 @@ message ValidatorAssignments {
 }
 
 message GetValidatorParticipationRequest {
-    // Epoch to request participation information.
-    uint64 epoch = 1;
+    oneof query_filter {
+        // Epoch to request participation information.
+        uint64 epoch = 1;
+
+        // Whether or not to query for the genesis information.
+        bool genesis = 2;
+    }
 }
 
-message ValidatorParticipation {
+message ValidatorParticipationResponse {
     // Epoch which this message is applicable.
     uint64 epoch = 1;
 
     // Whether or not epoch has been finalized.
     bool finalized = 2;
 
-    // Percentage of validator participation in the given epoch. This field
-    // contains a value between 0 and 1.
-    float global_participation_rate = 3;
-
-    // The total amount of ether, in gwei, that has been used in voting.
-    uint64 voted_ether = 4;
-
-    // The total amount of ether, in gwei, that is eligible for voting.
-    uint64 eligible_ether = 5;   
+    // The actual participation metrics.
+    ValidatorParticipation participation = 3;
 }
 
 message AttestationPoolResponse {

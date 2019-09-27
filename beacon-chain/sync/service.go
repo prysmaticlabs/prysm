@@ -66,6 +66,7 @@ type RegularSync struct {
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool
 	initialSync         Checker
+	validateBlockLock   sync.RWMutex
 }
 
 // Start the regular sync service.
@@ -73,6 +74,7 @@ func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
+	go r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.
@@ -83,13 +85,6 @@ func (r *RegularSync) Stop() error {
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
 	return nil
-}
-
-// ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
-// this should be called during new finalization.
-func (r *RegularSync) ClearPendingBlocks() {
-	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
-	r.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
 // Checker defines a struct which can verify whether a node is currently
