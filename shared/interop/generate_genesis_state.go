@@ -1,8 +1,6 @@
 package interop
 
 import (
-	"time"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -11,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -47,7 +46,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 	root := trie.Root()
 	if genesisTime == 0 {
-		genesisTime = uint64(time.Now().Unix())
+		genesisTime = uint64(roughtime.Now().Unix())
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
