@@ -8,9 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // OnAttestation is called whenever an attestation is received, it updates validators latest vote,
