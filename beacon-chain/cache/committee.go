@@ -18,8 +18,8 @@ var (
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
 	// maxShuffledIndicesSize defines the max number of shuffled indices list can cache.
-	// 2 for current epoch and next epoch.
-	maxShuffledIndicesSize = 2
+	// 3 for previous, current epoch and next epoch.
+	maxShuffledIndicesSize = 3
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
