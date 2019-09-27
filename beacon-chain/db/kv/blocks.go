@@ -183,6 +183,9 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve block roots")
+	}
 	return blockRoots, nil
 }
 
