@@ -162,12 +162,14 @@ func ProcessBlockHeader(
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
+
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block signature")
 	}
+
 	return beaconState, nil
 }
 
