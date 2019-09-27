@@ -52,9 +52,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
 	for i, pkey := range v.pubkeys {
-		tpk := hex.EncodeToString(pkey)[:12]
+		log := log.WithField("pubKey", hex.EncodeToString(pkey)[:12])
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
-			log.WithField("pubKey", fmt.Sprintf("%#x", tpk)).Info("Validator not able to be retrieved from beacon node")
+			log.Info("Validator not able to be retrieved from beacon node")
 			continue
 		}
 		if slot < params.BeaconConfig().SlotsPerEpoch {
@@ -70,7 +70,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"newBalance":    newBalance,
 				"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
-				"pubKey":        tpk,
 			}).Info("Net gains/losses in eth")
 		}
 		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
