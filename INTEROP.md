@@ -25,7 +25,7 @@ You can use `bazel run //tools/genesis-state-gen` to create a deterministic gene
 
 ### Usage
 
-- **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state
+- **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state (defaults to now)
 - **--mainnet-config** bool: Select whether genesis state should be generated with mainnet or minimal (default) params
 - **--num-validators** int: Number of validators to deterministically include in the generated genesis state
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
@@ -50,7 +50,6 @@ bazel run //beacon-chain -- \
 --deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
 --clear-db \
 --interop-num-validators 64 \
---interop-genesis-time=$(date +%s) \
 --interop-eth1data-votes
 ```
 
