@@ -61,8 +61,8 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	atts := make([]*ethpb.Attestation, 1000)
-	attDataRoots := make([][32]byte, 1000)
+	atts := make([]*ethpb.Attestation, 10)
+	attDataRoots := make([][32]byte, 10)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -88,7 +88,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) != 1000 {
+	if len(retrieved) != 10 {
 		t.Errorf("Received %d attestations, wanted 1000", len(retrieved))
 	}
 	if err := db.DeleteAttestations(ctx, attDataRoots); err != nil {

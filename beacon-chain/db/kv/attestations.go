@@ -120,13 +120,16 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 	return k.db.Update(func(tx *bolt.Tx) error {
 		var wg sync.WaitGroup
 		var err error
+		fmt.Println(len(attDataRoots))
 		wg.Add(len(attDataRoots))
 		for _, r := range attDataRoots {
 			go func(w *sync.WaitGroup, root [32]byte) {
-				defer w.Done()
 				if err = k.DeleteAttestation(ctx, root); err != nil {
+					w.Done()
 					return
 				}
+				w.Done()
+				return
 			}(&wg, r)
 		}
 		fmt.Println("Waiting...")
