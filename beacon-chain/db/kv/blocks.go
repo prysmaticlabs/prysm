@@ -64,7 +64,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")
 	defer span.End()
 	blocks := make([]*ethpb.BeaconBlock, 0)
-	err := k.db.Batch(func(tx *bolt.Tx) error {
+	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
 		// If no filter criteria are specified, return all blocks.
@@ -132,19 +132,58 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoots")
 	defer span.End()
-	blocks, err := k.Blocks(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	roots := make([][]byte, len(blocks))
-	for i, b := range blocks {
-		root, err := ssz.SigningRoot(b)
-		if err != nil {
-			return nil, err
+	blockRoots := make([][]byte, 0)
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+
+		// If no filter criteria are specified, return all block roots.
+		if f == nil {
+			return bkt.ForEach(func(k, v []byte) error {
+				blockRoots = append(blockRoots, k)
+				return nil
+			})
 		}
-		roots[i] = root[:]
-	}
-	return roots, nil
+
+		// Creates a list of indices from the passed in filter values, such as:
+		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
+		// block roots that were stored under each of those indices for O(1) lookup.
+		indicesByBucket, err := createBlockIndicesFromFilters(f)
+		if err != nil {
+			return errors.Wrap(err, "could not determine lookup indices")
+		}
+
+		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
+		filtersMap := f.Filters()
+		rootsBySlotRange := fetchBlockRootsBySlotRange(
+			tx.Bucket(blockSlotIndicesBucket),
+			filtersMap[filters.StartSlot],
+			filtersMap[filters.EndSlot],
+		)
+
+		// Once we have a list of block roots that correspond to each
+		// lookup index, we find the intersection across all of them.
+		indices := lookupValuesForIndices(indicesByBucket, tx)
+		keys := rootsBySlotRange
+		if len(indices) > 0 {
+			// If we have found indices that meet the filter criteria, and there are also
+			// block roots that meet the slot range filter criteria, we find the intersection
+			// between these two sets of roots.
+			if len(rootsBySlotRange) > 0 {
+				joined := append([][][]byte{keys}, indices...)
+				keys = sliceutil.IntersectionByteSlices(joined...)
+			} else {
+				// If we have found indices that meet the filter criteria, but there are no block roots
+				// that meet the slot range filter criteria, we find the intersection
+				// of the regular filter indices.
+				keys = sliceutil.IntersectionByteSlices(indices...)
+			}
+		}
+		for i := 0; i < len(keys); i++ {
+			blockRoots = append(blockRoots, keys[i])
+		}
+		return nil
+	})
+	return blockRoots, nil
 }
 
 // HasBlock checks if a block by root exists in the db.
