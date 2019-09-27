@@ -83,6 +83,10 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
+	if s.genesisTime == 0 {
+		// Generated genesis time; fetch it
+		s.genesisTime = genesisState.GenesisTime
+	}
 	if err := s.saveGenesisState(ctx, genesisState); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}

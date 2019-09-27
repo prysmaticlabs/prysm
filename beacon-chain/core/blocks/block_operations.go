@@ -972,14 +972,14 @@ func ProcessDepositsNoVerify(
 //         # Increase balance by deposit amount
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
-func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
 	if !ok {
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
