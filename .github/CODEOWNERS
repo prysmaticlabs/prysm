@@ -27,16 +27,34 @@
 # sync related code
 /beacon-chain/sync/ @prestonvanloon @nisdas
 
+* beacon chain state transition related code
+/beacon-chain/core/ @terencechain
+
+* chain service related code
+/beacon-chain/blockchain/ @terencechain
+
+* operation service related code
+/beacon-chain/operations/ @terencechain
+
 # fork choice related code
 /beacon-chain/blockchain/forkchoice/ @terencechain
 /tools/forkchecker/ @terencechain
 
+* cache related code
+/beacon-chain/cache/ @terencechain
+
+* rpc related code
+/beacon-chain/rpc/ @terencechain
+
 # database related code
 /beacon-chain/db/ @rauljordan
-/beacon-chain/archiver @rauljordan
+/beacon-chain/archiver/ @rauljordan
 
 # protobuf / API code
 /proto/ @prestonvanloon
 
 # slashing detection
 /slasher/ @shayzluf @0xKiwi
+
+# validator
+/validator/ @terencechain
