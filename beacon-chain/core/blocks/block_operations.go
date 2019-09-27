@@ -1058,7 +1058,7 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 //         # Increase balance by deposit amount
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
-func ProcessDepositNoVerify(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+func ProcessDepositNoVerify(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
