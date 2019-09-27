@@ -22,20 +22,20 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 	}
 
 	tests := []struct {
-		key [32]byte
+		key [48]byte
 		val int
 		ok  bool
 	}{
 		{
-			key: bytesutil.ToBytes32([]byte("zero")),
+			key: bytesutil.ToBytes48([]byte("zero")),
 			val: 0,
 			ok:  true,
 		}, {
-			key: bytesutil.ToBytes32([]byte("one")),
+			key: bytesutil.ToBytes48([]byte("one")),
 			val: 1,
 			ok:  true,
 		}, {
-			key: bytesutil.ToBytes32([]byte("no")),
+			key: bytesutil.ToBytes48([]byte("no")),
 			val: 0,
 			ok:  false,
 		},
