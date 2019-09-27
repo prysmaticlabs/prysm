@@ -25,7 +25,6 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/tools/contract-addr",
     pure = "on",
     race = "off",
-    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = ["@org_uber_go_automaxprocs//:go_default_library"],

@@ -201,10 +201,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath)
+		d, err = confirmDelete(d, dbPath)
 		if err != nil {
 			return err
 		}
