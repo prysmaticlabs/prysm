@@ -971,63 +971,15 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 		[]byte("2"),
 		[]byte("3"),
 	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
 	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
-	}
-}
-
-func TestBeaconChainServer_GetValidatorQueue_PendingActivation_BelowChurn(t *testing.T) {
-	activeValidatorCount := uint64(100)
-	validators := make([]*ethpb.Validator, activeValidatorCount)
-	// We create a bunch of active validators.
-	for i := uint64(0); i < activeValidatorCount; i++ {
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			PublicKey:       []byte(strconv.Itoa(int(i))),
-		}
-	}
-	headState := &pbp2p.BeaconState{
-		Validators: validators,
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		},
-	}
-	churnLimit, err := helpers.ValidatorChurnLimit(headState)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pendingActiveCount := churnLimit * 2
-	wantedKeys := make([][]byte, int(churnLimit*2))
-	for i := uint64(0); i < pendingActiveCount; i++ {
-		val := &ethpb.Validator{
-			ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
-			ActivationEligibilityEpoch: i + 1,
-			PublicKey:                  []byte(strconv.Itoa(len(validators))),
-		}
-		validators = append(validators, val)
-		wantedKeys[i] = val.PublicKey
-	}
-	headState.Validators = validators
-	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.ActivationPublicKeys) > int(churnLimit) {
-		t.Errorf(
-			"Expected to clip queued activations below churn limit %d, received %d in queue",
-			churnLimit,
-			len(res.ActivationPublicKeys),
-		)
-	}
-	if !reflect.DeepEqual(res.ActivationPublicKeys, wantedKeys[:churnLimit]) {
-		t.Errorf("Received %v, wanted %v", res.ActivationPublicKeys, wantedKeys[:churnLimit])
 	}
 }
 
@@ -1072,59 +1024,15 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		[]byte("2"),
 		[]byte("3"),
 	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
 	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
-	}
-}
-
-func TestBeaconChainServer_GetValidatorQueue_PendingExit_BelowChurn(t *testing.T) {
-	activeValidatorCount := uint64(100)
-	validators := make([]*ethpb.Validator, activeValidatorCount)
-	// We create a bunch of active validators.
-	for i := uint64(0); i < activeValidatorCount; i++ {
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			PublicKey:       []byte(strconv.Itoa(int(i))),
-		}
-	}
-	headState := &pbp2p.BeaconState{
-		Validators: validators,
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		},
-	}
-	churnLimit, err := helpers.ValidatorChurnLimit(headState)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pendingActiveCount := churnLimit * 2
-	wantedKeys := make([][]byte, int(churnLimit*2))
-	for i := uint64(0); i < pendingActiveCount; i++ {
-		validators[i].ExitEpoch = pendingActiveCount
-		validators[i].WithdrawableEpoch = i
-		wantedKeys[i] = validators[i].PublicKey
-	}
-	headState.Validators = validators
-	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.ExitPublicKeys) > int(churnLimit) {
-		t.Errorf(
-			"Expected to clip queued exits below churn limit %d, received %d in queue",
-			churnLimit,
-			len(res.ExitPublicKeys),
-		)
-	}
-	if !reflect.DeepEqual(res.ExitPublicKeys, wantedKeys[:churnLimit]) {
-		t.Errorf("Received %v, wanted %v", res.ExitPublicKeys, wantedKeys[:churnLimit])
 	}
 }
 
