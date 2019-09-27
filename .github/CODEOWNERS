@@ -1,0 +1,42 @@
+# Order is important. The last matching pattern has the most precedence.
+# Paths that end in a slash match any files in that directory and subdirectories.
+# Paths that end in a * match any files in that directory only.
+# 
+# Code owners auto selected in code review as dictated in this file.
+
+
+# Global / default reviewers
+* @prysmaticlabs/core-team
+
+# Tools base directory
+/tools/* @prestonvanloon
+
+# Deployment tools
+/tools/cluster-pk-manager/ @prestonvanloon
+/tools/contract-addr/ @prestonvanloon
+/tools/enr-calculator/ @prestonvanloon
+/tools/eth1exporter/ @prestonvanloon
+/tools/faucet/ @prestonvanloon
+
+# p2p related code
+/beacon-chain/p2p/ @prestonvanloon
+/tools/bootnode/ @prestonvanloon
+/tools/bootnode-query/ @prestonvanloon
+/tools/relaynode/ @prestonvanloon
+
+# sync related code
+/beacon-chain/sync/ @prestonvanloon @nisdas
+
+# fork choice related code
+/beacon-chain/blockchain/forkchoice/ @terencechain
+/tools/forkchecker/ @terencechain
+
+# database related code
+/beacon-chain/db/ @rauljordan
+/beacon-chain/archiver @rauljordan
+
+# protobuf / API code
+/proto/ @prestonvanloon
+
+# slashing detection
+/slasher/ @shayzluf @0xKiwi
