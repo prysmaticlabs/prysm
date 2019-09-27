@@ -27,7 +27,6 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
     pure = "on",
     race = "off",
-    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
