@@ -34,6 +34,7 @@ type FeatureFlagConfig struct {
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -78,6 +79,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
 		log.Warn("Initial syncing without verifying block's contents")
 		cfg.InitSyncNoVerify = true
+	}
+	if ctx.GlobalBool(NewCacheFlag.Name) {
+		log.Warn("Using new cache for committee shuffled indices")
+		cfg.EnableNewCache = true
 	}
 	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")

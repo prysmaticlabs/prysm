@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -84,6 +85,9 @@ func (r *RegularSync) Stop() error {
 
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
+	if r.initialSync.Syncing(){
+		return errors.New("waiting for initial sync")
+	}
 	return nil
 }
 
