@@ -94,7 +94,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted = item2.Epoch + item3.Epoch
+	wanted = item1.Epoch + item2.Epoch + item3.Epoch
 	if sum(epochs) != wanted {
 		t.Errorf("Wanted: %v, got: %v", wanted, sum(epochs))
 	}
@@ -107,7 +107,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted = item3.Epoch + item4.Epoch
+	wanted = item2.Epoch + item3.Epoch + item4.Epoch
 	if sum(epochs) != wanted {
 		t.Errorf("Wanted: %v, got: %v", wanted, sum(epochs))
 	}
@@ -124,6 +124,9 @@ func TestCommitteeCache_EpochInCache(t *testing.T) {
 	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 99}); err != nil {
 		t.Fatal(err)
 	}
+	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 100}); err != nil {
+		t.Fatal(err)
+	}
 	inCache, err := cache.EpochInCache(1)
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +134,7 @@ func TestCommitteeCache_EpochInCache(t *testing.T) {
 	if inCache {
 		t.Error("Epoch shouldn't be in cache")
 	}
-	inCache, err = cache.EpochInCache(99)
+	inCache, err = cache.EpochInCache(100)
 	if err != nil {
 		t.Fatal(err)
 	}
