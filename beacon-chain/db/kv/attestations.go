@@ -117,25 +117,20 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
-		var wg sync.WaitGroup
-		var err error
-		fmt.Println(len(attDataRoots))
-		wg.Add(len(attDataRoots))
-		for _, r := range attDataRoots {
-			go func(w *sync.WaitGroup, root [32]byte) {
-				if err = k.DeleteAttestation(ctx, root); err != nil {
-					w.Done()
-					return
-				}
-				w.Done()
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(attDataRoots))
+	for _, r := range attDataRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer wg.Done()
+			if err = k.DeleteAttestation(ctx, root); err != nil {
 				return
-			}(&wg, r)
-		}
-		fmt.Println("Waiting...")
-		wg.Wait()
-		return err
-	})
+			}
+			return
+		}(&wg, r)
+	}
+	wg.Wait()
+	return err
 }
 
 // SaveAttestation to the db.

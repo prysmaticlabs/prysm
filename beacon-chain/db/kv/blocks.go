@@ -191,21 +191,19 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
-		var wg sync.WaitGroup
-		var err error
-		wg.Add(len(blockRoots))
-		for _, r := range blockRoots {
-			go func(w *sync.WaitGroup, root [32]byte) {
-				defer w.Done()
-				if err = k.DeleteBlock(ctx, root); err != nil {
-					return
-				}
-			}(&wg, r)
-		}
-		wg.Wait()
-		return err
-	})
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(blockRoots))
+	for _, r := range blockRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer w.Done()
+			if err = k.DeleteBlock(ctx, root); err != nil {
+				return
+			}
+		}(&wg, r)
+	}
+	wg.Wait()
+	return err
 }
 
 // SaveBlock to the db.

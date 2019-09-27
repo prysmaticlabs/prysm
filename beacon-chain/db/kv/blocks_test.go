@@ -54,8 +54,9 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	blocks := make([]*ethpb.BeaconBlock, 1000)
-	blockRoots := make([][32]byte, 1000)
+	numBlocks := 1000
+	blocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, numBlocks)
 	for i := 0; i < len(blocks); i++ {
 		blocks[i] = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
@@ -74,7 +75,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) != 1000 {
+	if len(retrieved) != numBlocks {
 		t.Errorf("Received %d blocks, wanted 1000", len(retrieved))
 	}
 	if err := db.DeleteBlocks(ctx, blockRoots); err != nil {
