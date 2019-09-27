@@ -288,28 +288,31 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	return nil
 }
 
-// This gets called to initialize chain info variables using the head stored in DB
+// This gets called to initialize chain info variables using the finalized checkpoint stored in DB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	headBlock, err := s.beaconDB.HeadBlock(ctx)
+	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head block in db")
+		return errors.Wrap(err,"could not get finalized checkpoint from db")
 	}
-	headState, err := s.beaconDB.HeadState(ctx)
+	if finalized == nil{
+		// This should never happen. At chain start, the finalized checkpoint
+		// would be the genesis state and block.
+		return errors.New("no finalized epoch in the database")
+	}
+	s.headState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
-		return errors.Wrap(err, "could not get head state in db")
+		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	s.headSlot = headBlock.Slot
-	s.headBlock = headBlock
-	s.headState = headState
+	s.headBlock, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized block from db")
+	}
 
-	headRoot, err := ssz.SigningRoot(headBlock)
-	if err != nil {
-		return errors.Wrap(err, "could not sign root on head block")
-	}
-	s.canonicalRoots[s.headSlot] = headRoot[:]
+	s.headSlot = s.headState.Slot
+	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil
 }
