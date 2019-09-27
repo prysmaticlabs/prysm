@@ -256,16 +256,14 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
-
 	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return nil
 	}
-
-	enc, err := proto.Marshal(block)
-	if err != nil {
-		return err
-	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return err
+		}
 		bkt := tx.Bucket(blocksBucket)
 		indicesByBucket := createBlockIndicesFromBlock(block, tx)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
@@ -280,41 +278,26 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
-	encodedValues := make([][]byte, len(blocks))
-	keys := make([][]byte, len(blocks))
-	for i := 0; i < len(blocks); i++ {
-		enc, err := proto.Marshal(blocks[i])
-		if err != nil {
-			return err
-		}
-		key, err := ssz.SigningRoot(blocks[i])
-		if err != nil {
-			return err
-		}
-		encodedValues[i] = enc
-		keys[i] = key[:]
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(blocks))
+	for _, blk := range blocks {
+		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
+			defer w.Done()
+			if err = k.SaveBlock(ctx, b); err != nil {
+				return
+			}
+		}(&wg, blk)
 	}
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(blocksBucket)
-		for i := 0; i < len(blocks); i++ {
-			indicesByBucket := createBlockIndicesFromBlock(blocks[i], tx)
-			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
-			k.blockCache.Set(string(keys[i]), blocks[i], time.Hour)
-			if err := bucket.Put(keys[i], encodedValues[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	wg.Wait()
+	return err
 }
 
 // SaveHeadBlockRoot to the db.
 func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})
