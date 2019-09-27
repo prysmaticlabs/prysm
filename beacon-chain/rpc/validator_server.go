@@ -171,7 +171,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
-		idx, ok := validatorIndexMap[bytesutil.ToBytes32(pubKey)]
+		idx, ok := validatorIndexMap[bytesutil.ToBytes48(pubKey)]
 		if ok {
 			status := vs.assignmentStatus(uint64(idx), s)
 			assignment.Status = status
@@ -295,7 +295,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 	}, nil
 }
 
-func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, idxMap map[[32]byte]int, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
+func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, idxMap map[[48]byte]int, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
@@ -310,7 +310,7 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, i
 		Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 	}
 
-	idx, ok := idxMap[bytesutil.ToBytes32(pubKey)]
+	idx, ok := idxMap[bytesutil.ToBytes48(pubKey)]
 	if !ok || headState == nil {
 		return defaultUnknownResponse
 	}
