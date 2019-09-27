@@ -280,3 +280,47 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkDeleteAttestations_Batch1000(b *testing.B) {
+	db := setupDB(b)
+	defer teardownDB(b, db)
+	root := [32]byte{1, 2, 3}
+	attestations := make([]*ethpb.Attestation, 1000)
+	dataRoots := make([][32]byte, 1000)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: root[:],
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  root[:],
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  root[:],
+				},
+				Crosslink: &ethpb.Crosslink{
+					Shard:      uint64(i),
+					ParentRoot: root[:],
+					StartEpoch: 1,
+					EndEpoch:   2,
+					DataRoot:   root[:],
+				},
+			},
+		}
+		dataRoot, err := ssz.HashTreeRoot(attestations[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+		dataRoots[i] = dataRoot
+	}
+	ctx := context.Background()
+	if err := db.SaveAttestations(ctx, attestations); err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		if err := db.DeleteAttestations(ctx, dataRoots); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

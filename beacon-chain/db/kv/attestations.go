@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -94,7 +95,7 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -116,25 +117,18 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationsBucket)
+	return k.db.Update(func(tx *bolt.Tx) error {
+		var wg sync.WaitGroup
+		wg.Add(len(attDataRoots))
 		for _, r := range attDataRoots {
-			enc := bkt.Get(r[:])
-			if enc == nil {
-				return nil
-			}
-			att := &ethpb.Attestation{}
-			if err := proto.Unmarshal(enc, att); err != nil {
-				return err
-			}
-			indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
-			if err := deleteValueForIndices(indicesByBucket, r[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			if err := bkt.Delete(r[:]); err != nil {
-				return errors.Wrapf(err, "could not delete root %#x", r)
-			}
+			go func(w *sync.WaitGroup) {
+				defer w.Done()
+				if err := k.DeleteBlock(ctx, r); err != nil {
+					return
+				}
+			}(&wg)
 		}
+		wg.Wait()
 		return nil
 	})
 }
