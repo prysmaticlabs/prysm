@@ -34,6 +34,11 @@ var (
 		Name:  "init-sync-no-verify",
 		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
 	}
+	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
+	SkipBLSVerifyFlag = cli.BoolFlag{
+		Name:  "skip-bls-verify",
+		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -49,4 +54,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
 	InitSyncNoVerifyFlag,
+	SkipBLSVerifyFlag,
 }
