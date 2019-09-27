@@ -18,8 +18,8 @@ var (
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
 	// maxShuffledIndicesSize defines the max number of shuffled indices list can cache.
-	// 2 for current epoch and next epoch.
-	maxShuffledIndicesSize = 2
+	// 3 for previous, current epoch and next epoch.
+	maxShuffledIndicesSize = 3
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -105,6 +105,9 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
 
 // Epochs returns the epochs stored in the committee cache. These are the keys to the cache.
 func (c *CommitteeCache) Epochs() ([]uint64, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	epochs := make([]uint64, len(c.CommitteeCache.ListKeys()))
 	for i, s := range c.CommitteeCache.ListKeys() {
 		epoch, err := strconv.Atoi(s)
@@ -118,6 +121,9 @@ func (c *CommitteeCache) Epochs() ([]uint64, error) {
 
 // EpochInCache returns true if an input epoch is part of keys in cache.
 func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	for _, s := range c.CommitteeCache.ListKeys() {
 		epoch, err := strconv.Atoi(s)
 		if err != nil {
@@ -128,6 +134,54 @@ func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// CommitteeCount returns the total number of committees in a given epoch as stored in cache.
+func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+	if err != nil {
+		return 0, false, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return 0, false, nil
+	}
+
+	item, ok := obj.(*Committee)
+	if !ok {
+		return 0, false, ErrNotCommittee
+	}
+
+	return item.CommitteeCount, true, nil
+}
+
+// StartShard returns the start shard number in a given epoch as stored in cache.
+func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+	if err != nil {
+		return 0, false, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return 0, false, nil
+	}
+
+	item, ok := obj.(*Committee)
+	if !ok {
+		return 0, false, ErrNotCommittee
+	}
+
+	return item.StartShard, true, nil
 }
 
 func startEndIndices(c *Committee, wantedShard uint64) (uint64, uint64) {
