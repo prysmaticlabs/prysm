@@ -56,6 +56,9 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &PublicKey{}, nil
+	}
 	cv := pubkeyCache.Get(string(pub))
 	if cv != nil && cv.Value() != nil {
 		return cv.Value().(*PublicKey).Copy(), nil
@@ -72,6 +75,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &Signature{}, nil
+	}
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
 	if err != nil {
@@ -87,6 +93,9 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &Signature{}
+	}
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, domain)
 	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
@@ -112,6 +121,10 @@ func (p *PublicKey) Copy() *PublicKey {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
+	// If the skip BLS verify feature flag is enabled, we simply return the same public key.
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return p
+	}
 	p1 := p.val
 	p1.Aggregate(p2.val)
 	return &PublicKey{val: p1}
@@ -170,12 +183,18 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return make([]byte, 96)
+	}
 	k := s.val.Serialize()
 	return k[:]
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return sigs[0]
+	}
 	var ss []*g1.Signature
 	for _, v := range sigs {
 		if v == nil {
