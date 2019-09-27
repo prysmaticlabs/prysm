@@ -99,18 +99,22 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
-	for _, addr := range addrs {
-		_, err := enode.Parse(enode.ValidSchemes, addr)
-		if err == nil {
-			discv5Nodes = append(discv5Nodes, addr)
-			continue
+	if len(addrs) == 1 && addrs[0] == "" {
+		log.Warn("No bootstrap addresses supplied")
+	} else {
+		for _, addr := range addrs {
+			_, err := enode.Parse(enode.ValidSchemes, addr)
+			if err == nil {
+				discv5Nodes = append(discv5Nodes, addr)
+				continue
+			}
+			_, err = multiAddrFromString(addr)
+			if err == nil {
+				kadDHTNodes = append(kadDHTNodes, addr)
+				continue
+			}
+			log.Errorf("Invalid bootstrap address of %s provided", addr)
 		}
-		_, err = multiAddrFromString(addr)
-		if err == nil {
-			kadDHTNodes = append(kadDHTNodes, addr)
-			continue
-		}
-		log.Errorf("Invalid bootstrap address of %s provided", addr)
 	}
 	return discv5Nodes, kadDHTNodes
 }
