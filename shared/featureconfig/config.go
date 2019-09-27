@@ -80,7 +80,7 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.GlobalBool(NewCacheFlag.Name) {
-		log.Warn("Initial syncing without verifying block's contents")
+		log.Warn("Using new cache for committee shuffled indices")
 		cfg.EnableNewCache = true
 	}
 	InitFeatureConfig(cfg)
