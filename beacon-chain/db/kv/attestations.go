@@ -137,15 +137,15 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
-	attDataRoot, err := ssz.HashTreeRoot(att.Data)
-	if err != nil {
-		return err
-	}
-	enc, err := proto.Marshal(att)
-	if err != nil {
-		return err
-	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return err
+		}
+		enc, err := proto.Marshal(att)
+		if err != nil {
+			return err
+		}
 		bkt := tx.Bucket(attestationsBucket)
 		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
@@ -159,33 +159,20 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
 	defer span.End()
-	encodedValues := make([][]byte, len(atts))
-	keys := make([][]byte, len(atts))
-	for i := 0; i < len(atts); i++ {
-		enc, err := proto.Marshal(atts[i])
-		if err != nil {
-			return err
-		}
-		key, err := ssz.HashTreeRoot(atts[i].Data)
-		if err != nil {
-			return err
-		}
-		encodedValues[i] = enc
-		keys[i] = key[:]
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(atts))
+	for _, a := range atts {
+		go func(w *sync.WaitGroup, att *ethpb.Attestation) {
+			defer wg.Done()
+			if err = k.SaveAttestation(ctx, att); err != nil {
+				return
+			}
+			return
+		}(&wg, a)
 	}
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationsBucket)
-		for i := 0; i < len(atts); i++ {
-			indicesByBucket := createAttestationIndicesFromData(atts[i].Data, tx)
-			if err := updateValueForIndices(indicesByBucket, keys[i], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
-			if err := bkt.Put(keys[i], encodedValues[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	wg.Wait()
+	return err
 }
 
 // createAttestationIndicesFromData takes in attestation data and returns
