@@ -794,9 +794,8 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearAllCaches()
-	params.UseMinimalConfig()
 
-	validatorCount := 1000
+	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]uint64, validatorCount)
 	for i := 0; i < validatorCount; i++ {
@@ -810,6 +809,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
+
 	if err := UpdateCommitteeCache(state); err != nil {
 		t.Fatal(err)
 	}
@@ -821,13 +821,12 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		t.Error("Did not save correct epoch lengths")
 	}
 	epoch := uint64(1)
-	shard := uint64(2)
+	shard := uint64(512)
 	indices, err = committeeCache.ShuffledIndices(epoch, shard)
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedLength := validatorCount / int(params.BeaconConfig().ShardCount)
-	if len(indices) != wantedLength {
+	if len(indices) != int(params.BeaconConfig().TargetCommitteeSize) {
 		t.Error("Did not save correct indices lengths")
 	}
 }
