@@ -57,7 +57,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// block roots that were stored under each of those indices for O(1) lookup.
 		indicesByBucket, err := createAttestationIndicesFromFilters(f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine block lookup indices")
+			return errors.Wrap(err, "could not determine lookup indices")
 		}
 		// Once we have a list of attestation data roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
@@ -122,13 +122,14 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 		var err error
 		wg.Add(len(attDataRoots))
 		for _, r := range attDataRoots {
-			go func(w *sync.WaitGroup) {
+			go func(w *sync.WaitGroup, root [32]byte) {
 				defer w.Done()
-				if err = k.DeleteAttestation(ctx, r); err != nil {
+				if err = k.DeleteAttestation(ctx, root); err != nil {
 					return
 				}
-			}(&wg)
+			}(&wg, r)
 		}
+		fmt.Println("Waiting...")
 		wg.Wait()
 		return err
 	})

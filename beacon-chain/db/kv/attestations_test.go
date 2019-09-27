@@ -66,6 +66,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("head"),
 				Crosslink: &ethpb.Crosslink{
 					Shard:      uint64(i),
 					ParentRoot: []byte("parent"),
@@ -83,7 +84,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err := db.SaveAttestations(ctx, atts); err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +94,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err := db.DeleteAttestations(ctx, attDataRoots); err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,7 +84,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// block roots that were stored under each of those indices for O(1) lookup.
 		indicesByBucket, err := createBlockIndicesFromFilters(f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine block lookup indices")
+			return errors.Wrap(err, "could not determine lookup indices")
 		}
 
 		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
@@ -196,12 +196,12 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 		var err error
 		wg.Add(len(blockRoots))
 		for _, r := range blockRoots {
-			go func(w *sync.WaitGroup) {
+			go func(w *sync.WaitGroup, root [32]byte) {
 				defer w.Done()
-				if err = k.DeleteBlock(ctx, r); err != nil {
+				if err = k.DeleteBlock(ctx, root); err != nil {
 					return
 				}
-			}(&wg)
+			}(&wg, r)
 		}
 		wg.Wait()
 		return err
