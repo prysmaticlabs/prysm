@@ -6,15 +6,16 @@ import (
 	"math/big"
 	"testing"
 	"time"
+	"encoding/hex"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/powchain"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func generateValidators(count int64) map[string]*prysmKeyStore.Key {
@@ -30,11 +31,11 @@ func generateValidators(count int64) map[string]*prysmKeyStore.Key {
 
 //should I explicitly return err here?
 func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
-	numberOfDeposits int64, log *Entry) {
-	depositAmountInGwei := contracts.Amount32Eth.Uint64()
+	numberOfDeposits int64) {
+	depositAmountInGwei := uint64(contracts.Amount32Eth.Int64())
 
 	depositDelay := int64(1)
-	depositContractAddrStr := testAcc.ContractAddr.GetHex()
+	depositContractAddrStr := testAcc.ContractAddr.Hex()
 
 	for _, validatorKey := range validatorKeys {
 		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
@@ -73,7 +74,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := powchain.NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -97,7 +98,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	sendDeposits(testAcc, validatorKeys, numberOfDeposits, log)
+	sendDeposits(testAcc, validatorKeys, numberOfDeposits)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
