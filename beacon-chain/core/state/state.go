@@ -156,7 +156,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	// Process initial deposits.
-	validatorMap := make(map[[32]byte]int)
+	validatorMap := make(map[[48]byte]int)
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
 		hash, err := ssz.HashTreeRoot(deposit.Data)

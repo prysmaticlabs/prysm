@@ -84,12 +84,12 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		if featureconfig.FeatureConfig().DemoConfig {
-			log.Info("Using demo config")
-			params.UseDemoBeaconConfig()
-		} else {
+		if featureconfig.FeatureConfig().MinimalConfig {
 			log.Info("Using minimal config")
 			params.UseMinimalConfig()
+		} else {
+			log.Info("Using demo config")
+			params.UseDemoBeaconConfig()
 		}
 	}
 
@@ -201,10 +201,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath)
+		d, err = confirmDelete(d, dbPath)
 		if err != nil {
 			return err
 		}
