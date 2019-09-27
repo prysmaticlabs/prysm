@@ -11,6 +11,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//shared/testutil:__pkg__",
         "//shared/interop:__pkg__",
         "//tools/genesis-state-gen:__pkg__",
     ],

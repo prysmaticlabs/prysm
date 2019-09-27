@@ -161,6 +161,8 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		if err := s.db.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
 		}
+	}
+
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
 		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint

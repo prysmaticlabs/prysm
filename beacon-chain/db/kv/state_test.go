@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"github.com/gogo/protobuf/proto"
 	"reflect"
 	"testing"
 
@@ -145,7 +146,7 @@ func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
 
 	blocks := make([]*ethpb.BeaconBlock, savingInterval-2)
 	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
-	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
+	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +233,7 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 	}
 
 	blocks[0] = firstBlock
-	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
+	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,69 +318,58 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 	}
 	genesisState.Slot = 1
 
-	// TODO finish test
-	blocks := make([]*ethpb.BeaconBlock, savingInterval+savingInterval-1)
 	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	root, err := ssz.SigningRoot(firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(context.Background(), genesisState, root); err != nil {
+	if err := db.SaveState(context.Background(), newState, root); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(context.Background(), firstBlock); err != nil {
 		t.Fatal(err)
 	}
 
-	blocks[0] = firstBlock
-	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
+	// Process 14 slots to skip over the normal interval
+	postSkipBlock := testutil.GenerateFullBlock(t, newState, privs)
+	postSkipBlock.Slot = savingInterval + (savingInterval - 2)
+	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, postSkipBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(t, newState, privs)
-		blocks[i] = block
-		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	// Slot at this point is 15, so we generate 2 blocks but only save the second one to simulate that the saving slot was skipped.
-	skipBlock := testutil.GenerateFullBlock(t, newState, privs)
-	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, skipBlock)
+	root, err = ssz.SigningRoot(firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := testutil.GenerateFullBlock(t, newState, privs)
-	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
-	if err != nil {
+	if err := db.SaveState(context.Background(), newState, root); err != nil {
 		t.Fatal(err)
 	}
-	root, err = ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = db.SaveState(context.Background(), newState, root); err != nil {
+	if err := db.SaveBlock(context.Background(), postSkipBlock); err != nil {
 		t.Fatal(err)
 	}
 
-	blocks = make([]*ethpb.BeaconBlock, savingInterval-2)
-	blocks[0] = block
-	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(t, newState, privs)
-		blocks[i] = block
-		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
-		if err != nil {
-			t.Fatal(err)
-		}
+	// Process one more slot so we can generate a state that isn't latest.
+	extraBlock := testutil.GenerateFullBlock(t, newState, privs)
+	stateCopy := proto.Clone(newState).(*pb.BeaconState)
+	_, err = state.ExecuteStateTransitionNoVerify(context.Background(), stateCopy, extraBlock)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := db.SaveBlocks(context.Background(), blocks); err != nil {
+	root, err = ssz.SigningRoot(extraBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(context.Background(), extraBlock); err != nil {
 		t.Fatal(err)
 	}
 
 	// Slot starting from 2, after 6 blocks, a slot skipped, and
 	// 6 more blocks, state slot should be 14.
-	generatedState, err := db.GenerateStateAtSlot(context.Background(), (savingInterval*2)-2)
+	generatedState, err := db.GenerateStateAtSlot(context.Background(), savingInterval+(savingInterval-2))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +409,7 @@ func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	newState, err := state.ExecuteStateTransitionForStateRoot(context.Background(), genesisState, firstBlock)
+	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		b.Fatal(err)
 	}

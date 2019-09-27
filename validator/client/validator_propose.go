@@ -41,7 +41,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	binary.LittleEndian.PutUint64(buf, epoch)
 	randaoReveal := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
 
-	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
+	block, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal.Marshal(),
 	})
@@ -55,16 +55,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return
 	}
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.SigningRoot(block)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
 	signature := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain)
-	b.Signature = signature.Marshal()
+	block.Signature = signature.Marshal()
 
 	// Broadcast network the signed block via beacon chain node.
-	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
+	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		return
@@ -72,14 +72,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 
 	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
-		trace.Int64Attribute("numDeposits", int64(len(b.Body.Deposits))),
-		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
+		trace.Int64Attribute("numDeposits", int64(len(block.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
 	)
 
 	log.WithFields(logrus.Fields{
-		"slot":            b.Slot,
+		"slot":            block.Slot,
 		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
-		"numAttestations": len(b.Body.Attestations),
-		"numDeposits":     len(b.Body.Deposits),
+		"numAttestations": len(block.Body.Attestations),
+		"numDeposits":     len(block.Body.Deposits),
 	}).Info("Proposed new beacon block")
 }

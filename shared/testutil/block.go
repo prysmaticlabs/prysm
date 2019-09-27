@@ -2,9 +2,9 @@ package testutil
 
 import (
 	"context"
-	"github.com/golang/protobuf/proto"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -83,7 +83,7 @@ func GenerateFullBlock(
 		},
 	}
 
-	s, err := state.ExecuteStateTransitionForStateRoot(context.Background(), bState, block)
+	s, err := state.CalculateStateRoot(context.Background(), bState, block)
 	if err != nil {
 		t.Fatal(err)
 	}

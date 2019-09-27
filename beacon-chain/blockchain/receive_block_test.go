@@ -90,12 +90,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		},
 	}
 
-	stateRootCandidate, err := state.ExecuteStateTransitionForStateRoot(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
+	stateRoot, err = state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,12 +211,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		},
 	}
 
-	stateRootCandidate, err := state.ExecuteStateTransitionForStateRoot(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
+	stateRoot, err = state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
