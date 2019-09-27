@@ -39,6 +39,11 @@ var (
 		Name:  "new-cache",
 		Usage: "Use the new shuffled indices cache for committee. Much improvement than previous caching implementations",
 	}
+	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
+	SkipBLSVerifyFlag = cli.BoolFlag{
+		Name:  "skip-bls-verify",
+		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -55,4 +60,5 @@ var BeaconChainFlags = []cli.Flag{
 	EnableEth1DataVoteCacheFlag,
 	InitSyncNoVerifyFlag,
 	NewCacheFlag,
+	SkipBLSVerifyFlag,
 }

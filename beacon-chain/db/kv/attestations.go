@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -56,7 +57,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// block roots that were stored under each of those indices for O(1) lookup.
 		indicesByBucket, err := createAttestationIndicesFromFilters(f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine block lookup indices")
+			return errors.Wrap(err, "could not determine lookup indices")
 		}
 		// Once we have a list of attestation data roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
@@ -91,11 +92,10 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 }
 
 // DeleteAttestation by attestation data root.
-// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -111,6 +111,26 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		}
 		return bkt.Delete(attDataRoot[:])
 	})
+}
+
+// DeleteAttestations by attestation data roots.
+func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
+	defer span.End()
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(attDataRoots))
+	for _, r := range attDataRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer wg.Done()
+			if err = k.DeleteAttestation(ctx, root); err != nil {
+				return
+			}
+			return
+		}(&wg, r)
+	}
+	wg.Wait()
+	return err
 }
 
 // SaveAttestation to the db.
