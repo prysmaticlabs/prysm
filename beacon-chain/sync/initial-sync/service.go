@@ -61,8 +61,13 @@ func (s *InitialSync) Start() {
 	// Wait until chain start.
 	genesis := <-ch
 	if genesis.After(roughtime.Now()) {
+		log.WithField(
+			"genesis time",
+			genesis,
+		).Warn("Genesis time is in the future. Waiting to start sync.")
 		time.Sleep(roughtime.Until(genesis))
 	}
+	log.Info("Starting initial sync.")
 	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
