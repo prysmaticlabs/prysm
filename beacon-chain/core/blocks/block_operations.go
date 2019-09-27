@@ -973,27 +973,13 @@ func ProcessDepositsNoVerify(
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
 func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
-	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := beaconState.Eth1Data.DepositRoot
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash deposit data")
+	if err := verifyDeposit(beaconState, deposit); err != nil {
+		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
-	if ok := trieutil.VerifyMerkleProof(
-		receiptRoot,
-		leaf[:],
-		int(beaconState.Eth1DepositIndex),
-		deposit.Proof,
-	); !ok {
-		return nil, fmt.Errorf(
-			"deposit merkle branch of deposit root did not verify for root: %#x",
-			receiptRoot,
-		)
-	}
-
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
-	_, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	amount := deposit.Data.Amount
+	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
 	if !ok {
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -1002,24 +988,46 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
 			return beaconState, nil
 		}
-	}
 
-	beaconState, err = ProcessDepositNoVerify(beaconState, deposit, valIndexMap)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit")
+		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
+		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
+			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		}
+		beaconState.Validators = append(beaconState.Validators, &ethpb.Validator{
+			PublicKey:                  pubKey,
+			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           effectiveBalance,
+		})
+		beaconState.Balances = append(beaconState.Balances, amount)
+	} else {
+		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 	}
 
 	return beaconState, nil
 }
 
 // ProcessDepositNoVerify takes in a deposit object and inserts it
-// into the registry as a new validator or balance change. This function does not verify the deposit.
+// into the registry as a new validator or balance change. This method
+// does not verify BLS signatures.
 //
 // Spec pseudocode definition:
 //   def process_deposit(state: BeaconState, deposit: Deposit) -> None:
 //     """
 //     Process an Eth1 deposit, registering a validator or increasing its balance.
 //     """
+//     # Verify the Merkle branch
+//     assert verify_merkle_branch(
+//         leaf=hash_tree_root(deposit.data),
+//         proof=deposit.proof,
+//         depth=DEPOSIT_CONTRACT_TREE_DEPTH,
+//         index=deposit.index,
+//         root=state.latest_eth1_data.deposit_root,
+//     )
+//
 //     # Deposits must be processed in order
 //     assert deposit.index == state.deposit_index
 //     state.deposit_index += 1
@@ -1028,6 +1036,11 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 //     amount = deposit.data.amount
 //     validator_pubkeys = [v.pubkey for v in state.validator_registry]
 //     if pubkey not in validator_pubkeys:
+//         # Verify the deposit signature (proof of possession).
+//         # Invalid signatures are allowed by the deposit contract, and hence included on-chain, but must not be processed.
+//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature%d, get_domain(state, DOMAIN_DEPOSIT)):
+//             return
+//
 //         # Add validator and balance entries
 //         state.validator_registry.append(Validator(
 //             pubkey=pubkey,
@@ -1070,6 +1083,27 @@ func ProcessDepositNoVerify(beaconState *pb.BeaconState, deposit *ethpb.Deposit,
 	return beaconState, nil
 }
 
+func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
+	// Verify Merkle proof of deposit and deposit trie root.
+	receiptRoot := beaconState.Eth1Data.DepositRoot
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash deposit data")
+	}
+	if ok := trieutil.VerifyMerkleProof(
+		receiptRoot,
+		leaf[:],
+		int(beaconState.Eth1DepositIndex),
+		deposit.Proof,
+	); !ok {
+		return fmt.Errorf(
+			"deposit merkle branch of deposit root did not verify for root: %#x",
+			receiptRoot,
+		)
+	}
+	return nil
+}
+
 // ProcessVoluntaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
@@ -1101,15 +1135,12 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-		validator := beaconState.Validators[exit.ValidatorIndex]
-		if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-			return nil, errors.Wrapf(err, "could not verify voluntary exit signature at index %d", idx)
+		if err := VerifyExit(beaconState, exit); err != nil {
+			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
-
-		beaconState, err = ProcessVoluntaryExitNoVerify(beaconState, exit)
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", idx)
+			return nil, err
 		}
 	}
 	return beaconState, nil
@@ -1124,17 +1155,16 @@ func ProcessVoluntaryExitsNoVerify(
 	var err error
 	exits := body.VoluntaryExits
 
-	for i, exit := range exits {
-		beaconState, err = ProcessVoluntaryExitNoVerify(beaconState, exit)
+	for idx, exit := range exits {
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process voluntary exit at index %d", i)
+			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
 		}
 	}
 	return beaconState, nil
 }
 
-// ProcessVoluntaryExitNoVerify implements the spec defined validation for voluntary exits.
-// Except with it's BLS verification removed.
+// VerifyExit implements the spec defined validation for voluntary exits.
 //
 // Spec pseudocode definition:
 //   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
@@ -1150,43 +1180,41 @@ func ProcessVoluntaryExitsNoVerify(
 //    assert get_current_epoch(state) >= exit.epoch
 //    # Verify the validator has been active long enough
 //    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
-//    # Initiate exit
-//    initiate_validator_exit(state, exit.validator_index)
-func ProcessVoluntaryExitNoVerify(
-	beaconState *pb.BeaconState,
-	exit *ethpb.VoluntaryExit,
-) (*pb.BeaconState, error) {
+//    # Verify signature
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
+//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
-		return nil, fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
+		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
 
 	validator := beaconState.Validators[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidator(validator, currentEpoch) {
-		return nil, errors.New("non-active validator cannot exit")
+		return errors.New("non-active validator cannot exit")
 	}
 	// Verify the validator has not yet exited.
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return nil, fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
-		return nil, fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
+		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	beaconState, err := v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
-	if err != nil {
-		return nil, err
+	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
+		return errors.Wrap(err, "could not verify voluntary exit signature")
 	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessTransfers is one of the operations performed

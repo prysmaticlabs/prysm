@@ -145,7 +145,7 @@ func CalculateStateRoot(
 	block *ethpb.BeaconBlock,
 ) ([32]byte, error) {
 	if ctx.Err() != nil {
-		return []byte{}, ctx.Err()
+		return [32]byte{}, ctx.Err()
 	}
 
 	stateCopy := proto.Clone(state).(*pb.BeaconState)
@@ -157,20 +157,20 @@ func CalculateStateRoot(
 	// Execute per slots transition.
 	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
 	if err != nil {
-		return []byte{}, errors.Wrap(err, "could not process slot")
+		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
 	if block != nil {
 		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
 		if err != nil {
-			return []byte{}, errors.Wrap(err, "could not process block")
+			return [32]byte{}, errors.Wrap(err, "could not process block")
 		}
 	}
 
 	root, err := ssz.HashTreeRoot(stateCopy)
 	if err != nil {
-		return []byte{}, errors.Wrap(err, "could not tree hash beacon state")
+		return [32]byte{}, errors.Wrap(err, "could not tree hash beacon state")
 	}
 
 	return root, nil
