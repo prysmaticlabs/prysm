@@ -87,13 +87,6 @@ func (r *RegularSync) Status() error {
 	return nil
 }
 
-// ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
-// this should be called during new finalization.
-func (r *RegularSync) ClearPendingBlocks() {
-	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
-	r.seenPendingBlocks = make(map[[32]byte]bool)
-}
-
 // Checker defines a struct which can verify whether a node is currently
 // synchronizing a chain with the rest of peers in the network.
 type Checker interface {
