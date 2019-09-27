@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -59,16 +60,36 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorLatestVote")
 	defer span.End()
-	buf := uint64ToBytes(validatorIdx)
-	enc, err := proto.Marshal(vote)
-	if err != nil {
-		return err
-	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		buf := uint64ToBytes(validatorIdx)
+		enc, err := proto.Marshal(vote)
+		if err != nil {
+			return err
+		}
 		bucket := tx.Bucket(validatorsBucket)
 		k.votesCache.Set(string(validatorIdx), vote, time.Hour)
 		return bucket.Put(buf, enc)
 	})
+}
+
+// SaveValidatorLatestVotes by validator indidces.
+func (k *Store) SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*pb.ValidatorLatestVote) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorLatestVotes")
+	defer span.End()
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(votes))
+	for i := 0; i < len(votes); i++ {
+		go func(w *sync.WaitGroup, i uint64, v *pb.ValidatorLatestVote) {
+			defer wg.Done()
+			if err = k.SaveValidatorLatestVote(ctx, i, v); err != nil {
+				return
+			}
+			return
+		}(&wg, validatorIndices[i], votes[i])
+	}
+	wg.Wait()
+	return err
 }
 
 // DeleteValidatorLatestVote from the db.

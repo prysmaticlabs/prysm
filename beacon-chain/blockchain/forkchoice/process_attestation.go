@@ -8,6 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,8 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // OnAttestation is called whenever an attestation is received, it updates validators latest vote,
@@ -249,21 +250,23 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	newVoteIndices := make([]uint64, 0)
+	newVotes := make([]*pb.ValidatorLatestVote, 0)
+	for _, i := range indices {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
 		if vote == nil || tgtEpoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+			newVotes = append(newVotes, &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
-			}
+			})
+			newVoteIndices = append(newVoteIndices, i)
 		}
 	}
-	return nil
+	return s.db.SaveValidatorLatestVotes(ctx, newVoteIndices, newVotes)
 }
 
 // setSeenAtt sets the attestation hash in seen attestation map to true.
