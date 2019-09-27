@@ -13,7 +13,6 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//contracts/deposit-contract:go_default_library",
