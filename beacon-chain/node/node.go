@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -215,7 +216,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.BootstrapNode.Name))
+	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
 	for i, addr := range bootnodeAddrs {
 		if filepath.Ext(addr) == ".enr" {
 			b, err := ioutil.ReadFile(addr)
