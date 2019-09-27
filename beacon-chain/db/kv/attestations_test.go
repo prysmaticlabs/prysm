@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -62,10 +63,12 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	numAtts := 1000
-	atts := make([]*ethpb.Attestation, numAtts)
-	attDataRoots := make([][32]byte, numAtts)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
+	totalAtts := make([]*ethpb.Attestation, numAtts)
+	// We track the data roots for the even indexed attestations.
+	attDataRoots := make([][32]byte, 0)
+	oddAtts := make([]*ethpb.Attestation, 0)
+	for i := 0; i < len(totalAtts); i++ {
+		totalAtts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("head"),
 				Crosslink: &ethpb.Crosslink{
@@ -76,13 +79,17 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 				},
 			},
 		}
-		r, err := ssz.HashTreeRoot(atts[i].Data)
-		if err != nil {
-			t.Fatal(err)
+		if i%2 == 0 {
+			r, err := ssz.HashTreeRoot(totalAtts[i].Data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			attDataRoots = append(attDataRoots, r)
+		} else {
+			oddAtts = append(oddAtts, totalAtts[i])
 		}
-		attDataRoots[i] = r
 	}
-	if err := db.SaveAttestations(ctx, atts); err != nil {
+	if err := db.SaveAttestations(ctx, totalAtts); err != nil {
 		t.Fatal(err)
 	}
 	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
@@ -92,15 +99,17 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if len(retrieved) != numAtts {
 		t.Errorf("Received %d attestations, wanted 1000", len(retrieved))
 	}
+	// We delete all even indexed attestation.
 	if err := db.DeleteAttestations(ctx, attDataRoots); err != nil {
 		t.Fatal(err)
 	}
+	// When we retrieve the data, only the odd indexed attestations should remain.
 	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) > 0 {
-		t.Errorf("Received %d attestations, wanted none", len(retrieved))
+	if !reflect.DeepEqual(retrieved, oddAtts) {
+		t.Errorf("Wanted %v, received %v", oddAtts, retrieved)
 	}
 }
 

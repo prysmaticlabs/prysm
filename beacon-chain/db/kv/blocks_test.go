@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -55,20 +56,25 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	numBlocks := 1000
-	blocks := make([]*ethpb.BeaconBlock, numBlocks)
-	blockRoots := make([][32]byte, numBlocks)
-	for i := 0; i < len(blocks); i++ {
-		blocks[i] = &ethpb.BeaconBlock{
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	oddBlocks := make([]*ethpb.BeaconBlock, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
 			Slot:       uint64(i),
 			ParentRoot: []byte("parent"),
 		}
-		r, err := ssz.SigningRoot(blocks[i])
-		if err != nil {
-			t.Fatal(err)
+		if i%2 == 0 {
+			r, err := ssz.SigningRoot(totalBlocks[i])
+			if err != nil {
+				t.Fatal(err)
+			}
+			blockRoots = append(blockRoots, r)
+		} else {
+			oddBlocks = append(oddBlocks, totalBlocks[i])
 		}
-		blockRoots[i] = r
 	}
-	if err := db.SaveBlocks(ctx, blocks); err != nil {
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
 		t.Fatal(err)
 	}
 	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
@@ -78,15 +84,17 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	if len(retrieved) != numBlocks {
 		t.Errorf("Received %d blocks, wanted 1000", len(retrieved))
 	}
+	// We delete all even indexed blocks.
 	if err := db.DeleteBlocks(ctx, blockRoots); err != nil {
 		t.Fatal(err)
 	}
+	// When we retrieve the data, only the odd indexed blocks should remain.
 	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) > 0 {
-		t.Errorf("Received %d blocks, wanted none", len(retrieved))
+	if !reflect.DeepEqual(retrieved, oddBlocks) {
+		t.Errorf("Wanted %v, received %v", oddBlocks, retrieved)
 	}
 }
 
