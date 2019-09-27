@@ -80,7 +80,8 @@ func ExecuteStateTransition(
 
 // ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
 // This does not validate any BLS signatures in a block, it is used for performing a state transition as quickly
-// as possible.
+// as possible. This function should only be used when we can trust the data we're receiving entirely, such as
+// initial sync or for processing past accepted blocks.
 //
 // WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
 //
