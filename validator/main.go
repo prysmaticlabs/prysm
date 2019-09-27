@@ -99,7 +99,7 @@ contract in order to activate the validator client`,
 								params.UseDemoBeaconConfig()
 							}
 						}
-						
+
 						if keystoreDir, _, err := node.CreateValidatorAccount(ctx); err != nil {
 							log.Fatalf("Could not create validator at path: %s", keystoreDir)
 						}
