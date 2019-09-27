@@ -140,6 +140,68 @@ func TestCommitteeCache_EpochInCache(t *testing.T) {
 	}
 }
 
+func TestCommitteeCache_CommitteesCount(t *testing.T) {
+	cache := NewCommitteeCache()
+
+	committeeCount := uint64(3)
+	epoch := uint64(10)
+	item := &Committee{Epoch: epoch, CommitteeCount: committeeCount}
+
+	_, exists, err := cache.CommitteeCount(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Error("Expected committee count not to exist in empty cache")
+	}
+
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+
+	count, exists, err := cache.CommitteeCount(epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected committee count to be in cache")
+	}
+	if count != committeeCount {
+		t.Errorf("wanted: %d, got: %d", committeeCount, count)
+	}
+}
+
+func TestCommitteeCache_ShardCount(t *testing.T) {
+	cache := NewCommitteeCache()
+
+	startShard := uint64(7)
+	epoch := uint64(3)
+	item := &Committee{Epoch: epoch, StartShard: startShard}
+
+	_, exists, err := cache.StartShard(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Error("Expected start shard not to exist in empty cache")
+	}
+
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+
+	shard, exists, err := cache.StartShard(epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected start shard to be in cache")
+	}
+	if shard != startShard {
+		t.Errorf("wanted: %d, got: %d", startShard, shard)
+	}
+}
+
 func sum(values []uint64) uint64 {
 	sum := uint64(0)
 	for _, v := range values {
