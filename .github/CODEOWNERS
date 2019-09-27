@@ -27,23 +27,23 @@
 # sync related code
 /beacon-chain/sync/ @prestonvanloon @nisdas
 
-* beacon chain state transition related code
+# beacon chain state transition related code
 /beacon-chain/core/ @terencechain
 
-* chain service related code
+# chain service related code
 /beacon-chain/blockchain/ @terencechain
 
-* operation service related code
+# operation service related code
 /beacon-chain/operations/ @terencechain
 
 # fork choice related code
 /beacon-chain/blockchain/forkchoice/ @terencechain
 /tools/forkchecker/ @terencechain
 
-* cache related code
+# cache related code
 /beacon-chain/cache/ @terencechain
 
-* rpc related code
+# rpc related code
 /beacon-chain/rpc/ @terencechain
 
 # database related code
