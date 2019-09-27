@@ -21,11 +21,12 @@ var (
 	// 2 for current epoch and next epoch.
 	maxShuffledIndicesSize = 2
 
-	// Metrics.
+	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "committee_cache_miss",
 		Help: "The number of committee requests that aren't present in the cache.",
 	})
+	// CommitteeCacheHit tracks the number of committee requests that are in the cache.
 	CommitteeCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "committee_cache_hit",
 		Help: "The number of committee requests that are present in the cache.",
