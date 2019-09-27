@@ -1062,7 +1062,7 @@ func ProcessDepositNoVerify(beaconState *pb.BeaconState, deposit *ethpb.Deposit,
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
 	if !ok {
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
