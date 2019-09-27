@@ -119,17 +119,18 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		var wg sync.WaitGroup
+		var err error
 		wg.Add(len(attDataRoots))
 		for _, r := range attDataRoots {
 			go func(w *sync.WaitGroup) {
 				defer w.Done()
-				if err := k.DeleteBlock(ctx, r); err != nil {
+				if err = k.DeleteAttestation(ctx, r); err != nil {
 					return
 				}
 			}(&wg)
 		}
 		wg.Wait()
-		return nil
+		return err
 	})
 }
 

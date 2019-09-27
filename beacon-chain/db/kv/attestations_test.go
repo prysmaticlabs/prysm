@@ -61,27 +61,24 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	atts := []*ethpb.Attestation{
-		{
+	atts := make([]*ethpb.Attestation, 1000)
+	attDataRoots := make([][32]byte, 1000)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Crosslink: &ethpb.Crosslink{
-					Shard:      5,
+					Shard:      uint64(i),
 					ParentRoot: []byte("parent"),
 					StartEpoch: 1,
 					EndEpoch:   2,
 				},
 			},
-		},
-		{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:      8,
-					ParentRoot: []byte("parent"),
-					StartEpoch: 3,
-					EndEpoch:   4,
-				},
-			},
-		},
+		}
+		r, err := ssz.HashTreeRoot(atts[i].Data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		attDataRoots[i] = r
 	}
 	if err := db.SaveAttestations(ctx, atts); err != nil {
 		t.Fatal(err)
@@ -90,18 +87,10 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(retrieved) != 2 {
-		t.Errorf("Received %d attestations, wanted 2", len(retrieved))
+	if len(retrieved) != 1000 {
+		t.Errorf("Received %d attestations, wanted 1000", len(retrieved))
 	}
-	roots := make([][32]byte, len(atts))
-	for i := 0; i < len(roots); i++ {
-		r, err := ssz.HashTreeRoot(atts[i].Data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		roots[i] = r
-	}
-	if err := db.DeleteAttestations(ctx, roots); err != nil {
+	if err := db.DeleteAttestations(ctx, attDataRoots); err != nil {
 		t.Fatal(err)
 	}
 	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
@@ -277,50 +266,6 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		}
 		if len(retrievedAtts) != tt.expectedNumAtt {
 			t.Errorf("Expected %d attestations, received %d", tt.expectedNumAtt, len(retrievedAtts))
-		}
-	}
-}
-
-func BenchmarkDeleteAttestations_Batch1000(b *testing.B) {
-	db := setupDB(b)
-	defer teardownDB(b, db)
-	root := [32]byte{1, 2, 3}
-	attestations := make([]*ethpb.Attestation, 1000)
-	dataRoots := make([][32]byte, 1000)
-	for i := 0; i < len(attestations); i++ {
-		attestations[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: root[:],
-				Source: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  root[:],
-				},
-				Target: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  root[:],
-				},
-				Crosslink: &ethpb.Crosslink{
-					Shard:      uint64(i),
-					ParentRoot: root[:],
-					StartEpoch: 1,
-					EndEpoch:   2,
-					DataRoot:   root[:],
-				},
-			},
-		}
-		dataRoot, err := ssz.HashTreeRoot(attestations[i])
-		if err != nil {
-			b.Fatal(err)
-		}
-		dataRoots[i] = dataRoot
-	}
-	ctx := context.Background()
-	if err := db.SaveAttestations(ctx, attestations); err != nil {
-		b.Fatal(err)
-	}
-	for i := 0; i < b.N; i++ {
-		if err := db.DeleteAttestations(ctx, dataRoots); err != nil {
-			b.Fatal(err)
 		}
 	}
 }

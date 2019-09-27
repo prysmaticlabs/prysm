@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -167,7 +168,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
@@ -186,30 +187,24 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
-// DeleteBlocks by roots.
+// DeleteBlocks by block roots.
 func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
+	return k.db.Update(func(tx *bolt.Tx) error {
+		var wg sync.WaitGroup
+		var err error
+		wg.Add(len(blockRoots))
 		for _, r := range blockRoots {
-			enc := bkt.Get(r[:])
-			if enc == nil {
-				return nil
-			}
-			b := &ethpb.BeaconBlock{}
-			if err := proto.Unmarshal(enc, b); err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(b, tx)
-			if err := deleteValueForIndices(indicesByBucket, r[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			if err := bkt.Delete(r[:]); err != nil {
-				return errors.Wrapf(err, "could not delete root %#x", r)
-			}
+			go func(w *sync.WaitGroup) {
+				defer w.Done()
+				if err = k.DeleteBlock(ctx, r); err != nil {
+					return
+				}
+			}(&wg)
 		}
-		return nil
+		wg.Wait()
+		return err
 	})
 }
 
