@@ -285,6 +285,7 @@ func ProcessRandao(
 //     )
 func ProcessRandaoNoVerify(
 	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
