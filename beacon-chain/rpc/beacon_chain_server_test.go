@@ -933,6 +933,109 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 	}
 }
 
+func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 3,
+				PublicKey:                  []byte("3"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 2,
+				PublicKey:                  []byte("2"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 1,
+				PublicKey:                  []byte("1"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We verify the keys are properly sorted by the validators' activation eligibility epoch.
+	wanted := [][]byte{
+		[]byte("1"),
+		[]byte("2"),
+		[]byte("3"),
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
+	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 3,
+				PublicKey:         []byte("3"),
+			},
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 2,
+				PublicKey:         []byte("2"),
+			},
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 1,
+				PublicKey:         []byte("1"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We verify the keys are properly sorted by the validators' withdrawable epoch.
+	wanted := [][]byte{
+		[]byte("1"),
+		[]byte("2"),
+		[]byte("3"),
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
+	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
+	}
+}
+
 func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)

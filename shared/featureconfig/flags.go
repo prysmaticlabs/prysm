@@ -10,10 +10,10 @@ var (
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 	}
-	// DemoConfigFlag enables the demo configuration.
-	DemoConfigFlag = cli.BoolFlag{
-		Name:  "demo-config",
-		Usage: "Use demo config with lower deposit thresholds.",
+	// MinimalConfigFlag enables the minimal configuration.
+	MinimalConfigFlag = cli.BoolFlag{
+		Name:  "minimal-config",
+		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
 	writeSSZStateTransitionsFlag = cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
@@ -38,13 +38,13 @@ var (
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = []cli.Flag{
-	DemoConfigFlag,
+	MinimalConfigFlag,
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,
-	DemoConfigFlag,
+	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,

@@ -29,9 +29,13 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 		return false
 	}
 
+	r.pendingQueueLock.RLock()
 	if r.seenPendingBlocks[blockRoot] {
+		r.pendingQueueLock.RUnlock()
 		return false
 	}
+	r.pendingQueueLock.RUnlock()
+
 	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
 		return false
 	}

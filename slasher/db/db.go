@@ -1,7 +1,6 @@
 package db
 
 import (
-	"io"
 	"os"
 	"path"
 	"time"
@@ -11,16 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "beacondb")
-
-// Database defines the necessary methods for slasher service which may
-// be implemented by any key-value or relational database in practice.
-type Database interface {
-	io.Closer
-	DatabasePath() string
-
-	ClearDB() error
-}
+var log = logrus.WithField("prefix", "slasherDB")
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.

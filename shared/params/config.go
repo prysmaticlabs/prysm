@@ -198,7 +198,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
-	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
+	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{

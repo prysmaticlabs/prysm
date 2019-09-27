@@ -76,15 +76,11 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 		},
 	}
 
-	stateRootCandidate, err := state.ExecuteStateTransitionForStateRoot(context.Background(), beaconState, block)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot, err := ssz.HashTreeRoot(stateRootCandidate)
-	if err != nil {
-		t.Fatal(err)
-	}
 	block.StateRoot = stateRoot[:]
 
 	block, err = testutil.SignBlock(beaconState, block, privKeys)

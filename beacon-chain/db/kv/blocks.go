@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -83,7 +84,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		// block roots that were stored under each of those indices for O(1) lookup.
 		indicesByBucket, err := createBlockIndicesFromFilters(f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine block lookup indices")
+			return errors.Wrap(err, "could not determine lookup indices")
 		}
 
 		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
@@ -164,11 +165,10 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteBlock by block root.
-// TODO(#3064): Add the ability for batch deletions.
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
@@ -185,6 +185,25 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		k.blockCache.Delete(string(blockRoot[:]))
 		return bkt.Delete(blockRoot[:])
 	})
+}
+
+// DeleteBlocks by block roots.
+func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
+	defer span.End()
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(len(blockRoots))
+	for _, r := range blockRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer w.Done()
+			if err = k.DeleteBlock(ctx, root); err != nil {
+				return
+			}
+		}(&wg, r)
+	}
+	wg.Wait()
+	return err
 }
 
 // SaveBlock to the db.
