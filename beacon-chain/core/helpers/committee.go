@@ -17,6 +17,7 @@ import (
 )
 
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
+var committeeCache = cache.NewCommitteeCache()
 
 // CommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -472,6 +473,35 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	}
 
 	return shuffledIndices, nil
+}
+
+// UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
+// list with start shard and epoch number. It caches the shuffled indices for current epoch and next epoch.
+func UpdateCommitteeCache(state *pb.BeaconState) error {
+	currentEpoch := CurrentEpoch(state)
+	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
+		committees, err := ShuffledIndices(state, epoch)
+		if err != nil {
+			return err
+		}
+		startShard, err := StartShard(state, epoch)
+		if err != nil {
+			return err
+		}
+		committeeCount, err := CommitteeCount(state, epoch)
+		if err != nil {
+			return err
+		}
+		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
+			Epoch:          epoch,
+			Committee:      committees,
+			StartShard:     startShard,
+			CommitteeCount: committeeCount,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // compressValidator compacts all the validator data such as validator index, slashing info and balance
