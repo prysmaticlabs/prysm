@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -198,7 +197,6 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
-	helpers.ClearAllCaches()
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		Reader:       &goodReader{},
