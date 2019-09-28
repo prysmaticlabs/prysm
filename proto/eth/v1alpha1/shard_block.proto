@@ -12,8 +12,8 @@ message ShardBlock {
     bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
     bytes parent_root = 4[(gogoproto.moretags) = "ssz-size:\"32\""];
     bytes state_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
-    uint64 block_size_sum = 6;
-    repeated bytes body = 7 [(gogoproto.moretags) = "ssz-max:\"65024\""];
+    repeated bytes body = 6 [(gogoproto.moretags) = "ssz-max:\"65024\""];
+    uint64 block_size_sum = 7;
     bytes aggregation_bits = 8 [(gogoproto.moretags) = "ssz-max:\"256\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
     bytes attestations_signature = 9 [(gogoproto.moretags) = "ssz-size:\"96\""];
     bytes signature = 10 [(gogoproto.moretags) = "ssz-size:\"96\""];
@@ -46,11 +46,13 @@ message ShardState {
     uint64 block_size_sum = 5;
     // Fee and rewards
     uint64 block_size_price = 6;
-    repeated uint64 older_committee_deltas = 7 [(gogoproto.moretags) = "ssz-max:\"128\""];
-    repeated uint64 newer_committee_deltas = 8 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 older_committee_positive_deltas = 7 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 older_committee_negative_deltas = 8 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 newer_committee_positive_deltas = 9 [(gogoproto.moretags) = "ssz-max:\"128\""];
+    repeated uint64 newer_committee_negative_deltas = 10 [(gogoproto.moretags) = "ssz-max:\"128\""];
 }
 
-message ShardCheckpoint {
+message ShardAttestationData {
     // The slot of the check point.
     uint64 slot = 1;
     // 32 byte root of the shard block's parent root that links to this check point.
