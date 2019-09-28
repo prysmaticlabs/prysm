@@ -94,8 +94,10 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount := uint64(0)
+	var eth1DataHash [32]byte
+	var err error
 	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
-		eth1DataHash, err := hashutil.HashProto(data)
+		eth1DataHash, err = hashutil.HashProto(data)
 		if err != nil {
 			return false, errors.Wrap(err, "could not hash eth1data")
 		}

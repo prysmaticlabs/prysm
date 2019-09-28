@@ -16,13 +16,17 @@ const BlockCacheSize = 256
 // VotesCacheSize with 1M validators will only be around 50Mb.
 const VotesCacheSize = 1000000
 
+// ValidatorIndexCache of 1M * 8 bytes, ~8 Mb
+const ValidatorIndexCacheSize = 1000000
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db           *bolt.DB
-	databasePath string
-	blockCache   *ccache.Cache
-	votesCache   *ccache.Cache
+	db                  *bolt.DB
+	databasePath        string
+	blockCache          *ccache.Cache
+	votesCache          *ccache.Cache
+	validatorIndexCache *ccache.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -42,10 +46,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}
 
 	kv := &Store{
-		db:           boltDB,
-		databasePath: dirPath,
-		blockCache:   ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
-		votesCache:   ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		db:                  boltDB,
+		databasePath:        dirPath,
+		blockCache:          ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
+		votesCache:          ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		validatorIndexCache: ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

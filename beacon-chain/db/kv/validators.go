@@ -8,8 +8,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // ValidatorLatestVote retrieval by validator index.
@@ -18,7 +19,7 @@ func (k *Store) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*
 	defer span.End()
 
 	// Return latest vote from cache if it exists.
-	if v := k.votesCache.Get(string(validatorIdx)); v != nil {
+	if v := k.votesCache.Get(string(validatorIdx)); v != nil && v.Value() != nil {
 		return v.Value().(*pb.ValidatorLatestVote), nil
 	}
 
@@ -41,7 +42,7 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorLatestVote")
 	defer span.End()
 
-	if v := k.votesCache.Get(string(validatorIdx)); v != nil {
+	if v := k.votesCache.Get(string(validatorIdx)); v != nil && v.Value() != nil {
 		return true
 	}
 
@@ -111,6 +112,11 @@ func (k *Store) DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorIndex")
 	defer span.End()
+	// Return latest validatorIndex from cache if it exists.
+	if v := k.validatorIndexCache.Get(string(publicKey[:])); v != nil && v.Value() != nil {
+		return v.Value().(uint64), true, nil
+	}
+
 	var validatorIdx uint64
 	var ok bool
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -131,6 +137,9 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorIndex")
 	defer span.End()
+	if v := k.validatorIndexCache.Get(string(publicKey[:])); v != nil && v.Value() != nil {
+		return true
+	}
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
@@ -147,6 +156,7 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
+		k.validatorIndexCache.Delete(string(publicKey[:]))
 		return bucket.Delete(publicKey[:])
 	})
 }
@@ -158,6 +168,7 @@ func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, vali
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
 		buf := uint64ToBytes(validatorIdx)
+		k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, time.Hour)
 		return bucket.Put(publicKey[:], buf)
 	})
 }
