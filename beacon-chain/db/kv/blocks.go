@@ -127,8 +127,6 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 	defer span.End()
 	blockRoots := make([][]byte, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-
 		// If no filter criteria are specified, return an error.
 		if f == nil {
 			return errors.New("must specify a filter criteria for retrieving block roots")
@@ -210,7 +208,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := proto.Unmarshal(enc, block); err != nil {
 			return err
 		}
-		indicesByBucket := createBlockIndicesFromBlock(block, tx)
+		indicesByBucket := createBlockIndicesFromBlock(block)
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -256,7 +254,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 			return err
 		}
 		bkt := tx.Bucket(blocksBucket)
-		indicesByBucket := createBlockIndicesFromBlock(block, tx)
+		indicesByBucket := createBlockIndicesFromBlock(block)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
@@ -347,7 +345,7 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createBlockIndicesFromBlock(block *ethpb.BeaconBlock, tx *bolt.Tx) map[string][]byte {
+func createBlockIndicesFromBlock(block *ethpb.BeaconBlock) map[string][]byte {
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
 	// range scans for filtering across keys.
