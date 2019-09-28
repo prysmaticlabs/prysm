@@ -10,7 +10,6 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -56,8 +55,6 @@ func RunBlockOperationTest(
 	body *ethpb.BeaconBlockBody,
 	operationFn blockOperation,
 ) {
-	helpers.ClearAllCaches()
-
 	preBeaconStateFile, err := BazelFileBytes(path.Join(folderPath, "pre.ssz"))
 	if err != nil {
 		t.Fatal(err)
@@ -115,8 +112,6 @@ func RunEpochOperationTest(
 	testFolderPath string,
 	operationFn epochOperation,
 ) {
-	helpers.ClearAllCaches()
-
 	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
 	if err != nil {
 		t.Fatal(err)
