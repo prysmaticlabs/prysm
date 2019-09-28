@@ -276,7 +276,6 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	helpers.ClearAllCaches()
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
@@ -451,7 +450,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -540,7 +538,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
