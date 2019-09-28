@@ -259,11 +259,6 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 			expectedNumAtt: 2,
 		},
 		{
-			// No specified filter should return all attestations.
-			filter:         nil,
-			expectedNumAtt: 3,
-		},
-		{
 			// No attestation meets the criteria below.
 			filter: filters.NewFilter().
 				SetTargetEpoch(1000),

@@ -178,11 +178,6 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			expectedNumBlocks: 2,
 		},
 		{
-			// No specified filter should return all blocks.
-			filter:            nil,
-			expectedNumBlocks: 5,
-		},
-		{
 			// No block meets the criteria below.
 			filter:            filters.NewFilter().SetParentRoot([]byte{3, 4, 5}),
 			expectedNumBlocks: 0,
