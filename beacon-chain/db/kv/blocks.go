@@ -67,16 +67,9 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
-		// If no filter criteria are specified, return all blocks.
+		// If no filter criteria are specified, return an error.
 		if f == nil {
-			return bkt.ForEach(func(k, v []byte) error {
-				block := &ethpb.BeaconBlock{}
-				if err := proto.Unmarshal(v, block); err != nil {
-					return err
-				}
-				blocks = append(blocks, block)
-				return nil
-			})
+			return errors.New("must specify a filter criteria for retrieving blocks")
 		}
 
 		// Creates a list of indices from the passed in filter values, such as:
@@ -136,12 +129,9 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
-		// If no filter criteria are specified, return all block roots.
+		// If no filter criteria are specified, return an error.
 		if f == nil {
-			return bkt.ForEach(func(k, v []byte) error {
-				blockRoots = append(blockRoots, k)
-				return nil
-			})
+			return errors.New("must specify a filter criteria for retrieving block roots")
 		}
 
 		// Creates a list of indices from the passed in filter values, such as:

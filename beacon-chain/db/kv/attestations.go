@@ -40,16 +40,9 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	err := k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 
-		// If no filter criteria are specified, return all attestations.
+		// If no filter criteria are specified, return an error.
 		if f == nil {
-			return bkt.ForEach(func(k, v []byte) error {
-				att := &ethpb.Attestation{}
-				if err := proto.Unmarshal(v, att); err != nil {
-					return err
-				}
-				atts = append(atts, att)
-				return nil
-			})
+			return errors.New("must specify a filter criteria for retrieving attestations")
 		}
 
 		// Creates a list of indices from the passed in filter values, such as:
