@@ -2,10 +2,10 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/terencechain/prysm-phase2/shared/ssz"
 )
 
 // GenesisShardState returns the genesis state of a particular shard.
@@ -39,7 +39,7 @@ func GenesisShardBlock(state *pb.BeaconState, shard uint64) (*ethpb.ShardBlock, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get shard genesis state")
 	}
-	stateRoot, err := ssz.TreeHash(genesisState)
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash shard genesis state")
 	}
