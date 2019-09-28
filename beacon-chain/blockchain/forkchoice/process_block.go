@@ -100,7 +100,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
@@ -174,7 +173,6 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
