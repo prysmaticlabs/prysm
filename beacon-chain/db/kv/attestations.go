@@ -116,7 +116,8 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 	for _, r := range attDataRoots {
 		go func(w *sync.WaitGroup, root [32]byte) {
 			defer wg.Done()
-			if err = k.DeleteAttestation(ctx, root); err != nil {
+			if routineErr := k.DeleteAttestation(ctx, root); routineErr != nil {
+				err = routineErr
 				return
 			}
 			return
@@ -158,7 +159,8 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	for _, a := range atts {
 		go func(w *sync.WaitGroup, att *ethpb.Attestation) {
 			defer wg.Done()
-			if err = k.SaveAttestation(ctx, att); err != nil {
+			if routineErr := k.SaveAttestation(ctx, att); routineErr != nil {
+				err = routineErr
 				return
 			}
 			return

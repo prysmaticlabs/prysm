@@ -229,7 +229,8 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	for _, r := range blockRoots {
 		go func(w *sync.WaitGroup, root [32]byte) {
 			defer w.Done()
-			if err = k.DeleteBlock(ctx, root); err != nil {
+			if routineErr := k.DeleteBlock(ctx, root); routineErr != nil {
+				err = routineErr
 				return
 			}
 		}(&wg, r)
@@ -274,7 +275,8 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 	for _, blk := range blocks {
 		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
 			defer w.Done()
-			if err = k.SaveBlock(ctx, b); err != nil {
+			if routineErr := k.SaveBlock(ctx, b); routineErr != nil {
+				err = routineErr
 				return
 			}
 		}(&wg, blk)
