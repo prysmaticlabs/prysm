@@ -236,7 +236,7 @@ func ProcessShardBlockSizeFee(beaconState *pb.BeaconState, shardState *ethpb.Sha
 		return nil, errors.Wrap(err, "could not get proposer index")
 	}
 	blockSize := uint64(len(shardBlock.Body)) + params.ShardConfig().ShardHeaderSize
-	fee := shardState.BlockSizePrice * blockSize / params.ShardConfig().ShardBlockSizeLimit
+	fee := shardState.BlockSizePrice * blockSize / params.ShardConfig().MaxShardBlockSize
 	shardState, err = shardHelper.AddFee(beaconState, shardState, proposerIdx, fee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add fee to proposer")
@@ -245,7 +245,7 @@ func ProcessShardBlockSizeFee(beaconState *pb.BeaconState, shardState *ethpb.Sha
 	// Calculate and change new block size pricing
 	if blockSize > params.ShardConfig().ShardBlockSizeTarget {
 		sizeDelta := blockSize - params.ShardConfig().ShardBlockSizeTarget
-		priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().ShardBlockSizeLimit / params.ShardConfig().BlockSizeQuotient
+		priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().MaxShardBlockSize / params.ShardConfig().BlockBodyPriceQuotient
 		// Max gas price caps the amount burnt on gas fees within a period to 32ETH
 		maxBlockSizePrice := params.BeaconConfig().MaxEffectiveBalance / params.ShardConfig().EpochsPerShardPeriod / params.ShardConfig().ShardSlotsPerEpoch
 		if shardState.BlockSizePrice+priceDelta < maxBlockSizePrice {
@@ -257,7 +257,7 @@ func ProcessShardBlockSizeFee(beaconState *pb.BeaconState, shardState *ethpb.Sha
 	}
 
 	sizeDelta := params.ShardConfig().ShardBlockSizeTarget - blockSize
-	priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().ShardBlockSizeLimit / params.ShardConfig().BlockSizeQuotient
+	priceDelta := shardState.BlockSizePrice * sizeDelta / params.ShardConfig().MaxShardBlockSize / params.ShardConfig().BlockBodyPriceQuotient
 	if shardState.BlockSizePrice-priceDelta > params.ShardConfig().MinBlockSizePrice {
 		shardState.BlockSizePrice = shardState.BlockSizePrice - priceDelta
 	} else {

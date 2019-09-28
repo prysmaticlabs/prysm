@@ -102,17 +102,22 @@ type BeaconChainConfig struct {
 
 // ShardChainConfig contains constant configs for node to participate in shard chains.
 type ShardChainConfig struct {
-	ShardSlotsPerEpoch       uint64 // ShardSlotsPerEpoch is the number of slots in a shard epoch.
-	EpochsPerShardPeriod     uint64 // EpochsPerShardPeriod defines how many epochs are in a shard period.
-	MaxPeriodCommitteeSize   uint64 // MaxPeriodCommitteeSize defines the committee size of a shard period.
-	ShardGenesisEpoch        uint64 // ShardGenesisEpoch is the genesis shard epoch.
-	MinBlockSizePrices       uint64 // MinBlockSizePrices defines the min block size prices.
-	ShardHeaderSize          uint64 // ShardHeaderSize defines the header size of shard block.
-	ShardBlockSizeLimit      uint64 // ShardBlockSizeLimit defines the size limit of a shard block.
-	ShardBlockSizeTarget     uint64 // ShardBlockSizeTarget defines the block size target of a shard block.
-	BlockSizeQuotient        uint64 // BlockSizeQuotient defines the quotient to determine shard block fees.
-	MinBlockSizePrice        uint64 // MinBlockSizePrice defines the minimal price for a shard block.
-	HistoryAccumulatorVector uint64 // HistoryAccumulatorVector defines the length of history accumulator.
+	// Time parameters
+	ShardSlotsPerEpoch   uint64 // ShardSlotsPerEpoch is the number of slots in a shard epoch.
+	EpochsPerShardPeriod uint64 // EpochsPerShardPeriod defines how many epochs are in a shard period.
+	// Configuration parameters
+	MinBlockSizePrice      uint64 // MinBlockSizePrice defines the minimal price for a shard block.
+	MaxPeriodCommitteeSize uint64 // MaxPeriodCommitteeSize defines the committee size of a shard period.
+	ShardHeaderSize        uint64 // ShardHeaderSize defines the header size of shard block.
+	ShardBlockSizeTarget   uint64 // ShardBlockSizeTarget defines the block size target of a shard block.
+	MaxShardBlockSize      uint64 // MaxShardBlockSize defines the size limit of a shard block.
+	// State list lengths
+	HistoryAccumulatorDepth uint64 // HistoryAccumulatorDepth defines the length of history accumulator.
+	// Rewards and penalties
+	BlockBodyPriceQuotient uint64 // BlockBodyPriceQuotient defines the quotient to determine shard block fees.
+	// Misc
+	ShardGenesisEpoch  uint64 // ShardGenesisEpoch is the genesis shard epoch.
+	MinBlockSizePrices uint64 // MinBlockSizePrices defines the min block size prices.
 }
 
 // DepositContractConfig contains the deposits for
@@ -215,17 +220,17 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var defaultShardChainConfig = &ShardChainConfig{
-	ShardGenesisEpoch:        0,
-	MinBlockSizePrices:       0,
-	ShardHeaderSize:          512,
-	ShardBlockSizeLimit:      65536,
-	ShardBlockSizeTarget:     16384,
-	BlockSizeQuotient:        8,
-	MinBlockSizePrice:        1,
-	HistoryAccumulatorVector: 64,
-	ShardSlotsPerEpoch:       128,
-	EpochsPerShardPeriod:     256,
-	MaxPeriodCommitteeSize:   128,
+	ShardGenesisEpoch:       0,
+	MinBlockSizePrices:      0,
+	ShardHeaderSize:         512,
+	MaxShardBlockSize:       65536,
+	ShardBlockSizeTarget:    16384,
+	BlockBodyPriceQuotient:  8,
+	MinBlockSizePrice:       1,
+	HistoryAccumulatorDepth: 64,
+	ShardSlotsPerEpoch:      128,
+	EpochsPerShardPeriod:    256,
+	MaxPeriodCommitteeSize:  128,
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{

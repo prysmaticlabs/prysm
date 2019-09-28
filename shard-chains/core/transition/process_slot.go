@@ -68,7 +68,7 @@ func ProcessShardSlot(beaconState *pb.BeaconState, shardState *ethpb.ShardState)
 	// Cache shard state root in history accumulator
 	depth := uint64(0)
 	twoTotheDepth := uint64(1 << depth)
-	for shardState.Slot%twoTotheDepth == 0 && depth < params.ShardConfig().HistoryAccumulatorVector {
+	for shardState.Slot%twoTotheDepth == 0 && depth < params.ShardConfig().HistoryAccumulatorDepth {
 		shardState.HistoryAccumulator[depth] = prevStateRoot[:]
 		depth++
 	}
