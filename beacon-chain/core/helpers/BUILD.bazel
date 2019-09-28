@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "attestation.go",
         "block.go",
-        "cache.go",
         "committee.go",
         "randao.go",
         "rewards_penalties.go",

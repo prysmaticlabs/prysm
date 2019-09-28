@@ -46,7 +46,7 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	ClearAllCaches()
+
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
@@ -124,7 +124,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 }
 
 func TestActiveIndexRoot_CopyOK(t *testing.T) {
-	ClearAllCaches()
+
 	conf := params.BeaconConfig()
 	conf.EpochsPerHistoricalVector = 100
 	params.OverrideBeaconConfig(conf)
@@ -159,7 +159,6 @@ func TestActiveIndexRoot_CopyOK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
-	ClearAllCaches()
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {

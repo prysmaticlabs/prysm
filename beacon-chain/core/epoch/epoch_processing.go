@@ -797,7 +797,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	// to calculate earliest attestation rewards later.
 	attestersVotedSource := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
-	// the rewards and penalties lists.
+	// the rewards and penalties lists.z
 	for i, matchAtt := range attsPackage {
 		indices, err := unslashedAttestingIndices(state, matchAtt)
 		if err != nil {

@@ -143,7 +143,6 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
-	ClearAllCaches()
 
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -210,7 +209,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	ClearAllCaches()
+
 	beaconState := &pb.BeaconState{
 		Slot:             0,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -243,7 +242,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
-		ClearAllCaches()
+
 		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{

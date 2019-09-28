@@ -235,8 +235,6 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -316,8 +314,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -535,7 +531,6 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	helpers.ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -902,9 +897,6 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
-	helpers.ClearActiveIndicesCache()
-	helpers.ClearActiveCountCache()
-
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -926,7 +918,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*ethpb.Crosslink{
 		{
@@ -948,8 +939,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	aggBits := bitfield.NewBitlist(1)
 	custodyBits := bitfield.NewBitlist(1)
 	attestations := []*ethpb.Attestation{
@@ -1008,8 +997,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -1037,7 +1024,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	helpers.ClearAllCaches()
 
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousCrosslinks = []*ethpb.Crosslink{
@@ -1056,7 +1042,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
-	helpers.ClearAllCaches()
 
 	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	block.Body.Attestations[0].Data.Target.Epoch = helpers.CurrentEpoch(beaconState)
@@ -1073,8 +1058,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
@@ -1134,7 +1117,6 @@ func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
-	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -1187,7 +1169,6 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 }
 
 func TestProcessAttestations_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -1260,7 +1241,6 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
-	helpers.ClearAllCaches()
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -1309,7 +1289,6 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1364,8 +1343,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
-
 		attestation.AggregationBits = tt.aggregationBitfield
 		attestation.CustodyBits = tt.custodyBitfield
 		wanted := &ethpb.IndexedAttestation{
@@ -1387,7 +1364,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -1450,8 +1426,6 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
-
 		attDataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
 			Data:       tt.attestation.Data,
 			CustodyBit: false,
@@ -2053,7 +2027,6 @@ func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
 }
 
 func TestProcessBeaconTransfers_OK(t *testing.T) {
-	helpers.ClearShuffledValidatorCache()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 	params.OverrideBeaconConfig(testConfig)

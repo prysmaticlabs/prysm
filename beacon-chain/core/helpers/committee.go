@@ -17,7 +17,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 var committeeCache = cache.NewCommitteeCache()
 
 // CommitteeCount returns the number of crosslink committees of an epoch.
@@ -139,15 +138,6 @@ func ComputeCommittee(
 	start := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard)
 	end := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard+1)
 
-	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])
-	if err != nil {
-		return nil, err
-	}
-	if cachedShuffledList != nil {
-		return cachedShuffledList, nil
-	}
-
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new shard index.
 	shuffledIndices := make([]uint64, end-start)
 	for i := start; i < end; i++ {
@@ -157,13 +147,7 @@ func ComputeCommittee(
 		}
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
-	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
-		Index:           indexShard,
-		Seed:            seed[:],
-		ShuffledIndices: shuffledIndices,
-	}); err != nil {
-		return []uint64{}, errors.Wrap(err, "could not add shuffled indices list to cache")
-	}
+
 	return shuffledIndices, nil
 }
 

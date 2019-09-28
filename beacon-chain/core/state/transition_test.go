@@ -38,7 +38,6 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	helpers.ClearAllCaches()
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -107,7 +106,6 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	helpers.ClearAllCaches()
 	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -312,8 +310,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	deposits, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -687,7 +683,6 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 }
 
 func TestProcessEpoch_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
@@ -734,7 +729,6 @@ func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 
-	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
@@ -804,7 +798,6 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 	testConfig := params.BeaconConfig()
 	testConfig.MaxTransfers = 1
 

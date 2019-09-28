@@ -16,8 +16,6 @@ import (
 )
 
 func init() {
-	helpers.ClearShuffledValidatorCache()
-
 	// TODO(2312): remove this and use the mainnet count.
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
@@ -117,8 +115,6 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 }
 
 func TestAttestingBalance_CorrectBalance(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
@@ -164,7 +160,6 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestMatchAttestations_PrevEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -242,7 +237,6 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 }
 
 func TestMatchAttestations_CurrentEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -370,7 +364,6 @@ func TestWinningCrosslink_ReturnGenesisCrosslink(t *testing.T) {
 }
 
 func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	gs := uint64(0) // genesis slot
 	ge := uint64(0) // genesis epoch
@@ -444,8 +437,6 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 }
 
 func TestProcessCrosslinks_NoUpdate(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	validatorCount := 128
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -553,8 +544,6 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 }
 
 func TestBaseReward_AccurateRewards(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -566,7 +555,6 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2289739},
 	}
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
 		state := &pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
@@ -740,7 +728,6 @@ func TestProcessJustificationAndFinalization_JustifyCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessJustificationAndFinalization_JustifyPrevEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
@@ -875,8 +862,6 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(string(i), func(t *testing.T) {
-			helpers.ClearAllCaches()
-
 			original := proto.Clone(tt.state)
 			newState, err := ProcessSlashings(tt.state)
 			if err != nil {
@@ -999,9 +984,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 }
 
 func TestCrosslinkDelta_SomeAttested(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
-	helpers.ClearShuffledValidatorCache()
 	state := buildState(e+2, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	startShard := uint64(960)
 	atts := make([]*pb.PendingAttestation, 2)
@@ -1111,11 +1094,11 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 			},
 			InclusionDelay:  uint64(i + 100),
-			AggregationBits: bitfield.Bitlist{0xFF, 0x01},
+			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF},
 		}
 	}
 	state.PreviousEpochAttestations = atts
-
+	state.ActiveIndexRoots = [][]byte{}
 	_, _, err := attestationDelta(state)
 	wanted := "could not get attestation indices"
 	if !strings.Contains(err.Error(), wanted) {
@@ -1168,7 +1151,6 @@ func TestAttestationDelta_NoOneAttested(t *testing.T) {
 }
 
 func TestAttestationDelta_SomeAttested(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
@@ -1250,7 +1232,6 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 }
 
 func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+4, validatorCount)
@@ -1462,7 +1443,6 @@ func TestProcessRewardsAndPenalties_GenesisEpoch(t *testing.T) {
 }
 
 func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
-	helpers.ClearAllCaches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 8
 	state := buildState(e+2, validatorCount)
