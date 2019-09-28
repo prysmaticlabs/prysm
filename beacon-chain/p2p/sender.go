@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -13,7 +12,7 @@ import (
 
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
 // closed for writing.
-func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) (network.Stream, error) {
+func (s *Service) Send(ctx context.Context, message interface{}, pid peer.ID) (network.Stream, error) {
 	topic := RPCTypeMapping[reflect.TypeOf(message)] + s.Encoding().ProtocolSuffix()
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
@@ -25,7 +24,7 @@ func (s *Service) Send(ctx context.Context, message proto.Message, pid peer.ID) 
 		return nil, err
 	}
 
-	if _, err := s.Encoding().Encode(stream, message); err != nil {
+	if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
 		return nil, err
 	}
 

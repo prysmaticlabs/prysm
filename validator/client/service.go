@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"encoding/hex"
 
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -55,7 +55,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
-		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
+		log.WithField("pubKey", hex.EncodeToString(v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
 		pubkey := v.keys[i].PublicKey.Marshal()
 		pubkeys = append(pubkeys, pubkey)
 	}
@@ -80,7 +80,6 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
-		beaconClient:         pb.NewBeaconServiceClient(v.conn),
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),

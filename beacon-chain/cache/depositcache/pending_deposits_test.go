@@ -10,6 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
+var _ = PendingDepositsFetcher(&DepositCache{})
+
 func TestInsertPendingDeposit_OK(t *testing.T) {
 	dc := DepositCache{}
 	dc.InsertPendingDeposit(context.Background(), &ethpb.Deposit{}, big.NewInt(111), 100, [32]byte{})

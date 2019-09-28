@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestRegularSync_generateErrorResponse(t *testing.T) {
@@ -25,11 +24,11 @@ func TestRegularSync_generateErrorResponse(t *testing.T) {
 	if b[0] != responseCodeServerError {
 		t.Errorf("The first byte was not the status code. Got %#x wanted %#x", b, responseCodeServerError)
 	}
-	msg := &pb.ErrorMessage{}
-	if err := r.p2p.Encoding().Decode(buf, msg); err != nil {
+	msg := make([]byte, 0)
+	if err := r.p2p.Encoding().DecodeWithLength(buf, &msg); err != nil {
 		t.Fatal(err)
 	}
-	if msg.ErrorMessage != "something bad happened" {
+	if string(msg) != "something bad happened" {
 		t.Errorf("Received the wrong message: %v", msg)
 	}
 }

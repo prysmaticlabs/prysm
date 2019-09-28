@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
@@ -30,11 +29,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
-
-	span.AddAttributes(
-		trace.StringAttribute("validator", tpk),
-	)
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
+	span.AddAttributes(trace.StringAttribute("validator", tpk))
+	log := log.WithField("pubKey", tpk[:12])
 
 	v.waitToSlotMidpoint(ctx, slot)
 
@@ -70,11 +67,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 			slot, err)
 		return
 	}
-	committeeLength := mathutil.CeilDiv8(len(assignment.Committee))
 
-	// We set the custody bitfield to an slice of zero values as a stub for phase 0
-	// of length len(committee)+7 // 8.
-	custodyBitfield := make([]byte, committeeLength)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
@@ -102,9 +96,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to sign attestation data and custody bit")
+		log.WithError(err).Error("Failed to sign attestation data and custody bit")
 		return
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
@@ -127,7 +119,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
-		"pubKey":      tpk,
 	}).Info("Attested latest head")
 
 	span.AddAttributes(

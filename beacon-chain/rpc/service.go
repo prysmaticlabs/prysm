@@ -4,12 +4,9 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -19,13 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -39,89 +35,87 @@ func init() {
 	log = logrus.WithField("prefix", "rpc")
 }
 
-type chainService interface {
-	blockchain.HeadRetriever
-	blockchain.AttestationReceiver
-	blockchain.BlockReceiver
-	StateInitializedFeed() *event.Feed
-}
-
-type operationService interface {
-	operations.Pool
-	HandleAttestation(context.Context, proto.Message) error
-	IncomingAttFeed() *event.Feed
-}
-
-type powChainService interface {
-	HasChainStarted() bool
-	ETH2GenesisTime() (uint64, *big.Int)
-	ChainStartFeed() *event.Feed
-	LatestBlockHeight() *big.Int
-	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
-	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
-	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
-	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
-	DepositRoot() [32]byte
-	DepositTrie() *trieutil.MerkleTrie
-	ChainStartDepositHashes() ([][]byte, error)
-	ChainStartDeposits() []*ethpb.Deposit
-	ChainStartETH1Data() *ethpb.Eth1Data
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	beaconDB            db.Database
-	chainService        chainService
-	powChainService     powChainService
-	operationService    operationService
-	syncService         sync.Checker
-	port                string
-	listener            net.Listener
-	withCert            string
-	withKey             string
-	grpcServer          *grpc.Server
-	canonicalStateChan  chan *pbp2p.BeaconState
-	incomingAttestation chan *ethpb.Attestation
-	credentialError     error
-	p2p                 p2p.Broadcaster
-	depositCache        *depositcache.DepositCache
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	beaconDB              db.Database
+	stateFeedListener     blockchain.ChainFeeds
+	headFetcher           blockchain.HeadFetcher
+	finalizationFetcher   blockchain.FinalizationFetcher
+	genesisTimeFetcher    blockchain.GenesisTimeFetcher
+	attestationReceiver   blockchain.AttestationReceiver
+	blockReceiver         blockchain.BlockReceiver
+	powChainService       powchain.Chain
+	chainStartFetcher     powchain.ChainStartFetcher
+	mockEth1Votes         bool
+	attestationsPool      operations.Pool
+	operationsHandler     operations.Handler
+	syncService           sync.Checker
+	port                  string
+	listener              net.Listener
+	withCert              string
+	withKey               string
+	grpcServer            *grpc.Server
+	canonicalStateChan    chan *pbp2p.BeaconState
+	incomingAttestation   chan *ethpb.Attestation
+	credentialError       error
+	p2p                   p2p.Broadcaster
+	depositFetcher        depositcache.DepositFetcher
+	pendingDepositFetcher depositcache.PendingDepositsFetcher
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port             string
-	CertFlag         string
-	KeyFlag          string
-	BeaconDB         db.Database
-	ChainService     chainService
-	POWChainService  powChainService
-	OperationService operationService
-	SyncService      sync.Checker
-	Broadcaster      p2p.Broadcaster
-	DepositCache     *depositcache.DepositCache
+	Port                  string
+	CertFlag              string
+	KeyFlag               string
+	BeaconDB              db.Database
+	StateFeedListener     blockchain.ChainFeeds
+	HeadFetcher           blockchain.HeadFetcher
+	FinalizationFetcher   blockchain.FinalizationFetcher
+	AttestationReceiver   blockchain.AttestationReceiver
+	BlockReceiver         blockchain.BlockReceiver
+	POWChainService       powchain.Chain
+	ChainStartFetcher     powchain.ChainStartFetcher
+	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
+	MockEth1Votes         bool
+	OperationsHandler     operations.Handler
+	AttestationsPool      operations.Pool
+	SyncService           sync.Checker
+	Broadcaster           p2p.Broadcaster
+	DepositFetcher        depositcache.DepositFetcher
+	PendingDepositFetcher depositcache.PendingDepositsFetcher
 }
 
-// NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
-// interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
+// NewService instantiates a new RPC service instance that will
+// be registered into a running beacon node.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		beaconDB:            cfg.BeaconDB,
-		p2p:                 cfg.Broadcaster,
-		chainService:        cfg.ChainService,
-		powChainService:     cfg.POWChainService,
-		operationService:    cfg.OperationService,
-		syncService:         cfg.SyncService,
-		port:                cfg.Port,
-		withCert:            cfg.CertFlag,
-		withKey:             cfg.KeyFlag,
-		depositCache:        cfg.DepositCache,
-		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		ctx:                   ctx,
+		cancel:                cancel,
+		beaconDB:              cfg.BeaconDB,
+		stateFeedListener:     cfg.StateFeedListener,
+		headFetcher:           cfg.HeadFetcher,
+		finalizationFetcher:   cfg.FinalizationFetcher,
+		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
+		attestationReceiver:   cfg.AttestationReceiver,
+		blockReceiver:         cfg.BlockReceiver,
+		p2p:                   cfg.Broadcaster,
+		powChainService:       cfg.POWChainService,
+		chainStartFetcher:     cfg.ChainStartFetcher,
+		mockEth1Votes:         cfg.MockEth1Votes,
+		attestationsPool:      cfg.AttestationsPool,
+		operationsHandler:     cfg.OperationsHandler,
+		syncService:           cfg.SyncService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		depositFetcher:        cfg.DepositFetcher,
+		pendingDepositFetcher: cfg.PendingDepositFetcher,
+		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 
@@ -160,50 +154,52 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	beaconServer := &BeaconServer{
-		beaconDB:            s.beaconDB,
-		ctx:                 s.ctx,
-		powChainService:     s.powChainService,
-		chainService:        s.chainService,
-		operationService:    s.operationService,
-		incomingAttestation: s.incomingAttestation,
-		canonicalStateChan:  s.canonicalStateChan,
-		chainStartChan:      make(chan time.Time, 1),
-	}
 	proposerServer := &ProposerServer{
-		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
-		powChainService:    s.powChainService,
-		operationService:   s.operationService,
-		canonicalStateChan: s.canonicalStateChan,
-		depositCache:       s.depositCache,
+		beaconDB:               s.beaconDB,
+		headFetcher:            s.headFetcher,
+		blockReceiver:          s.blockReceiver,
+		chainStartFetcher:      s.chainStartFetcher,
+		eth1InfoFetcher:        s.powChainService,
+		eth1BlockFetcher:       s.powChainService,
+		mockEth1Votes:          s.mockEth1Votes,
+		pool:                   s.attestationsPool,
+		canonicalStateChan:     s.canonicalStateChan,
+		depositFetcher:         s.depositFetcher,
+		pendingDepositsFetcher: s.pendingDepositFetcher,
 	}
 	attesterServer := &AttesterServer{
-		beaconDB:         s.beaconDB,
-		operationService: s.operationService,
-		p2p:              s.p2p,
-		chainService:     s.chainService,
-		cache:            cache.NewAttestationCache(),
+		p2p:               s.p2p,
+		beaconDB:          s.beaconDB,
+		operationsHandler: s.operationsHandler,
+		attReceiver:       s.attestationReceiver,
+		headFetcher:       s.headFetcher,
+		attestationCache:  cache.NewAttestationCache(),
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
-		chainService:       s.chainService,
+		headFetcher:        s.headFetcher,
 		canonicalStateChan: s.canonicalStateChan,
-		powChainService:    s.powChainService,
-		depositCache:       s.depositCache,
+		blockFetcher:       s.powChainService,
+		chainStartFetcher:  s.chainStartFetcher,
+		depositFetcher:     s.depositFetcher,
+		stateFeedListener:  s.stateFeedListener,
+		chainStartChan:     make(chan time.Time),
 	}
 	nodeServer := &NodeServer{
-		beaconDB:    s.beaconDB,
-		server:      s.grpcServer,
-		syncChecker: s.syncService,
+		beaconDB:           s.beaconDB,
+		server:             s.grpcServer,
+		syncChecker:        s.syncService,
+		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:     s.beaconDB,
-		pool:         s.operationService,
-		chainService: s.chainService,
+		beaconDB:            s.beaconDB,
+		pool:                s.attestationsPool,
+		headFetcher:         s.headFetcher,
+		finalizationFetcher: s.finalizationFetcher,
+		chainStartFetcher:   s.chainStartFetcher,
+		canonicalStateChan:  s.canonicalStateChan,
 	}
-	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)

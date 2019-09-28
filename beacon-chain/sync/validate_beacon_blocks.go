@@ -19,6 +19,8 @@ var recentlySeenRoots = ccache.New(ccache.Configure().MaxSize(100000))
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
 func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+	r.validateBlockLock.Lock()
+	defer r.validateBlockLock.Unlock()
 	m := msg.(*ethpb.BeaconBlock)
 
 	blockRoot, err := ssz.SigningRoot(m)
@@ -26,6 +28,14 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 		log.WithField("validate", "beacon block").WithError(err).Error("Failed to get signing root of block")
 		return false
 	}
+
+	r.pendingQueueLock.RLock()
+	if r.seenPendingBlocks[blockRoot] {
+		r.pendingQueueLock.RUnlock()
+		return false
+	}
+	r.pendingQueueLock.RUnlock()
+
 	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
 		return false
 	}
@@ -39,5 +49,11 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	if err == nil {
 		p.Broadcast(ctx, m)
 	}
+
+	// We should not attempt to process blocks until fully synced, but propagation is OK.
+	if r.initialSync.Syncing() {
+		return false
+	}
+
 	return err == nil
 }

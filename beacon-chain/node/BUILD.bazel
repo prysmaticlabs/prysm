@@ -3,17 +3,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "clear_db.go",
         "fetch_contract_address.go",
         "node.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/archiver:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/gateway:go_default_library",
+        "//beacon-chain/interop-cold-start:go_default_library",
         "//beacon-chain/operations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
@@ -26,6 +29,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
+        "//shared/sliceutil:go_default_library",
         "//shared/tracing:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

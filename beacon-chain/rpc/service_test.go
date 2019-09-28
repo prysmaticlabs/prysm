@@ -7,11 +7,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -22,80 +19,17 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockOperationService struct {
-	pendingAttestations []*ethpb.Attestation
-}
-
-func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockOperationService) HandleAttestation(_ context.Context, _ proto.Message) error {
-	return nil
-}
-
-func (ms *mockOperationService) IsAttCanonical(_ context.Context, att *ethpb.Attestation) (bool, error) {
-	return true, nil
-}
-
-func (ms *mockOperationService) AttestationPool(_ context.Context, expectedSlot uint64) ([]*ethpb.Attestation, error) {
-	if ms.pendingAttestations != nil {
-		return ms.pendingAttestations, nil
-	}
-	return []*ethpb.Attestation{
-		{
-			AggregationBits: []byte{0xC0},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-		{
-			AggregationBits: []byte{0xC1},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-		{
-			AggregationBits: []byte{0xC2},
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:    params.BeaconConfig().SlotsPerEpoch,
-					DataRoot: params.BeaconConfig().ZeroHash[:],
-				},
-			},
-		},
-	}, nil
-}
-
-type mockSyncService struct {
-}
-
-func (ms *mockSyncService) Status() error {
-	return nil
-}
-
-func (ms *mockSyncService) Syncing() bool {
-	return false
-}
-
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "7348",
-		CertFlag:     "alice.crt",
-		KeyFlag:      "alice.key",
-		SyncService:  &mockSyncService{},
-		ChainService: &mock.ChainService{},
+	rpcService := NewService(context.Background(), &Config{
+		Port:                "7348",
+		CertFlag:            "alice.crt",
+		KeyFlag:             "alice.key",
+		SyncService:         &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:       &mock.ChainService{},
+		AttestationReceiver: &mock.ChainService{},
+		HeadFetcher:         &mock.ChainService{},
+		StateFeedListener:   &mock.ChainService{},
 	})
 
 	rpcService.Start()
@@ -111,10 +45,13 @@ func TestLifecycle_OK(t *testing.T) {
 func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "ralph merkle!!!",
-		SyncService:  &mockSyncService{},
-		ChainService: &mock.ChainService{},
+	rpcService := NewService(context.Background(), &Config{
+		Port:                "ralph merkle!!!",
+		SyncService:         &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:       &mock.ChainService{},
+		AttestationReceiver: &mock.ChainService{},
+		HeadFetcher:         &mock.ChainService{},
+		StateFeedListener:   &mock.ChainService{},
 	})
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
@@ -140,10 +77,13 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "7777",
-		SyncService:  &mockSyncService{},
-		ChainService: &mock.ChainService{},
+	rpcService := NewService(context.Background(), &Config{
+		Port:                "7777",
+		SyncService:         &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:       &mock.ChainService{},
+		AttestationReceiver: &mock.ChainService{},
+		HeadFetcher:         &mock.ChainService{},
+		StateFeedListener:   &mock.ChainService{},
 	})
 
 	rpcService.Start()

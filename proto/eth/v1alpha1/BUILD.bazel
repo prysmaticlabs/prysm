@@ -6,6 +6,7 @@ load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
+        "archive.proto",
         "attestation.proto",
         "beacon_block.proto",
         "shard_block.proto",

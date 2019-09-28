@@ -4,8 +4,6 @@
 package blocks
 
 import (
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -20,31 +18,4 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.BeaconBlock {
 		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
 	return genBlock
-}
-
-// BlockFromHeader manufactures a block from its header. It contains all its fields,
-// except for the block body.
-func BlockFromHeader(header *ethpb.BeaconBlockHeader) *ethpb.BeaconBlock {
-	return &ethpb.BeaconBlock{
-		StateRoot:  header.StateRoot,
-		Slot:       header.Slot,
-		Signature:  header.Signature,
-		ParentRoot: header.ParentRoot,
-	}
-}
-
-// HeaderFromBlock extracts the block header from a block.
-func HeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
-	header := &ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		Signature:  block.Signature,
-		StateRoot:  block.StateRoot,
-	}
-	root, err := ssz.HashTreeRoot(block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash block body")
-	}
-	header.BodyRoot = root[:]
-	return header, nil
 }

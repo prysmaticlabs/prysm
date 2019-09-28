@@ -76,32 +76,6 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	return state, nil
 }
 
-// ExitValidator takes in validator index and does house
-// keeping work to exit validator with entry exit delay.
-//
-// Spec pseudocode definition:
-//  def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//    """
-//    Exit the validator of the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//
-//    # The following updates only occur if not previous exited
-//    if validator.exit_epoch <= get_entry_exit_effect_epoch(get_current_epoch(state)):
-//        return
-//
-//    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
-func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	validator := state.Validators[idx]
-
-	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return state
-	}
-	validator.ExitEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	return state
-}
-
 // SlashValidator slashes the malicious validator's balance and awards
 // the whistleblower's balance.
 //
@@ -153,4 +127,72 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	state = helpers.IncreaseBalance(state, proposerIdx, proposerReward)
 	state = helpers.IncreaseBalance(state, whistleBlowerIdx, whistleblowerReward-proposerReward)
 	return state, nil
+}
+
+// ActivatedValidatorIndices determines the indices activated during the current epoch.
+func ActivatedValidatorIndices(state *pb.BeaconState) []uint64 {
+	currentEpoch := helpers.CurrentEpoch(state)
+	activations := make([]uint64, 0)
+	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		if val.ActivationEpoch == delayedActivationEpoch {
+			activations = append(activations, uint64(i))
+		}
+	}
+	return activations
+}
+
+// SlashedValidatorIndices determines the indices slashed during the current epoch.
+func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
+	currentEpoch := helpers.CurrentEpoch(state)
+	slashed := make([]uint64, 0)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
+			slashed = append(slashed, uint64(i))
+		}
+	}
+	return slashed
+}
+
+// ExitedValidatorIndices determines the indices exited during the current epoch.
+func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
+	exited := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range state.Validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+	churn, err := helpers.ValidatorChurnLimit(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get churn limit")
+	}
+	if churn < uint64(exitQueueChurn) {
+		exitQueueEpoch++
+	}
+	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	for i, val := range state.Validators {
+		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
+			exited = append(exited, uint64(i))
+		}
+	}
+	return exited, nil
 }

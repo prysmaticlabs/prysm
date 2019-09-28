@@ -2,15 +2,17 @@ package spectest
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/hex"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestAggregatePubkeysYaml(t *testing.T) {
-	file, err := loadBlsYaml("aggregate_pubkeys/aggregate_pubkeys.yaml")
+	file, err := testutil.BazelFileBytes("tests/general/phase0/bls/aggregate_pubkeys/small/agg_pub_keys/data.yaml")
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
 	}
@@ -20,24 +22,32 @@ func TestAggregatePubkeysYaml(t *testing.T) {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 
-	for i, tt := range test.TestCases {
-		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			pk, err := bls.PublicKeyFromBytes(tt.Input[0])
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, pk2 := range tt.Input[1:] {
-				p, err := bls.PublicKeyFromBytes(pk2)
-				if err != nil {
-					t.Fatal(err)
-				}
-				pk.Aggregate(p)
-			}
+	pubBytes, err := hex.DecodeString(test.Input[0][2:])
+	if err != nil {
+		t.Fatalf("Cannot decode string to bytes: %v", err)
+	}
+	pk, err := bls.PublicKeyFromBytes(pubBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pk2 := range test.Input[1:] {
+		pubBytes2, err := hex.DecodeString(pk2[2:])
+		if err != nil {
+			t.Fatalf("Cannot decode string to bytes: %v", err)
+		}
+		p, err := bls.PublicKeyFromBytes(pubBytes2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pk.Aggregate(p)
+	}
 
-			if !bytes.Equal(tt.Output, pk.Marshal()) {
-				t.Fatal("Output does not equal marshaled aggregated public " +
-					"key bytes")
-			}
-		})
+	outputBytes, err := hex.DecodeString(test.Output[2:])
+	if err != nil {
+		t.Fatalf("Cannot decode string to bytes: %v", err)
+	}
+	if !bytes.Equal(outputBytes, pk.Marshal()) {
+		t.Fatal("Output does not equal marshaled aggregated public " +
+			"key bytes")
 	}
 }

@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -54,6 +55,61 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	}
 	if db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to have been deleted from the db")
+	}
+}
+
+func TestStore_AttestationsBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	numAtts := 1000
+	totalAtts := make([]*ethpb.Attestation, numAtts)
+	// We track the data roots for the even indexed attestations.
+	attDataRoots := make([][32]byte, 0)
+	oddAtts := make([]*ethpb.Attestation, 0)
+	for i := 0; i < len(totalAtts); i++ {
+		totalAtts[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("head"),
+				Crosslink: &ethpb.Crosslink{
+					Shard:      uint64(i),
+					ParentRoot: []byte("parent"),
+					StartEpoch: 1,
+					EndEpoch:   2,
+				},
+			},
+		}
+		if i%2 == 0 {
+			r, err := ssz.HashTreeRoot(totalAtts[i].Data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			attDataRoots = append(attDataRoots, r)
+		} else {
+			oddAtts = append(oddAtts, totalAtts[i])
+		}
+	}
+	if err := db.SaveAttestations(ctx, totalAtts); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != numAtts {
+		t.Errorf("Received %d attestations, wanted 1000", len(retrieved))
+	}
+	// We delete all even indexed attestation.
+	if err := db.DeleteAttestations(ctx, attDataRoots); err != nil {
+		t.Fatal(err)
+	}
+	// When we retrieve the data, only the odd indexed attestations should remain.
+	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retrieved, oddAtts) {
+		t.Errorf("Wanted %v, received %v", oddAtts, retrieved)
 	}
 }
 
@@ -124,36 +180,45 @@ func TestStore_BoltDontPanic(t *testing.T) {
 func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	sameParentRoot := [32]byte{1, 2, 3}
-	otherParentRoot := [32]byte{4, 5, 6}
+	someRoot := [32]byte{1, 2, 3}
+	otherRoot := [32]byte{4, 5, 6}
 	atts := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:      5,
-					ParentRoot: sameParentRoot[:],
-					StartEpoch: 1,
-					EndEpoch:   2,
+				BeaconBlockRoot: someRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 5,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 7,
 				},
 			},
 		},
 		{
 			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:      5,
-					ParentRoot: sameParentRoot[:],
-					StartEpoch: 10,
-					EndEpoch:   11,
+				BeaconBlockRoot: someRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  otherRoot[:],
+					Epoch: 5,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  otherRoot[:],
+					Epoch: 7,
 				},
 			},
 		},
 		{
 			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:      5,
-					ParentRoot: otherParentRoot[:],
-					StartEpoch: 1,
-					EndEpoch:   20,
+				BeaconBlockRoot: otherRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 7,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 5,
 				},
 			},
 		},
@@ -169,33 +234,28 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	}{
 		{
 			filter: filters.NewFilter().
-				SetShard(5),
-			expectedNumAtt: 3,
-		},
-		{
-			filter: filters.NewFilter().
-				SetShard(5).
-				SetParentRoot(otherParentRoot[:]),
-			expectedNumAtt: 1,
-		},
-		{
-			filter: filters.NewFilter().
-				SetShard(5).
-				SetParentRoot(sameParentRoot[:]),
-			expectedNumAtt: 2,
-		},
-		{
-			filter:         filters.NewFilter().SetStartEpoch(1),
+				SetSourceEpoch(5),
 			expectedNumAtt: 2,
 		},
 		{
 			filter: filters.NewFilter().
-				SetParentRoot(otherParentRoot[:]),
+				SetHeadBlockRoot(someRoot[:]),
+			expectedNumAtt: 2,
+		},
+		{
+			filter: filters.NewFilter().
+				SetHeadBlockRoot(otherRoot[:]),
 			expectedNumAtt: 1,
+		},
+		{
+			filter:         filters.NewFilter().SetTargetEpoch(7),
+			expectedNumAtt: 2,
 		},
 		{
 			// Only two attestation in the list meet the composite filter criteria above.
-			filter:         filters.NewFilter().SetShard(5).SetStartEpoch(1),
+			filter: filters.NewFilter().
+				SetHeadBlockRoot(someRoot[:]).
+				SetTargetEpoch(7),
 			expectedNumAtt: 2,
 		},
 		{
@@ -206,7 +266,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		{
 			// No attestation meets the criteria below.
 			filter: filters.NewFilter().
-				SetShard(1000),
+				SetTargetEpoch(1000),
 			expectedNumAtt: 0,
 		},
 	}

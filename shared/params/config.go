@@ -82,7 +82,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
@@ -212,7 +211,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
-	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
+	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultShardChainConfig = &ShardChainConfig{
@@ -266,8 +265,6 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
-	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
-	demoConfig.MinGenesisTime = 0
 	demoConfig.Eth1FollowDistance = 16
 
 	return demoConfig
@@ -276,55 +273,70 @@ func DemoBeaconConfig() *BeaconChainConfig {
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
+	// Misc
 	minimalConfig.ShardCount = 8
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 4096
 	minimalConfig.MinPerEpochChurnLimit = 4
 	minimalConfig.ChurnLimitQuotient = 65536
-	minimalConfig.BaseRewardsPerEpoch = 5
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
-	minimalConfig.DepositContractTreeDepth = 32
+	minimalConfig.MinGenesisTime = 0
+
+	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
 	minimalConfig.MaxEffectiveBalance = 32e9
 	minimalConfig.EjectionBalance = 16e9
 	minimalConfig.EffectiveBalanceIncrement = 1e9
-	minimalConfig.FarFutureEpoch = 1<<64 - 1
+
+	// Initial values
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
+
+	// Time parameters
 	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.ActivationExitDelay = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
-	minimalConfig.HistoricalRootsLimit = 64
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+
+	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
+	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorRegistryLimit = 1099511627776
+
+	// Reward and penalty quotients
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32
+	minimalConfig.BaseRewardsPerEpoch = 5
+
+	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
 	minimalConfig.MaxAttesterSlashings = 1
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxTransfers = 0
+
+	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
 	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
 	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
-	minimalConfig.MinGenesisTime = 1578009600
 
+	minimalConfig.DepositContractTreeDepth = 32
+	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	return &minimalConfig
 }
 
@@ -336,6 +348,11 @@ func ContractConfig() *DepositContractConfig {
 // UseDemoBeaconConfig for beacon chain services.
 func UseDemoBeaconConfig() {
 	beaconConfig = DemoBeaconConfig()
+}
+
+// UseMinimalConfig for beacon chain services.
+func UseMinimalConfig() {
+	beaconConfig = MinimalSpecConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

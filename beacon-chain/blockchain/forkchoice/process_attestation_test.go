@@ -1,10 +1,13 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -85,22 +88,6 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErr:       true,
 			wantErrString: "could not process attestation from the future epoch",
 		},
-		{
-			name: "process attestation with invalid index",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not convert attestation to indexed attestation",
-		},
-		{
-			name: "process attestation with invalid signature",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not verify indexed attestation",
-		},
 	}
 
 	for _, tt := range tests {
@@ -152,6 +139,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		CurrentCrosslinks:          crosslinks,
 		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
@@ -210,5 +198,72 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 	if s3.Slot != s.Slot {
 		t.Errorf("Wanted state slot: %d, got: %d", s.Slot, s3.Slot)
+	}
+}
+
+func TestStore_AggregateAttestation(t *testing.T) {
+	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}
+
+	bits := bitfield.NewBitlist(8)
+	bits.SetBitAt(0, true)
+	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	r, _ := ssz.HashTreeRoot(a.Data)
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, bits) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(1, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{3, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(7, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{131, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+}
+
+func TestStore_SaveNewAttestation(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
+	r1, _ := ssz.HashTreeRoot(a1.Data)
+
+	if err := store.saveNewAttestation(ctx, a1); err != nil {
+		t.Fatal(err)
+	}
+	saved, err := store.db.Attestation(ctx, r1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(a1, saved) {
+		t.Error("did not retrieve saved attestation")
+	}
+
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
+	if err := store.saveNewAttestation(ctx, a2); err != nil {
+		t.Fatal(err)
+	}
+	saved, err = store.db.Attestation(ctx, r1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(a2, saved) {
+		t.Error("did not retrieve saved attestation")
 	}
 }

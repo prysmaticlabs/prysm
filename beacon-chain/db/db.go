@@ -18,10 +18,11 @@ type Database interface {
 	DatabasePath() string
 	ClearDB() error
 	// Attestation related methods.
-	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
-	HasAttestation(ctx context.Context, attRoot [32]byte) bool
-	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
+	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
+	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
+	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	// Block related methods.
@@ -31,6 +32,7 @@ type Database interface {
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
+	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
@@ -68,6 +70,15 @@ type Database interface {
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	// Archival data handlers for storing/retrieving historical beacon node information.
+	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethpb.ArchivedActiveSetChanges, error)
+	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethpb.ArchivedActiveSetChanges) error
+	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb.ArchivedCommitteeInfo, error)
+	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethpb.ArchivedCommitteeInfo) error
+	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
+	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
+	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error)
+	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
