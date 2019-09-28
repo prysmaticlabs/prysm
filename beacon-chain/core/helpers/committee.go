@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
@@ -32,6 +33,16 @@ var committeeCache = cache.NewCommitteeCache()
 //    ))
 //    return committees_per_slot * SLOTS_PER_EPOCH
 func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		count, exists, err := committeeCache.CommitteeCount(epoch)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if exists {
+			return count, nil
+		}
+	}
+
 	minCommitteePerSlot := uint64(1)
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
@@ -69,6 +80,16 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //        count=get_committee_count(state, epoch),
 //    )
 func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		indices, err := committeeCache.ShuffledIndices(epoch, shard)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if indices != nil {
+			return indices, nil
+		}
+	}
+
 	seed, err := Seed(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -317,6 +338,16 @@ func shardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 //        shard = Shard((shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT)
 //    return shard
 func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		startShard, exists, err := committeeCache.StartShard(epoch)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if exists {
+			return startShard, nil
+		}
+	}
+
 	currentEpoch := CurrentEpoch(state)
 	checkEpoch := currentEpoch + 1
 

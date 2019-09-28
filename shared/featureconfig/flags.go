@@ -34,6 +34,11 @@ var (
 		Name:  "init-sync-no-verify",
 		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
 	}
+	// NewCacheFlag enables the node to use the new caching scheme.
+	NewCacheFlag = cli.BoolFlag{
+		Name:  "new-cache",
+		Usage: "Use the new shuffled indices cache for committee. Much improvement than previous caching implementations",
+	}
 	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
 	SkipBLSVerifyFlag = cli.BoolFlag{
 		Name:  "skip-bls-verify",
@@ -54,5 +59,6 @@ var BeaconChainFlags = []cli.Flag{
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
 	InitSyncNoVerifyFlag,
+	NewCacheFlag,
 	SkipBLSVerifyFlag,
 }
