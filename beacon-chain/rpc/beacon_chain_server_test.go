@@ -1275,7 +1275,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 }
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1353,7 +1352,6 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 }
 
 func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1528,7 +1526,6 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 }
 
 func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
