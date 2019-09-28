@@ -16,7 +16,7 @@ const BlockCacheSize = 256
 // VotesCacheSize with 1M validators will only be around 50Mb.
 const VotesCacheSize = 1000000
 
-// ValidatorIndexCache of 1M * 8 bytes, ~8 Mb
+// ValidatorIndexCacheSize of 1M * 8 bytes, ~8 Mb
 const ValidatorIndexCacheSize = 1000000
 
 // Store defines an implementation of the Prysm Database interface
