@@ -120,6 +120,7 @@ func (k *Store) PruneSavedStates(
 	return nil
 }
 
+// DeleteState removes the state of the passed in DB key from the DB.
 func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
