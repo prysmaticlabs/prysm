@@ -197,7 +197,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "0479f6ade208be05292784eda38bc51d2f0e9755",
+    commit = "a1a36e6d85f19b3007d1ee56d8a4e91294f1ddd5",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -1223,13 +1223,6 @@ go_repository(
     name = "com_github_paulbellamy_ratecounter",
     commit = "a803f0e4f07116687bb30965e8f7d0c32981b63c",
     importpath = "github.com/paulbellamy/ratecounter",
-)
-
-go_repository(
-    name = "com_github_elastic_gosigar",
-    importpath = "github.com/elastic/gosigar",
-    sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
-    version = "v0.10.5",
 )
 
 go_repository(
