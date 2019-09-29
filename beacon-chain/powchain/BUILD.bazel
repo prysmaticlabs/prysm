@@ -40,7 +40,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "medium",
+    size = "large",
     srcs = [
         "block_cache_test.go",
         "block_reader_test.go",
