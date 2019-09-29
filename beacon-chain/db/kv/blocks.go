@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -222,19 +223,22 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
 	defer span.End()
 	var wg sync.WaitGroup
-	var err error
+	errs := make([]string, 0)
 	wg.Add(len(blockRoots))
 	for _, r := range blockRoots {
 		go func(w *sync.WaitGroup, root [32]byte) {
 			defer w.Done()
-			if routineErr := k.DeleteBlock(ctx, root); routineErr != nil {
-				err = routineErr
+			if err := k.DeleteBlock(ctx, root); err != nil {
+				errs = append(errs, err.Error())
 				return
 			}
 		}(&wg, r)
 	}
 	wg.Wait()
-	return err
+	if len(errs) > 0 {
+		return fmt.Errorf("deleting blocks failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // SaveBlock to the db.
@@ -268,19 +272,22 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 	var wg sync.WaitGroup
-	var err error
+	errs := make([]string, 0)
 	wg.Add(len(blocks))
 	for _, blk := range blocks {
 		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
 			defer w.Done()
-			if routineErr := k.SaveBlock(ctx, b); routineErr != nil {
-				err = routineErr
+			if err := k.SaveBlock(ctx, b); err != nil {
+				errs = append(errs, err.Error())
 				return
 			}
 		}(&wg, blk)
 	}
 	wg.Wait()
-	return err
+	if len(errs) > 0 {
+		return fmt.Errorf("saving blocks failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // SaveHeadBlockRoot to the db.

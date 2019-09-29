@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/boltdb/bolt"
@@ -111,20 +112,23 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
 	var wg sync.WaitGroup
-	var err error
+	errs := make([]string, 0)
 	wg.Add(len(attDataRoots))
 	for _, r := range attDataRoots {
 		go func(w *sync.WaitGroup, root [32]byte) {
 			defer wg.Done()
-			if routineErr := k.DeleteAttestation(ctx, root); routineErr != nil {
-				err = routineErr
+			if err := k.DeleteAttestation(ctx, root); err != nil {
+				errs = append(errs, err.Error())
 				return
 			}
 			return
 		}(&wg, r)
 	}
 	wg.Wait()
-	return err
+	if len(errs) > 0 {
+		return fmt.Errorf("deleting attestations failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // SaveAttestation to the db.
@@ -154,20 +158,23 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
 	defer span.End()
 	var wg sync.WaitGroup
-	var err error
+	errs := make([]string, 0)
 	wg.Add(len(atts))
 	for _, a := range atts {
 		go func(w *sync.WaitGroup, att *ethpb.Attestation) {
 			defer wg.Done()
-			if routineErr := k.SaveAttestation(ctx, att); routineErr != nil {
-				err = routineErr
+			if err := k.SaveAttestation(ctx, att); err != nil {
+				errs = append(errs, err.Error())
 				return
 			}
 			return
 		}(&wg, a)
 	}
 	wg.Wait()
-	return err
+	if len(errs) > 0 {
+		return fmt.Errorf("deleting attestations failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // createAttestationIndicesFromData takes in attestation data and returns

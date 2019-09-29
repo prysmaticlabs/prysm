@@ -62,7 +62,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	numAtts := 1000
+	numAtts := 10
 	totalAtts := make([]*ethpb.Attestation, numAtts)
 	// We track the data roots for the even indexed attestations.
 	attDataRoots := make([][32]byte, 0)
