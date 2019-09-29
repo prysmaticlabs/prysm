@@ -9,6 +9,7 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -134,10 +135,12 @@ func (s *Service) Start() {
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(),
 			grpc_prometheus.StreamServerInterceptor,
+			grpc_opentracing.StreamServerInterceptor(),
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(),
 			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.UnaryServerInterceptor(),
 		)),
 	}
 	// TODO(#791): Utilize a certificate for secure connections
