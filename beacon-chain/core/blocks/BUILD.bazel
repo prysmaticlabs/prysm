@@ -30,7 +30,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "medium",
+    size = "small",
     srcs = [
         "block_operations_test.go",
         "block_test.go",
