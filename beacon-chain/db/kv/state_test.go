@@ -3,7 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
-	"github.com/gogo/protobuf/proto"
+	// "github.com/gogo/protobuf/proto"
 	"reflect"
 	"testing"
 
@@ -341,7 +341,7 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err = ssz.SigningRoot(firstBlock)
+	root, err = ssz.SigningRoot(postSkipBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,13 +352,8 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Process one more slot so we can generate a state that isn't latest.
+	// Save one more block so we can generate a state that isn't latest.
 	extraBlock := testutil.GenerateFullBlock(t, newState, privs)
-	stateCopy := proto.Clone(newState).(*pb.BeaconState)
-	_, err = state.ExecuteStateTransitionNoVerify(context.Background(), stateCopy, extraBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
 	root, err = ssz.SigningRoot(extraBlock)
 	if err != nil {
 		t.Fatal(err)

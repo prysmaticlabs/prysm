@@ -295,9 +295,9 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err,"could not get finalized checkpoint from db")
+		return errors.Wrap(err, "could not get finalized checkpoint from db")
 	}
-	if finalized == nil{
+	if finalized == nil {
 		// This should never happen. At chain start, the finalized checkpoint
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
