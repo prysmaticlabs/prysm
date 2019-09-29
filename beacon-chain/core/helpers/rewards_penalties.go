@@ -1,13 +1,8 @@
 package helpers
 
 import (
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var totalActiveBalanceCache = cache.NewActiveBalanceCache()
 
 // TotalBalance returns the total amount at stake in Gwei
 // of input validators.
@@ -42,27 +37,11 @@ func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
 //    """
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
-	epoch := CurrentEpoch(state)
-	total, err := totalActiveBalanceCache.ActiveBalanceInEpoch(epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not retrieve total balance from cache")
-	}
-	if total != params.BeaconConfig().FarFutureEpoch {
-		return total, nil
-	}
-
-	total = 0
+	total := uint64(0)
 	for i, v := range state.Validators {
-		if IsActiveValidator(v, epoch) {
+		if IsActiveValidator(v, CurrentEpoch(state)) {
 			total += state.Validators[i].EffectiveBalance
 		}
-	}
-
-	if err := totalActiveBalanceCache.AddActiveBalance(&cache.ActiveBalanceByEpoch{
-		Epoch:         epoch,
-		ActiveBalance: total,
-	}); err != nil {
-		return 0, errors.Wrap(err, "could not save active balance for cache")
 	}
 	return total, nil
 }

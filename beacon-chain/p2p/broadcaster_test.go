@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"reflect"
 	"sync"
@@ -59,9 +58,8 @@ func TestService_Broadcast(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		buf := bytes.NewBuffer(incomingMessage.Data)
 		result := &testpb.TestSimpleMessage{}
-		if err := p.Encoding().Decode(buf, result); err != nil {
+		if err := p.Encoding().Decode(incomingMessage.Data, result); err != nil {
 			t.Fatal(err)
 		}
 		if !proto.Equal(result, msg) {

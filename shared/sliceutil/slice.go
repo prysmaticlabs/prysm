@@ -1,5 +1,9 @@
 package sliceutil
 
+import (
+	"strings"
+)
+
 // SubsetUint64 returns true if the first array is
 // completely contained in the second array with time
 // complexity of approximately o(n).
@@ -258,4 +262,27 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 		inter = tmp
 	}
 	return inter
+}
+
+// SplitCommaSeparated values from the list. Example: []string{"a,b", "c,d"} becomes []string{"a", "b", "c", "d"}.
+func SplitCommaSeparated(arr []string) []string {
+	var result []string
+	for _, val := range arr {
+		result = append(result, strings.Split(val, ",")...)
+	}
+	return result
+}
+
+// SplitOffset returns the start index of a given list splits into chunks,
+// it computes (listsize * index) / chunks.
+//
+// Spec pseudocode definition:
+// def get_split_offset(list_size: int, chunks: int, index: int) -> int:
+//     """
+//     Returns a value such that for a list L, chunk count k and index i,
+//     split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
+//     """
+//     return (list_size * index) // chunks
+func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
+	return (listSize * index) / chunks
 }

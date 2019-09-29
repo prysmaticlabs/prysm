@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -26,16 +26,16 @@ type AttestationReceiver interface {
 //  2. Validate attestation, update validator's latest vote
 //  3. Apply fork choice to the processed attestation
 //  4. Save latest head info
-func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestation")
 	defer span.End()
 
 	// Broadcast the new attestation to the network.
-	if err := c.p2p.Broadcast(ctx, att); err != nil {
+	if err := s.p2p.Broadcast(ctx, att); err != nil {
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	attRoot, err := ssz.HashTreeRoot(att)
+	attRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash attestation")
 	}
@@ -45,7 +45,7 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
-	if err := c.ReceiveAttestationNoPubsub(ctx, att); err != nil {
+	if err := s.ReceiveAttestationNoPubsub(ctx, att); err != nil {
 		return err
 	}
 
@@ -58,27 +58,27 @@ func (c *ChainService) ReceiveAttestation(ctx context.Context, att *ethpb.Attest
 //  1. Validate attestation, update validator's latest vote
 //  2. Apply fork choice to the processed attestation
 //  3. Save latest head info
-func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
+func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
 	// Update forkchoice store for the new attestation
-	attSlot, err := c.forkChoiceStore.OnAttestation(ctx, att)
+	attSlot, err := s.forkChoiceStore.OnAttestation(ctx, att)
 	if err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 
 	log.WithFields(logrus.Fields{
-		"attSlot":     attSlot,
-		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attTargetSlot": attSlot,
+		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Finished updating fork choice store for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
-	headRoot, err := c.forkChoiceStore.Head(ctx)
+	headRoot, err := s.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := c.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
@@ -89,7 +89,9 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
 	if !helpers.IsEpochStart(attSlot) {
-		targetRoot, err := helpers.BlockRoot(c.headState, att.Data.Target.Epoch)
+		s.headLock.RLock()
+		defer s.headLock.RUnlock()
+		targetRoot, err := helpers.BlockRoot(s.headState, att.Data.Target.Epoch)
 		if err != nil {
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
 		}
@@ -97,7 +99,7 @@ func (c *ChainService) ReceiveAttestationNoPubsub(ctx context.Context, att *ethp
 	}
 
 	// Save head info after running fork choice.
-	if err := c.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+	if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 

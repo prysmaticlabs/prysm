@@ -2,19 +2,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    testonly = True,
-    srcs = [
-        "attestation_test.yaml.go",
-        "block_operations.yaml.go",
-        "blocks_mainnet.yaml.go",
-        "blocks_minimal.yaml.go",
-    ],
+    srcs = ["block_processing_test.yaml.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/spectest",
     visibility = ["//beacon-chain:__subpackages__"],
-    deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-    ],
 )
 
 test_suite(
@@ -22,7 +12,8 @@ test_suite(
     tags = ["spectest"],
     tests = [
         ":go_mainnet_test",
-        ":go_minimal_test",
+        # Minimal tests must be run with --define ssz=minimal
+        #":go_minimal_test",
     ],
 )
 
@@ -34,7 +25,7 @@ go_test(
         exclude = ["*_minimal_test.go"],
     ),
     data = glob(["*.yaml"]) + [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_mainnet//:test_data",
     ],
     embed = [":go_default_library"],
     shard_count = 4,
@@ -44,15 +35,18 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
 
+# Requires --define ssz=minimal
 go_test(
     name = "go_minimal_test",
     size = "small",
@@ -61,19 +55,25 @@ go_test(
         exclude = ["*_mainnet_test.go"],
     ),
     data = glob(["*.yaml"]) + [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
     ],
     embed = [":go_default_library"],
-    tags = ["spectest"],
+    tags = [
+        "manual",
+        "minimal",
+        "spectest",
+    ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],

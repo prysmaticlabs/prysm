@@ -39,7 +39,7 @@ type ValidatorClient struct {
 }
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
-func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*ValidatorClient, error) {
+func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
 		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
@@ -49,6 +49,14 @@ func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*Valid
 	); err != nil {
 		return nil, err
 	}
+
+	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	level, err := logrus.ParseLevel(verbosity)
+	if err != nil {
+		return nil, err
+	}
+	logrus.SetLevel(level)
+
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,
@@ -56,13 +64,23 @@ func NewValidatorClient(ctx *cli.Context, keys map[string]*keystore.Key) (*Valid
 		stop:     make(chan struct{}),
 	}
 
+	featureconfig.ConfigureValidatorFeatures(ctx)
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		params.UseDemoBeaconConfig()
+		if featureconfig.FeatureConfig().MinimalConfig {
+			log.Warn("Using Minimal Config")
+			params.UseMinimalConfig()
+		} else {
+			log.Warn("Using Demo Config")
+			params.UseDemoBeaconConfig()
+		}
 	}
 
-	featureconfig.ConfigureBeaconFeatures(ctx)
+	keys, err := keysParser(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

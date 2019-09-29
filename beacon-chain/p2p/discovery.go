@@ -1,13 +1,16 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
-	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discv5"
+	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
+	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -16,74 +19,139 @@ import (
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
 type Listener interface {
-	Self() *discv5.Node
+	Self() *enode.Node
 	Close()
-	Lookup(discv5.NodeID) []*discv5.Node
-	ReadRandomNodes([]*discv5.Node) int
-	SetFallbackNodes([]*discv5.Node) error
-	Resolve(discv5.NodeID) *discv5.Node
-	RegisterTopic(discv5.Topic, <-chan struct{})
-	SearchTopic(discv5.Topic, <-chan time.Duration, chan<- *discv5.Node, chan<- bool)
+	Lookup(enode.ID) []*enode.Node
+	ReadRandomNodes([]*enode.Node) int
+	Resolve(*enode.Node) *enode.Node
+	LookupRandom() []*enode.Node
+	Ping(*enode.Node) error
+	RequestENR(*enode.Node) (*enode.Node, error)
 }
 
-func createListener(ipAddr net.IP, port int, privKey *ecdsa.PrivateKey) *discv5.Network {
+func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
-		Port: port,
+		Port: int(cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
+	if err != nil {
+		log.Fatal(err)
+	}
+	dv5Cfg := discover.Config{
+		PrivateKey: privKey,
+	}
+	dv5Cfg.Bootnodes = []*enode.Node{}
+	for _, addr := range cfg.Discv5BootStrapAddr {
+		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
+	}
 
-	network, err := discv5.ListenUDP(privKey, conn, "", nil)
+	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return network
 }
 
-func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discv5.Network, error) {
-	listener := createListener(addr, int(cfg.UDPPort), privKey)
-	bootNode, err := discv5.ParseNode(cfg.BootstrapNodeAddr)
+func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
+	db, err := enode.OpenDB("")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
-	if err := listener.SetFallbackNodes([]*discv5.Node{bootNode}); err != nil {
-		return nil, err
-	}
+	localNode := enode.NewLocalNode(db, privKey)
+	ipEntry := enr.IP(ipAddr)
+	udpEntry := enr.UDP(udpPort)
+	tcpEntry := enr.TCP(tcpPort)
+	localNode.Set(ipEntry)
+	localNode.Set(udpEntry)
+	localNode.Set(tcpEntry)
+
+	return localNode, nil
+}
+
+func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
+	listener := createListener(addr, privKey, cfg)
 	node := listener.Self()
-	log.Infof("Started Discovery: %s", node.String())
+	log.Infof("Started Discovery: %s", node.ID())
 	return listener, nil
 }
 
-func convertToMultiAddr(nodes []*discv5.Node) []ma.Multiaddr {
+// startDHTDiscovery supports discovery via DHT.
+func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
+	multiAddr, err := multiAddrFromString(bootstrapAddr)
+	if err != nil {
+		return err
+	}
+	peerInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return err
+	}
+	err = host.Connect(context.Background(), *peerInfo)
+	return err
+}
+
+func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
+	for _, addr := range addrs {
+		if addr == "" {
+			// Ignore empty entries
+			continue
+		}
+		_, err := enode.Parse(enode.ValidSchemes, addr)
+		if err == nil {
+			discv5Nodes = append(discv5Nodes, addr)
+			continue
+		}
+		_, err = multiAddrFromString(addr)
+		if err == nil {
+			kadDHTNodes = append(kadDHTNodes, addr)
+			continue
+		}
+		log.Errorf("Invalid bootstrap address of %s provided", addr)
+	}
+	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
+		log.Warn("No bootstrap addresses supplied")
+	}
+	return discv5Nodes, kadDHTNodes
+}
+
+func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 	var multiAddrs []ma.Multiaddr
 	for _, node := range nodes {
-		ip4 := node.IP.To4()
-		if ip4 == nil {
-			log.Error("Node doesn't have an ip4 address")
-			continue
-		}
-		pubkey, err := node.ID.Pubkey()
+		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
-			log.Errorf("Could not get pubkey from node ID: %v", err)
-			continue
-		}
-		assertedKey := convertToInterfacePubkey(pubkey)
-		id, err := peer.IDFromPublicKey(assertedKey)
-		if err != nil {
-			log.Errorf("Could not get peer id: %v", err)
-		}
-		multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP, id)
-		multiAddr, err := ma.NewMultiaddr(multiAddrString)
-		if err != nil {
-			log.Errorf("Could not get multiaddr:%v", err)
+			log.WithError(err).Error("Could not convert to multiAddr")
 			continue
 		}
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
+}
+
+func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
+	ip4 := node.IP().To4()
+	if ip4 == nil {
+		return nil, errors.Errorf("node doesn't have an ip4 address, it's stated IP is %s", node.IP().String())
+	}
+	pubkey := node.Pubkey()
+	assertedKey := convertToInterfacePubkey(pubkey)
+	id, err := peer.IDFromPublicKey(assertedKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get peer id")
+	}
+	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP(), id)
+	multiAddr, err := ma.NewMultiaddr(multiAddrString)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get multiaddr")
+	}
+	return multiAddr, nil
 }
 
 func manyMultiAddrsFromString(addrs []string) ([]ma.Multiaddr, error) {

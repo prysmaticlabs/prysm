@@ -22,7 +22,12 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster) bool {
+func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+	// The head state will be too far away to validate any voluntary exit.
+	if r.initialSync.Syncing() {
+		return false
+	}
+
 	exit, ok := msg.(*ethpb.VoluntaryExit)
 	if !ok {
 		return false
@@ -54,6 +59,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 		return false
 	}
 	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+
+	if fromSelf {
+		return false
+	}
 
 	if err := p.Broadcast(ctx, exit); err != nil {
 		log.WithError(err).Error("Failed to propagate voluntary exit")

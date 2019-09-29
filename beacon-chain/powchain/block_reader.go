@@ -10,11 +10,11 @@ import (
 )
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
-func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 
-	if exists, blkInfo, err := w.blockCache.BlockInfoByHash(hash); exists || err != nil {
+	if exists, blkInfo, err := s.blockCache.BlockInfoByHash(hash); exists || err != nil {
 		if err != nil {
 			return false, nil, err
 		}
@@ -22,12 +22,12 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 		return true, blkInfo.Number, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := w.blockFetcher.BlockByHash(ctx, hash)
+	block, err := s.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), errors.Wrap(err, "could not query block with given hash")
 	}
 
-	if err := w.blockCache.AddBlock(block); err != nil {
+	if err := s.blockCache.AddBlock(block); err != nil {
 		return false, big.NewInt(0), err
 	}
 
@@ -35,11 +35,11 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
-func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
+func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
 	defer span.End()
 
-	if exists, blkInfo, err := w.blockCache.BlockInfoByHeight(height); exists || err != nil {
+	if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -47,21 +47,21 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 		return blkInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not query block with given height")
 	}
-	if err := w.blockCache.AddBlock(block); err != nil {
+	if err := s.blockCache.AddBlock(block); err != nil {
 		return [32]byte{}, err
 	}
 	return block.Hash(), nil
 }
 
 // BlockTimeByHeight fetches an eth1.0 block timestamp by its height.
-func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
+func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not query block with given height")
 	}
@@ -72,11 +72,11 @@ func (w *Web3Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (u
 // This is a naive implementation that will use O(ETH1_FOLLOW_DISTANCE) calls to cache
 // or ETH1. This is called for multiple times but only changes every
 // SlotsPerEth1VotingPeriod (1024 slots) so the whole method should be cached.
-func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
+func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := w.blockFetcher.BlockByNumber(ctx, nil)
+	head, err := s.blockFetcher.BlockByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -86,17 +86,17 @@ func (w *Web3Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (
 			return nil, ctx.Err()
 		}
 
-		exists, info, err := w.blockCache.BlockInfoByHeight(bn)
+		exists, info, err := s.blockCache.BlockInfoByHeight(bn)
 		if err != nil {
 			return nil, err
 		}
 
 		if !exists {
-			blk, err := w.blockFetcher.BlockByNumber(ctx, bn)
+			blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
 			if err != nil {
 				return nil, err
 			}
-			if err := w.blockCache.AddBlock(blk); err != nil {
+			if err := s.blockCache.AddBlock(blk); err != nil {
 				return nil, err
 			}
 			info = blockToBlockInfo(blk)

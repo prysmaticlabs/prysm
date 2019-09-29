@@ -5,5 +5,5 @@ import (
 )
 
 func TestSlotProcessingMainnet(t *testing.T) {
-	runSlotProcessingTests(t, "sanity_slots_mainnet.yaml")
+	runSlotProcessingTests(t, "mainnet")
 }

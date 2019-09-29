@@ -2,20 +2,19 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
 	"reflect"
 	"testing"
 )
 
 func TestSavesUnencryptedKeys(t *testing.T) {
-	ctnr := generateUnencryptedKeys(rand.Reader)
+	ctnr := generateUnencryptedKeys(0 /* start index */)
 	buf := new(bytes.Buffer)
-	if err := saveUnencryptedKeysToFile(buf, ctnr); err != nil {
+	if err := SaveUnencryptedKeysToFile(buf, ctnr); err != nil {
 		t.Fatal(err)
 	}
 	enc := buf.Bytes()
-	dec := &unencryptedKeysContainer{}
+	dec := &UnencryptedKeysContainer{}
 	if err := json.Unmarshal(enc, dec); err != nil {
 		t.Fatal(err)
 	}

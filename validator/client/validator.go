@@ -4,14 +4,12 @@ package client
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -25,7 +23,6 @@ type validator struct {
 	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
-	beaconClient         pb.BeaconServiceClient
 	attesterClient       pb.AttesterServiceClient
 	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
@@ -46,7 +43,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
@@ -59,7 +56,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
@@ -96,7 +93,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not receive validator activation from stream")
@@ -110,9 +107,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 	}
 	for _, pk := range validatorActivatedRecords {
-		log.WithFields(logrus.Fields{
-			"publicKey": fmt.Sprintf("%#x", pk),
-		}).Info("Validator activated")
+		log.WithField("pubKey", hex.EncodeToString(pk)[:12]).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
@@ -122,40 +117,31 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
+		log := log.WithFields(logrus.Fields{
+			"pubKey": hex.EncodeToString(status.PublicKey)[:12],
+			"status": status.Status.Status.String(),
+		})
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
-			log.WithFields(logrus.Fields{
-				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"status":    status.Status.Status.String(),
-			}).Info("Validator has been activated")
+			log.Info("Validator has been activated")
 			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
-			log.WithFields(logrus.Fields{
-				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"status":    status.Status.Status.String(),
-			}).Info("Validator has been ejected")
+			log.Info("Validator has been ejected")
 			continue
 		}
 		if status.Status.DepositInclusionSlot == 0 {
-			log.WithFields(logrus.Fields{
-				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"status":    status.Status.Status.String(),
-			}).Info("Not yet included in state...")
+			log.Info("Not yet included in state...")
 			continue
 		}
 		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			log.WithFields(logrus.Fields{
-				"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-				"status":                    status.Status.Status.String(),
 				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
 				"positionInActivationQueue": status.Status.PositionInActivationQueue,
 			}).Info("Waiting to be activated")
 			continue
 		}
 		log.WithFields(logrus.Fields{
-			"publicKey":                 fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-			"status":                    status.Status.Status.String(),
 			"depositInclusionSlot":      status.Status.DepositInclusionSlot,
 			"activationEpoch":           status.Status.ActivationEpoch,
 			"positionInActivationQueue": status.Status.PositionInActivationQueue,
@@ -169,7 +155,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	head, err := v.validatorClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		return 0, err
 	}
@@ -216,11 +202,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		for _, assignment := range v.assignments.ValidatorAssignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
-			assignmentKey := hex.EncodeToString(assignment.PublicKey)
-			assignmentKey = assignmentKey[:12]
 			lFields := logrus.Fields{
-				"validator": assignmentKey,
-				"status":    assignment.Status,
+				"pubKey": hex.EncodeToString(assignment.PublicKey)[:12],
+				"status": assignment.Status,
 			}
 			if assignment.Status != pb.ValidatorStatus_ACTIVE {
 				log.WithFields(lFields).Info("New assignment")

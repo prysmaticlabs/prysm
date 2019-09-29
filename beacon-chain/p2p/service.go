@@ -2,64 +2,98 @@ package p2p
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/gogo/protobuf/proto"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
+	"github.com/karlseguin/ccache"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
-	network "github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared"
-	deprecatedp2p "github.com/prysmaticlabs/prysm/shared/deprecated-p2p"
-	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var _ = shared.Service(&Service{})
+
 var pollingPeriod = 1 * time.Second
+var ttl = 1 * time.Hour
+
+const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	started     bool
-	cfg         *Config
-	startupErr  error
-	dv5Listener Listener
-	host        host.Host
-	pubsub      *pubsub.PubSub
+	ctx           context.Context
+	cancel        context.CancelFunc
+	started       bool
+	cfg           *Config
+	startupErr    error
+	dv5Listener   Listener
+	host          host.Host
+	pubsub        *pubsub.PubSub
+	exclusionList *ccache.Cache
+	privKey       *ecdsa.PrivateKey
+	dht           *kaddht.IpfsDHT
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
 func NewService(cfg *Config) (*Service, error) {
+	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Service{
-		ctx:    ctx,
-		cancel: cancel,
-		cfg:    cfg,
+		ctx:           ctx,
+		cancel:        cancel,
+		cfg:           cfg,
+		exclusionList: ccache.New(ccache.Configure()),
 	}
 
+	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
+
+	cfg.Discv5BootStrapAddr = dv5Nodes
+	cfg.KademliaBootStrapAddr = kadDHTNodes
+
 	ipAddr := ipAddr(s.cfg)
-	privKey, err := privKey(s.cfg)
+	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
 		return nil, err
 	}
 
-	// TODO(3147): Add host options
-	opts := buildOptions(s.cfg, ipAddr, privKey)
+	opts := buildOptions(s.cfg, ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
 		return nil, err
+	}
+
+	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
+		dopts := []dhtopts.Option{
+			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+			dhtopts.Protocols(
+				protocol.ID(prysmProtocolPrefix + "/dht"),
+			),
+		}
+
+		s.dht, err = kaddht.New(ctx, h, dopts...)
+		if err != nil {
+			return nil, err
+		}
+		// Wrap host with a routed host so that peers can be looked up in the
+		// distributed hash table by their peer ID.
+		h = rhost.Wrap(h, s.dht)
 	}
 	s.host = h
 
@@ -68,7 +102,11 @@ func NewService(cfg *Config) (*Service, error) {
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host)
+	psOpts := []pubsub.Option{
+		pubsub.WithMessageSigning(false),
+		pubsub.WithStrictSignatureVerification(false),
+	}
+	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err
@@ -85,24 +123,52 @@ func (s *Service) Start() {
 		return
 	}
 
-	if s.cfg.BootstrapNodeAddr != "" && !s.cfg.NoDiscovery {
-		ipAddr := ipAddr(s.cfg)
-		privKey, err := privKey(s.cfg)
-		if err != nil {
-			s.startupErr = err
-			log.WithError(err).Error("Failed to generate p2p private key")
-			return
+	var peersToWatch []string
+	if s.cfg.RelayNodeAddr != "" {
+		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
+			log.WithError(err).Errorf("Could not dial relay node")
 		}
+	}
 
-		listener, err := startDiscoveryV5(ipAddr, privKey, s.cfg)
+	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+		ipAddr := ipAddr(s.cfg)
+		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
+			s.startupErr = err
+			return
+		}
+		err = s.addBootNodesToExclusionList()
+		if err != nil {
+			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
 			return
 		}
 		s.dv5Listener = listener
 
 		go s.listenForNewNodes()
+	}
+
+	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+		for _, addr := range s.cfg.KademliaBootStrapAddr {
+			peersToWatch = append(peersToWatch, addr)
+			err := startDHTDiscovery(s.host, addr)
+			if err != nil {
+				log.WithError(err).Error("Could not connect to bootnode")
+				s.startupErr = err
+				return
+			}
+			if err := s.addKadDHTNodesToExclusionList(addr); err != nil {
+				s.startupErr = err
+				return
+			}
+		}
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
+			log.WithError(err).Error("Failed to bootstrap DHT")
+		}
 	}
 
 	s.started = true
@@ -115,6 +181,7 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
+	startPeerWatcher(s.ctx, s.host, peersToWatch...)
 	registerMetrics(s)
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
@@ -179,24 +246,20 @@ func (s *Service) Disconnect(pid peer.ID) error {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	node, err := discv5.ParseNode(s.cfg.BootstrapNodeAddr)
-	if err != nil {
-		log.Fatalf("could not parse bootstrap address: %v", err)
-	}
-	nodeID := node.ID
 	ticker := time.NewTicker(pollingPeriod)
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.Discv5BootStrapAddr[0])
+	if err != nil {
+		log.Fatal(err)
+	}
 	for {
 		select {
 		case <-ticker.C:
-			nodes := s.dv5Listener.Lookup(nodeID)
+			nodes := s.dv5Listener.Lookup(bootNode.ID())
 			multiAddresses := convertToMultiAddr(nodes)
 			s.connectWithAllPeers(multiAddresses)
-			// store furthest node as the next to lookup
-			nodeID = nodes[len(nodes)-1].ID
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
 			break
-
 		}
 	}
 }
@@ -211,10 +274,49 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
+		if s.exclusionList.Get(info.ID.String()) != nil {
+			continue
+		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
-			log.Errorf("Could not connect with peer: %v", err)
+			log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+			s.exclusionList.Set(info.ID.String(), true, ttl)
 		}
 	}
+}
+
+func (s *Service) addBootNodesToExclusionList() error {
+	for _, addr := range s.cfg.Discv5BootStrapAddr {
+		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
+		if err != nil {
+			return err
+		}
+		multAddr, err := convertToSingleMultiAddr(bootNode)
+		if err != nil {
+			return err
+		}
+		addrInfo, err := peer.AddrInfoFromP2pAddr(multAddr)
+		if err != nil {
+			return err
+		}
+		// bootnode is never dialled, so ttl is tentatively 1 year
+		s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+	}
+
+	return nil
+}
+
+func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
+	multiAddr, err := ma.NewMultiaddr(addr)
+	if err != nil {
+		return errors.Wrap(err, "could not get multiaddr")
+	}
+	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return err
+	}
+	// bootnode is never dialled, so ttl is tentatively 1 year
+	s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+	return nil
 }
 
 func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
@@ -226,11 +328,4 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 		}
 	}
 	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
-}
-
-// Subscribe to some topic.
-// TODO(3147): Remove
-// DEPRECATED: Do not use.
-func (s *Service) Subscribe(_ proto.Message, _ chan deprecatedp2p.Message) event.Subscription {
-	return nil
 }

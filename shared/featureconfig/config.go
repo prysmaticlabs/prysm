@@ -25,23 +25,16 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	DisableHistoricalStatePruning bool // DisableHistoricalStatePruning when updating finalized states.
-	DisableGossipSub              bool // DisableGossipSub in p2p messaging.
-	EnableExcessDeposits          bool // EnableExcessDeposits in validator balances.
-	NoGenesisDelay                bool // NoGenesisDelay when processing a chain start genesis event.
-	UseNewP2P                     bool // UseNewP2P service.
-	UseNewSync                    bool // UseNewSync services.
-	UseNewDatabase                bool // UseNewDatabase service.
-	UseNewBlockChainService       bool // UseNewBlockChainService service.
+	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
+	MinimalConfig            bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify            bool // Skips BLS verification across the runtime.
 
 	// Cache toggles.
-	EnableActiveBalanceCache bool // EnableActiveBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAncestorBlockCache bool // EnableAncestorBlockCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSeedCache          bool // EnableSeedCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableStartShardCache    bool // EnableStartShardCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableTotalBalanceCache  bool // EnableTotalBalanceCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -63,61 +56,37 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
-	if ctx.GlobalBool(DisableHistoricalStatePruningFlag.Name) {
-		log.Info("Enabled historical state pruning")
-		cfg.DisableHistoricalStatePruning = true
-	}
-	if ctx.GlobalBool(DisableGossipSubFlag.Name) {
-		log.Info("Disabled gossipsub, using floodsub")
-		cfg.DisableGossipSub = true
+	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
 	}
 	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewP2PFlag.Name) {
-		log.Warn("Using new P2P service.")
-		cfg.UseNewP2P = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewSyncFlag.Name) {
-		log.Warn("Using new sync services.")
-		cfg.UseNewSync = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewDatabaseFlag.Name) {
-		log.Warn("Using new database service.")
-		cfg.UseNewDatabase = true
-	}
-	if ctx.GlobalBool(NextFlag.Name) || ctx.GlobalBool(UseNewBlockChainFlag.Name) {
-		log.Warn("Using new blockchain service.")
-		cfg.UseNewBlockChainService = true
-	}
-	if ctx.GlobalBool(EnableActiveBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe active balance cache")
-		cfg.EnableActiveBalanceCache = true
+	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
+		log.Warn("Writing SSZ states and blocks after state transitions")
+		cfg.WriteSSZStateTransitions = true
 	}
 	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
 	}
-	if ctx.GlobalBool(EnableAncestorBlockCacheFlag.Name) {
-		log.Warn("Enabled unsafe ancestor block cache")
-		cfg.EnableAncestorBlockCache = true
-	}
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
-	if ctx.GlobalBool(EnableSeedCacheFlag.Name) {
-		log.Warn("Enabled unsafe seed cache")
-		cfg.EnableSeedCache = true
+	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
+		log.Warn("Initial syncing without verifying block's contents")
+		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(EnableStartShardCacheFlag.Name) {
-		log.Warn("Enabled unsafe start shard cache")
-		cfg.EnableStartShardCache = true
+	if ctx.GlobalBool(NewCacheFlag.Name) {
+		log.Warn("Using new cache for committee shuffled indices")
+		cfg.EnableNewCache = true
 	}
-	if ctx.GlobalBool(EnableTotalBalanceCacheFlag.Name) {
-		log.Warn("Enabled unsafe total balance cache")
-		cfg.EnableTotalBalanceCache = true
+	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
+		log.Warn("UNSAFE: Skipping BLS verification at runtime")
+		cfg.SkipBLSVerify = true
 	}
 	InitFeatureConfig(cfg)
 }
@@ -126,5 +95,9 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidatorFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
+	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
+	}
 	InitFeatureConfig(cfg)
 }

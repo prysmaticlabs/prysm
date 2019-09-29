@@ -10,13 +10,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
-var startShardCache = cache.NewStartShardCache()
+var committeeCache = cache.NewCommitteeCache()
 
 // CommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -31,6 +33,16 @@ var startShardCache = cache.NewStartShardCache()
 //    ))
 //    return committees_per_slot * SLOTS_PER_EPOCH
 func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		count, exists, err := committeeCache.CommitteeCount(epoch)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if exists {
+			return count, nil
+		}
+	}
+
 	minCommitteePerSlot := uint64(1)
 	// Max committee count per slot will be 0 when shard count is less than epoch length, this
 	// covers the special case to ensure there's always 1 max committee count per slot.
@@ -68,6 +80,16 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //        count=get_committee_count(state, epoch),
 //    )
 func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		indices, err := committeeCache.ShuffledIndices(epoch, shard)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if indices != nil {
+			return indices, nil
+		}
+	}
+
 	seed, err := Seed(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -110,15 +132,15 @@ func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]ui
 func ComputeCommittee(
 	validatorIndices []uint64,
 	seed [32]byte,
-	index uint64,
+	indexShard uint64,
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := SplitOffset(validatorCount, totalCommittees, index)
-	end := SplitOffset(validatorCount, totalCommittees, index+1)
+	start := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard)
+	end := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +158,7 @@ func ComputeCommittee(
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
-		Index:           index,
+		Index:           indexShard,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
@@ -175,15 +197,15 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 	return indices, nil
 }
 
-// VerifyBitfield validates a bitfield with a given committee size.
-func VerifyBitfield(bf bitfield.Bitfield, committeeSize uint64) (bool, error) {
+// VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
+func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	if bf.Len() != committeeSize {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			committeeSize,
 			bf.Len())
 	}
-	return true, nil
+	return nil
 }
 
 // CommitteeAssignment is used to query committee assignment from
@@ -269,7 +291,7 @@ func CommitteeAssignment(
 // ShardDelta returns the minimum number of shards get processed in one epoch.
 //
 // Note: if you already have the committee count,
-// use ShardDeltaFromCommitteeCount as CommitteeCount (specifically
+// use shardDeltaFromCommitteeCount as CommitteeCount (specifically
 // ActiveValidatorCount) iterates over the entire validator set.
 //
 // Spec pseudocode definition:
@@ -283,14 +305,14 @@ func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get committee count")
 	}
-	return ShardDeltaFromCommitteeCount(committeeCount), nil
+	return shardDeltaFromCommitteeCount(committeeCount), nil
 }
 
-// ShardDeltaFromCommitteeCount returns the number of shards that get processed
+// shardDeltaFromCommitteeCount returns the number of shards that get processed
 // in one epoch. This method is the inner logic of ShardDelta.
 // Returns the minimum of the committeeCount and maximum shard delta which is
 // defined as SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH.
-func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
+func shardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 	shardCount := params.BeaconConfig().ShardCount
 	maxShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
 	if committeeCount < maxShardDelta {
@@ -316,12 +338,14 @@ func ShardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 //        shard = Shard((shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT)
 //    return shard
 func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	startShard, err := startShardCache.StartShardInEpoch(epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not retrieve start shard from cache")
-	}
-	if startShard != params.BeaconConfig().FarFutureEpoch {
-		return startShard, nil
+	if featureconfig.FeatureConfig().EnableNewCache {
+		startShard, exists, err := committeeCache.StartShard(epoch)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if exists {
+			return startShard, nil
+		}
 	}
 
 	currentEpoch := CurrentEpoch(state)
@@ -337,7 +361,7 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get shard delta")
 	}
 
-	startShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
+	startShard := (state.StartShard + delta) % params.BeaconConfig().ShardCount
 	for checkEpoch > epoch {
 		checkEpoch--
 		d, err := ShardDelta(state, checkEpoch)
@@ -347,28 +371,28 @@ func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
 		startShard = (startShard + params.BeaconConfig().ShardCount - d) % params.BeaconConfig().ShardCount
 	}
 
-	if err := startShardCache.AddStartShard(&cache.StartShardByEpoch{
-		Epoch:      epoch,
-		StartShard: startShard,
-	}); err != nil {
-		return 0, errors.Wrap(err, "could not save start shard for cache")
-	}
-
 	return startShard, nil
 }
 
-// VerifyAttestationBitfield verifies that an attestations bitfield is valid in respect
-// to the committees at that slot.
-func VerifyAttestationBitfield(bState *pb.BeaconState, att *ethpb.Attestation) (bool, error) {
+// VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
+// a valid length matching the size of the committee.
+func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := CrosslinkCommittee(bState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
 	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve crosslink committees at slot")
+		return errors.Wrap(err, "could not retrieve crosslink committees")
 	}
 
 	if committee == nil {
-		return false, fmt.Errorf("no committee exist for shard in the attestation")
+		return errors.New("no committee exist for shard in the attestation")
 	}
-	return VerifyBitfield(att.AggregationBits, uint64(len(committee)))
+
+	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+		return errors.Wrap(err, "failed to verify aggregation bitfield")
+	}
+	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
+		return errors.Wrap(err, "failed to verify custody bitfield")
+	}
+	return nil
 }
 
 // CompactCommitteesRoot returns the index root of a given epoch.
@@ -447,7 +471,6 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 				compactCommArray[shard].Pubkeys = append(compactCommArray[shard].Pubkeys, validator.PublicKey)
 				compactValidator := compressValidator(validator, index)
 				compactCommArray[shard].CompactValidators = append(compactCommArray[shard].CompactValidators, compactValidator)
-
 			}
 		}
 		return ssz.HashTreeRoot(compactCommArray)
@@ -455,6 +478,61 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 		return [32]byte{}, fmt.Errorf("expected minimal or mainnet config shard count, received %d", shardCount)
 	}
 
+}
+
+// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
+// the shuffled indices then can be used to break up into committees.
+func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
+	seed, err := Seed(state, epoch)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
+	}
+
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get active indices %d", epoch)
+	}
+
+	validatorCount := uint64(len(indices))
+	shuffledIndices := make([]uint64, validatorCount)
+	for i := 0; i < len(shuffledIndices); i++ {
+		permutedIndex, err := ShuffledIndex(uint64(i), validatorCount, seed)
+		if err != nil {
+			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
+		}
+		shuffledIndices[i] = indices[permutedIndex]
+	}
+
+	return shuffledIndices, nil
+}
+
+// UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
+// list with start shard and epoch number. It caches the shuffled indices for current epoch and next epoch.
+func UpdateCommitteeCache(state *pb.BeaconState) error {
+	currentEpoch := CurrentEpoch(state)
+	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
+		committees, err := ShuffledIndices(state, epoch)
+		if err != nil {
+			return err
+		}
+		startShard, err := StartShard(state, epoch)
+		if err != nil {
+			return err
+		}
+		committeeCount, err := CommitteeCount(state, epoch)
+		if err != nil {
+			return err
+		}
+		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
+			Epoch:          epoch,
+			Committee:      committees,
+			StartShard:     startShard,
+			CommitteeCount: committeeCount,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // compressValidator compacts all the validator data such as validator index, slashing info and balance
@@ -473,6 +551,6 @@ func compressValidator(validator *ethpb.Validator, idx uint64) uint64 {
 	}
 	// Clear all bits except last 15.
 	compactBalance &= 0x7FFF // 0b01111111 0b11111111
-	compactValidator := compactIndex | uint64(slashedBit|compactBalance)
+	compactValidator := compactIndex | slashedBit | compactBalance
 	return compactValidator
 }

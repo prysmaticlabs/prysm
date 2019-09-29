@@ -14,6 +14,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -43,7 +44,7 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	helpers.ClearStartShardCache()
+
 	b.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
@@ -62,12 +63,15 @@ func ExecuteStateTransition(
 		}
 	}
 
+	interop.WriteBlockToDisk(block, false)
+	interop.WriteStateToDisk(state)
+
 	postStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
 	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
-		return nil, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], block.StateRoot)
 	}
 
@@ -75,12 +79,11 @@ func ExecuteStateTransition(
 }
 
 // ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
-// This does not validate state root, The use case of such is for state root calculation, the proposer
-// should first run state transition on an unsigned block containing a stub for the state root and signature.
-// This does not modify state.
+// This does not validate any BLS signatures in a block, it is used for performing a state transition as quickly
+// as possible. This function should only be used when we can trust the data we're receiving entirely, such as
+// initial sync or for processing past accepted blocks.
 //
-// WARNING: This method does not validate state root and proposer signature. This is used for proposer to compute
-// state root before proposing a new block, and this does not modify state.
+// WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
 //
 // Spec pseudocode definition:
 //  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
@@ -99,28 +102,79 @@ func ExecuteStateTransitionNoVerify(
 		return nil, ctx.Err()
 	}
 
-	stateCopy := proto.Clone(state).(*pb.BeaconState)
-	helpers.ClearStartShardCache()
 	b.ClearEth1DataVoteCache()
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionNoVerify")
 	defer span.End()
 	var err error
 
 	// Execute per slots transition.
-	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
+	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
 	if block != nil {
-		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
+		state, err = processBlockNoVerify(ctx, state, block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
-	return stateCopy, nil
+	return state, nil
+}
+
+// CalculateStateRoot defines the procedure for a state transition function.
+// This does not validate any BLS signatures in a block, it is used for calculating the
+// state root of the state for the block proposer to use.
+// This does not modify state.
+//
+// WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
+// state root before proposing a new block, and this does not modify state.
+//
+// Spec pseudocode definition:
+//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//    # Process slots (including those with no blocks) since block
+//    process_slots(state, block.slot)
+//    # Process block
+//    process_block(state, block)
+//    # Return post-state
+//    return state
+func CalculateStateRoot(
+	ctx context.Context,
+	state *pb.BeaconState,
+	block *ethpb.BeaconBlock,
+) ([32]byte, error) {
+	if ctx.Err() != nil {
+		return [32]byte{}, ctx.Err()
+	}
+
+	stateCopy := proto.Clone(state).(*pb.BeaconState)
+	b.ClearEth1DataVoteCache()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
+	defer span.End()
+	var err error
+
+	// Execute per slots transition.
+	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	if block != nil {
+		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not process block")
+		}
+	}
+
+	root, err := ssz.HashTreeRoot(stateCopy)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not tree hash beacon state")
+	}
+
+	return root, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -142,6 +196,8 @@ func ExecuteStateTransitionNoVerify(
 func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
+
 	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
@@ -267,7 +323,7 @@ func processBlockNoVerify(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandao(state, block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
@@ -360,10 +416,10 @@ func ProcessOperations(
 }
 
 // processOperationsNoVerify processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not validate the attestation signature
+// with the operations in block. It does not verify attestation signatures or voluntary exit signatures.
 //
-// WARNING: This method does not verify attestation signature. This is used for proposer to compute state root
-// using a unsigned block.
+// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
+// This is used to perform the block operations as fast as possible.
 //
 // Spec pseudocode definition:
 //
@@ -424,7 +480,7 @@ func processOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -517,6 +573,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
 
 	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
 	if err != nil {
