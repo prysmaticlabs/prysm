@@ -85,7 +85,7 @@ func (r *RegularSync) Stop() error {
 
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
-	if r.initialSync.Syncing() {
+	if r.chainStarted && r.initialSync.Syncing() {
 		return errors.New("waiting for initial sync")
 	}
 	return nil
