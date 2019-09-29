@@ -18,9 +18,7 @@ func BenchmarkSignature_Verify(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if !sig.Verify(msg, sk.PublicKey(), domain) {
-			b.Fatal("could not verify sig")
-		}
+		sig.Verify(msg, sk.PublicKey(), domain)
 	}
 }
 
@@ -43,8 +41,6 @@ func BenchmarkSignature_VerifyAggregate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if !aggregated.VerifyAggregateCommon(pks, msg, domain) {
-			b.Fatal("could not verify aggregate sig")
-		}
+		aggregated.VerifyAggregateCommon(pks, msg, domain)
 	}
 }

@@ -965,6 +965,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_kilic_bls12-381",
+    commit = "45bd4a389fdcb78e1ff3196a9ee6b3a251bc1c13",
+    importpath = "github.com/kilic/bls12-381",
+)
+
+go_repository(
     name = "com_github_multiformats_go_base32",
     commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",  # v0.0.3
     importpath = "github.com/multiformats/go-base32",
