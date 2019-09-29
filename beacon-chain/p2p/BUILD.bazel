@@ -33,6 +33,7 @@ go_library(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared:go_default_library",
         "//shared/iputils:go_default_library",
+        "//shared/traceutil:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",

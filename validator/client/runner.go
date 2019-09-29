@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -53,8 +54,7 @@ func run(ctx context.Context, v Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 	for {
-		ctx, span := trace.StartSpan(ctx, "processSlot")
-		defer span.End()
+		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
@@ -74,10 +74,15 @@ func run(ctx context.Context, v Validator) {
 			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
+				span.End()
 				continue
 			}
+
+			var wg sync.WaitGroup
 			for id, role := range v.RolesAt(slot) {
+				wg.Add(1)
 				go func(role pb.ValidatorRole, id string) {
+					defer wg.Done()
 					switch role {
 					case pb.ValidatorRole_ATTESTER:
 						v.AttestToBlockHead(slotCtx, slot, id)
@@ -100,6 +105,11 @@ func run(ctx context.Context, v Validator) {
 
 				}(role, id)
 			}
+			// Wait for all processes to complete, then report span complete.
+			go func() {
+				wg.Wait()
+				span.End()
+			}()
 		}
 	}
 }
