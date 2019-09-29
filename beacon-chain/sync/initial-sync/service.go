@@ -57,11 +57,10 @@ func (s *InitialSync) Start() {
 	var genesis time.Time
 
 	// Wait for state to be initialized, if not already.
+	ch := make(chan time.Time)
+	sub := s.chain.StateInitializedFeed().Subscribe(ch)
+	defer sub.Unsubscribe()
 	if s.chain.HeadState() == nil {
-		ch := make(chan time.Time)
-		sub := s.chain.StateInitializedFeed().Subscribe(ch)
-		defer sub.Unsubscribe()
-
 		// Wait until chain start.
 		genesis = <-ch
 	} else {
