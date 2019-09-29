@@ -22,6 +22,8 @@ go_library(
         "//shared/roughtime:go_default_library",
         "//shared/slotutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
+        "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",

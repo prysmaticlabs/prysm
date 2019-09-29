@@ -9,6 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -96,16 +97,20 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(data []byte, fromSelf bool) {
+		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
+		defer span.End()
+
 		defer func() {
 			if r := recover(); r != nil {
+				traceutil.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
 				log.WithField("error", r).Error("Panic occurred")
 				debug.PrintStack()
 			}
 		}()
-		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
-		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
-		defer span.End()
+
 		span.AddAttributes(trace.StringAttribute("topic", topic))
+		span.AddAttributes(trace.BoolAttribute("fromSelf", fromSelf))
 
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
@@ -114,17 +119,22 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 		msg := proto.Clone(base)
 		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
+			traceutil.AnnotateError(span, err)
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}
 
 		if !validate(ctx, msg, r.p2p, fromSelf) {
 			// TODO(3147): Increment metrics.
+			if !fromSelf {
+				log.WithError(err).Debug("Message failed to verify")
+			}
 			return
 		}
 
 		if err := handle(ctx, msg); err != nil {
 			// TODO(3147): Increment metrics.
+			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
 			return
 		}
