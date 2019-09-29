@@ -354,13 +354,13 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2+1
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
 	headRoot, _ := ssz.SigningRoot(headBlock)
 	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
-		Epoch:                helpers.SlotToEpoch(finalizedSlot),
-		Root:                 headRoot[:],
+		Epoch: helpers.SlotToEpoch(finalizedSlot),
+		Root:  headRoot[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
