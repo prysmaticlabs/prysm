@@ -184,6 +184,30 @@ func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
 	return item.StartShard, true, nil
 }
 
+// ActiveIndices returns the active indices of a given epoch stored in cache.
+func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return nil, nil
+	}
+
+	item, ok := obj.(*Committee)
+	if !ok {
+		return nil, ErrNotCommittee
+	}
+
+	return item.Committee, nil
+}
+
 func startEndIndices(c *Committee, wantedShard uint64) (uint64, uint64) {
 	shardCount := params.BeaconConfig().ShardCount
 	currentShard := (wantedShard + shardCount - c.StartShard) % shardCount
