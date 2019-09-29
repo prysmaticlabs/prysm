@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -117,6 +118,13 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if helpers.IsEpochStart(postState.Slot) {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
+
+		// Update committee shuffled indices at the end of every epoch
+		if featureconfig.FeatureConfig().EnableNewCache {
+			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

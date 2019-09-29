@@ -54,12 +54,19 @@ func NewInitialSync(cfg *Config) *InitialSync {
 
 // Start the initial sync service.
 func (s *InitialSync) Start() {
+	var genesis time.Time
+
+	// Wait for state to be initialized, if not already.
 	ch := make(chan time.Time)
 	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
+	if s.chain.HeadState() == nil {
+		// Wait until chain start.
+		genesis = <-ch
+	} else {
+		genesis = time.Unix(int64(s.chain.HeadState().GenesisTime), 0)
+	}
 
-	// Wait until chain start.
-	genesis := <-ch
 	if genesis.After(roughtime.Now()) {
 		log.WithField(
 			"genesis time",
