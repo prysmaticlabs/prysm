@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "helpers.go",
+        "service.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/light-client",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/db:go_default_library",
+        "//proto/light/v1alpha1:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+    ],
+)
