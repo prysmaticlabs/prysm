@@ -123,7 +123,7 @@ func SignBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBlock, privKeys [
 		return nil, err
 	}
 	epoch := helpers.SlotToEpoch(block.Slot)
-	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 	block.Signature = blockSig[:]
 	return block, nil
@@ -138,7 +138,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal(), nil
