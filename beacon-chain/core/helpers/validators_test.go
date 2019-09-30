@@ -289,7 +289,7 @@ func TestDomain_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)))
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
 	}
 }
