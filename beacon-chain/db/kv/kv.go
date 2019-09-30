@@ -7,7 +7,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/karlseguin/ccache"
+	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // BlockCacheSize specifies 4 epochs worth of blocks cached.
@@ -81,6 +83,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
+	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
 }
@@ -90,11 +93,13 @@ func (k *Store) ClearDB() error {
 	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
 		return nil
 	}
+	prometheus.Unregister(createBoltCollector(k.db))
 	return os.RemoveAll(k.databasePath)
 }
 
 // Close closes the underlying BoltDB database.
 func (k *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(k.db))
 	return k.db.Close()
 }
 
@@ -110,4 +115,9 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 		}
 	}
 	return nil
+}
+
+// createBoltCollector returns a prometheus collector specifically configured for boltdb.
+func createBoltCollector(db *bolt.DB) prometheus.Collector {
+	return prombolt.New("boltDB", db)
 }
