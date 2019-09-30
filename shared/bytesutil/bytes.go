@@ -137,7 +137,7 @@ func Xor(x []byte, y []byte) []byte {
 
 // Trunc truncates the byte slices to 12 bytes.
 func Trunc(x []byte) []byte {
-	if len(x) > 1 {
+	if len(x) > 12 {
 		return x[:12]
 	}
 	return x
