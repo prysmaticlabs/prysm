@@ -111,6 +111,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
+		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 
