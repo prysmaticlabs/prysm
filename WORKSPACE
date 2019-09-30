@@ -1158,7 +1158,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_sigs_yaml",
-    commit = "4cd0c284b15f1735b8cc247df097d262b8903f9f",
+    commit = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",  # v1.1.0
     importpath = "sigs.k8s.io/yaml",
 )
 
