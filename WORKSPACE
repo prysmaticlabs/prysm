@@ -812,7 +812,7 @@ go_repository(
 go_repository(
     name = "io_k8s_client_go",
     build_extra_args = ["-exclude=vendor"],
-    commit = "0c47f9da00011ea9a8717671127ac21625c7a6c0",
+    commit = "c1ea390cb7f7ca6d6345b4d3bcfd5546028cee20",  # v12.0.0
     importpath = "k8s.io/client-go",
 )
 
