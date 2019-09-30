@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 
@@ -108,6 +109,9 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sort.Slice(retrieved, func(i, j int) bool {
+		return retrieved[i].Data.Crosslink.Shard < retrieved[j].Data.Crosslink.Shard
+	})
 	if !reflect.DeepEqual(retrieved, oddAtts) {
 		t.Errorf("Wanted %v, received %v", oddAtts, retrieved)
 	}
