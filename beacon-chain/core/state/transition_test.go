@@ -1072,27 +1072,19 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 	}
 
 	// Set up randao reveal object for block
-	proposerIdx, err := helpers.BeaconProposerIndex(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.Domain(sCopy, 1, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature, err := testutil.CreateRandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
 	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
 	blk := &ethpb.BeaconBlock{
 		Slot:       s.Slot,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:     &ethpb.Eth1Data{},
-			RandaoReveal: epochSignature.Marshal(),
+			RandaoReveal: epochSignature,
 			Attestations: atts,
 		},
 	}
 
-	proposerIdx, err = helpers.BeaconProposerIndex(s)
+	proposerIdx, err := helpers.BeaconProposerIndex(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1101,7 +1093,7 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 		t.Fatal(err)
 	}
 	epoch := helpers.SlotToEpoch(blk.Slot)
-	domain = helpers.Domain(s, epoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(s, epoch, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 	blk.Signature = blockSig[:]
 
