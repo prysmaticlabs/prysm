@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -34,11 +35,13 @@ const counterSeconds = 20
 // after the finalized epoch, request blocks to head from some subset of peers
 // where step = 1.
 func (s *InitialSync) roundRobinSync(genesis time.Time) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 
 	var lastEmptyRequests int
+	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
@@ -57,11 +60,15 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
+			var wg sync.WaitGroup
 
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
 
 			for i, pid := range peers {
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
 				start := start + uint64(i)*step
 				step := step * uint64(len(peers))
 				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
@@ -82,30 +89,50 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					Step:          step,
 				}
 
-				resp, err := s.requestBlocks(ctx, req, pid)
-				log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
-				if err != nil {
-					// fail over to other peers by splitting this requests evenly across them.
-					ps := append(peers[:i], peers[i+1:]...)
-					log.WithError(err).WithField(
-						"remaining peers",
-						len(ps),
-					).WithField(
-						"peer",
-						pid.Pretty(),
-					).Debug("Request failed, trying to round robin with other peers")
-					if len(ps) == 0 {
-						return nil, errors.WithStack(errors.New("no peers left to request blocks"))
-					}
-					_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
+				// Fulfill requests asynchronously, in parallel, and wait for results from all.
+				wg.Add(1)
+				go func(i int, pid peer.ID) {
+					defer wg.Done()
+					resp, err := s.requestBlocks(ctx, req, pid)
+					log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 					if err != nil {
-						return nil, err
+						// fail over to other peers by splitting this requests evenly across them.
+						ps := append(peers[:i], peers[i+1:]...)
+						log.WithError(err).WithField(
+							"remaining peers",
+							len(ps),
+						).WithField(
+							"peer",
+							pid.Pretty(),
+						).Debug("Request failed, trying to round robin with other peers")
+						if len(ps) == 0 {
+							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
+							return
+						}
+						_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
+						if err != nil {
+							errChan <- err
+							return
+						}
 					}
-				}
-				blocks = append(blocks, resp...)
+					blocks = append(blocks, resp...)
+				}(i, pid)
 			}
 
-			return blocks, nil
+			// Wait for done signal or any error.
+			done := make(chan interface{})
+			go func() {
+				wg.Wait()
+				done <- true
+			}()
+			for {
+				select {
+				case err := <-errChan:
+					return nil, err
+				case <-done:
+					return blocks, nil
+				}
+			}
 		}
 
 		blocks, err := request(
