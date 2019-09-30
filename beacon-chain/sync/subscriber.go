@@ -125,17 +125,17 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		}
 
 		if !validate(ctx, msg, r.p2p, fromSelf) {
-			// TODO(3147): Increment metrics.
 			if !fromSelf {
 				log.WithError(err).Debug("Message failed to verify")
+				messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			}
 			return
 		}
 
 		if err := handle(ctx, msg); err != nil {
-			// TODO(3147): Increment metrics.
 			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
+			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 	}
