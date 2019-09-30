@@ -78,7 +78,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
-	err = prometheus.Register(prombolt.New("boltDB", kv.db))
+	prometheus.MustRegister(createBoltCollector(kv.db))
 
 	return kv, err
 }
@@ -108,4 +108,8 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 		}
 	}
 	return nil
+}
+
+func createBoltCollector(db *bolt.DB) prometheus.Collector {
+	return prombolt.New("boltDB", db)
 }
