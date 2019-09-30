@@ -7,7 +7,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/karlseguin/ccache"
+	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // BlockCacheSize specifies 4 epochs worth of blocks cached.
@@ -76,6 +78,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
+	err = prometheus.Register(prombolt.New("boltDB", kv.db))
 
 	return kv, err
 }
