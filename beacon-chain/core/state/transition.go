@@ -284,21 +284,25 @@ func ProcessBlock(
 
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
