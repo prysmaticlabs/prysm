@@ -173,7 +173,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	proposerSlashIdx := uint64(3)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      1,
@@ -222,7 +222,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -469,7 +469,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(
-		beaconState,
+		beaconState.Fork,
 		currentEpoch,
 		params.BeaconConfig().DomainBeaconProposer,
 	)
@@ -521,7 +521,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -610,7 +610,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	domain = helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
 	exit.Signature = privKeys[exit.ValidatorIndex].Sign(signingRoot[:], domain).Marshal()[:]
 
 	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
@@ -927,7 +927,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
 	// Set up transfer object for block
