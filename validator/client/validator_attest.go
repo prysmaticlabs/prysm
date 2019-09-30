@@ -116,7 +116,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	log.WithFields(logrus.Fields{
 		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
-		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
 	}).Info("Attested latest head")
