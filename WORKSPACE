@@ -1221,7 +1221,7 @@ go_repository(
 
 go_repository(
     name = "com_github_paulbellamy_ratecounter",
-    commit = "a803f0e4f07116687bb30965e8f7d0c32981b63c",
+    commit = "524851a93235ac051e3540563ed7909357fe24ab",  # v0.2.0
     importpath = "github.com/paulbellamy/ratecounter",
 )
 
