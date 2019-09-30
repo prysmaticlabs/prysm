@@ -1005,6 +1005,196 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 }
 
+func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
+	logrus.SetLevel(logrus.PanicLevel)
+	helpers.ClearAllCaches()
+
+	validatorCount := uint64(512)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, validatorCount)
+	s, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 128 validators per attestation
+	aggBits := bitfield.NewBitlist(8)
+	custodyBits := bitfield.NewBitlist(8)
+	for i := uint64(1); i < 8; i++ {
+		aggBits.SetBitAt(i, true)
+	}
+	// 128 attestations per block
+	atts := make([]*ethpb.Attestation, 64)
+	for i := 0; i < len(atts); i++ {
+		att := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard:      uint64(i),
+					StartEpoch: 0,
+				},
+			},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
+		}
+		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+		if err != nil {
+			t.Error(err)
+		}
+		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+			Data:       att.Data,
+			CustodyBit: false,
+		}
+		domain := helpers.Domain(s, 0, params.BeaconConfig().DomainAttestation)
+		sigs := make([]*bls.Signature, len(attestingIndices))
+		zeroSig := [96]byte{}
+		att.Signature = zeroSig[:]
+		for i, indice := range attestingIndices {
+			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+			if err != nil {
+				t.Error(err)
+			}
+			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			sigs[i] = sig
+		}
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+		atts[i] = att
+	}
+
+	// Set up randao reveal object for block
+	proposerIdx, err := helpers.BeaconProposerIndex(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, 0)
+	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
+	blk := &ethpb.BeaconBlock{
+		Slot:       s.Slot,
+		ParentRoot: parentRoot[:],
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
+			RandaoReveal: epochSignature.Marshal(),
+			Attestations: atts,
+		},
+	}
+
+	signingRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.SlotToEpoch(blk.Slot)
+	domain = helpers.Domain(s, epoch, params.BeaconConfig().DomainBeaconProposer)
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+	blk.Signature = blockSig[:]
+
+	config := params.BeaconConfig()
+	config.MinAttestationInclusionDelay = 0
+	params.OverrideBeaconConfig(config)
+	_, err = state.ProcessBlock(context.Background(), s, blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func BenchmarkProcessBlk_65536Validators_JustAtts(b *testing.B) {
+	logrus.SetLevel(logrus.PanicLevel)
+	helpers.ClearAllCaches()
+
+	validatorCount := uint64(65536)
+	deposits, privKeys := testutil.SetupInitialDeposits(b, validatorCount)
+	s, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// 512 validators per attestation
+	aggBits := bitfield.NewBitlist(512)
+	custodyBits := bitfield.NewBitlist(1)
+	for i := uint64(1); i < 512; i++ {
+		aggBits.SetBitAt(i, true)
+	}
+	// 128 attestations per block
+	atts := make([]*ethpb.Attestation, 128)
+	for i := 0; i < len(atts); i++ {
+		att := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard:      uint64(i),
+					StartEpoch: 0,
+				},
+			},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
+		}
+		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+		if err != nil {
+			b.Error(err)
+		}
+		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+			Data:       att.Data,
+			CustodyBit: false,
+		}
+		domain := helpers.Domain(s, 0, params.BeaconConfig().DomainAttestation)
+		sigs := make([]*bls.Signature, len(attestingIndices))
+		zeroSig := [96]byte{}
+		att.Signature = zeroSig[:]
+		for i, indice := range attestingIndices {
+			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+			if err != nil {
+				b.Error(err)
+			}
+			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			sigs[i] = sig
+		}
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+		atts[i] = att
+	}
+
+	// Set up randao reveal object for block
+	proposerIdx, err := helpers.BeaconProposerIndex(s)
+	if err != nil {
+		b.Fatal(err)
+	}
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, 0)
+	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
+	epochSignature := priv.Sign(buf, domain)
+
+	blk := &ethpb.BeaconBlock{
+		Slot: s.Slot,
+		Body: &ethpb.BeaconBlockBody{
+			RandaoReveal: epochSignature.Marshal(),
+			Attestations: atts,
+		},
+	}
+
+	// Precache the shuffled indices
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := state.ProcessBlock(context.Background(), s, blk)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
