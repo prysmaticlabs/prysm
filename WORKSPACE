@@ -1231,3 +1231,10 @@ go_repository(
     sum = "h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=",
     version = "v0.0.4",
 )
+
+go_repository(
+    name = "com_github_mdlayher_prombolt",
+    importpath = "github.com/mdlayher/prombolt",
+    sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
+    version = "v0.0.0-20161005185022-dfcf01d20ee9",
+)
