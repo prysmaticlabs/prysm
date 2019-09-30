@@ -776,7 +776,6 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	state := &pbp2p.BeaconState{Slot: 0}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -803,7 +802,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		chainStartFetcher: p,
 		blockFetcher:      p,
 		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		headFetcher:       &mockChain.ChainService{Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
