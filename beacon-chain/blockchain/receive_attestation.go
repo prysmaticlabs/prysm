@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -71,21 +71,27 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	log.WithFields(logrus.Fields{
 		"attTargetSlot": attSlot,
 		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Debug("Finished updating fork choice store for attestation")
+	}).Debug("Finished updating validator vote for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := s.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
+	// Only save head if it's different than the current head.
+	if !bytes.Equal(headRoot, s.HeadRoot()) {
+		headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			return errors.Wrap(err, "could not compute state from block head")
+		}
+		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
+		log.WithFields(logrus.Fields{
+			"headSlot": headBlk.Slot,
+			"headRoot": hex.EncodeToString(headRoot),
+		}).Debug("Saved new head")
 	}
-	log.WithFields(logrus.Fields{
-		"headSlot": headBlk.Slot,
-		"headRoot": hex.EncodeToString(headRoot),
-	}).Debug("Finished applying fork choice for attestation")
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
 	if !helpers.IsEpochStart(attSlot) {
@@ -96,11 +102,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
 		}
 		isCompetingAtts(targetRoot, att.Data.Target.Root[:])
-	}
-
-	// Save head info after running fork choice.
-	if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head")
 	}
 
 	processedAttNoPubsub.Inc()
