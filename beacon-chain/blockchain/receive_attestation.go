@@ -87,10 +87,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
-		log.WithFields(logrus.Fields{
-			"headSlot": headBlk.Slot,
-			"headRoot": hex.EncodeToString(headRoot),
-		}).Debug("Saved new head")
 	}
 
 	// Skip checking for competing attestation's target roots at epoch boundary.

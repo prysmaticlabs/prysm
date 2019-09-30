@@ -84,10 +84,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
-		log.WithFields(logrus.Fields{
-			"headSlot": headBlk.Slot,
-			"headRoot": hex.EncodeToString(headRoot),
-		}).Debug("Saved new head")
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
