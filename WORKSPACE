@@ -42,13 +42,13 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "da217044d24abd16667324626a33581f3eaccabf80985b2688d6a08ed2f864be",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.37.1/rules_nodejs-0.37.1.tar.gz"],
+    sha256 = "1249a60f88e4c0a46d78de06be04d3d41e7421dcfa0c956de65309a7b7ecf6f4",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.0/rules_nodejs-0.38.0.tar.gz"],
 )
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "d4a7864b90733ee8ab51c32d0657b2d4868d2f70",
+    commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -111,9 +111,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "68aabfdac3d52d30ee03e16ff53aa6fd3d61f1d2502532b4ce792b0f47077800",
-    strip_prefix = "repo-infra-24cc8eb96f265a7dc0c05e78288a41bbfb0fef88",
-    url = "https://github.com/kubernetes/repo-infra/archive/24cc8eb96f265a7dc0c05e78288a41bbfb0fef88.tar.gz",
+    sha256 = "d2e7e1dd746adc1d3fe4a4d2baef7eb90117ca6f6520ebb6cdf1f2131cf5a221",
+    strip_prefix = "repo-infra-b6d1648c80a25e36e5855f91eab0605e9d1de236",
+    url = "https://github.com/kubernetes/repo-infra/archive/b6d1648c80a25e36e5855f91eab0605e9d1de236.tar.gz",
 )
 
 http_archive(
@@ -184,7 +184,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "09745575a923640154bcf307fba8aedff47f240a",
+    commit = "97b18021f675333d2fde67fb13508c90a4654837",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -210,7 +210,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "c54dc95f42bf03c9c35a4209b372af61d49f48c0",
+    commit = "2655bc1ee68f69d1e40c01d141f9423a6a7ebb7a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -246,7 +246,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "a3c39ad62a5d215b78fd95947dc304784faa98f6",  # v0.3.1
+    commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v0.4.0
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -422,7 +422,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.0
+    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
@@ -542,7 +542,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "78f94f4dc7b89e60f4ef983cc661f8e793e8c5ed",  # v0.1.1
+    commit = "8cca0dbc7f3533b122bd2cbeaa4a9b07c2913b9d",  # v0.1.2
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -757,7 +757,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_todocounter",
-    commit = "bc75efcf13e6e50fbba27679ba5451585d70c954",  # v0.0.1
+    commit = "742667602a47ab3a2b7f17d935019c3255719dce",  # v0.0.2
     importpath = "github.com/ipfs/go-todocounter",
 )
 
@@ -812,7 +812,7 @@ go_repository(
 go_repository(
     name = "io_k8s_client_go",
     build_extra_args = ["-exclude=vendor"],
-    commit = "0c47f9da00011ea9a8717671127ac21625c7a6c0",
+    commit = "c1ea390cb7f7ca6d6345b4d3bcfd5546028cee20",  # v12.0.0
     importpath = "k8s.io/client-go",
 )
 
@@ -825,7 +825,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_klog",
-    commit = "9be023858d57e1beb4d7c29fa54093cea2cf9583",
+    commit = "2ca9ad30301bf30a8a6e0fa2110db6b8df699a91",  # v1.0.0
     importpath = "k8s.io/klog",
 )
 
@@ -918,13 +918,13 @@ go_repository(
 
 go_repository(
     name = "com_github_go_stack_stack",
-    commit = "f66e05c21cd224e01c8a3ee7bc867aa79439e207",  # v1.8.0
+    commit = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a",  # v1.8.0
     importpath = "github.com/go-stack/stack",
 )
 
 go_repository(
     name = "com_github_rs_cors",
-    commit = "9a47f48565a795472d43519dd49aac781f3034fb",  # v1.6.0
+    commit = "db0fe48135e83b5812a5a31be0eea66984b1b521",  # v1.7.0
     importpath = "github.com/rs/cors",
 )
 
@@ -996,7 +996,7 @@ go_repository(
 
 go_repository(
     name = "com_github_karlseguin_ccache",
-    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",
+    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",  # v2.0.3
     importpath = "github.com/karlseguin/ccache",
 )
 
@@ -1033,7 +1033,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "d204016fc64589d0ec2ba965dd686d768d7ab34a",  # v0.2.2
+    commit = "26b960839df84e2783f8f6125fa822a9978c2b8f",  # v0.2.3
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
@@ -1158,7 +1158,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_sigs_yaml",
-    commit = "4cd0c284b15f1735b8cc247df097d262b8903f9f",
+    commit = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",  # v1.1.0
     importpath = "sigs.k8s.io/yaml",
 )
 
@@ -1221,7 +1221,7 @@ go_repository(
 
 go_repository(
     name = "com_github_paulbellamy_ratecounter",
-    commit = "a803f0e4f07116687bb30965e8f7d0c32981b63c",
+    commit = "524851a93235ac051e3540563ed7909357fe24ab",  # v0.2.0
     importpath = "github.com/paulbellamy/ratecounter",
 )
 
