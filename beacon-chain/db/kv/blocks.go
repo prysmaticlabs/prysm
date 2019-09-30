@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -252,19 +253,26 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return nil
 	}
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		enc, err := proto.Marshal(block)
-		if err != nil {
-			return err
+	k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
+
+	go func() {
+		if err := k.db.Batch(func(tx *bolt.Tx) error {
+			enc, err := proto.Marshal(block)
+			if err != nil {
+				return err
+			}
+			bkt := tx.Bucket(blocksBucket)
+			indicesByBucket := createBlockIndicesFromBlock(block)
+			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
+			}
+			return bkt.Put(blockRoot[:], enc)
+		}); err != nil {
+			logrus.WithError(err).Error("Failed to save block")
 		}
-		bkt := tx.Bucket(blocksBucket)
-		indicesByBucket := createBlockIndicesFromBlock(block)
-		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not update DB indices")
-		}
-		k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
-		return bkt.Put(blockRoot[:], enc)
-	})
+	}()
+
+	return nil
 }
 
 // SaveBlocks via batch updates to the db.

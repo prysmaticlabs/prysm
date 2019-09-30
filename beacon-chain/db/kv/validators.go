@@ -8,9 +8,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"go.opencensus.io/trace"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // ValidatorLatestVote retrieval by validator index.
@@ -61,16 +61,22 @@ func (k *Store) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64)
 func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorLatestVote")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		buf := uint64ToBytes(validatorIdx)
-		enc, err := proto.Marshal(vote)
-		if err != nil {
-			return err
+	k.votesCache.Set(string(validatorIdx), vote, time.Hour)
+
+	go func() {
+		if err := k.db.Batch(func(tx *bolt.Tx) error {
+			buf := uint64ToBytes(validatorIdx)
+			enc, err := proto.Marshal(vote)
+			if err != nil {
+				return err
+			}
+			bucket := tx.Bucket(validatorsBucket)
+			return bucket.Put(buf, enc)
+		}); err != nil {
+			logrus.WithError(err).Error("Failed to save validator vote")
 		}
-		bucket := tx.Bucket(validatorsBucket)
-		k.votesCache.Set(string(validatorIdx), vote, time.Hour)
-		return bucket.Put(buf, enc)
-	})
+	}()
+	return nil
 }
 
 // SaveValidatorLatestVotes by validator indidces.
@@ -165,12 +171,19 @@ func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) er
 func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorIndex")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(validatorsBucket)
-		buf := uint64ToBytes(validatorIdx)
-		k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, time.Hour)
-		return bucket.Put(publicKey[:], buf)
-	})
+	k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, time.Hour)
+
+	go func() {
+		if err := k.db.Batch(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(validatorsBucket)
+			buf := uint64ToBytes(validatorIdx)
+
+			return bucket.Put(publicKey[:], buf)
+		}); err != nil {
+			logrus.WithError(err).Error("Failed to set validator index")
+		}
+	}()
+	return nil
 }
 
 func uint64ToBytes(i uint64) []byte {
