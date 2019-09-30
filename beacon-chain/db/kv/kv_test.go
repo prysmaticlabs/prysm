@@ -8,7 +8,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -34,7 +33,6 @@ func teardownDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
-	prometheus.Unregister(createBoltCollector(db.db))
 	if err := os.RemoveAll(db.DatabasePath()); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
