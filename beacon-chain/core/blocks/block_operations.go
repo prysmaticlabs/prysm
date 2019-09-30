@@ -149,33 +149,11 @@ func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	if beaconState.Slot != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
+	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		return nil, fmt.Errorf(
-			"parent root %#x does not match the latest block header signing root in state %#x",
-			block.ParentRoot, parentRoot)
-	}
-
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
-	if err != nil {
-		return nil, err
-	}
-	emptySig := make([]byte, 96)
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  params.BeaconConfig().ZeroHash[:],
-		BodyRoot:   bodyRoot[:],
-		Signature:  emptySig,
-	}
-	// Verify proposer is not slashed.
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
@@ -198,7 +176,7 @@ func ProcessBlockHeader(
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
 // signature verification.
 //
-// // WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
+// WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
 // using a unsigned block.
 //
 // Spec pseudocode definition:
@@ -248,16 +226,6 @@ func ProcessBlockHeaderNoVerify(
 		BodyRoot:   bodyRoot[:],
 		Signature:  emptySig,
 	}
-	// Verify proposer is not slashed.
-	idx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, err
-	}
-	proposer := beaconState.Validators[idx]
-	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
-	}
-
 	return beaconState, nil
 }
 
@@ -299,28 +267,27 @@ func ProcessRandao(
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	// If block randao passed verification, we XOR the state's latest randao mix with the block's
-	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	latestMixSlice := beaconState.RandaoMixes[currentEpoch%latestMixesLength]
-	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
-	for i, x := range blockRandaoReveal {
-		latestMixSlice[i] ^= x
+	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process randao")
 	}
-	beaconState.RandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
 }
 
 // ProcessRandaoNoVerify generates a new randao mix to update
 // in the beacon state's latest randao mixes slice.
+//
+// Spec pseudocode definition:
+//     # Mix it in
+//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//         xor(get_randao_mix(state, get_current_epoch(state)),
+//             hash(body.randao_reveal))
+//     )
 func ProcessRandaoNoVerify(
 	beaconState *pb.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
-
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
@@ -983,14 +950,14 @@ func ProcessDeposits(
 //         # Increase balance by deposit amount
 //         index = validator_pubkeys.index(pubkey)
 //         increase_balance(state, index, amount)
-func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[32]byte]int) (*pb.BeaconState, error) {
+func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	beaconState.Eth1DepositIndex++
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes32(pubKey)]
+	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
 	if !ok {
 		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -1084,6 +1051,24 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
+// ProcessVoluntaryExitsNoVerify processes all the voluntary exits in
+// a block body, without verifying their BLS signatures.
+func ProcessVoluntaryExitsNoVerify(
+	beaconState *pb.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*pb.BeaconState, error) {
+	var err error
+	exits := body.VoluntaryExits
+
+	for idx, exit := range exits {
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
+		}
+	}
+	return beaconState, nil
+}
+
 // VerifyExit implements the spec defined validation for voluntary exits.
 //
 // Spec pseudocode definition:
@@ -1103,8 +1088,6 @@ func ProcessVoluntaryExits(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-//    # Initiate exit
-//    initiate_validator_exit(state, exit.validator_index)
 func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -205,10 +206,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath)
+		d, err = confirmDelete(d, dbPath)
 		if err != nil {
 			return err
 		}
@@ -222,7 +220,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.BootstrapNode.Name))
+	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
 	for i, addr := range bootnodeAddrs {
 		if filepath.Ext(addr) == ".enr" {
 			b, err := ioutil.ReadFile(addr)
@@ -421,12 +419,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher powchain.ChainStartFetcher
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
 			return err
@@ -506,7 +503,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
@@ -516,8 +513,6 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		})
 
 		return b.services.RegisterService(svc)
-	} else if genesisTime+genesisValidators > 0 {
-		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
 }

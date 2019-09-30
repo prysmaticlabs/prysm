@@ -17,6 +17,7 @@ go_library(
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/node:go_default_library",
@@ -39,7 +40,6 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/validator",
     pure = "on",
     race = "off",
-    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
@@ -47,6 +47,7 @@ go_image(
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/node:go_default_library",
