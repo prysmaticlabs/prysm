@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -1015,6 +1016,7 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.Slot = 64
 
 	// 128 validators per attestation
 	aggBits := bitfield.NewBitlist(8)
@@ -1024,6 +1026,12 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 	}
 	// 128 attestations per block
 	atts := make([]*ethpb.Attestation, 64)
+	crosslinkRoot, err := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	sCopy := proto.Clone(s).(*pb.BeaconState)
+	sCopy.Slot = 0
 	for i := 0; i < len(atts); i++ {
 		att := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -1032,12 +1040,14 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 				Crosslink: &ethpb.Crosslink{
 					Shard:      uint64(i),
 					StartEpoch: 0,
+					ParentRoot: crosslinkRoot[:],
+					DataRoot: params.BeaconConfig().ZeroHash[:],
 				},
 			},
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
 		}
-		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+		attestingIndices, err := helpers.AttestingIndices(sCopy, att.Data, att.AggregationBits)
 		if err != nil {
 			t.Error(err)
 		}
@@ -1045,7 +1055,7 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 			Data:       att.Data,
 			CustodyBit: false,
 		}
-		domain := helpers.Domain(s, 0, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(sCopy, 0, params.BeaconConfig().DomainAttestation)
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		att.Signature = zeroSig[:]
@@ -1069,7 +1079,7 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 	s.Validators[proposerIdx].PublicKey = privKeys[proposerIdx].PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain := helpers.Domain(s, 0, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(sCopy, 1, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
 	blk := &ethpb.BeaconBlock{
@@ -1082,6 +1092,10 @@ func TestProcessBlk_65536Validators_JustAtts(t *testing.T) {
 		},
 	}
 
+	proposerIdx, err = helpers.BeaconProposerIndex(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
