@@ -310,7 +310,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+	testutil.AssertLogsContain(t, hook, "data already exists")
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
