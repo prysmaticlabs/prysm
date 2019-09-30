@@ -250,11 +250,13 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
+				traceutil.AnnotateError(span, err)
 				return nil, errors.Wrap(err, "could not process epoch")
 			}
 		}
