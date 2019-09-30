@@ -88,6 +88,7 @@ func (k *Store) ClearDB() error {
 	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
 		return nil
 	}
+	prometheus.Unregister(createBoltCollector(k.db))
 	return os.RemoveAll(k.databasePath)
 }
 
