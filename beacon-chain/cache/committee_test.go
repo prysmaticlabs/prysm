@@ -205,6 +205,31 @@ func TestCommitteeCache_ShardCount(t *testing.T) {
 	}
 }
 
+func TestCommitteeCache_ActiveIndices(t *testing.T) {
+	cache := NewCommitteeCache()
+
+	item := &Committee{Epoch: 1, Committee: []uint64{1, 2, 3, 4, 5, 6}}
+	indices, err := cache.ActiveIndices(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indices != nil {
+		t.Error("Expected committee count not to exist in empty cache")
+	}
+
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+
+	indices, err = cache.ActiveIndices(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(indices, item.Committee) {
+		t.Error("Did not receive correct active indices from cache")
+	}
+}
+
 func sum(values []uint64) uint64 {
 	sum := uint64(0)
 	for _, v := range values {

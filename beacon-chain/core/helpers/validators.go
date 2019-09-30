@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -62,6 +63,16 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
+	if featureconfig.FeatureConfig().EnableNewCache {
+		activeIndices, err := committeeCache.ActiveIndices(epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if activeIndices != nil {
+			return activeIndices, nil
+		}
+	}
+
 	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active indices from cache")
