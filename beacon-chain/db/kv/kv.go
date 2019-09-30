@@ -78,7 +78,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
-	prometheus.MustRegister(createBoltCollector(kv.db))
+	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
 }
@@ -93,6 +93,7 @@ func (k *Store) ClearDB() error {
 
 // Close closes the underlying BoltDB database.
 func (k *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(k.db))
 	return k.db.Close()
 }
 
@@ -110,6 +111,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	return nil
 }
 
+// createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db)
 }
