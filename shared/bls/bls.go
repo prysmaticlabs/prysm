@@ -17,7 +17,10 @@ import (
 	bls12 "github.com/kilic/bls12-381"
 )
 
-var CurveOrder, _ = new(big.Int).SetString("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16)
+// CurveOrder for the BLS12-381 curve.
+var CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
+
+var curveOrder, _ = new(big.Int).SetString("52435875175126190479447740508185965837690552500527637822603658699938581184513", 10)
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
@@ -36,7 +39,7 @@ type SecretKey struct {
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey(r io.Reader) (*SecretKey, error) {
-	k, err := rand.Int(r, CurveOrder)
+	k, err := rand.Int(r, curveOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,7 @@ func RandKey(r io.Reader) (*SecretKey, error) {
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	b := bytesutil.ToBytes32(priv)
 	k := new(big.Int).SetBytes(b[:])
-	if CurveOrder.Cmp(k) < 0 {
+	if curveOrder.Cmp(k) < 0 {
 		return nil, errors.New("invalid private key")
 	}
 	return &SecretKey{p: k}, nil
@@ -257,6 +260,7 @@ func Domain(domainType []byte, forkVersion []byte) uint64 {
 	return bytesutil.FromBytes8(b)
 }
 
+// HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element
 func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
 	xReBytes := [41]byte{}
 	xImBytes := [41]byte{}
