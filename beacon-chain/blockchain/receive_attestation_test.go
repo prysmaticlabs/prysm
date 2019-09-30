@@ -113,8 +113,7 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Finished updating fork choice store for attestation")
-	testutil.AssertLogsContain(t, hook, "Finished applying fork choice")
-	testutil.AssertLogsContain(t, hook, "Saved head info")
+	testutil.AssertLogsContain(t, hook, "Finished updating validator vote for attestation")
+	testutil.AssertLogsContain(t, hook, "Saved new head info")
 	testutil.AssertLogsDoNotContain(t, hook, "Broadcasting attestation")
 }
