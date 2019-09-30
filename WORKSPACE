@@ -996,7 +996,7 @@ go_repository(
 
 go_repository(
     name = "com_github_karlseguin_ccache",
-    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",
+    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",  # v2.0.3
     importpath = "github.com/karlseguin/ccache",
 )
 
