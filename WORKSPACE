@@ -246,7 +246,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "a3c39ad62a5d215b78fd95947dc304784faa98f6",  # v0.3.1
+    commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v0.4.0
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -422,7 +422,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.0
+    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
@@ -542,7 +542,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "78f94f4dc7b89e60f4ef983cc661f8e793e8c5ed",  # v0.1.1
+    commit = "8cca0dbc7f3533b122bd2cbeaa4a9b07c2913b9d",  # v0.1.2
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -757,7 +757,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_todocounter",
-    commit = "bc75efcf13e6e50fbba27679ba5451585d70c954",  # v0.0.1
+    commit = "742667602a47ab3a2b7f17d935019c3255719dce",  # v0.0.2
     importpath = "github.com/ipfs/go-todocounter",
 )
 
@@ -1033,7 +1033,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "d204016fc64589d0ec2ba965dd686d768d7ab34a",  # v0.2.2
+    commit = "26b960839df84e2783f8f6125fa822a9978c2b8f",  # v0.2.3
     importpath = "github.com/libp2p/go-libp2p-core",
 )
 
