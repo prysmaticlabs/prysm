@@ -184,7 +184,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "97b18021f675333d2fde67fb13508c90a4654837",
+    commit = "11a5b035da6985bb25dadb2af0d98af0a86dcf39",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
