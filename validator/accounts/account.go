@@ -102,7 +102,7 @@ func NewValidatorAccount(directory string, password string) error {
 
 %#x
 
-===========================================================
+===================================================================
 `, tx.Data())
 	return nil
 }
