@@ -825,7 +825,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_klog",
-    commit = "9be023858d57e1beb4d7c29fa54093cea2cf9583",
+    commit = "2ca9ad30301bf30a8a6e0fa2110db6b8df699a91",  # v1.0.0
     importpath = "k8s.io/klog",
 )
 
