@@ -924,7 +924,7 @@ go_repository(
 
 go_repository(
     name = "com_github_rs_cors",
-    commit = "9a47f48565a795472d43519dd49aac781f3034fb",  # v1.6.0
+    commit = "db0fe48135e83b5812a5a31be0eea66984b1b521",  # v1.7.0
     importpath = "github.com/rs/cors",
 )
 
