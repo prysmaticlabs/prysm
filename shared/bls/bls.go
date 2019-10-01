@@ -8,7 +8,9 @@ import (
 	"encoding/binary"
 	"io"
 	"math/big"
+	"time"
 
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -16,6 +18,8 @@ import (
 
 	bls12 "github.com/kilic/bls12-381"
 )
+
+var pubkeyCache = ccache.New(ccache.Configure())
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
@@ -61,10 +65,19 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
-	p, err := bls12.NewG1(nil).FromCompressed(pub)
+	cv := pubkeyCache.Get(string(pub))
+	if cv != nil && cv.Value() != nil {
+		return cv.Value().(*PublicKey).Copy(), nil
+	}
+	b := bytesutil.ToBytes48(pub)
+	g1Elems := bls12.NewG1(nil)
+	p, err := g1Elems.FromCompressed(b[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
+	copiedVal := &bls12.PointG1{}
+	g1Elems.Copy(copiedVal, p)
+	pubkeyCache.Set(string(pub), copiedVal, 48*time.Hour)
 	return &PublicKey{p: p}, nil
 }
 
