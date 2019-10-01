@@ -68,11 +68,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
 
-	log.WithFields(logrus.Fields{
-		"attTargetSlot": attSlot,
-		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Debug("Finished updating validator vote for attestation")
-
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := s.forkChoiceStore.Head(ctx)
 	if err != nil {

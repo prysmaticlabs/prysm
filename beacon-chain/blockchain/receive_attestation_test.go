@@ -42,7 +42,6 @@ func TestReceiveAttestation_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Finished updating validator vote for attestation")
 	testutil.AssertLogsContain(t, hook, "Saved new head info")
 	testutil.AssertLogsContain(t, hook, "Broadcasting attestation")
 }
@@ -78,7 +77,6 @@ func TestReceiveAttestation_SameHead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Finished updating validator vote for attestation")
 	testutil.AssertLogsDoNotContain(t, hook, "Saved new head info")
 	testutil.AssertLogsContain(t, hook, "Broadcasting attestation")
 }
@@ -113,7 +111,6 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Finished updating validator vote for attestation")
 	testutil.AssertLogsContain(t, hook, "Saved new head info")
 	testutil.AssertLogsDoNotContain(t, hook, "Broadcasting attestation")
 }
