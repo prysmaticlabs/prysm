@@ -112,7 +112,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 }
 
 func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
@@ -270,6 +270,6 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlockNoPubsubForkchoice(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
 }
