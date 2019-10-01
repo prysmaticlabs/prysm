@@ -31,6 +31,7 @@ type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
 	headFetcher        blockchain.HeadFetcher
+	forkFetcher        blockchain.ForkFetcher
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
 	depositFetcher     depositcache.DepositFetcher
@@ -284,8 +285,8 @@ func (vs *ValidatorServer) ExitedValidators(
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	headState := vs.headFetcher.HeadState()
-	dv := helpers.Domain(headState, request.Epoch, request.Domain)
+	fork := vs.forkFetcher.CurrentFork()
+	dv := helpers.Domain(fork, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
