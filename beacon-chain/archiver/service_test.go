@@ -57,7 +57,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "New chain head event")
 	// The service should ONLY log any archival logs if we receive a
 	// head slot that is an epoch end.
-	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived validator participation during epoch")
+	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
@@ -87,7 +87,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	if !proto.Equal(wanted, retrieved) {
 		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch, wanted, retrieved)
 	}
-	testutil.AssertLogsContain(t, hook, "archived validator participation")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
@@ -113,7 +113,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 			retrieved,
 		)
 	}
-	testutil.AssertLogsContain(t, hook, "archived validator balances")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
@@ -163,7 +163,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 			retrieved,
 		)
 	}
-	testutil.AssertLogsContain(t, hook, "archived committee info")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
@@ -188,7 +188,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
 		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
 	}
-	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
@@ -212,7 +212,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	if !reflect.DeepEqual(retrieved.Slashed, []uint64{95, 96}) {
 		t.Errorf("Wanted indices 95, 96 slashed, received %v", retrieved.Slashed)
 	}
-	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
@@ -236,7 +236,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	if !reflect.DeepEqual(retrieved.Exited, []uint64{95}) {
 		t.Errorf("Wanted indices 95 exited, received %v", retrieved.Exited)
 	}
-	testutil.AssertLogsContain(t, hook, "archived active validator set changes")
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
