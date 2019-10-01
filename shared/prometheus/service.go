@@ -75,7 +75,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	// Write status header
 	if hasError {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.WithField("statuses", statuses).Warn("Node is unhealthy!")
+		log.WithField("statuses", buf.String()).Warn("Node is unhealthy!")
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
