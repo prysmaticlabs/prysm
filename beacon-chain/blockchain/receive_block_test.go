@@ -55,9 +55,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		BodyRoot:   bodyRoot[:],
 		StateRoot:  genesis.StateRoot,
 	}
-	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
-		t.Fatalf("Could not save block to db: %v", err)
-	}
+
 	parentRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +87,23 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-
+	ok, err := chainService.ParentExists(ctx, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("block parent should not exist before save")
+	}
+	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
+		t.Fatalf("Could not save block to db: %v", err)
+	}
+	ok, err = chainService.ParentExists(ctx, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("block parent should exist")
+	}
 	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
