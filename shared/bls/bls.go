@@ -75,10 +75,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	copiedVal := &bls12.PointG1{}
-	g1Elems.Copy(copiedVal, p)
-	pubkeyCache.Set(string(pub), copiedVal, 48*time.Hour)
-	return &PublicKey{p: p}, nil
+	pubkey := &PublicKey{p: p}
+	pubkeyCache.Set(string(pub), pubkey.Copy(), 48*time.Hour)
+	return pubkey, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
