@@ -179,6 +179,7 @@ func (s *Service) run(ctx context.Context) {
 				helpers.CurrentEpoch(headState),
 			).Debug("Successfully archived validator participation during epoch")
 		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-sub.Err():
 			log.WithError(err).Error("Subscription to new chain head notifier failed")

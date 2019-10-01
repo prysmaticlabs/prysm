@@ -236,9 +236,11 @@ func (s *Service) removeOperations() {
 	for {
 		ctx := context.TODO()
 		select {
-		case <-incomingBlockSub.Err():
+		case err := <-incomingBlockSub.Err():
+			log.WithError(err).Error("Subscription to incoming block sub failed")
 			return
 		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
