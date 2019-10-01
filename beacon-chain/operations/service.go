@@ -277,7 +277,10 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 			// from the attestation pool for that attestation.
 			if attestation.AggregationBits.Contains(retAtt.AggregationBits) {
 				delete(s.attestationPool, root)
-				log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
+				log.WithField(
+					"attDataRoot",
+					fmt.Sprintf("%#x", root),
+				).Debug("Attestation removed from pool")
 			}
 		}
 	}

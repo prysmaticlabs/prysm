@@ -18,7 +18,6 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
 	if r.initialSync.Syncing() {
-		log.Debug("Not propagating or processing attestation during syncing")
 		return false
 	}
 

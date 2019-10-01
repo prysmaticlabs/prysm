@@ -395,10 +395,10 @@ func (s *Service) run(done <-chan struct{}) {
 		case <-done:
 			s.isRunning = false
 			s.runError = nil
-			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
-			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", s.runError)
+			log.WithError(err).Error("Subscription to new head notifier failed")
 			return
 		case header, ok := <-s.headerChan:
 			if ok {

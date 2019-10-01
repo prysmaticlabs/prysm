@@ -24,9 +24,8 @@ func (r *RegularSync) processPendingBlocksQueue() {
 		case <-ticker.C:
 			r.processPendingBlocks(ctx)
 		case <-r.ctx.Done():
-			log.Debug("p2p context is closed, exiting routine")
+			log.Debug("Context closed, exiting routine")
 			break
-
 		}
 	}
 }

@@ -35,14 +35,14 @@ func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	attRoot, err := ssz.HashTreeRoot(att.Data)
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash attestation")
 	}
 
 	log.WithFields(logrus.Fields{
-		"attRoot":     hex.EncodeToString(attRoot[:]),
-		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attRoot":   hex.EncodeToString(attDataRoot[:]),
+		"blockRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
 	if err := s.ReceiveAttestationNoPubsub(ctx, att); err != nil {

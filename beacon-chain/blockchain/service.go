@@ -232,8 +232,8 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slots": b.Slot,
-		"root":  hex.EncodeToString(r[:]),
+		"slot":     b.Slot,
+		"headRoot": hex.EncodeToString(r[:]),
 	}).Debug("Saved new head info")
 	return nil
 }

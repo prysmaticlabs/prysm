@@ -32,7 +32,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					//}
 					return
 				}
-				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected.")
+				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
 			}()
 		},
 	})
