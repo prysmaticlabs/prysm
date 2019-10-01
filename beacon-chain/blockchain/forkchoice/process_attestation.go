@@ -98,6 +98,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
+	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
 			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
@@ -120,9 +121,15 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
-		if err := s.saveNewAttestation(ctx, a); err != nil {
+		att, err := s.aggregatedAttestation(ctx, a)
+		if err != nil {
 			return 0, err
 		}
+		atts = append(atts, att)
+	}
+
+	if err := s.db.SaveAttestations(ctx, atts); err != nil {
+		return 0, err
 	}
 
 	return tgtSlot, nil
@@ -249,21 +256,23 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	newVoteIndices := make([]uint64, 0, len(indices))
+	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
+	for _, i := range indices {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
 		if vote == nil || tgtEpoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+			newVotes = append(newVotes, &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
-			}
+			})
+			newVoteIndices = append(newVoteIndices, i)
 		}
 	}
-	return nil
+	return s.db.SaveValidatorLatestVotes(ctx, newVoteIndices, newVotes)
 }
 
 // setSeenAtt sets the attestation hash in seen attestation map to true.
@@ -280,31 +289,25 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	return nil
 }
 
-// savesNewAttestation saves the new attestations to DB.
-func (s *Store) saveNewAttestation(ctx context.Context, att *ethpb.Attestation) error {
+// aggregatedAttestation returns the aggregated attestation after checking saved one in db.
+func (s *Store) aggregatedAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.Attestation, error) {
 	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	saved, err := s.db.Attestation(ctx, r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if saved == nil {
-		if err := s.db.SaveAttestation(ctx, att); err != nil {
-			return err
-		}
-		return nil
+		return att, nil
 	}
 
 	aggregated, err := helpers.AggregateAttestation(saved, att)
 	if err != nil {
-		return err
-	}
-	if err := s.db.SaveAttestation(ctx, aggregated); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return aggregated, nil
 }

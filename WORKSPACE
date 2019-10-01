@@ -184,7 +184,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "97b18021f675333d2fde67fb13508c90a4654837",
+    commit = "09745575a923640154bcf307fba8aedff47f240a",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -1208,7 +1208,7 @@ go_repository(
 
 go_repository(
     name = "com_github_cloudflare_roughtime",
-    commit = "6b7e31ac9cb2d6048096585d2e8563ee60b28f84",
+    commit = "d41fdcee702eb3e5c3296288a453b9340184d37e",
     importpath = "github.com/cloudflare/roughtime",
 )
 

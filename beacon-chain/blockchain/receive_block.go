@@ -70,7 +70,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	logStateTransitionData(block, root[:])
 
 	// Run fork choice after applying state transition on the new block.
 	headRoot, err := s.forkChoiceStore.Head(ctx)
@@ -81,16 +80,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
-	log.WithFields(logrus.Fields{
-		"slot":      headBlk.Slot,
-		"blockRoot": fmt.Sprintf("0x%s...", hex.EncodeToString(headRoot)[:8]),
-	}).Info("Ran fork choice for block")
 
-	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
-
-	// Save head info after running fork choice.
-	if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head")
+	// Only save head if it's different than the current head.
+	if !bytes.Equal(headRoot, s.HeadRoot()) {
+		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
@@ -100,6 +95,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(block.Slot)
+
+	// Log if block is a competing block.
+	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
+
+	// Log state transition data.
+	logStateTransitionData(block, root[:])
 
 	processedBlkNoPubsub.Inc()
 
@@ -124,11 +125,11 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	logStateTransitionData(block, root[:])
 
-	// Save new block as head.
-	if err := s.saveHead(ctx, block, root); err != nil {
-		return errors.Wrap(err, "could not save head")
+	if !bytes.Equal(root[:], s.HeadRoot()) {
+		if err := s.saveHead(ctx, block, root); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
@@ -138,6 +139,9 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(block.Slot)
+
+	// Log state transition data.
+	logStateTransitionData(block, root[:])
 
 	// We write the latest saved head root to a feed for consumption by other services.
 	s.headUpdatedFeed.Send(root)
@@ -160,15 +164,18 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-	logStateTransitionData(block, root[:])
 
-	// Save new block as head.
-	if err := s.saveHead(ctx, block, root); err != nil {
-		return errors.Wrap(err, "could not save head")
+	if !bytes.Equal(root[:], s.HeadRoot()) {
+		if err := s.saveHead(ctx, block, root); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
 	}
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(block.Slot)
+
+	// Log state transition data.
+	logStateTransitionData(block, root[:])
 
 	// We write the latest saved head root to a feed for consumption by other services.
 	s.headUpdatedFeed.Send(root)
