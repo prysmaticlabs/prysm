@@ -37,6 +37,5 @@ go_test(
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_kilic_bls12-381//:go_default_library",
-        "@com_github_phoreproject_bls//:go_default_library",
     ],
 )
