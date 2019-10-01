@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -93,6 +94,9 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sort.Slice(retrieved, func(i, j int) bool {
+		return retrieved[i].Slot < retrieved[j].Slot
+	})
 	if !reflect.DeepEqual(retrieved, oddBlocks) {
 		t.Errorf("Wanted %v, received %v", oddBlocks, retrieved)
 	}
@@ -176,11 +180,6 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		{
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
 			expectedNumBlocks: 2,
-		},
-		{
-			// No specified filter should return all blocks.
-			filter:            nil,
-			expectedNumBlocks: 5,
 		},
 		{
 			// No block meets the criteria below.

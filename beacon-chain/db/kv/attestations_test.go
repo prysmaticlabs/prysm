@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	numAtts := 1000
+	numAtts := 10
 	totalAtts := make([]*ethpb.Attestation, numAtts)
 	// We track the data roots for the even indexed attestations.
 	attDataRoots := make([][32]byte, 0)
@@ -108,6 +109,9 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sort.Slice(retrieved, func(i, j int) bool {
+		return retrieved[i].Data.Crosslink.Shard < retrieved[j].Data.Crosslink.Shard
+	})
 	if !reflect.DeepEqual(retrieved, oddAtts) {
 		t.Errorf("Wanted %v, received %v", oddAtts, retrieved)
 	}
@@ -257,11 +261,6 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 				SetHeadBlockRoot(someRoot[:]).
 				SetTargetEpoch(7),
 			expectedNumAtt: 2,
-		},
-		{
-			// No specified filter should return all attestations.
-			filter:         nil,
-			expectedNumAtt: 3,
 		},
 		{
 			// No attestation meets the criteria below.
