@@ -125,19 +125,54 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		sort.Slice(blocks, func(i, j int) bool {
 			return blocks[i].Slot < blocks[j].Slot
 		})
+		var checkParentExists func(blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error)
+		checkParentExists = func(blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
+			ok, err := s.chain.ParentExists(ctx, blk)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				bl, err := s.requestBlocksByRoot(ctx, [][32]byte{bytesutil.ToBytes32(blk.ParentRoot)}, peers[0])
+				if err != nil {
+					return nil, err
+				}
+				parentBlocks = append(bl, parentBlocks...)
 
-		for _, blk := range blocks {
-			logSyncStatus(genesis, blk, peers, counter)
-			if featureconfig.FeatureConfig().InitSyncNoVerify {
-				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
+			}
+			return parentBlocks, nil
+		}
+
+		var receiveBlocks func(blocks []*eth.BeaconBlock) error
+		receiveBlocks = func(blocks []*eth.BeaconBlock) error {
+			for _, blk := range blocks {
+				logSyncStatus(genesis, blk, peers, counter)
+				emptyBlk := make([]*eth.BeaconBlock, 0)
+
+				prBlocks, err := checkParentExists(blk, emptyBlk)
+				if err != nil {
 					return err
 				}
-			} else {
-				if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-					return err
+				if len(prBlocks) > 0 {
+					if err := receiveBlocks(prBlocks); err != nil {
+						return err
+					}
+				}
+				if featureconfig.FeatureConfig().InitSyncNoVerify {
+					if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
+						return err
+					}
+				} else {
+					if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+						return err
+					}
 				}
 			}
+			return nil
 		}
+		if err := receiveBlocks(blocks); err != nil {
+			return err
+		}
+
 		// If there were no blocks in the last request range, increment the counter so the same
 		// range isn't requested again on the next loop as the headSlot didn't change.
 		if len(blocks) == 0 {
@@ -208,6 +243,32 @@ func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocks
 		resp = append(resp, blk)
 	}
 
+	return resp, nil
+}
+
+// requestBlock sends a beacon blocks request to a peer to get
+// those corresponding blocks from that peer.
+func (r *InitialSync) requestBlocksByRoot(ctx context.Context, blockRoots [][32]byte, id peer.ID) ([]*eth.BeaconBlock, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	stream, err := r.p2p.Send(ctx, blockRoots, id)
+	if err != nil {
+		return nil, err
+	}
+	resp := make([]*eth.BeaconBlock, 0, len(blockRoots))
+	for i := 0; i < len(blockRoots); i++ {
+		blk, err := prysmsync.ReadChunkedBlock(stream, r.p2p)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.WithError(err).Error("Unable to retrieve block from stream")
+			return nil, err
+		}
+		resp = append(resp, blk)
+
+	}
 	return resp, nil
 }
 
