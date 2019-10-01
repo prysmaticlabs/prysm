@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"crypto/rand"
 	"encoding/binary"
 	"sync"
 	"testing"
@@ -12,6 +11,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -20,11 +21,16 @@ var lock sync.Mutex
 
 // Caches
 var deposits []*ethpb.Deposit
+var depositDataRoots [][32]byte
 var privKeys []*bls.SecretKey
 var trie *trieutil.MerkleTrie
 
-// SetupInitialDeposits prepares the entered amount of deposits
-// and secret keys.
+// SetupInitialDeposits prepares the entered amount of deposits,
+// deposit data roots, and secret keys.
+// The deposits are configured such that for deposit n the validator
+// account is key n and the withdrawal account is key n+1.  As such,
+// if all secret keys for n validators are required then numDeposits
+// should be n+1
 func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
 	lock.Lock()
 	defer lock.Unlock()
@@ -39,31 +45,47 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 		}
 	}
 
-	// Extend caches as needed.
-	for i := len(deposits); uint64(len(deposits)) < numDeposits; i++ {
-		var withdrawalCreds [32]byte
-		copy(withdrawalCreds[:], []byte("testing"))
-		depositData := &ethpb.Deposit_Data{
-			Amount:                params.BeaconConfig().MaxEffectiveBalance,
-			WithdrawalCredentials: withdrawalCreds[:],
-		}
-		priv, err := bls.RandKey(rand.Reader)
+	if numDeposits > uint64(len(deposits)) {
+		// Additional deposits required
+		numExisting := uint64(len(deposits))
+		numRequired := numDeposits - uint64(len(deposits))
+		// Fetch the required number of keys
+		secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
 		if err != nil {
-			t.Fatalf("could not generate random key: %v", err)
+			t.Fatalf("could not create deterministic keys: %v", err)
 		}
-		privKeys = append(privKeys, priv)
-		depositData.PublicKey = priv.PublicKey().Marshal()[:]
-		domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
-		root, err := ssz.SigningRoot(depositData)
-		if err != nil {
-			t.Fatalf("could not get signing root of deposit data %v", err)
-		}
-		depositData.Signature = priv.Sign(root[:], domain).Marshal()
-		deposit := &ethpb.Deposit{
-			Data: depositData,
-		}
+		privKeys = append(privKeys, secretKeys[:len(secretKeys)-1]...)
 
-		deposits = append(deposits, deposit)
+		// Create the deposits
+		for i := uint64(0); i < numRequired; i++ {
+			withdrawalCreds := hashutil.Hash(publicKeys[i+1].Marshal())
+			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+
+			depositData := &ethpb.Deposit_Data{
+				PublicKey:             publicKeys[i].Marshal()[:],
+				Amount:                params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawalCredentials: withdrawalCreds[:],
+			}
+
+			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+			root, err := ssz.SigningRoot(depositData)
+			if err != nil {
+				t.Fatalf("could not get signing root of deposit data %v", err)
+			}
+			depositData.Signature = secretKeys[i].Sign(root[:], domain).Marshal()
+
+			depositDataRoot, err := ssz.HashTreeRoot(depositData)
+			if err != nil {
+				t.Fatalf("could not get hash tree root of deposit data %v", err)
+			}
+			depositDataRoots = append(depositDataRoots, depositDataRoot)
+
+			deposit := &ethpb.Deposit{
+				Data: depositData,
+			}
+
+			deposits = append(deposits, deposit)
+		}
 	}
 
 	d, _ := GenerateDepositProof(t, deposits[0:numDeposits])
