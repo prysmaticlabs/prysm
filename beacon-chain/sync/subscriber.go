@@ -127,7 +127,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		valid, err := validate(ctx, msg, r.p2p, fromSelf)
 		if err != nil {
 			if !fromSelf {
-				log.WithError(err).Debug("Message failed to verify")
+				log.WithError(err).Error("Message failed to verify")
 				messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			}
 			return
