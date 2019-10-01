@@ -7,10 +7,8 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	bls12 "github.com/kilic/bls12-381"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
