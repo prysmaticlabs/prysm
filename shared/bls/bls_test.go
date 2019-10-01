@@ -1,63 +1,84 @@
 package bls_test
 
 import (
+	"bytes"
 	"crypto/rand"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func TestVerifySignature(t *testing.T) {
-	msg := make([]byte, 32)
-	var domain uint64 = 1
-	secretKey, err := bls.RandKey(rand.Reader)
+func TestMarshalUnmarshal(t *testing.T) {
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
+	pk, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubKey := secretKey.PublicKey()
-	signature := secretKey.Sign(msg, domain)
-	if !signature.Verify(msg, pubKey, domain) {
-		t.Fatal("verification fails")
+	pk2, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(pk.Marshal(), pk2.Marshal()) {
+		t.Errorf("Keys not equal, received %#x == %#x", pk.Marshal(), pk2.Marshal())
 	}
 }
 
-func TestVerifySignatureAggregatedCommon(t *testing.T) {
-	msg := make([]byte, 32)
-	var domain uint64 = 1
-	signerSize := 10
-	pubkeys := make([]*bls.PublicKey, signerSize)
-	signatures := make([]*bls.Signature, signerSize)
-	for i := 0; i < signerSize; i++ {
-		secretKey, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pubkeys[i] = secretKey.PublicKey()
-		signatures[i] = secretKey.Sign(msg, domain)
-	}
-	signature := bls.AggregateSignatures(signatures)
-	if !signature.VerifyAggregateCommon(pubkeys, msg, domain) {
-		t.Fatal("verification fails")
+func TestSignVerify(t *testing.T) {
+	priv, _ := bls.RandKey(rand.Reader)
+	pub := priv.PublicKey()
+	msg := []byte("hello")
+	sig := priv.Sign(msg, 0)
+	if !sig.Verify(msg, pub, 0) {
+		t.Error("Signature did not verify")
 	}
 }
 
-func TestVerifySignatureAggregated(t *testing.T) {
-	msgs := make([][32]byte, 10)
-	var domain uint64 = 1
-	signerSize := 10
-	pubkeys := make([]*bls.PublicKey, signerSize)
-	signatures := make([]*bls.Signature, signerSize)
-	for i := 0; i < signerSize; i++ {
-		msgs[i][0] = byte(i)
-		secretKey, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pubkeys[i] = secretKey.PublicKey()
-		signatures[i] = secretKey.Sign(msgs[i][:], domain)
+func TestVerifyAggregate(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	sigs := make([]*bls.Signature, 0, 100)
+	var msgs [][32]byte
+	for i := 0; i < 100; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
+		priv, _ := bls.RandKey(rand.Reader)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:], 0)
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		msgs = append(msgs, msg)
 	}
-	signature := bls.AggregateSignatures(signatures)
-	if !signature.VerifyAggregate(pubkeys, msgs, domain) {
-		t.Fatal("verification fails")
+	aggSig := bls.AggregateSignatures(sigs)
+	if !aggSig.VerifyAggregate(pubkeys, msgs, 0) {
+		t.Error("Signature did not verify")
+	}
+}
+
+func TestVerifyAggregateCommon(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	sigs := make([]*bls.Signature, 0, 100)
+	msg := []byte("hello")
+	for i := 0; i < 100; i++ {
+		priv, _ := bls.RandKey(rand.Reader)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg, 0)
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+	}
+	aggSig := bls.AggregateSignatures(sigs)
+	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+		t.Error("Signature did not verify")
+	}
+}
+
+func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
+	var pubkeys []*bls.PublicKey
+	sigs := make([]*bls.Signature, 0, 100)
+	msg := []byte("hello")
+
+	aggSig := bls.AggregateSignatures(sigs)
+	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0 /*domain*/) != false {
+		t.Error("Expected VerifyAggregate to return false with empty input " +
+			"of public keys.")
 	}
 }
