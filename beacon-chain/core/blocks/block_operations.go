@@ -18,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -92,15 +93,20 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	eth1DataHash, err := hashutil.HashProto(data)
-	if err != nil {
-		return false, errors.Wrap(err, "could not hash eth1data")
-	}
-	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
-	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
-	}
+	voteCount := uint64(0)
+	var eth1DataHash [32]byte
+	var err error
+	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		eth1DataHash, err = hashutil.HashProto(data)
+		if err != nil {
+			return false, errors.Wrap(err, "could not hash eth1data")
+		}
+		voteCount, err = eth1DataCache.Eth1DataVote(eth1DataHash)
+		if err != nil {
+			return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
+		}
 
+	}
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes {
 			if proto.Equal(vote, data) {
@@ -111,11 +117,13 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 		voteCount++
 	}
 
-	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		Eth1DataHash: eth1DataHash,
-		VoteCount:    voteCount,
-	}); err != nil {
-		return false, errors.Wrap(err, "could not save eth1 data vote cache")
+	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+			Eth1DataHash: eth1DataHash,
+			VoteCount:    voteCount,
+		}); err != nil {
+			return false, errors.Wrap(err, "could not save eth1 data vote cache")
+		}
 	}
 
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the

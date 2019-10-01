@@ -79,6 +79,7 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 				return
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
+				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				log.WithError(err).Error("Failed to handle p2p RPC")
 			}
 		} else {
@@ -88,6 +89,7 @@ func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHand
 				return
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				log.WithError(err).Error("Failed to handle p2p RPC")
 			}
 		}
