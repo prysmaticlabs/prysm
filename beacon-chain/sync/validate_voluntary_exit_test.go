@@ -40,7 +40,7 @@ func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Error(err)

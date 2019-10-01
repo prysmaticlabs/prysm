@@ -52,7 +52,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	}
 
 	domain := helpers.Domain(
-		state,
+		state.Fork,
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)

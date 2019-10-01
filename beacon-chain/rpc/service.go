@@ -43,6 +43,7 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	forkFetcher           blockchain.ForkFetcher
 	finalizationFetcher   blockchain.FinalizationFetcher
 	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
@@ -74,6 +75,7 @@ type Config struct {
 	BeaconDB              db.Database
 	StateFeedListener     blockchain.ChainFeeds
 	HeadFetcher           blockchain.HeadFetcher
+	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
@@ -99,6 +101,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
@@ -182,6 +185,7 @@ func (s *Service) Start() {
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		headFetcher:        s.headFetcher,
+		forkFetcher:        s.forkFetcher,
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
