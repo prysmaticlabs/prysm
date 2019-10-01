@@ -2,44 +2,50 @@ package spectest
 
 import (
 	"bytes"
+	"encoding/hex"
 	"path"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
-	"gopkg.in/yaml.v2"
 )
 
-type aggregateSignaturesTest struct {
-	Input  []string `yaml:"input"`
-	Output string   `yaml:"output"`
-}
-
-func TestAggregateSignatures(t *testing.T) {
+func TestAggregateSignaturesYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate_sigs/small")
+
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			test := &aggregateSignaturesTest{}
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to read file: %v", err)
 			}
+
+			test := &AggregateSigsTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			expectedOutputString := toBytes(96, test.Output)
-			signatures := []*bls.Signature{}
-			for i := 0; i < len(test.Input); i++ {
-				signature, err := bls.SignatureFromBytes(toBytes(96, test.Input[i]))
+
+			var sigs []*bls.Signature
+			for _, s := range test.Input {
+				sigBytes, err := hex.DecodeString(s[2:])
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("Cannot decode string to bytes: %v", err)
 				}
-				signatures = append(signatures, signature)
+				sig, err := bls.SignatureFromBytes(sigBytes)
+				if err != nil {
+					t.Fatalf("Unable to unmarshal signature from bytes: %v", err)
+				}
+				sigs = append(sigs, sig)
 			}
-			aggregated := bls.AggregateSignatures(signatures)
-			if !bytes.Equal(expectedOutputString, aggregated.Marshal()) {
-				t.Fatal("signature aggregation fails\n", folder.Name())
+			sig := bls.AggregateSignatures(sigs)
+
+			outputBytes, err := hex.DecodeString(test.Output[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			if !bytes.Equal(outputBytes, sig.Marshal()) {
+				t.Fatal("Output does not equal marshaled aggregated sig bytes")
 			}
 		})
 	}

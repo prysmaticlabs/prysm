@@ -2,44 +2,52 @@ package spectest
 
 import (
 	"bytes"
-	"path"
+	"encoding/hex"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-type aggregatePubkeysTest struct {
-	Input  []string `yaml:"input"`
-	Output string   `yaml:"output"`
-}
+func TestAggregatePubkeysYaml(t *testing.T) {
+	file, err := testutil.BazelFileBytes("tests/general/phase0/bls/aggregate_pubkeys/small/agg_pub_keys/data.yaml")
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
 
-func TestAggregatePubkeys(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate_pubkeys/small")
-	for _, folder := range testFolders {
-		t.Run(folder.Name(), func(t *testing.T) {
-			test := &aggregatePubkeysTest{}
-			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := yaml.Unmarshal(file, test); err != nil {
-				t.Fatal(err)
-			}
-			expectedOutputString := toBytes(48, test.Output)
-			aggregated := bls.NewAggregatePubkey()
-			for i := 0; i < len(test.Input); i++ {
-				pubkey, err := bls.PublicKeyFromBytes(toBytes(48, test.Input[i]))
-				if err != nil {
-					t.Fatal(err)
-				}
-				aggregated.Aggregate(pubkey)
-			}
-			if !bytes.Equal(expectedOutputString, aggregated.Marshal()) {
-				t.Fatal("pubkey aggregation fails\n", folder.Name())
-			}
-		})
+	test := &AggregatePubkeysTest{}
+	if err := yaml.Unmarshal(file, test); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	pubBytes, err := hex.DecodeString(test.Input[0][2:])
+	if err != nil {
+		t.Fatalf("Cannot decode string to bytes: %v", err)
+	}
+	pk, err := bls.PublicKeyFromBytes(pubBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pk2 := range test.Input[1:] {
+		pubBytes2, err := hex.DecodeString(pk2[2:])
+		if err != nil {
+			t.Fatalf("Cannot decode string to bytes: %v", err)
+		}
+		p, err := bls.PublicKeyFromBytes(pubBytes2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pk.Aggregate(p)
+	}
+
+	outputBytes, err := hex.DecodeString(test.Output[2:])
+	if err != nil {
+		t.Fatalf("Cannot decode string to bytes: %v", err)
+	}
+	if !bytes.Equal(outputBytes, pk.Marshal()) {
+		t.Fatal("Output does not equal marshaled aggregated public " +
+			"key bytes")
 	}
 }

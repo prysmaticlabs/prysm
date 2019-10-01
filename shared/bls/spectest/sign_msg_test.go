@@ -3,46 +3,59 @@ package spectest
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"path"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"gopkg.in/yaml.v2"
 )
 
-type testVectorSignMessage struct {
-	Input struct {
-		Secret  string `yaml:"privkey"`
-		Message string `yaml:"message"`
-		Domain  string `yaml:"domain"`
-	} `yaml:"input"`
-	Output string `yaml:"output"`
-}
-
-func TestSignMessage(t *testing.T) {
+func TestSignMessageYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign_msg/small")
+
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			test := &testVectorSignMessage{}
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to read file: %v", err)
 			}
+			test := &SignMsgTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			expectedOutputString := toBytes(96, test.Output)
-			msg := toBytes(32, test.Input.Message)
-			domain := binary.LittleEndian.Uint64(toBytes(8, test.Input.Domain))
-			secretKey, err := bls.SecretKeyFromBytes(toBytes(32, test.Input.Secret))
+
+			pkBytes, err := hex.DecodeString(test.Input.Privkey[2:])
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			signature := secretKey.Sign(msg, domain)
-			if !bytes.Equal(expectedOutputString[:], signature.Marshal()) {
-				t.Fatal("msg sign fails\n", folder.Name())
+			sk, err := bls.SecretKeyFromBytes(pkBytes)
+			if err != nil {
+				t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 			}
+
+			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			domain, err := hex.DecodeString(test.Input.Domain[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			num := binary.LittleEndian.Uint64(domain)
+			sig := sk.Sign(msgBytes, num)
+
+			outputBytes, err := hex.DecodeString(test.Output[2:])
+			if err != nil {
+				t.Fatalf("Cannot decode string to bytes: %v", err)
+			}
+			if !bytes.Equal(outputBytes, sig.Marshal()) {
+				t.Logf("Domain=%d", domain)
+				t.Fatalf("Signature does not match the expected output. "+
+					"Expected %#x but received %#x", outputBytes, sig.Marshal())
+			}
+			t.Logf("Success. Domain=%d", domain)
 		})
 	}
 }

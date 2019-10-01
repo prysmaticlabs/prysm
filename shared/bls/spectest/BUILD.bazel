@@ -4,7 +4,12 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "bytesutil.go",
+        "aggregate_pubkeys_test.yaml.go",
+        "aggregate_sigs_test.yaml.go",
+        "msg_hash_compressed_test.yaml.go",
+        "msg_hash_uncompressed_test.yaml.go",
+        "priv_to_pub_test.yaml.go",
+        "sign_msg_test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
     visibility = ["//visibility:public"],
@@ -30,7 +35,7 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
-        "@in_gopkg_yaml_v2//:go_default_library",
-        "@com_github_kilic_bls12-381//:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_phoreproject_bls//:go_default_library",
     ],
 )
