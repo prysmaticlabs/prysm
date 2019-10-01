@@ -5,14 +5,16 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -27,8 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // ChainFeeds interface defines the methods of the Service which provide state related
@@ -233,7 +233,7 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 
 	log.WithFields(logrus.Fields{
 		"slot":     b.Slot,
-		"headRoot": hex.EncodeToString(r[:]),
+		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
 }

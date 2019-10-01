@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -41,8 +42,8 @@ func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 
 	log.WithFields(logrus.Fields{
-		"attRoot":   hex.EncodeToString(attDataRoot[:]),
-		"blockRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attRoot":   fmt.Sprintf("%#x", attDataRoot),
+		"blockRoot": fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
 	if err := s.ReceiveAttestationNoPubsub(ctx, att); err != nil {
