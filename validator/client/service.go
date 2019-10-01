@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -57,8 +58,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
-		log.WithField("pubKey", hex.EncodeToString(v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
 		pubkey := v.keys[i].PublicKey.Marshal()
+		log.WithField("pubKey", fmt.Sprintf("0x%s...", hex.EncodeToString(pubkey)[:8])).Info("New validator service")
 		pubkeys = append(pubkeys, pubkey)
 	}
 
