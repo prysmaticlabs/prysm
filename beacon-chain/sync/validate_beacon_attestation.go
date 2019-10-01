@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,7 +19,6 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
 	if r.initialSync.Syncing() {
-		log.Debug("Not propagating or processing attestation during syncing")
 		return false, nil
 	}
 
@@ -34,7 +34,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
-		log.Warn("Ignored incoming attestation that points to a block that isn't in the database.")
+		log.WithField(
+			"blockRoot",
+			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
+		).Debug("Ignored incoming attestation that points to a block which is not in the database")
 		return false, nil
 	}
 

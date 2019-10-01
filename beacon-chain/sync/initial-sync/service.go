@@ -71,21 +71,20 @@ func (s *InitialSync) Start() {
 		log.WithField(
 			"genesis time",
 			genesis,
-		).Warn("Genesis time is in the future. Waiting to start sync.")
+		).Warn("Genesis time is in the future - waiting to start sync...")
 		time.Sleep(roughtime.Until(genesis))
 	}
-	log.Info("Starting initial sync.")
 	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch. Not syncing.")
+		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		return
 	}
-
+	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
-		log.Info("Already synced to the current epoch.")
+		log.Info("Already synced to the current chain head")
 		s.synced = true
 		return
 	}
@@ -96,7 +95,7 @@ func (s *InitialSync) Start() {
 		log.WithField(
 			"handshakes",
 			fmt.Sprintf("%d/%d", count, minStatusCount),
-		).Info("Waiting for enough peer handshakes before syncing.")
+		).Info("Waiting for enough peer handshakes before syncing")
 
 		if count >= minStatusCount {
 			break
@@ -108,7 +107,7 @@ func (s *InitialSync) Start() {
 		panic(err)
 	}
 
-	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
 }
 

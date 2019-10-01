@@ -28,7 +28,7 @@ func withRelayAddrs(relay string) config.AddrsFactory {
 		}
 
 		if len(relayAddrs) == 0 {
-			log.Warn("Addresses via relay node are zero. Using non-relay addresses")
+			log.Warn("Addresses via relay node are zero - using non-relay addresses")
 			return addrs
 		}
 		return append(addrs, relayAddrs...)
