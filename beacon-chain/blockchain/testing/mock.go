@@ -100,7 +100,7 @@ func (ms *ChainService) HeadUpdatedFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+// ParentExists mocks the same method in the chain service.
 func (ms *ChainService) ParentExists(ctx context.Context, block *ethpb.BeaconBlock) (bool, error) {
-
 	return false, nil
 }
