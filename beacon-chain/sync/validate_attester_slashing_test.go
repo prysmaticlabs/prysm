@@ -140,7 +140,7 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 	}
 
 	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/)
-	if !valid {
+	if valid {
 		t.Error("Passed validation")
 	}
 
@@ -164,7 +164,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	}
 
 	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
-	if !valid {
+	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }
@@ -182,7 +182,7 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	}
 
 	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
-	if !valid {
+	if valid {
 		t.Error("Passed validation")
 	}
 

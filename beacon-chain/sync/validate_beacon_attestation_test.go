@@ -82,7 +82,7 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	}
 
 	valid, _ := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if !valid {
+	if valid {
 		t.Error("Invalid beacon attestation passed validation when it should not have")
 	}
 	if p.BroadcastCalled {
