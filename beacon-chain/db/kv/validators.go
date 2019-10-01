@@ -74,6 +74,7 @@ func (k *Store) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64
 			return bucket.Put(buf, enc)
 		}); err != nil {
 			logrus.WithError(err).Error("Failed to save validator vote")
+			panic(err)
 		}
 	}()
 	return nil

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -58,6 +59,8 @@ func TestStore_OnAttestation(t *testing.T) {
 	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(10*time.Millisecond) // Sleep to allow batch saves to propagate.
 
 	tests := []struct {
 		name          string

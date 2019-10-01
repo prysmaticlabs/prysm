@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -34,6 +35,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond) // Sleep to allow batch saves to propagate.
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
 	}
@@ -78,6 +80,8 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
 		t.Fatal(err)
 	}
+	// This operation of 1000 saves is flaky with lower values.
+	time.Sleep(5 * time.Second) // Sleep to allow batch saves to propagate.
 	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
 	if err != nil {
 		t.Fatal(err)
@@ -124,6 +128,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(50 * time.Millisecond) // Sleep to allow batch saves to propagate.
 	db.blockCache.Delete(string(blockRoot[:]))
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
@@ -172,6 +177,8 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	if err := db.SaveBlocks(ctx, blocks); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(25 * time.Millisecond) // Sleep to allow batch saves to propagate.
 
 	tests := []struct {
 		filter            *filters.QueryFilter
@@ -249,6 +256,7 @@ func TestStore_Blocks_RetrieveRange(t *testing.T) {
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(5 * time.Second) // Sleep to allow batch saves to propagate.
 	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399))
 	if err != nil {
 		t.Fatal(err)

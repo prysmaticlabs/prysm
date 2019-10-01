@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -1665,6 +1666,8 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	if err := db.SaveBlocks(ctx, blks); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(250 * time.Millisecond)
 
 	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
 	if err != nil {

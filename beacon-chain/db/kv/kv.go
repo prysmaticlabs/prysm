@@ -121,3 +121,9 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db)
 }
+
+// TestOnlyDisableBatchDelay disables any batch delays. Only useful in testing scenarios.
+func (k *Store) TestOnlyDisableBatchDelay() {
+	k.db.MaxBatchSize = 0
+	k.db.MaxBatchDelay = 0
+}

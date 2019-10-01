@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -94,6 +95,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 		}
 
+		time.Sleep(10*time.Millisecond) // Sleep to allow batch saves to propagate.
+
 		store := NewForkChoiceService(ctx, db)
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
@@ -135,6 +138,5 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		helpers.ClearAllCaches()
 		testDB.TeardownDB(t, db)
-
 	}
 }

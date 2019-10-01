@@ -25,6 +25,7 @@ func setupDB(t testing.TB) *Store {
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	db.TestOnlyDisableBatchDelay()
 	return db
 }
 

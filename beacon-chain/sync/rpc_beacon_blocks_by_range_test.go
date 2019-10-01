@@ -37,6 +37,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	time.Sleep(500 * time.Millisecond)
 
 	r := &RegularSync{p2p: p1, db: d}
 	pcl := protocol.ID("/testing")

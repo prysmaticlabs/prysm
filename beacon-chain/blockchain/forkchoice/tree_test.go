@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -40,6 +41,7 @@ func blockTree1(db db.Database) ([][]byte, error) {
 			return nil, err
 		}
 	}
+	time.Sleep(10*time.Millisecond) // Sleep to allow batch saves to propagate.
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
 }
 

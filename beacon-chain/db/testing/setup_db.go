@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -24,6 +25,8 @@ func SetupDB(t testing.TB) db.Database {
 		t.Fatalf("failed to remove directory: %v", err)
 	}
 	s, err := kv.NewKVStore(p)
+	// Disable batch delays.
+	s.TestOnlyDisableBatchDelay()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,6 +35,7 @@ func SetupDB(t testing.TB) db.Database {
 
 // TeardownDB closes a database and destroys the files at the database path.
 func TeardownDB(t testing.TB, db db.Database) {
+	time.Sleep(10 * time.Millisecond) // Sleep to allow batch saves to propagate.
 	if err := db.Close(); err != nil {
 		t.Fatalf("failed to close database: %v", err)
 	}

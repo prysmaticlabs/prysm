@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -61,6 +62,7 @@ func TestStore_ValidatorLatestVoteCRUD(t *testing.T) {
 	if err := db.SaveValidatorLatestVote(ctx, validatorIdx, latestVote); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(10 * time.Millisecond) // Sleep to allow batch saves to propagate.
 	if !db.HasValidatorLatestVote(ctx, validatorIdx) {
 		t.Error("Expected validator latest vote to exist in the db")
 	}
@@ -98,6 +100,7 @@ func TestStore_ValidatorLatestVoteCRUD_NoCache(t *testing.T) {
 	if err := db.SaveValidatorLatestVote(ctx, validatorIdx, latestVote); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(25 * time.Millisecond) // Sleep to allow batch saves to propagate.
 	db.votesCache.Delete(string(validatorIdx))
 	if !db.HasValidatorLatestVote(ctx, validatorIdx) {
 		t.Error("Expected validator latest vote to exist in the db")

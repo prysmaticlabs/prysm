@@ -279,21 +279,10 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(blocks))
 	for _, blk := range blocks {
-		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
-			defer w.Done()
-			if err := k.SaveBlock(ctx, b); err != nil {
-				errs = append(errs, err.Error())
-				return
-			}
-		}(&wg, blk)
-	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("saving blocks failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+		if err := k.SaveBlock(ctx, blk); err != nil {
+			return err
+		}
 	}
 	return nil
 }
