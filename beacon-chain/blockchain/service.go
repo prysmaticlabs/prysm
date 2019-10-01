@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -25,6 +26,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -61,7 +63,7 @@ type Service struct {
 	headBlock            *ethpb.BeaconBlock
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
-	canonicalRootsLock   sync.RWMutex
+	headLock             sync.RWMutex
 }
 
 // Config options for the service.
@@ -172,6 +174,13 @@ func (s *Service) initializeBeaconChain(
 		return errors.Wrap(err, "could not save genesis data")
 	}
 
+	// Update committee shuffled indices for genesis epoch.
+	if featureconfig.FeatureConfig().EnableNewCache {
+		if err := helpers.UpdateCommitteeCache(genesisState); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -206,11 +215,12 @@ func (s *Service) HeadUpdatedFeed() *event.Feed {
 
 // This gets called to update canonical root mapping.
 func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
 	s.headSlot = b.Slot
 
-	s.canonicalRootsLock.Lock()
 	s.canonicalRoots[b.Slot] = r[:]
-	defer s.canonicalRootsLock.Unlock()
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
@@ -226,7 +236,7 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	log.WithFields(logrus.Fields{
 		"slots": b.Slot,
 		"root":  hex.EncodeToString(r[:]),
-	}).Debug("Saved head info")
+	}).Debug("Saved new head info")
 	return nil
 }
 
@@ -242,6 +252,9 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconSta
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconState) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
 	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
@@ -284,25 +297,31 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	return nil
 }
 
-// This gets called to initialize chain info variables using the head stored in DB
+// This gets called to initialize chain info variables using the finalized checkpoint stored in DB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
-	headBlock, err := s.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head block in db")
-	}
-	headState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head state in db")
-	}
-	s.headSlot = headBlock.Slot
-	s.headBlock = headBlock
-	s.headState = headState
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
 
-	headRoot, err := ssz.SigningRoot(headBlock)
+	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not sign root on head block")
+		return errors.Wrap(err, "could not get finalized checkpoint from db")
 	}
-	s.canonicalRoots[s.headSlot] = headRoot[:]
+	if finalized == nil {
+		// This should never happen. At chain start, the finalized checkpoint
+		// would be the genesis state and block.
+		return errors.New("no finalized epoch in the database")
+	}
+	s.headState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized state from db")
+	}
+	s.headBlock, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized block from db")
+	}
+
+	s.headSlot = s.headState.Slot
+	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil
 }

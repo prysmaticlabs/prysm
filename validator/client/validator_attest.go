@@ -19,8 +19,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var delay = params.BeaconConfig().SecondsPerSlot / 2
-
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
@@ -29,13 +27,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
-
-	span.AddAttributes(
-		trace.StringAttribute("validator", tpk),
-	)
-
-	v.waitToSlotMidpoint(ctx, slot)
+	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
+	span.AddAttributes(trace.StringAttribute("validator", tpk))
+	log := log.WithField("pubKey", tpk[:12])
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -59,6 +53,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
+
+	v.waitToSlotMidpoint(ctx, slot)
+
 	req := &pb.AttestationRequest{
 		Slot:  slot,
 		Shard: assignment.Shard,
@@ -98,9 +95,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to sign attestation data and custody bit")
+		log.WithError(err).Error("Failed to sign attestation data and custody bit")
 		return
 	}
 	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
@@ -123,7 +118,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		"shard":       data.Crosslink.Shard,
 		"sourceEpoch": data.Source.Epoch,
 		"targetEpoch": data.Target.Epoch,
-		"pubKey":      tpk,
 	}).Info("Attested latest head")
 
 	span.AddAttributes(
@@ -144,8 +138,12 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToSlotMidpoint")
 	defer span.End()
 
-	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
+	half := params.BeaconConfig().SecondsPerSlot / 2
+	delay := time.Duration(half) * time.Second
+	if half == 0 {
+		delay = 500 * time.Millisecond
+	}
+	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot) + delay
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
-
 	time.Sleep(roughtime.Until(timeToBroadcast))
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -101,6 +102,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	// Compute state root with the newly constructed block.
 	stateRoot, err = ps.computeStateRoot(ctx, blk)
 	if err != nil {
+		interop.WriteBlockToDisk(blk, true /*failed*/)
 		return nil, errors.Wrap(err, "could not get compute state root")
 	}
 	blk.StateRoot = stateRoot
@@ -176,19 +178,15 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 
-	s, err := state.ExecuteStateTransitionNoVerify(
+	root, err := state.CalculateStateRoot(
 		ctx,
 		beaconState,
 		block,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not execute state transition for state at slot %d", beaconState.Slot)
+		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot)
 	}
 
-	root, err := ssz.HashTreeRoot(s)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash beacon state")
-	}
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state hash")
 	return root[:], nil
 }

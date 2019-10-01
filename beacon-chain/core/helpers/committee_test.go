@@ -10,6 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -153,8 +154,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start := SplitOffset(validatorCount, committeeCount, shard)
-	end := SplitOffset(validatorCount, committeeCount, shard+1)
+	start := sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end := sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee5) {
 		t.Error("committee has different shuffled indices")
@@ -166,8 +167,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start = SplitOffset(validatorCount, committeeCount, shard)
-	end = SplitOffset(validatorCount, committeeCount, shard+1)
+	start = sliceutil.SplitOffset(validatorCount, committeeCount, shard)
+	end = sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee9) {
 		t.Error("committee has different shuffled indices")
@@ -744,6 +745,89 @@ func TestCompactCommitteesRoot_OK(t *testing.T) {
 	_, err := CompactCommitteesRoot(state, 1)
 	if err != nil {
 		t.Fatalf("Could not get compact root %v", err)
+	}
+}
+
+func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
+	ClearAllCaches()
+
+	valiatorCount := 1000
+	validators := make([]*ethpb.Validator, valiatorCount)
+	indices := make([]uint64, valiatorCount)
+	for i := 0; i < valiatorCount; i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		indices[i] = uint64(i)
+	}
+	state := &pb.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+	// Test for current epoch
+	shuffledIndices, err := ShuffledIndices(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shuffledIndices) != valiatorCount {
+		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
+			valiatorCount, len(shuffledIndices))
+	}
+	if reflect.DeepEqual(indices, shuffledIndices) {
+		t.Error("Shuffling did not happen")
+	}
+
+	// Test for next epoch
+	shuffledIndices, err = ShuffledIndices(state, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shuffledIndices) != valiatorCount {
+		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
+			valiatorCount, len(shuffledIndices))
+	}
+	if reflect.DeepEqual(indices, shuffledIndices) {
+		t.Error("Shuffling did not happen")
+	}
+}
+
+func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
+	ClearAllCaches()
+
+	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	validators := make([]*ethpb.Validator, validatorCount)
+	indices := make([]uint64, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+		indices[i] = uint64(i)
+	}
+	state := &pb.BeaconState{
+		Validators:       validators,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	if err := UpdateCommitteeCache(state); err != nil {
+		t.Fatal(err)
+	}
+	savedEpochs, err := committeeCache.Epochs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(savedEpochs) != 2 {
+		t.Error("Did not save correct epoch lengths")
+	}
+	epoch := uint64(1)
+	shard := uint64(512)
+	indices, err = committeeCache.ShuffledIndices(epoch, shard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(indices) != int(params.BeaconConfig().TargetCommitteeSize) {
+		t.Error("Did not save correct indices lengths")
 	}
 }
 

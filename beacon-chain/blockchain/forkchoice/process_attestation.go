@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,7 +59,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
-	tgt := a.Data.Target
+	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	// Verify beacon node has seen the target block before.
@@ -99,9 +98,10 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
+	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
 		log.WithFields(logrus.Fields{
-			"AggregatedBitfield": fmt.Sprintf("%b", a.AggregationBits),
+			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
 		}).Debug("Updating latest votes")
 
@@ -121,6 +121,15 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
+		att, err := s.aggregatedAttestation(ctx, a)
+		if err != nil {
+			return 0, err
+		}
+		atts = append(atts, att)
+	}
+
+	if err := s.db.SaveAttestations(ctx, atts); err != nil {
+		return 0, err
 	}
 
 	return tgtSlot, nil
@@ -182,7 +191,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	}
 
 	nextSlot := slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot)*time.Second + time.Millisecond
+	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
 	if err := s.aggregateAttestation(ctx, a); err != nil {
@@ -197,33 +206,20 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return err
 	}
 
-	incomingAttBits := att.AggregationBits
 	if a, ok := s.attsQueue[root]; ok {
-		if !a.AggregationBits.Contains(incomingAttBits) {
-			newBits := a.AggregationBits.Or(incomingAttBits)
-			incomingSig, err := bls.SignatureFromBytes(att.Signature)
-			if err != nil {
-				return err
-			}
-			currentSig, err := bls.SignatureFromBytes(a.Signature)
-			if err != nil {
-				return err
-			}
-			aggregatedSig := bls.AggregateSignatures([]*bls.Signature{currentSig, incomingSig})
-			a.Signature = aggregatedSig.Marshal()
-			a.AggregationBits = newBits
-			s.attsQueue[root] = a
+		a, err := helpers.AggregateAttestation(a, att)
+		if err != nil {
+			return nil
 		}
+		s.attsQueue[root] = a
 		return nil
 	}
-
-	s.attsQueue[root] = att
+	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
 }
 
@@ -248,7 +244,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
-		return nil, errors.New("could not verify indexed attestation")
+		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil
 }
@@ -260,21 +256,23 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	newVoteIndices := make([]uint64, 0, len(indices))
+	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
+	for _, i := range indices {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
 		}
-		if !s.db.HasValidatorLatestVote(ctx, i) || tgtEpoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+		if vote == nil || tgtEpoch > vote.Epoch {
+			newVotes = append(newVotes, &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
-			}
+			})
+			newVoteIndices = append(newVoteIndices, i)
 		}
 	}
-	return nil
+	return s.db.SaveValidatorLatestVotes(ctx, newVoteIndices, newVotes)
 }
 
 // setSeenAtt sets the attestation hash in seen attestation map to true.
@@ -291,8 +289,25 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	return nil
 }
 
-// returns true when time is divisible with slot duration / 2.
-func halfSlot(genesisTime uint64) bool {
-	t := time.Unix(int64(genesisTime), 0)
-	return uint64(roughtime.Since(t).Seconds())%params.BeaconConfig().SecondsPerSlot/2 == 0
+// aggregatedAttestation returns the aggregated attestation after checking saved one in db.
+func (s *Store) aggregatedAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.Attestation, error) {
+	r, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return nil, err
+	}
+	saved, err := s.db.Attestation(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	if saved == nil {
+		return att, nil
+	}
+
+	aggregated, err := helpers.AggregateAttestation(saved, att)
+	if err != nil {
+		return nil, err
+	}
+
+	return aggregated, nil
 }

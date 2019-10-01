@@ -47,7 +47,7 @@ and save the bytecode in `bytecode.bin` in the folder. Now with both the abi and
 we can generate the go bindings. 
 
 ```
-abigen -bin ./bytecode.bin -abi ./abi.json -out ./depositContract.go --pkg depositContract
+abigen -bin ./bytecode.bin -abi ./abi.json -out ./depositContract.go --pkg depositcontract --type DepositContract
 
 ```
 

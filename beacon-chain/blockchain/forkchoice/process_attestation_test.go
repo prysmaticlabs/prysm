@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -231,5 +232,28 @@ func TestStore_AggregateAttestation(t *testing.T) {
 	}
 	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{131, 1}) {
 		t.Error("Received incorrect aggregation bitfield")
+	}
+}
+
+func TestStore_ReturnAggregatedAttestation(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
+	err := store.db.SaveAttestation(ctx, a1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
+	saved, err := store.aggregatedAttestation(ctx, a2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(a2, saved) {
+		t.Error("did not retrieve saved attestation")
 	}
 }

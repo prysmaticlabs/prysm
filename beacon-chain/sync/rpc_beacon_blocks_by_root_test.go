@@ -8,14 +8,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -54,17 +52,14 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
-		res := make([]*ethpb.BeaconBlock, 0)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
-			t.Error(err)
-		}
-		if len(res) != len(blkRoots) {
-			t.Errorf("Received only %d blocks, expected %d", len(res), len(blkRoots))
-		}
-		for i, blk := range res {
-			if blk.Slot != uint64(i+1) {
-				t.Errorf("Received unexpected block slot %d but wanted %d", blk.Slot, i+1)
+		for i := range blkRoots {
+			expectSuccess(t, r, stream)
+			res := &ethpb.BeaconBlock{}
+			if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
+				t.Error(err)
+			}
+			if res.Slot != uint64(i+1) {
+				t.Errorf("Received unexpected block slot %d but wanted %d", res.Slot, i+1)
 			}
 		}
 	})
@@ -74,7 +69,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.recentBeaconBlocksRPCHandler(context.Background(), blkRoots, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -87,6 +82,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
 
 	blockA := &ethpb.BeaconBlock{Slot: 111}
 	blockB := &ethpb.BeaconBlock{Slot: 40}
@@ -119,12 +115,13 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		helloTracker: make(map[peer.ID]*pb.Hello),
-		ctx:          context.Background(),
+		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/recent_beacon_blocks/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -136,13 +133,15 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		if !reflect.DeepEqual(out, expectedRoots) {
 			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out, expectedRoots)
 		}
-		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-			t.Fatalf("Failed to write to stream: %v", err)
-		}
 		response := []*ethpb.BeaconBlock{blockB, blockA}
-		_, err := p2.Encoding().EncodeWithLength(stream, response)
-		if err != nil {
-			t.Errorf("Could not send response back: %v ", err)
+		for _, blk := range response {
+			if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+				t.Fatalf("Failed to write to stream: %v", err)
+			}
+			_, err := p2.Encoding().EncodeWithLength(stream, blk)
+			if err != nil {
+				t.Errorf("Could not send response back: %v ", err)
+			}
 		}
 	})
 

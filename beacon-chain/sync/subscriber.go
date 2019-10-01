@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -10,10 +9,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 const oneYear = 365 * 24 * time.Hour
+const pubsubMessageTimeout = 10 * time.Second
 
 // prefix to add to keys, so that we can represent invalid objects
 const invalid = "invalidObject"
@@ -21,20 +22,16 @@ const invalid = "invalidObject"
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
-func notImplementedSubHandler(_ context.Context, _ proto.Message) error {
-	return errors.New("not implemented")
-}
-
 // validator should verify the contents of the message, propagate the message
 // as expected, and return true or false to continue the message processing
 // pipeline. FromSelf indicates whether or not this is a message received from our
 // node in pubsub.
-type validator func(ctx context.Context, msg proto.Message, broadcaster p2p.Broadcaster, fromSelf bool) bool
+type validator func(ctx context.Context, msg proto.Message, broadcaster p2p.Broadcaster, fromSelf bool) (bool, error)
 
 // noopValidator is a no-op that always returns true and does not propagate any
 // message.
-func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) bool {
-	return true
+func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) (bool, error) {
+	return true, nil
 }
 
 // Register PubSub subscribers
@@ -43,9 +40,9 @@ func (r *RegularSync) registerSubscribers() {
 		ch := make(chan time.Time)
 		sub := r.chain.StateInitializedFeed().Subscribe(ch)
 		defer sub.Unsubscribe()
+
 		// Wait until chain start.
 		genesis := <-ch
-
 		if genesis.After(roughtime.Now()) {
 			time.Sleep(roughtime.Until(genesis))
 		}
@@ -100,16 +97,20 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(data []byte, fromSelf bool) {
+		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
+		defer span.End()
+
 		defer func() {
 			if r := recover(); r != nil {
+				traceutil.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
 				log.WithField("error", r).Error("Panic occurred")
 				debug.PrintStack()
 			}
 		}()
-		ctx := context.Background()
-		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
-		defer span.End()
+
 		span.AddAttributes(trace.StringAttribute("topic", topic))
+		span.AddAttributes(trace.BoolAttribute("fromSelf", fromSelf))
 
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
@@ -118,20 +119,27 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 		msg := proto.Clone(base)
 		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
+			traceutil.AnnotateError(span, err)
 			log.WithError(err).Warn("Failed to decode pubsub message")
 			return
 		}
 
-		if !validate(ctx, msg, r.p2p, fromSelf) {
-			log.WithField("message", msg.String()).Debug("Message did not verify")
-
-			// TODO(3147): Increment metrics.
+		valid, err := validate(ctx, msg, r.p2p, fromSelf)
+		if err != nil {
+			if !fromSelf {
+				log.WithError(err).Error("Message failed to verify")
+				messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			}
+			return
+		}
+		if !valid {
 			return
 		}
 
 		if err := handle(ctx, msg); err != nil {
-			// TODO(3147): Increment metrics.
+			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
+			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 	}

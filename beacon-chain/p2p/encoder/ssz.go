@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/gogo/protobuf/proto"
@@ -54,6 +55,23 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, 
 	return w.Write(b)
 }
 
+// EncodeWithMaxLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
+// to indicate the size of the message. This checks that the encoded message isn't larger than the provided max limit.
+func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, maxSize uint64) (int, error) {
+	if msg == nil {
+		return 0, nil
+	}
+	b, err := e.doEncode(msg)
+	if err != nil {
+		return 0, err
+	}
+	if uint64(len(b)) > maxSize {
+		return 0, fmt.Errorf("size of encoded message is %d which is larger than the provided max limit of %d", len(b), maxSize)
+	}
+	b = append(proto.EncodeVarint(uint64(len(b))), b...)
+	return w.Write(b)
+}
+
 // Decode the bytes to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 	if e.UseSnappyCompression {
@@ -78,14 +96,25 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	if err != nil {
 		return err
 	}
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
+	return e.Decode(b, to)
+}
+
+// DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
+// This checks that the decoded message isn't larger than the provided max limit.
+func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxSize uint64) error {
+	msgLen, err := readVarint(r)
+	if err != nil {
+		return err
 	}
-	return ssz.Unmarshal(b, to)
+	if msgLen > maxSize {
+		return fmt.Errorf("size of decoded message is %d which is larger than the provided max limit of %d", msgLen, maxSize)
+	}
+	b := make([]byte, msgLen)
+	_, err = r.Read(b)
+	if err != nil {
+		return err
+	}
+	return e.Decode(b, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.

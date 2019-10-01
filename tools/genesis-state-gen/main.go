@@ -19,7 +19,7 @@ const (
 var (
 	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
 	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
-	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state")
+	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state (defaults to now)")
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
@@ -31,7 +31,7 @@ func main() {
 		log.Fatal("Expected --num-validators to have been provided, received 0")
 	}
 	if *genesisTime == 0 {
-		log.Print("No --genesis-time specified, defaulting to 0 as the unix timestamp")
+		log.Print("No --genesis-time specified, defaulting to now")
 	}
 	if *sszOutputFile == "" && *yamlOutputFile == "" && *jsonOutputFile == "" {
 		log.Fatal("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")

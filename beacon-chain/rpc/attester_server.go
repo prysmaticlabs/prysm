@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -32,19 +33,21 @@ type AttesterServer struct {
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
-	root, err := ssz.SigningRoot(att)
+	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign root attestation")
+		return nil, errors.Wrap(err, "failed to hash tree root attestation")
 	}
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
-			log.WithError(err).Error("could not handle attestation in operations service")
-			return
-		}
+		attCopy := proto.Clone(att).(*ethpb.Attestation)
 		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
+			return
+		}
+		if err := as.operationsHandler.HandleAttestation(ctx, attCopy); err != nil {
+			log.WithError(err).Error("could not handle attestation in operations service")
+			return
 		}
 	}()
 

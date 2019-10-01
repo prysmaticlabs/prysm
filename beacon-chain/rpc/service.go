@@ -9,6 +9,7 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -42,6 +43,8 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	forkFetcher           blockchain.ForkFetcher
+	finalizationFetcher   blockchain.FinalizationFetcher
 	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
@@ -72,6 +75,8 @@ type Config struct {
 	BeaconDB              db.Database
 	StateFeedListener     blockchain.ChainFeeds
 	HeadFetcher           blockchain.HeadFetcher
+	ForkFetcher           blockchain.ForkFetcher
+	FinalizationFetcher   blockchain.FinalizationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
@@ -96,6 +101,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		forkFetcher:           cfg.ForkFetcher,
+		finalizationFetcher:   cfg.FinalizationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
@@ -131,10 +138,12 @@ func (s *Service) Start() {
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(),
 			grpc_prometheus.StreamServerInterceptor,
+			grpc_opentracing.StreamServerInterceptor(),
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(),
 			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.UnaryServerInterceptor(),
 		)),
 	}
 	// TODO(#791): Utilize a certificate for secure connections
@@ -176,6 +185,7 @@ func (s *Service) Start() {
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		headFetcher:        s.headFetcher,
+		forkFetcher:        s.forkFetcher,
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
@@ -190,11 +200,12 @@ func (s *Service) Start() {
 		genesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
-		beaconDB:           s.beaconDB,
-		pool:               s.attestationsPool,
-		headFetcher:        s.headFetcher,
-		chainStartFetcher:  s.chainStartFetcher,
-		canonicalStateChan: s.canonicalStateChan,
+		beaconDB:            s.beaconDB,
+		pool:                s.attestationsPool,
+		headFetcher:         s.headFetcher,
+		finalizationFetcher: s.finalizationFetcher,
+		chainStartFetcher:   s.chainStartFetcher,
+		canonicalStateChan:  s.canonicalStateChan,
 	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)

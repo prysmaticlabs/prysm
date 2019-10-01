@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -84,12 +85,12 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		if featureconfig.FeatureConfig().DemoConfig {
-			log.Info("Using demo config")
-			params.UseDemoBeaconConfig()
-		} else {
+		if featureconfig.FeatureConfig().MinimalConfig {
 			log.Info("Using minimal config")
 			params.UseMinimalConfig()
+		} else {
+			log.Info("Using demo config")
+			params.UseDemoBeaconConfig()
 		}
 	}
 
@@ -117,11 +118,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSyncService(ctx); err != nil {
+	if err := beacon.registerInitialSyncService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerInitialSyncService(ctx); err != nil {
+	if err := beacon.registerSyncService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -201,10 +202,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath)
+		d, err = confirmDelete(d, dbPath)
 		if err != nil {
 			return err
 		}
@@ -218,19 +216,21 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeENR := ctx.GlobalString(cmd.BootstrapNode.Name)
-	if filepath.Ext(bootnodeENR) == ".enr" {
-		b, err := ioutil.ReadFile(bootnodeENR)
-		if err != nil {
-			return err
+	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
+	for i, addr := range bootnodeAddrs {
+		if filepath.Ext(addr) == ".enr" {
+			b, err := ioutil.ReadFile(addr)
+			if err != nil {
+				return err
+			}
+			bootnodeAddrs[i] = string(b)
 		}
-		bootnodeENR = string(b)
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeENR,
+		BootstrapNodeAddr: bootnodeAddrs,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
@@ -362,11 +362,17 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
+	var initSync *initialsync.InitialSync
+	if err := b.services.FetchService(&initSync); err != nil {
+		return err
+	}
+
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:         b.db,
-		P2P:        b.fetchP2P(ctx),
-		Operations: operationService,
-		Chain:      chainService,
+		DB:          b.db,
+		P2P:         b.fetchP2P(ctx),
+		Operations:  operationService,
+		Chain:       chainService,
+		InitialSync: initSync,
 	})
 
 	return b.services.RegisterService(rs)
@@ -379,15 +385,9 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var regSync *prysmsync.RegularSync
-	if err := b.services.FetchService(&regSync); err != nil {
-		return err
-	}
-
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		Chain:   chainService,
-		RegSync: regSync,
-		P2P:     b.fetchP2P(ctx),
+		Chain: chainService,
+		P2P:   b.fetchP2P(ctx),
 	})
 
 	return b.services.RegisterService(is)
@@ -410,17 +410,16 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *prysmsync.RegularSync
+	var syncService *initialsync.InitialSync
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
 	}
 
-	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher powchain.ChainStartFetcher
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
 			return err
@@ -443,6 +442,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
+		ForkFetcher:           chainService,
+		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		StateFeedListener:     chainService,
@@ -499,7 +500,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
@@ -509,8 +510,6 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		})
 
 		return b.services.RegisterService(svc)
-	} else if genesisTime+genesisValidators > 0 {
-		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
 }

@@ -6,11 +6,16 @@ package bls
 import (
 	"encoding/binary"
 	"io"
+	"time"
 
+	"github.com/karlseguin/ccache"
 	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
+
+var pubkeyCache = ccache.New(ccache.Configure())
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
@@ -51,16 +56,28 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &PublicKey{}, nil
+	}
+	cv := pubkeyCache.Get(string(pub))
+	if cv != nil && cv.Value() != nil {
+		return cv.Value().(*PublicKey).Copy(), nil
+	}
 	b := bytesutil.ToBytes48(pub)
 	k, err := g1.DeserializePublicKey(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	return &PublicKey{val: k}, nil
+	pk := &PublicKey{val: k}
+	pubkeyCache.Set(string(pub), pk.Copy(), 48*time.Hour)
+	return pk, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &Signature{}, nil
+	}
 	b := bytesutil.ToBytes96(sig)
 	s, err := g1.DeserializeSignature(b)
 	if err != nil {
@@ -76,6 +93,9 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return &Signature{}
+	}
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, domain)
 	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
@@ -94,8 +114,17 @@ func (p *PublicKey) Marshal() []byte {
 	return k[:]
 }
 
+// Copy the public key to a new pointer reference.
+func (p *PublicKey) Copy() *PublicKey {
+	return &PublicKey{val: p.val.Copy()}
+}
+
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
+	// If the skip BLS verify feature flag is enabled, we simply return the same public key.
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return p
+	}
 	p1 := p.val
 	p1.Aggregate(p2.val)
 	return &PublicKey{val: p1}
@@ -103,6 +132,10 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+	// If the skip BLS verify feature flag is enabled, we simply return true.
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return true
+	}
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, domain)
 	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
@@ -112,6 +145,10 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+	// If the skip BLS verify feature flag is enabled, we simply return true.
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return true
+	}
 	if len(pubKeys) == 0 {
 		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
 	}
@@ -128,6 +165,10 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+	// If the skip BLS verify feature flag is enabled, we simply return true.
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return true
+	}
 	if len(pubKeys) == 0 {
 		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
 	}
@@ -142,12 +183,18 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return make([]byte, 96)
+	}
 	k := s.val.Serialize()
 	return k[:]
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return sigs[0]
+	}
 	var ss []*g1.Signature
 	for _, v := range sigs {
 		if v == nil {

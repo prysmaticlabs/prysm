@@ -7,7 +7,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/karlseguin/ccache"
+	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // BlockCacheSize specifies 4 epochs worth of blocks cached.
@@ -16,13 +18,17 @@ const BlockCacheSize = 256
 // VotesCacheSize with 1M validators will only be around 50Mb.
 const VotesCacheSize = 1000000
 
+// ValidatorIndexCacheSize of 1M * 8 bytes, ~8 Mb
+const ValidatorIndexCacheSize = 1000000
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db           *bolt.DB
-	databasePath string
-	blockCache   *ccache.Cache
-	votesCache   *ccache.Cache
+	db                  *bolt.DB
+	databasePath        string
+	blockCache          *ccache.Cache
+	votesCache          *ccache.Cache
+	validatorIndexCache *ccache.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -42,10 +48,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}
 
 	kv := &Store{
-		db:           boltDB,
-		databasePath: dirPath,
-		blockCache:   ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
-		votesCache:   ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		db:                  boltDB,
+		databasePath:        dirPath,
+		blockCache:          ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
+		votesCache:          ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		validatorIndexCache: ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -64,7 +71,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 			archivedCommitteeInfoBucket,
 			archivedBalancesBucket,
 			archivedValidatorParticipationBucket,
-			archivedActiveIndicesBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -77,6 +83,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
+	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
 }
@@ -86,11 +93,13 @@ func (k *Store) ClearDB() error {
 	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
 		return nil
 	}
+	prometheus.Unregister(createBoltCollector(k.db))
 	return os.RemoveAll(k.databasePath)
 }
 
 // Close closes the underlying BoltDB database.
 func (k *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(k.db))
 	return k.db.Close()
 }
 
@@ -106,4 +115,9 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 		}
 	}
 	return nil
+}
+
+// createBoltCollector returns a prometheus collector specifically configured for boltdb.
+func createBoltCollector(db *bolt.DB) prometheus.Collector {
+	return prombolt.New("boltDB", db)
 }

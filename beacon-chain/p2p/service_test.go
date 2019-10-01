@@ -133,8 +133,9 @@ func TestListenForNewNodes(t *testing.T) {
 	bootNode := bootListener.Self()
 
 	cfg = &Config{
-		BootstrapNodeAddr: bootNode.String(),
-		Encoding:          "ssz",
+		BootstrapNodeAddr:   []string{bootNode.String()},
+		Discv5BootStrapAddr: []string{bootNode.String()},
+		Encoding:            "ssz",
 	}
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
