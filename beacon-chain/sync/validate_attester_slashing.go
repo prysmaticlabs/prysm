@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -26,28 +27,27 @@ func attSlashingCacheKey(slashing *ethpb.AttesterSlashing) (string, error) {
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// The head state will be too far away to validate any slashing.
 	if r.initialSync.Syncing() {
-		return false
+		return false, nil
 	}
 
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
-		return false
+		return false, nil
 	}
 	cacheKey, err := attSlashingCacheKey(slashing)
 	if err != nil {
-		log.WithError(err).Warn("could not hash attester slashing")
-		return false
+		return false, errors.Wrapf(err, "could not hash attestation slashing")
 	}
 
 	invalidKey := invalid + cacheKey
 	if seenAttesterSlashings.Get(invalidKey) != nil {
-		return false
+		return false, errors.New("previously seen invalid attester slashing received")
 	}
 	if seenAttesterSlashings.Get(cacheKey) != nil {
-		return false
+		return false, nil
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
@@ -55,31 +55,29 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < slashSlot {
 		if ctx.Err() != nil {
-			log.WithError(ctx.Err()).Errorf("Failed to advance state to slot %d to process attester slashing", slashSlot)
-			return false
+			return false, errors.Wrapf(ctx.Err(),
+				"Failed to advance state to slot %d to process attester slashing", slashSlot)
 		}
 
 		var err error
 		s, err = state.ProcessSlots(ctx, s, slashSlot)
 		if err != nil {
-			log.WithError(err).Errorf("Failed to advance state to slot %d", slashSlot)
-			return false
+			return false, errors.Wrapf(err, "Failed to advance state to slot %d", slashSlot)
 		}
 	}
 
 	if err := blocks.VerifyAttesterSlashing(s, slashing); err != nil {
-		log.WithError(err).Warn("Received invalid attester slashing")
 		seenAttesterSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
-		return false
+		return false, errors.Wrap(err, "Received invalid attester slashing")
 	}
 	seenAttesterSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
 
 	if fromSelf {
-		return false
+		return false, nil
 	}
 
 	if err := p.Broadcast(ctx, slashing); err != nil {
 		log.WithError(err).Error("Failed to propagate attester slashing")
 	}
-	return true
+	return true, nil
 }
