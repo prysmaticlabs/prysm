@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -22,23 +23,23 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) bool {
+func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// The head state will be too far away to validate any voluntary exit.
 	if r.initialSync.Syncing() {
-		return false
+		return false, nil
 	}
 
 	exit, ok := msg.(*ethpb.VoluntaryExit)
 	if !ok {
-		return false
+		return false, nil
 	}
 	cacheKey := exitCacheKey(exit)
 	invalidKey := invalid + cacheKey
 	if seenExits.Get(invalidKey) != nil {
-		return false
+		return false, errors.New("previously seen invalid validator exit received")
 	}
 	if seenExits.Get(cacheKey) != nil {
-		return false
+		return false, nil
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in exit message.
@@ -48,24 +49,22 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 		var err error
 		s, err = state.ProcessSlots(ctx, s, exitedEpochSlot)
 		if err != nil {
-			log.WithError(err).Errorf("Failed to advance state to slot %d", exitedEpochSlot)
-			return false
+			return false, errors.Wrapf(err, "Failed to advance state to slot %d", exitedEpochSlot)
 		}
 	}
 
 	if err := blocks.VerifyExit(s, exit); err != nil {
-		log.WithError(err).Warn("Received invalid voluntary exit")
 		seenExits.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
-		return false
+		return false, errors.Wrap(err, "Received invalid validator exit")
 	}
 	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
 
 	if fromSelf {
-		return false
+		return false, nil
 	}
 
 	if err := p.Broadcast(ctx, exit); err != nil {
 		log.WithError(err).Error("Failed to propagate voluntary exit")
 	}
-	return true
+	return true, nil
 }

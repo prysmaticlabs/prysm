@@ -71,7 +71,11 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if !r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/) {
+	valid, err := r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if err != nil {
+		t.Errorf("Failed validation: %v", err)
+	}
+	if !valid {
 		t.Error("Failed validation")
 	}
 
@@ -82,7 +86,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/) {
+	valid, _ = r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Passed validation when should have failed")
 	}
 
@@ -105,7 +110,8 @@ func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if r.validateVoluntaryExit(ctx, exit, p2p, true /*fromSelf*/) {
+	valid, _ := r.validateVoluntaryExit(ctx, exit, p2p, true /*fromSelf*/)
+	if valid {
 		t.Error("Validation should have failed")
 	}
 
@@ -128,7 +134,8 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 
-	if r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/) {
+	valid, _ := r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Validation should have failed")
 	}
 
