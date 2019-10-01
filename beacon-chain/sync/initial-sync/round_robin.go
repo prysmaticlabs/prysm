@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"io"
 	"sort"
 	"time"
@@ -16,7 +17,6 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -126,32 +126,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Slot < blocks[j].Slot
 		})
 
-		var receiveBlocks func(blocks []*eth.BeaconBlock) error
-		receiveBlocks = func(blocks []*eth.BeaconBlock) error {
-			for _, blk := range blocks {
-				logSyncStatus(genesis, blk, peers, counter)
-				prBlocks, err := s.checkParentExists(ctx, peers[0], blk)
-				if err != nil {
-					return err
-				}
-				if len(prBlocks) > 0 {
-					if err := receiveBlocks(prBlocks); err != nil {
-						return err
-					}
-				}
-				if featureconfig.FeatureConfig().InitSyncNoVerify {
-					if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
-						return err
-					}
-				} else {
-					if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		if err := receiveBlocks(blocks); err != nil {
+		if err := s.receiveBlocks(ctx, blocks, counter, peers, genesis); err != nil {
 			return err
 		}
 
@@ -201,6 +176,31 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		}
 	}
 
+	return nil
+}
+
+func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlock, counter *ratecounter.RateCounter, peers []peer.ID, genesis time.Time) error {
+	for _, blk := range blocks {
+		logSyncStatus(genesis, blk, peers, counter)
+		prBlocks, err := s.checkParentExists(ctx, peers[0], blk)
+		if err != nil {
+			return err
+		}
+		if len(prBlocks) > 0 {
+			if err := s.receiveBlocks(ctx, prBlocks, counter, peers, genesis); err != nil {
+				return err
+			}
+		}
+		if featureconfig.FeatureConfig().InitSyncNoVerify {
+			if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
+				return err
+			}
+		} else {
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
