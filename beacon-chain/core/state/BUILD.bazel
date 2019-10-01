@@ -12,6 +12,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/interop:__pkg__",
+        "//shared/testutil:__pkg__",
         "//tools/genesis-state-gen:__pkg__",
     ],
     deps = [
