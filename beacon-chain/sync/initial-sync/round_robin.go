@@ -126,7 +126,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Slot < blocks[j].Slot
 		})
 
-		if err := s.receiveBlocks(ctx, blocks, counter, peers, genesis); err != nil {
+		if err := s.receiveBlocks(ctx, blocks, counter, peers, genesis, 0); err != nil {
 			return err
 		}
 
@@ -179,15 +179,15 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	return nil
 }
 
-func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlock, counter *ratecounter.RateCounter, peers []peer.ID, genesis time.Time) error {
+func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlock, counter *ratecounter.RateCounter, peers []peer.ID, genesis time.Time, depth uint8) error {
 	for _, blk := range blocks {
 		logSyncStatus(genesis, blk, peers, counter)
 		prBlocks, err := s.checkParentExists(ctx, peers[0], blk)
 		if err != nil {
 			return err
 		}
-		if len(prBlocks) > 0 {
-			if err := s.receiveBlocks(ctx, prBlocks, counter, peers, genesis); err != nil {
+		if len(prBlocks) > 0 && depth < 10 {
+			if err := s.receiveBlocks(ctx, prBlocks, counter, peers, genesis, depth+1); err != nil {
 				return err
 			}
 		}
@@ -205,10 +205,8 @@ func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlo
 }
 
 func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
-	ok, err := s.chain.ParentExists(ctx, blk)
-	if err != nil {
-		return nil, err
-	}
+	ok := s.chain.ParentExists(ctx, blk)
+
 	if !ok {
 		bl, err := s.requestBlocksByRoot(ctx, [][32]byte{bytesutil.ToBytes32(blk.ParentRoot)}, id)
 		if err != nil {
