@@ -126,7 +126,7 @@ func (s *Service) Start() {
 		}
 		s.stateInitializedFeed.Send(s.genesisTime)
 	} else {
-		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 		if s.chainStartFetcher == nil {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
@@ -161,7 +161,7 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	log.Info("ChainStart time reached, starting the beacon chain!")
+	log.Info("Genesis time reached, starting the beacon chain")
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
@@ -187,8 +187,6 @@ func (s *Service) initializeBeaconChain(
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-
-	log.Info("Stopping service")
 	return nil
 }
 

@@ -229,7 +229,6 @@ func (s *Service) Start() {
 
 // Stop the service.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()

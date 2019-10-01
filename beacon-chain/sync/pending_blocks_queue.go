@@ -77,7 +77,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
-		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
+		log.Infof("Processed ancestor block with slot %d and cleared pending block cache", s)
 	}
 	return nil
 }

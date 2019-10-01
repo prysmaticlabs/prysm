@@ -88,7 +88,6 @@ func (s *Service) Start() {
 // and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -238,10 +237,8 @@ func (s *Service) removeOperations() {
 		ctx := context.TODO()
 		select {
 		case <-incomingBlockSub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
 			return
 		case <-s.ctx.Done():
-			log.Debug("operations service context closed, exiting remove goroutine")
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:

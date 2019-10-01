@@ -36,7 +36,7 @@ func confirmDelete(d db.Database, path string) (db.Database, error) {
 			break
 		}
 		log.Info("Not deleting chain data, the db will be initialized" +
-			" with the currently saved chain data in the data directory.")
+			" with the current data directory.")
 		break
 	}
 

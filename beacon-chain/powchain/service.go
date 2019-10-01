@@ -214,7 +214,6 @@ func (s *Service) Stop() error {
 	if s.headerChan != nil {
 		defer close(s.headerChan)
 	}
-	log.Info("Stopping service")
 	return nil
 }
 
