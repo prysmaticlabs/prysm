@@ -253,13 +253,13 @@ func (s *InitialSync) requestBlocksByRoot(ctx context.Context, blockRoots [][32]
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	stream, err := r.p2p.Send(ctx, blockRoots, id)
+	stream, err := s.p2p.Send(ctx, blockRoots, id)
 	if err != nil {
 		return nil, err
 	}
 	resp := make([]*eth.BeaconBlock, 0, len(blockRoots))
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := prysmsync.ReadChunkedBlock(stream, r.p2p)
+		blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
 		if err == io.EOF {
 			break
 		}
