@@ -79,6 +79,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
 	}
+
 	// Only save head if it's different than the current head.
 	if !bytes.Equal(headRoot, s.HeadRoot()) {
 		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
@@ -173,7 +174,11 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	s.reportSlotMetrics(block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(block, root[:])
+	log.WithFields(logrus.Fields{
+		"slot":         block.Slot,
+		"attestations": len(block.Body.Attestations),
+		"deposits":     len(block.Body.Deposits),
+	}).Debug("Finished applying state transition")
 
 	// We write the latest saved head root to a feed for consumption by other services.
 	s.headUpdatedFeed.Send(root)
