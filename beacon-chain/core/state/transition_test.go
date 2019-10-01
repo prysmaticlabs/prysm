@@ -1000,7 +1000,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)
