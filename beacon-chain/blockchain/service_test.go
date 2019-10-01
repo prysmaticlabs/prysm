@@ -266,8 +266,8 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("Context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
-	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
+	testutil.AssertLogsContain(t, hook, "Waiting")
+	testutil.AssertLogsContain(t, hook, "Genesis time reached")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
