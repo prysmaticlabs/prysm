@@ -27,8 +27,7 @@ type BlockGenConfig struct {
 }
 
 // GenerateFullBlock generates a fully valid block with the requested parameters.
-// change the BeaconConfig() MAX_OPERATIONNAME lengths to build a block of the conditions
-// needed.
+// Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
 	t testing.TB,
 	bState *pb.BeaconState,
@@ -113,7 +112,7 @@ func GenerateFullBlock(
 		t.Fatal(err)
 	}
 	bState.Slot--
-	domain := helpers.Domain(bState, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 
 	return block
@@ -144,7 +143,7 @@ func generateProposerSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 		header1.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
 
 		header2 := &ethpb.BeaconBlockHeader{
@@ -211,7 +210,7 @@ func generateAttesterSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState, i, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainAttestation)
 		sig := privs[committee[i]].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
@@ -329,7 +328,7 @@ func generateAttestations(
 		aggregationBits.SetBitAt(i, true)
 		att.AggregationBits = aggregationBits
 
-		domain := helpers.Domain(bState, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(bState.Fork, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainAttestation)
 		sig := privs[committee[i]].Sign(dataRoot[:], domain)
 		att.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 		attestations[i] = att
@@ -374,7 +373,7 @@ func generateVoluntaryExits(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
 		exit.Signature = privs[uint64(valIndex)].Sign(root[:], domain).Marshal()
 		voluntaryExits[i] = exit
 	}
