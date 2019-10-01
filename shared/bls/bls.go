@@ -102,7 +102,12 @@ func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
-	return s.p.Bytes()
+	keyBytes := s.p.Bytes()
+	if len(keyBytes) < 32 {
+		emptyBytes := make([]byte, 32-len(keyBytes))
+		keyBytes = append(emptyBytes, keyBytes...)
+	}
+	return keyBytes
 }
 
 // Marshal a public key into a LittleEndian byte slice.
@@ -131,19 +136,7 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	}
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
-	e := bls12.NewBLSPairingEngine()
-	target := &bls12.Fe12{}
-	e.Pair(target,
-		[]bls12.PointG1{
-			bls12.G1NegativeOne,
-			*pub.p,
-		},
-		[]bls12.PointG2{
-			*s.s,
-			*e.G2.MapToPoint(HashWithDomain(bytesutil.ToBytes32(msg), b)),
-		},
-	)
-	return e.Fp12.Equal(&bls12.Fp12One, target)
+	return s.s.VerifyMsgWithDomain(bytesutil.ToBytes32(msg), pub.p, b)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
