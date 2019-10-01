@@ -136,7 +136,19 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	}
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
-	return s.s.VerifyMsgWithDomain(bytesutil.ToBytes32(msg), pub.p, b)
+	e := bls12.NewBLSPairingEngine()
+	target := &bls12.Fe12{}
+	e.Pair(target,
+		[]bls12.PointG1{
+			bls12.G1NegativeOne,
+			*pub.p,
+		},
+		[]bls12.PointG2{
+			*s.s,
+			*e.G2.MapToPoint(HashWithDomain(bytesutil.ToBytes32(msg), b)),
+		},
+	)
+	return e.Fp12.Equal(&bls12.Fp12One, target)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
