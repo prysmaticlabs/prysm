@@ -248,7 +248,7 @@ func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocks
 
 // requestBlock sends a beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (r *InitialSync) requestBlocksByRoot(ctx context.Context, blockRoots [][32]byte, id peer.ID) ([]*eth.BeaconBlock, error) {
+func (s *InitialSync) requestBlocksByRoot(ctx context.Context, blockRoots [][32]byte, id peer.ID) ([]*eth.BeaconBlock, error) {
 	log.WithField("peer", id.Pretty()).WithField("roots", blockRoots).Debug("requesting blocks")
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
