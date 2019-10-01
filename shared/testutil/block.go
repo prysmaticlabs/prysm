@@ -347,8 +347,6 @@ func generateDepositsAndEth1Data(
 ) {
 	previousDepsLen := bState.Eth1DepositIndex
 	currentDeposits, _ := SetupInitialDeposits(t, previousDepsLen+maxDeposits)
-	t.Log(previousDepsLen)
-	t.Log(len(currentDeposits))
 	eth1Data := GenerateEth1Data(t, currentDeposits)
 	return currentDeposits[previousDepsLen:], eth1Data
 }
