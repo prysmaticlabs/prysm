@@ -21,7 +21,6 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Collecting metrics")
 
 	prometheusService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 type mockService struct {
