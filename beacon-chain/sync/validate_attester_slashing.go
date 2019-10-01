@@ -38,7 +38,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 	cacheKey, err := attSlashingCacheKey(slashing)
 	if err != nil {
-		log.WithError(err).Warn("could not hash attester slashing")
+		log.WithError(err).Error("Could not hash attester slashing")
 		return false
 	}
 
@@ -68,7 +68,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 
 	if err := blocks.VerifyAttesterSlashing(s, slashing); err != nil {
-		log.WithError(err).Warn("Received invalid attester slashing")
+		log.WithError(err).Error("Received invalid attester slashing")
 		seenAttesterSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
 		return false
 	}

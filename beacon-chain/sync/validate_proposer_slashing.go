@@ -37,7 +37,7 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	}
 	cacheKey, err := propSlashingCacheKey(slashing)
 	if err != nil {
-		log.WithError(err).Warn("could not hash proposer slashing")
+		log.WithError(err).Warn("Could not hash proposer slashing")
 		return false
 	}
 

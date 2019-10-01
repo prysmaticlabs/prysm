@@ -71,13 +71,13 @@ func (s *InitialSync) Start() {
 		log.WithField(
 			"genesis time",
 			genesis,
-		).Warn("Genesis time is in the future. Waiting to start sync.")
+		).Warn("Genesis time is in the future - waiting to start sync...")
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch - not syncing.")
+		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		return
 	}

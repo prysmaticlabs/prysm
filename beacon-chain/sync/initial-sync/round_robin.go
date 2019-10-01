@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const blockBatchSize = 64
@@ -275,16 +276,18 @@ func logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, peers []peer.ID, cou
 		rate = 1
 	}
 	timeRemaining := time.Duration(float64(slotsSinceGenesis(genesis)-blk.Slot)/rate) * time.Second
-	log.WithField(
-		"peers",
-		fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
-	).WithField(
-		"blocks per second",
-		fmt.Sprintf("%.1f", rate),
-	).Infof(
-		"Processing block %d/%d. Estimated %s remaining.",
-		blk.Slot,
-		slotsSinceGenesis(genesis),
-		timeRemaining,
-	)
+	if uint64(time.Now().Unix())%params.BeaconConfig().SecondsPerSlot == 0 {
+		log.WithField(
+			"peers",
+			fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
+		).WithField(
+			"blocks per second",
+			fmt.Sprintf("%.1f", rate),
+		).Infof(
+			"Processing block %d/%d. Estimated %s remaining.",
+			blk.Slot,
+			slotsSinceGenesis(genesis),
+			timeRemaining,
+		)
+	}
 }
