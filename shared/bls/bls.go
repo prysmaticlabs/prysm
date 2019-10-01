@@ -127,7 +127,7 @@ func (p *PublicKey) Marshal() []byte {
 	return bls12.NewG1(nil).ToCompressed(p.p)
 }
 
-// Copy copies the public key and returns it.
+// Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() *PublicKey {
 	return &PublicKey{p: new(bls12.PointG1).Set(p.p)}
 }
