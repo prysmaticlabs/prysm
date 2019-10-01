@@ -111,7 +111,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	valid, err := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
 	if err != nil {
-		t.Error("Failed validation: %v", err)
+		t.Errorf("Failed validation: %v", err)
 	}
 	if !valid {
 		t.Error("Failed validation")
