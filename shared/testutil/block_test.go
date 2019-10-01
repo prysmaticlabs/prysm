@@ -2,12 +2,12 @@ package testutil
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
