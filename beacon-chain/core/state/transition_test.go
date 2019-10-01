@@ -1009,8 +1009,8 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 
-	// Default at 512 validators, can raise this number with faster BLS.
-	validatorCount := uint64(512)
+	// Default at 256 validators, can raise this number with faster BLS.
+	validatorCount := uint64(256)
 	deposits, privKeys := testutil.SetupInitialDeposits(t, validatorCount)
 	s, _ := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	s.Slot = params.BeaconConfig().SlotsPerEpoch
