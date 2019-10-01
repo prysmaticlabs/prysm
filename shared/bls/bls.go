@@ -5,7 +5,6 @@ package bls
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/binary"
 	"io"
 	"math/big"
@@ -13,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	bls12 "github.com/kilic/bls12-381"
 )
@@ -276,13 +276,9 @@ func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
 	copy(xImBytes[:32], messageHash[:])
 	copy(xImBytes[32:40], domain[:])
 	copy(xImBytes[40:41], []byte{0x02})
-	copy(xBytes[16:48], hash(xImBytes[:]))
-	copy(xBytes[64:], hash(xReBytes[:]))
+	hashedBytes := hashutil.Hash(xImBytes[:])
+	copy(xBytes[16:48], hashedBytes[:])
+	hashedBytes = hashutil.Hash(xReBytes[:])
+	copy(xBytes[64:], hashedBytes[:])
 	return xBytes
-}
-
-func hash(in []byte) []byte {
-	h := sha256.New()
-	h.Write(in)
-	return h.Sum(nil)
 }
