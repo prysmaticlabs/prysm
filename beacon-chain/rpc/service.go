@@ -125,13 +125,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
-	log.WithField("port", s.port).Info("Listening on port")
+	log.WithField("port", fmt.Sprintf(":%s", s.port)).Info("RPC-API listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
@@ -230,7 +229,6 @@ func (s *Service) Start() {
 
 // Stop the service.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()

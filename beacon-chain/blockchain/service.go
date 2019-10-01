@@ -5,14 +5,13 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -108,7 +107,7 @@ func (s *Service) Start() {
 	}
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
-		log.Info("Beacon chain data already exists, starting service")
+		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
@@ -126,7 +125,7 @@ func (s *Service) Start() {
 		}
 		s.stateInitializedFeed.Send(s.genesisTime)
 	} else {
-		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 		if s.chainStartFetcher == nil {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
@@ -161,7 +160,7 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	log.Info("ChainStart time reached, starting the beacon chain!")
+	log.Info("Genesis time reached, starting the beacon chain")
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
@@ -187,8 +186,6 @@ func (s *Service) initializeBeaconChain(
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -234,8 +231,8 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slots": b.Slot,
-		"root":  hex.EncodeToString(r[:]),
+		"slot":     b.Slot,
+		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
 }

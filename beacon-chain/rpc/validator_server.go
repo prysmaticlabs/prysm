@@ -402,7 +402,7 @@ func (vs *ValidatorServer) WaitForChainStart(req *ptypes.Empty, stream pb.Valida
 	for {
 		select {
 		case chainStartTime := <-vs.chainStartChan:
-			log.Info("Sending ChainStart log and genesis time to connected validator clients")
+			log.Info("Sending genesis time notification to connected validator clients")
 			res := &pb.ChainStartResponse{
 				Started:     true,
 				GenesisTime: uint64(chainStartTime.Unix()),
