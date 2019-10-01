@@ -282,7 +282,7 @@ func logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, peers []peer.ID, cou
 		"blocksPerSecond",
 		fmt.Sprintf("%.1f", rate),
 	).Infof(
-		"Processing block %d/%d. Estimated %s remaining.",
+		"Processing block %d/%d - estimated time remaining %s",
 		blk.Slot,
 		slotsSinceGenesis(genesis),
 		timeRemaining,
