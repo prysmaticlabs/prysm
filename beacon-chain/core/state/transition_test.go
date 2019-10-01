@@ -1005,6 +1005,85 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 }
 
+func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
+	logrus.SetLevel(logrus.PanicLevel)
+	helpers.ClearAllCaches()
+
+	// Default at 256 validators, can raise this number with faster BLS.
+	validatorCount := uint64(256)
+	deposits, privKeys := testutil.SetupInitialDeposits(t, validatorCount)
+	s, _ := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	s.Slot = params.BeaconConfig().SlotsPerEpoch
+
+	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
+	aggBits := bitfield.NewBitlist(bitCount)
+	custodyBits := bitfield.NewBitlist(bitCount)
+	for i := uint64(1); i < bitCount; i++ {
+		aggBits.SetBitAt(i, true)
+	}
+	atts := make([]*ethpb.Attestation, 64)
+	crosslinkRoot, _ := ssz.HashTreeRoot(s.CurrentCrosslinks[0])
+
+	for i := 0; i < len(atts); i++ {
+		att := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0},
+				Crosslink: &ethpb.Crosslink{
+					Shard:      uint64(i + 960),
+					StartEpoch: 0,
+					ParentRoot: crosslinkRoot[:],
+					DataRoot:   params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AggregationBits: aggBits,
+			CustodyBits:     custodyBits,
+		}
+		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+		if err != nil {
+			t.Error(err)
+		}
+		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
+			Data:       att.Data,
+			CustodyBit: false,
+		}
+		domain := helpers.Domain(s, 0, params.BeaconConfig().DomainAttestation)
+		sigs := make([]*bls.Signature, len(attestingIndices))
+		for i, indice := range attestingIndices {
+			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+			if err != nil {
+				t.Error(err)
+			}
+			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			sigs[i] = sig
+		}
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+		atts[i] = att
+	}
+
+	epochSignature, _ := testutil.CreateRandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
+	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
+	blk := &ethpb.BeaconBlock{
+		Slot:       s.Slot,
+		ParentRoot: parentRoot[:],
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:     &ethpb.Eth1Data{},
+			RandaoReveal: epochSignature,
+			Attestations: atts,
+		},
+	}
+	blk, _ = testutil.SignBlock(s, blk, privKeys)
+
+	config := params.BeaconConfig()
+	config.MinAttestationInclusionDelay = 0
+	params.OverrideBeaconConfig(config)
+
+	_, err := state.ProcessBlock(context.Background(), s, blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
