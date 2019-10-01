@@ -108,7 +108,6 @@ func (s *Service) Start() {
 
 // Stop the service gracefully.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return s.server.Shutdown(ctx)

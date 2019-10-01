@@ -8,7 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,8 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // Allow for blocks "from the future" within a certain tolerance.
@@ -119,8 +121,20 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		return errors.Wrap(err, "could not save attestations")
 	}
 
+	if helpers.IsEpochEnd(postState.Slot) {
+	}
+
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
+		participation, err := epoch.ComputeValidatorParticipation(preState)
+		if err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"votedEther":        fmt.Sprintf("%.5f ETH", float64(participation.VotedEther)/float64(params.BeaconConfig().GweiPerEth)),
+			"totalEther":        fmt.Sprintf("%.5f ETH", float64(participation.EligibleEther)/float64(params.BeaconConfig().GweiPerEth)),
+			"participationRate": fmt.Sprintf("%.3f%%", participation.GlobalParticipationRate*100.0),
+		}).Info("Validator participation at end of epoch")
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
