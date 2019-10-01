@@ -34,13 +34,6 @@ func TestStop_OK(t *testing.T) {
 	if err := opsService.Stop(); err != nil {
 		t.Fatalf("Unable to stop operation service: %v", err)
 	}
-
-	msg := hook.LastEntry().Message
-	want := "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-
 	// The context should have been canceled.
 	if opsService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")

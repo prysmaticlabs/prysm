@@ -1178,7 +1178,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}(t)
 	validatorServer.chainStartChan <- time.Unix(0, 0)
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending ChainStart log and genesis time to connected validator clients")
+	testutil.AssertLogsContain(t, hook, "Sending genesis time")
 }
 
 func BenchmarkAssignment(b *testing.B) {

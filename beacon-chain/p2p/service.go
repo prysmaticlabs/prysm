@@ -327,5 +327,10 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 			break
 		}
 	}
-	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
+	if correctAddr != nil {
+		log.WithField(
+			"multiAddr",
+			correctAddr.String()+"/p2p/"+id.String(),
+		).Info("Node started p2p server")
+	}
 }
