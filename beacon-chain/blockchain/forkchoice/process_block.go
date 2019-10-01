@@ -149,7 +149,7 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	log.WithField("slot", b.Slot).Info("Executing state transition on block")
+	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
 	if err != nil {
@@ -197,7 +197,6 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
-		logEpochData(postState)
 		reportEpochMetrics(postState)
 	}
 

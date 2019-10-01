@@ -7,10 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
@@ -174,7 +175,11 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	s.reportSlotMetrics(block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(block, root[:])
+	log.WithFields(logrus.Fields{
+		"slot":         block.Slot,
+		"attestations": len(block.Body.Attestations),
+		"deposits":     len(block.Body.Deposits),
+	}).Debug("Finished applying state transition")
 
 	// We write the latest saved head root to a feed for consumption by other services.
 	s.headUpdatedFeed.Send(root)
