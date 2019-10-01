@@ -1,9 +1,8 @@
 package blockchain
 
 import (
-	"github.com/sirupsen/logrus"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
