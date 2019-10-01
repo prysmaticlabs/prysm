@@ -37,7 +37,6 @@ func TestLifecycle_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "listening on port")
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 }
 
@@ -90,5 +89,4 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
