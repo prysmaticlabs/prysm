@@ -130,9 +130,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		receiveBlocks = func(blocks []*eth.BeaconBlock) error {
 			for _, blk := range blocks {
 				logSyncStatus(genesis, blk, peers, counter)
-				emptyBlk := make([]*eth.BeaconBlock, 0)
-
-				prBlocks, err := s.checkParentExists(ctx, peers[0], blk, emptyBlk)
+				prBlocks, err := s.checkParentExists(ctx, peers[0], blk)
 				if err != nil {
 					return err
 				}
@@ -206,7 +204,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	return nil
 }
 
-func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
+func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
 	ok, err := s.chain.ParentExists(ctx, blk)
 	if err != nil {
 		return nil, err
@@ -216,10 +214,10 @@ func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *et
 		if err != nil {
 			return nil, err
 		}
-		parentBlocks = append(bl, parentBlocks[0])
+		return bl, nil
 
 	}
-	return parentBlocks, nil
+	return nil, nil
 }
 
 // requestBlocks by range to a specific peer.
