@@ -67,7 +67,14 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	log.WithField("slot", b.Slot).Info("Executing state transition on block")
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+	}
+	log.WithFields(logrus.Fields{
+		"slot": b.Slot,
+		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
+	}).Info("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
@@ -79,10 +86,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 	if err := s.db.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-	}
-	root, err := ssz.SigningRoot(b)
-	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
 		return errors.Wrap(err, "could not save state")
@@ -111,7 +114,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 	// Save the unseen attestations from block to db.
-	s.saveNewBlockAttestations(ctx, b.Body.Attestations)
+	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+		return errors.Wrap(err, "could not save attestations")
+	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
@@ -143,7 +148,7 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	log.WithField("slot", b.Slot).Info("Executing state transition on block")
+	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
 	if err != nil {
@@ -184,11 +189,12 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 	// Save the unseen attestations from block to db.
-	s.saveNewBlockAttestations(ctx, b.Body.Attestations)
+	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+		return errors.Wrap(err, "could not save attestations")
+	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
-		logEpochData(postState)
 		reportEpochMetrics(postState)
 	}
 
@@ -335,13 +341,19 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 }
 
 // saveNewBlockAttestations saves the new attestations in block to DB.
-func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Attestation) {
+func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
 	for _, att := range atts {
-		if err := s.saveNewAttestation(ctx, att); err != nil {
-			log.Error("Could not save new attestation in block")
+		aggregated, err := s.aggregatedAttestation(ctx, att)
+		if err != nil {
 			continue
 		}
+		attestations = append(attestations, aggregated)
 	}
+	if err := s.db.SaveAttestations(ctx, atts); err != nil {
+		return err
+	}
+	return nil
 }
 
 // clearSeenAtts clears seen attestations map, it gets called upon new finalization.

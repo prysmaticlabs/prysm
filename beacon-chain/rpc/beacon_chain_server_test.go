@@ -33,6 +33,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
@@ -48,7 +49,11 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 		beaconDB: db,
 	}
 
-	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{})
+	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,6 +191,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
@@ -205,59 +211,97 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 		req *ethpb.ListAttestationsRequest
 		res *ethpb.ListAttestationsResponse
 	}{
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(1),
+				PageSize:  3,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 3},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 3},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 4},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 4},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 5},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 5},
 					}},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(10),
+				PageSize:  5,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 50},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 50},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 51},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 51},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 52},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 52},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 53},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 53},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 54},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 54},
 					}},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(33),
+				PageSize:  3,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 99},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 99},
 					}},
 				},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageSize: 2},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageSize: 2,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 0},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 0},
 					}},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 1},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 1},
 					}},
 				},
 				NextPageToken: strconv.Itoa(1),
@@ -269,7 +313,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Error("Incorrect attestations response")
+			t.Errorf("Incorrect attestations response, wanted %v, received %v", test.res, res)
 		}
 	}
 }
@@ -284,6 +328,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
@@ -299,7 +344,13 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	req := &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+		PageToken: strconv.Itoa(1),
+		PageSize:  100,
+	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -328,6 +379,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
@@ -343,7 +395,11 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListAttestationsRequest{}
+	req := &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+	}
 	res, err := bs.ListAttestations(ctx, req)
 	if err != nil {
 		t.Fatal(err)

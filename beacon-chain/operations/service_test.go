@@ -34,13 +34,6 @@ func TestStop_OK(t *testing.T) {
 	if err := opsService.Stop(); err != nil {
 		t.Fatalf("Unable to stop operation service: %v", err)
 	}
-
-	msg := hook.LastEntry().Message
-	want := "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-
 	// The context should have been canceled.
 	if opsService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
@@ -111,7 +104,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		Data:       att.Data,
 		CustodyBit: false,
 	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
@@ -227,7 +220,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		t.Error(err)
 	}
 	totalAggBits := bitfield.NewBitlist(uint64(len(committee)))
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
 
 	// For every single member of the committee, we sign the attestation data and handle
 	// the attestation through the operations service, which will perform basic aggregation
@@ -331,7 +324,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
 	att1.Signature = privKeys[committee[0]].Sign(hashTreeRoot[:], domain).Marshal()
 
 	att2 := &ethpb.Attestation{
@@ -484,7 +477,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		Data:       att.Data,
 		CustodyBit: false,
 	}
-	domain := helpers.Domain(beaconState, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 
 	zeroSig := [96]byte{}
