@@ -20,6 +20,7 @@ go_test(
     size = "small",
     srcs = ["bls_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/bytesutil:go_default_library"],
 )
 
 # gazelle:exclude bls_benchmark_test.go
