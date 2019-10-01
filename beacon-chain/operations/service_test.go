@@ -83,7 +83,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		BeaconDB: beaconDB,
 	})
 
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +193,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// We setup the genesis state with 256 validators.
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 256)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -282,7 +282,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	})
 	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
 
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 200)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -457,7 +457,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
 
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)

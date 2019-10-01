@@ -40,7 +40,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _ := testutil.SetupInitialDeposits(t, numDeposits)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, numDeposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
@@ -84,7 +84,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
