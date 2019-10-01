@@ -1047,7 +1047,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			Data:       att.Data,
 			CustodyBit: false,
 		}
-		domain := helpers.Domain(s, 0, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainAttestation)
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		for i, indice := range attestingIndices {
 			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
