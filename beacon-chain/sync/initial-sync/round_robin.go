@@ -255,6 +255,7 @@ func (s *InitialSync) requestBlocksByRoot(ctx context.Context, blockRoots [][32]
 
 	stream, err := s.p2p.Send(ctx, blockRoots, id)
 	if err != nil {
+		errors.Wrapf(err, "requesting blockRoots: %v caused errors", blockRoots)
 		return nil, err
 	}
 	resp := make([]*eth.BeaconBlock, 0, len(blockRoots))
