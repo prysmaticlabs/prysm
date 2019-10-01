@@ -31,7 +31,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
@@ -63,7 +63,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
@@ -98,12 +98,16 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
 		false, // fromSelf
 	)
+
+	if err != nil {
+		t.Errorf("Expected true result, got false: %v", err)
+	}
 
 	if !result {
 		t.Error("Expected true result, got false")
@@ -114,7 +118,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 
 	// The value should be cached now so the second request will fail.
 	mock.BroadcastCalled = false
-	result = r.validateBeaconBlockPubSub(
+	result, _ = r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
@@ -148,7 +152,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
@@ -183,7 +187,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,
@@ -218,7 +222,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
-	result := r.validateBeaconBlockPubSub(
+	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
 		msg,
 		mock,

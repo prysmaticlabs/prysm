@@ -9,7 +9,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = ["shuffle_yaml_test.go"],
     data = [
         "@eth2_spec_tests_mainnet//:test_data",

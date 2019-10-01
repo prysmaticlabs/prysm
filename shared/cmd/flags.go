@@ -9,7 +9,7 @@ var (
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = cli.StringFlag{
 		Name:  "verbosity",
-		Usage: "Logging verbosity (debug, info=default, warn, error, fatal, panic)",
+		Usage: "Logging verbosity (trace, debug, info=default, warn, error, fatal, panic)",
 		Value: "info",
 	}
 	// DataDirFlag defines a path on disk.
