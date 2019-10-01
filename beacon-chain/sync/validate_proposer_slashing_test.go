@@ -109,7 +109,11 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if !r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, err := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if err != nil {
+		t.Errorf("Failed validation: %v", err)
+	}
+	if !valid {
 		t.Error("Failed validation")
 	}
 
@@ -120,7 +124,8 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ = r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Passed validation when should have failed")
 	}
 
@@ -141,7 +146,8 @@ func TestValidateProposerSlashing_ValidSlashing_FromSelf(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if r.validateProposerSlashing(ctx, slashing, p2p, true /*fromSelf*/) {
+	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, true /*fromSelf*/)
+	if valid {
 		t.Error("Did not fail validation")
 	}
 
@@ -164,7 +170,8 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }
@@ -181,7 +188,8 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 
-	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Did not fail validation")
 	}
 
