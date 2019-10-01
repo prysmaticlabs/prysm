@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
-        "@com_github_karlseguin_ccache//:go_default_library",
         "@com_github_kilic_bls12-381//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
@@ -19,7 +18,6 @@ go_test(
     size = "small",
     srcs = ["bls_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/bytesutil:go_default_library"],
 )
 
 # gazelle:exclude bls_benchmark_test.go
