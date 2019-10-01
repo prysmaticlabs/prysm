@@ -276,9 +276,9 @@ func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
 	copy(xImBytes[:32], messageHash[:])
 	copy(xImBytes[32:40], domain[:])
 	copy(xImBytes[40:41], []byte{0x02})
-	hashedBytes := hashutil.Hash(xImBytes[:])
-	copy(xBytes[16:48], hashedBytes[:])
-	hashedBytes = hashutil.Hash(xReBytes[:])
-	copy(xBytes[64:], hashedBytes[:])
+	hashedxImBytes := hashutil.Hash(xImBytes[:])
+	copy(xBytes[16:48], hashedxImBytes[:])
+	hashedxReBytes := hashutil.Hash(xReBytes[:])
+	copy(xBytes[64:], hashedxReBytes[:])
 	return xBytes
 }
