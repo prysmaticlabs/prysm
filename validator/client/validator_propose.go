@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -76,7 +77,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	blkRoot := fmt.Sprintf("0x%s", hex.EncodeToString(blkResp.BlockRoot)[:8])
+
+	blkRoot := fmt.Sprintf("0x%s", hex.EncodeToString(bytesutil.Trunc(blkResp.BlockRoot)))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
