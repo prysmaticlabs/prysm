@@ -125,22 +125,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		sort.Slice(blocks, func(i, j int) bool {
 			return blocks[i].Slot < blocks[j].Slot
 		})
-		var checkParentExists func(blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error)
-		checkParentExists = func(blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
-			ok, err := s.chain.ParentExists(ctx, blk)
-			if err != nil {
-				return nil, err
-			}
-			if !ok {
-				bl, err := s.requestBlocksByRoot(ctx, [][32]byte{bytesutil.ToBytes32(blk.ParentRoot)}, peers[0])
-				if err != nil {
-					return nil, err
-				}
-				parentBlocks = append(bl, parentBlocks...)
-
-			}
-			return parentBlocks, nil
-		}
 
 		var receiveBlocks func(blocks []*eth.BeaconBlock) error
 		receiveBlocks = func(blocks []*eth.BeaconBlock) error {
@@ -148,7 +132,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				logSyncStatus(genesis, blk, peers, counter)
 				emptyBlk := make([]*eth.BeaconBlock, 0)
 
-				prBlocks, err := checkParentExists(blk, emptyBlk)
+				prBlocks, err := s.checkParentExists(ctx, peers[0], blk, emptyBlk)
 				if err != nil {
 					return err
 				}
@@ -220,6 +204,22 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	}
 
 	return nil
+}
+
+func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock, parentBlocks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
+	ok, err := s.chain.ParentExists(ctx, blk)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		bl, err := s.requestBlocksByRoot(ctx, [][32]byte{bytesutil.ToBytes32(blk.ParentRoot)}, id)
+		if err != nil {
+			return nil, err
+		}
+		parentBlocks = append(bl, parentBlocks[0])
+
+	}
+	return parentBlocks, nil
 }
 
 // requestBlocks by range to a specific peer.
