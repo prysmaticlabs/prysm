@@ -23,6 +23,7 @@ import (
 )
 
 const latestSlotCount = 10
+const treeSize = 64
 
 // For treehandler, each node is a representation of a node in the graph
 type node struct {
@@ -40,8 +41,8 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	// Determine block tree range. Current slot to epoch number of slots back.
 	currentSlot := s.currentSlot()
 	startSlot := uint64(1)
-	if currentSlot-params.BeaconConfig().SlotsPerEpoch > startSlot {
-		startSlot = currentSlot - params.BeaconConfig().SlotsPerEpoch
+	if currentSlot-treeSize > startSlot {
+		startSlot = currentSlot - treeSize
 	}
 
 	// Retrieve range blocks for the tree.
