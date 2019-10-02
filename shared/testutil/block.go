@@ -373,12 +373,12 @@ func generateAttestations(
 		sigs := []*bls.Signature{}
 		for b := i; b < i+bitsPerAtt; b++ {
 			aggregationBits.SetBitAt(b, true)
-			sigs = append(sigs, privs[committee[i]].Sign(dataRoot[:], domain))
+			sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
 		}
 		att.AggregationBits = aggregationBits
 
 		att.Signature = bls.AggregateSignatures(sigs).Marshal()
-		attestations[i] = att
+		attestations[i/bitsPerAtt] = att
 	}
 	return attestations
 }
