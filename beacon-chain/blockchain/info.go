@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,9 +11,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
-	"github.com/awalterschulze/gographviz"
+	"github.com/emicklei/dot"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -22,44 +26,66 @@ const latestSlotCount = 10
 
 // For treehandler, each node is a representation of a node in the graph
 type node struct {
-	parentRoot string
-	selfRoot string
+	parentRoot [32]byte
+	dothNode   *dot.Node
 }
 
 // TreeHandler is a handler to serve /tree page in metrics.
-func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
-	graphAst, _ := gographviz.Parse([]byte(`digraph G{}`))
-	graph := gographviz.NewGraph()
-	gographviz.Analyse(graphAst, graph)
+func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
+	graph := dot.NewGraph(dot.Directed)
+	graph.Attr("rankdir", "RL")
+	graph.Attr("label", "Canonical block = green")
+	graph.Attr("labeljust", "l")
 
+	// Determine block tree range. Current slot to epoch number of slots back.
 	currentSlot := s.currentSlot()
-	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(currentSlot)
-	blks, err := s.beaconDB.Blocks(context.Background(), filter)
-	nodes := make([]node, len(blks))
-	for i:=0; i<len(nodes) ; i++  {
-		r, _ := ssz.SigningRoot(blks[i])
-		nodes[i].selfRoot = hex.EncodeToString(r[:1])
-		nodes[i].parentRoot = hex.EncodeToString(blks[i].ParentRoot[:1])
+	startSlot := uint64(1)
+	if currentSlot-params.BeaconConfig().SlotsPerEpoch > startSlot {
+		startSlot = currentSlot - params.BeaconConfig().SlotsPerEpoch
 	}
-	for i := 0; i<len(nodes); i++ {
-		n := nodes[i]
-		if err := graph.AddNode("G", n.selfRoot, nil); err != nil {
-			log.WithError(err).Error("Could not add node to graph")
+
+	// Retrieve range blocks for the tree.
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(currentSlot)
+	blks, err := s.beaconDB.Blocks(context.Background(), filter)
+
+	// Construct tree nodes for visualizations.
+	m := make(map[[32]byte]*node)
+	for i := 0; i < len(blks); i++ {
+		b := blks[i]
+		r, err := ssz.SigningRoot(b)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		if i != 0 {
-			if err := graph.AddEdge(n.parentRoot, n.selfRoot, true, nil); err != nil {
-				log.WithError(err).Error("Could not add node to graph")
-			}
+		// Construct label of each node.
+		rStr := hex.EncodeToString(r[:2])
+		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr
+		dotN := graph.Node(rStr).Box().Attr("label", label)
+		// Set the node box to green if it's the block is canonical.
+		if bytes.Equal(r[:], s.CanonicalRoot(b.Slot)) {
+			dotN = dotN.Attr("color", "green")
+		}
+		n := &node{
+			parentRoot: bytesutil.ToBytes32(b.ParentRoot),
+			dothNode:   &dotN,
+		}
+		m[r] = n
+	}
+
+	// Construct an edge if node block's parent exist in the tree.
+	for _, n := range m {
+		if _, ok := m[n.parentRoot]; ok {
+			graph.Edge(*n.dothNode, *m[n.parentRoot].dothNode)
 		}
 	}
 
-	img, err := dotToSvg([]byte(graph.String()))
+	svg, err := dotToSvg([]byte(graph.String()))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.ServeFile(w, r, img)
+	http.ServeFile(w, r, svg)
 }
 
 // HeadsHandler is a handler to serve /heads page in metrics.
