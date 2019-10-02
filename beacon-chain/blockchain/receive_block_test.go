@@ -23,7 +23,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
