@@ -213,10 +213,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Moving the state 2048 epochs forward due to PERSISTENT_COMMITTEE_PERIOD.
-<<<<<<< HEAD
-=======
 	beaconState.Slot = 3 + params.BeaconConfig().PersistentCommitteePeriod*params.BeaconConfig().SlotsPerEpoch
->>>>>>> 8bab55d88e3c11dbddd6f47d79511e04cf7d1908
 	conf := &BlockGenConfig{
 		MaxProposerSlashings: 0,
 		MaxAttesterSlashings: 0,
