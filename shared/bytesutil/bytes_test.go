@@ -193,7 +193,7 @@ func TestTruncate(t *testing.T) {
 		b []byte
 	}{
 		{[]byte{'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'},
-			[]byte{'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'}},
+			[]byte{'A', 'C', 'D', 'E', 'F', 'G'}},
 		{[]byte{'A', 'C', 'D', 'E', 'F'},
 			[]byte{'A', 'C', 'D', 'E', 'F'}},
 		{[]byte{}, []byte{}},
