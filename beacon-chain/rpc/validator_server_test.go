@@ -776,21 +776,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey,
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-	}
-
-	deposit := &ethpb.Deposit{
-		Data: depData,
-	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
-	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
