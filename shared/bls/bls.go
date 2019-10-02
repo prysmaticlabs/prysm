@@ -4,15 +4,19 @@
 package bls
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"io"
+	"math/big"
 	"time"
 
 	"github.com/karlseguin/ccache"
-	g1 "github.com/phoreproject/bls/g1pubs"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
+	bls12 "github.com/kilic/bls12-381"
 )
 
 var pubkeyCache = ccache.New(ccache.Configure())
@@ -20,38 +24,40 @@ var pubkeyCache = ccache.New(ccache.Configure())
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 
+var curveOrder, _ = new(big.Int).SetString(CurveOrder, 10)
+
 // Signature used in the BLS signature scheme.
 type Signature struct {
-	val *g1.Signature
-}
-
-// SecretKey used in the BLS signature scheme.
-type SecretKey struct {
-	val *g1.SecretKey
+	s *bls12.PointG2
 }
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
-	val *g1.PublicKey
+	p *bls12.PointG1
+}
+
+// SecretKey used in the BLS signature scheme.
+type SecretKey struct {
+	p *big.Int
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey(r io.Reader) (*SecretKey, error) {
-	k, err := g1.RandKey(r)
+	k, err := rand.Int(r, curveOrder)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize secret key")
+		return nil, err
 	}
-	return &SecretKey{val: k}, nil
+	return &SecretKey{k}, nil
 }
 
 // SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
-	k := bytesutil.ToBytes32(priv)
-	val := g1.DeserializeSecretKey(k)
-	if val.GetFRElement() == nil {
+	b := bytesutil.ToBytes32(priv)
+	k := new(big.Int).SetBytes(b[:])
+	if curveOrder.Cmp(k) < 0 {
 		return nil, errors.New("invalid private key")
 	}
-	return &SecretKey{val}, nil
+	return &SecretKey{p: k}, nil
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
@@ -64,13 +70,14 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return cv.Value().(*PublicKey).Copy(), nil
 	}
 	b := bytesutil.ToBytes48(pub)
-	k, err := g1.DeserializePublicKey(b)
+	g1Elems := bls12.NewG1(nil)
+	p, err := g1Elems.FromCompressed(b[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	pk := &PublicKey{val: k}
-	pubkeyCache.Set(string(pub), pk.Copy(), 48*time.Hour)
-	return pk, nil
+	pubkey := &PublicKey{p: p}
+	pubkeyCache.Set(string(pub), pubkey.Copy(), 48*time.Hour)
+	return pubkey, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
@@ -78,116 +85,154 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return &Signature{}, nil
 	}
-	b := bytesutil.ToBytes96(sig)
-	s, err := g1.DeserializeSignature(b)
+	s, err := bls12.NewG2(nil).FromCompressed(sig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into signature")
 	}
-	return &Signature{val: s}, nil
+	return &Signature{s: s}, nil
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *SecretKey) PublicKey() *PublicKey {
-	return &PublicKey{val: g1.PrivToPub(s.val)}
+	p := &bls12.PointG1{}
+	bls12.NewG1(nil).MulScalar(p, &bls12.G1One, s.p)
+	return &PublicKey{p: p}
 }
 
-// Sign a message using a secret key - in a beacon/validator client,
+// Sign a message using a secret key - in a beacon/validator client.
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return &Signature{}
 	}
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, domain)
-	sig := g1.SignWithDomain(bytesutil.ToBytes32(msg), s.val, bytesutil.ToBytes8(b))
-	return &Signature{val: sig}
+	g2 := bls12.NewG2(nil)
+	b := [8]byte{}
+	binary.LittleEndian.PutUint64(b[:], domain)
+	signature := g2.MapToPoint(HashWithDomain(bytesutil.ToBytes32(msg), b))
+	g2.MulScalar(signature, signature, s.p)
+	return &Signature{s: signature}
 }
 
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
-	k := s.val.Serialize()
-	return k[:]
+	keyBytes := s.p.Bytes()
+	if len(keyBytes) < 32 {
+		emptyBytes := make([]byte, 32-len(keyBytes))
+		keyBytes = append(emptyBytes, keyBytes...)
+	}
+	return keyBytes
 }
 
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
-	k := p.val.Serialize()
-	return k[:]
+	return bls12.NewG1(nil).ToCompressed(p.p)
 }
 
 // Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() *PublicKey {
-	return &PublicKey{val: p.val.Copy()}
+	return &PublicKey{p: new(bls12.PointG1).Set(p.p)}
 }
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
-	// If the skip BLS verify feature flag is enabled, we simply return the same public key.
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return p
 	}
-	p1 := p.val
-	p1.Aggregate(p2.val)
-	return &PublicKey{val: p1}
+	bls12.NewG1(nil).Add(p.p, p.p, p2.p)
+	return p
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
-	// If the skip BLS verify feature flag is enabled, we simply return true.
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return true
 	}
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, domain)
-	return g1.VerifyWithDomain(bytesutil.ToBytes32(msg), pub.val, s.val, bytesutil.ToBytes8(b))
+	b := [8]byte{}
+	binary.LittleEndian.PutUint64(b[:], domain)
+	e := bls12.NewBLSPairingEngine()
+	target := &bls12.Fe12{}
+	e.Pair(target,
+		[]bls12.PointG1{
+			bls12.G1NegativeOne,
+			*pub.p,
+		},
+		[]bls12.PointG2{
+			*s.s,
+			*e.G2.MapToPoint(HashWithDomain(bytesutil.ToBytes32(msg), b)),
+		},
+	)
+	return e.Fp12.Equal(&bls12.Fp12One, target)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
-	// If the skip BLS verify feature flag is enabled, we simply return true.
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return true
 	}
-	if len(pubKeys) == 0 {
-		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+	size := len(pubKeys)
+	if size == 0 {
+		return false
 	}
-	var keys []*g1.PublicKey
-	for _, v := range pubKeys {
-		keys = append(keys, v.val)
+	if size != len(msg) {
+		return false
 	}
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, domain)
-	return s.val.VerifyAggregateWithDomain(keys, msg, bytesutil.ToBytes8(b))
+	b := [8]byte{}
+	binary.LittleEndian.PutUint64(b[:], domain)
+	points := make([]bls12.PointG1, size+1)
+	e := bls12.NewBLSPairingEngine()
+	e.G1.Copy(&points[0], &bls12.G1NegativeOne)
+	twistPoints := make([]bls12.PointG2, size+1)
+	e.G2.Copy(&twistPoints[0], s.s)
+	for i := 0; i < size; i++ {
+		e.G1.Copy(&points[i+1], pubKeys[i].p)
+		e.G2.Copy(&twistPoints[i+1], e.G2.MapToPoint(HashWithDomain(msg[i], b)))
+	}
+	target := &bls12.Fe12{}
+	e.Pair(target, points, twistPoints)
+	return e.Fp12.Equal(&bls12.Fp12One, target)
 }
 
 // VerifyAggregateCommon verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
-	// If the skip BLS verify feature flag is enabled, we simply return true.
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return true
 	}
 	if len(pubKeys) == 0 {
-		return false // Otherwise panic in VerifyAggregateCommonWithDomain.
+		return false
 	}
-	var keys []*g1.PublicKey
-	for _, v := range pubKeys {
-		keys = append(keys, v.val)
+	b := [8]byte{}
+	binary.LittleEndian.PutUint64(b[:], domain)
+	e := bls12.NewBLSPairingEngine()
+	aggregated := &bls12.PointG1{}
+	e.G1.Copy(aggregated, pubKeys[0].p)
+	for i := 1; i < len(pubKeys); i++ {
+		e.G1.Add(aggregated, aggregated, pubKeys[i].p)
 	}
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, domain)
-	return s.val.VerifyAggregateCommonWithDomain(keys, bytesutil.ToBytes32(msg), bytesutil.ToBytes8(b))
+	target := &bls12.Fe12{}
+	e.Pair(target,
+		[]bls12.PointG1{
+			bls12.G1NegativeOne,
+			*aggregated,
+		},
+		[]bls12.PointG2{
+			*s.s,
+			*e.G2.MapToPoint(HashWithDomain(bytesutil.ToBytes32(msg), b)),
+		},
+	)
+	return e.Fp12.Equal(&bls12.Fp12One, target)
 }
 
-// Marshal a signature into a LittleEndian byte slice.
-func (s *Signature) Marshal() []byte {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
-		return make([]byte, 96)
-	}
-	k := s.val.Serialize()
-	return k[:]
+// NewAggregateSignature creates a blank aggregate signature.
+func NewAggregateSignature() *Signature {
+	return &Signature{s: &bls12.PointG2{}}
+}
+
+// NewAggregatePubkey creates a blank public key.
+func NewAggregatePubkey() *PublicKey {
+	return &PublicKey{p: &bls12.PointG1{}}
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
@@ -195,14 +240,24 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 	if featureconfig.FeatureConfig().SkipBLSVerify {
 		return sigs[0]
 	}
-	var ss []*g1.Signature
-	for _, v := range sigs {
-		if v == nil {
+	aggregated := NewAggregateSignature()
+	g2 := bls12.NewG2(nil)
+	for i := 0; i < len(sigs); i++ {
+		sig := sigs[i]
+		if sig == nil {
 			continue
 		}
-		ss = append(ss, v.val)
+		g2.Add(aggregated.s, aggregated.s, sig.s)
 	}
-	return &Signature{val: g1.AggregateSignatures(ss)}
+	return aggregated
+}
+
+// Marshal a signature into a LittleEndian byte slice.
+func (s *Signature) Marshal() []byte {
+	if featureconfig.FeatureConfig().SkipBLSVerify {
+		return make([]byte, 96)
+	}
+	return bls12.NewG2(nil).ToCompressed(s.s)
 }
 
 // Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
@@ -220,4 +275,22 @@ func Domain(domainType []byte, forkVersion []byte) uint64 {
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
 	return bytesutil.FromBytes8(b)
+}
+
+// HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element
+func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
+	xReBytes := [41]byte{}
+	xImBytes := [41]byte{}
+	xBytes := make([]byte, 96)
+	copy(xReBytes[:32], messageHash[:])
+	copy(xReBytes[32:40], domain[:])
+	copy(xReBytes[40:41], []byte{0x01})
+	copy(xImBytes[:32], messageHash[:])
+	copy(xImBytes[32:40], domain[:])
+	copy(xImBytes[40:41], []byte{0x02})
+	hashedxImBytes := hashutil.Hash(xImBytes[:])
+	copy(xBytes[16:48], hashedxImBytes[:])
+	hashedxReBytes := hashutil.Hash(xReBytes[:])
+	copy(xBytes[64:], hashedxReBytes[:])
+	return xBytes
 }
