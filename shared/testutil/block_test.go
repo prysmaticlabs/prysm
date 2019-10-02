@@ -32,6 +32,8 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	deposits, _, privs := SetupInitialDeposits(t, 1024)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
