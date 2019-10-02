@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/phoreproject/bls"
+	bls12 "github.com/kilic/bls12-381"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -36,11 +37,13 @@ func TestMsgHashCompressed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			projective := bls.HashG2WithDomain(
+			g2 := bls12.NewG2(nil)
+			hash := bls.HashWithDomain(
 				bytesutil.ToBytes32(msgBytes),
 				bytesutil.ToBytes8(domain),
 			)
-			hash := bls.CompressG2(projective.ToAffine())
+			g2Point := g2.MapToPoint(hash)
+			compressedHash := g2.ToCompressed(g2Point)
 
 			var buf []byte
 			for _, innerString := range test.Output {
@@ -50,10 +53,10 @@ func TestMsgHashCompressed(t *testing.T) {
 				}
 				buf = append(buf, slice...)
 			}
-			if !bytes.Equal(buf, hash[:]) {
+			if !bytes.Equal(buf, compressedHash[:]) {
 				t.Logf("Domain=%d", domain)
 				t.Fatalf("Hash does not match the expected output. "+
-					"Expected %#x but received %#x", buf, hash)
+					"Expected %#x but received %#x", buf, compressedHash)
 			}
 			t.Logf("Success. Domain=%d", domain)
 		})

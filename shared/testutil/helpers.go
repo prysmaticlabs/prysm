@@ -31,7 +31,7 @@ var trie *trieutil.MerkleTrie
 // account is key n and the withdrawal account is key n+1.  As such,
 // if all secret keys for n validators are required then numDeposits
 // should be n+1
-func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
+func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [][32]byte, []*bls.SecretKey) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -89,7 +89,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 	}
 
 	d, _ := GenerateDepositProof(t, deposits[0:numDeposits])
-	return d, privKeys[0:numDeposits]
+	return d, depositDataRoots[0:numDeposits], privKeys[0:numDeposits]
 }
 
 // GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.
@@ -145,7 +145,7 @@ func SignBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBlock, privKeys [
 		return nil, err
 	}
 	epoch := helpers.SlotToEpoch(block.Slot)
-	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 	block.Signature = blockSig[:]
 	return block, nil
@@ -160,7 +160,7 @@ func CreateRandaoReveal(beaconState *pb.BeaconState, epoch uint64, privKeys []*b
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal(), nil

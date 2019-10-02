@@ -131,7 +131,7 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
-	if level == logrus.DebugLevel {
+	if level == logrus.TraceLevel {
 		golog.SetAllLoggers(gologging.DEBUG)
 	}
 

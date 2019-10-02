@@ -174,7 +174,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		}
 	}
 
-	log.Debug("Synced to finalized epoch. Syncing blocks to head slot now.")
+	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
 
 	if s.chain.HeadSlot() == slotsSinceGenesis(genesis) {
 		return nil
@@ -216,7 +216,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
-	log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("requesting blocks")
+	log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("Requesting blocks...")
 	stream, err := s.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
@@ -306,10 +306,10 @@ func logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, peers []peer.ID, cou
 		"peers",
 		fmt.Sprintf("%d/%d", len(peers), len(peerstatus.Keys())),
 	).WithField(
-		"blocks per second",
+		"blocksPerSecond",
 		fmt.Sprintf("%.1f", rate),
 	).Infof(
-		"Processing block %d/%d. Estimated %s remaining.",
+		"Processing block %d/%d - estimated time remaining %s",
 		blk.Slot,
 		slotsSinceGenesis(genesis),
 		timeRemaining,
