@@ -121,16 +121,6 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 }
 
 func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
-	c := params.BeaconConfig()
-	c.MaxAttestations = 2
-	c.MaxAttesterSlashings = 0
-	c.MaxProposerSlashings = 0
-	c.MaxDeposits = 0
-	c.MaxVoluntaryExits = 0
-	// Default, but setting to make it easy to config.
-	c.SavingInterval = 8
-	params.OverrideBeaconConfig(c)
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -200,17 +190,6 @@ func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
 }
 
 func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
-	c := params.BeaconConfig()
-	c.MaxAttestations = 2
-	c.MaxAttesterSlashings = 0
-	c.MaxProposerSlashings = 0
-	c.MaxDeposits = 0
-	c.MaxVoluntaryExits = 0
-	// Default, but setting to make it easy to config.
-	c.SavingInterval = 8
-	params.OverrideBeaconConfig(c)
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
-
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -298,17 +277,6 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 }
 
 func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
-	c := params.BeaconConfig()
-	c.MaxAttestations = 2
-	c.MaxAttesterSlashings = 0
-	c.MaxProposerSlashings = 0
-	c.MaxDeposits = 0
-	c.MaxVoluntaryExits = 0
-	// Default, but setting to make it easy to config.
-	c.SavingInterval = 8
-	params.OverrideBeaconConfig(c)
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
-
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -380,17 +348,6 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 }
 
 func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
-	c := params.BeaconConfig()
-	c.MaxAttestations = 4
-	c.MaxAttesterSlashings = 0
-	c.MaxProposerSlashings = 0
-	c.MaxDeposits = 0
-	c.MaxVoluntaryExits = 0
-	// Default, but setting to make it easy to config
-	c.SavingInterval = 8
-	params.OverrideBeaconConfig(c)
-
 	db := setupDB(b)
 	defer teardownDB(b, db)
 
