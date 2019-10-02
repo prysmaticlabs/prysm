@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -123,7 +123,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -149,13 +149,13 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, privs = SetupInitialDeposits(t, 129)
+	deposits, _, privs = SetupInitialDeposits(t, 129)
 	eth1Data = GenerateEth1Data(t, deposits)
 	beaconState.Eth1Data = eth1Data
 	conf := &BlockGenConfig{
@@ -183,7 +183,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
-	deposits, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
