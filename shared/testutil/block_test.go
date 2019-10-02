@@ -31,6 +31,42 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	}
 }
 
+func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
+	// Changing to minimal config as this will process 4 epochs of blocks.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
+	deposits, privs := SetupInitialDeposits(t, 128)
+	eth1Data := GenerateEth1Data(t, deposits)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conf := &BlockGenConfig{
+		MaxProposerSlashings: 0,
+		MaxAttesterSlashings: 0,
+		MaxAttestations:      1,
+		MaxDeposits:          0,
+		MaxVoluntaryExits:    0,
+	}
+	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
+	for i := 0; i < int(finalSlot); i++ {
+		block := GenerateFullBlock(t, beaconState, privs, conf)
+		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Blocks are one slot ahead of beacon state.
+	if finalSlot != beaconState.Slot {
+		t.Fatalf("expected output slot to be %d, received %d", finalSlot, beaconState.Slot)
+	}
+	if beaconState.CurrentJustifiedCheckpoint.Epoch != 3 {
+		t.Fatalf("expected justified epoch to change to 1, received %d", beaconState.CurrentJustifiedCheckpoint.Epoch)
+	}
+}
+
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	deposits, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
