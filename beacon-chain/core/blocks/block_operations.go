@@ -18,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -92,15 +93,20 @@ func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *ethpb.BeaconBloc
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	eth1DataHash, err := hashutil.HashProto(data)
-	if err != nil {
-		return false, errors.Wrap(err, "could not hash eth1data")
-	}
-	voteCount, err := eth1DataCache.Eth1DataVote(eth1DataHash)
-	if err != nil {
-		return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
-	}
+	voteCount := uint64(0)
+	var eth1DataHash [32]byte
+	var err error
+	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		eth1DataHash, err = hashutil.HashProto(data)
+		if err != nil {
+			return false, errors.Wrap(err, "could not hash eth1data")
+		}
+		voteCount, err = eth1DataCache.Eth1DataVote(eth1DataHash)
+		if err != nil {
+			return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
+		}
 
+	}
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes {
 			if proto.Equal(vote, data) {
@@ -111,11 +117,13 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 		voteCount++
 	}
 
-	if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-		Eth1DataHash: eth1DataHash,
-		VoteCount:    voteCount,
-	}); err != nil {
-		return false, errors.Wrap(err, "could not save eth1 data vote cache")
+	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
+			Eth1DataHash: eth1DataHash,
+			VoteCount:    voteCount,
+		}); err != nil {
+			return false, errors.Wrap(err, "could not save eth1 data vote cache")
+		}
 	}
 
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the
@@ -165,7 +173,7 @@ func ProcessBlockHeader(
 
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block signature")
 	}
@@ -262,7 +270,7 @@ func ProcessRandao(
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-	domain := helpers.Domain(beaconState, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
@@ -363,7 +371,7 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
 	headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 	for _, header := range headers {
 		if err := verifySigningRoot(header, proposer.PublicKey, header.Signature, domain); err != nil {
@@ -809,7 +817,7 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
-	domain := helpers.Domain(beaconState, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
 	var pubkeys []*bls.PublicKey
 	if len(custodyBit0Indices) > 0 {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)
@@ -959,7 +967,7 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
 	if !ok {
-		domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+		domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
@@ -1115,7 +1123,7 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain := helpers.Domain(beaconState, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
 		return errors.Wrap(err, "could not verify voluntary exit signature")
 	}
@@ -1239,7 +1247,7 @@ func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer) error
 		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
 	}
 
-	domain := helpers.Domain(beaconState, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
 	if err := verifySigningRoot(transfer, transfer.SenderWithdrawalPublicKey, transfer.Signature, domain); err != nil {
 		return errors.Wrap(err, "could not verify transfer signature")
 	}

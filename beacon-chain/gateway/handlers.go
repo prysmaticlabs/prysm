@@ -13,7 +13,7 @@ const swaggerDir = "proto/beacon/rpc/v1/"
 func SwaggerServer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			log.Debugf("Not Found: %s", r.URL.Path)
+			log.Debugf("Not found: %s", r.URL.Path)
 			http.NotFound(w, r)
 			return
 		}

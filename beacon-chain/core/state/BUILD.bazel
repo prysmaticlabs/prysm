@@ -13,6 +13,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
         "//shared/interop:__pkg__",
+        "//shared/testutil:__pkg__",
         "//tools/genesis-state-gen:__pkg__",
     ],
     deps = [
@@ -25,6 +26,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/traceutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

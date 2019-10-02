@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -29,7 +30,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
 	span.AddAttributes(trace.StringAttribute("validator", tpk))
-	log := log.WithField("pubKey", tpk[:12])
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
@@ -41,7 +42,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	binary.LittleEndian.PutUint64(buf, epoch)
 	randaoReveal := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
 
-	block, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
+	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal.Marshal(),
 	})
@@ -55,16 +56,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return
 	}
-	root, err := ssz.SigningRoot(block)
+	root, err := ssz.SigningRoot(b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
 	signature := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain)
-	block.Signature = signature.Marshal()
+	b.Signature = signature.Marshal()
 
 	// Broadcast network the signed block via beacon chain node.
-	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
+	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		return
@@ -72,14 +73,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 
 	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
-		trace.Int64Attribute("numDeposits", int64(len(block.Body.Deposits))),
-		trace.Int64Attribute("numAttestations", int64(len(block.Body.Attestations))),
+		trace.Int64Attribute("numDeposits", int64(len(b.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
-		"slot":            block.Slot,
-		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
-		"numAttestations": len(block.Body.Attestations),
-		"numDeposits":     len(block.Body.Deposits),
-	}).Info("Proposed new beacon block")
+		"slot":            b.Slot,
+		"blockRoot":       blkRoot,
+		"numAttestations": len(b.Body.Attestations),
+		"numDeposits":     len(b.Body.Deposits),
+	}).Info("Submitted new block")
 }

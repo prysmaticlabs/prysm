@@ -202,8 +202,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": s.endpoint,
-	}).Info("Starting service")
-
+	}).Info("Connected to eth1 proof-of-work chain")
 	go s.run(s.ctx.Done())
 }
 
@@ -215,7 +214,6 @@ func (s *Service) Stop() error {
 	if s.headerChan != nil {
 		defer close(s.headerChan)
 	}
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -397,10 +395,10 @@ func (s *Service) run(done <-chan struct{}) {
 		case <-done:
 			s.isRunning = false
 			s.runError = nil
-			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
-			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", s.runError)
+			log.WithError(err).Error("Subscription to new head notifier failed")
 			return
 		case header, ok := <-s.headerChan:
 			if ok {

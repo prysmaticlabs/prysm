@@ -67,7 +67,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 8)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 8)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +99,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -111,6 +111,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
+		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 
@@ -134,7 +135,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -214,7 +215,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -270,7 +271,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
-	deposits, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -775,7 +776,6 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	state := &pbp2p.BeaconState{Slot: 0}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -802,7 +802,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		chainStartFetcher: p,
 		blockFetcher:      p,
 		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		headFetcher:       &mockChain.ChainService{Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -1178,7 +1178,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}(t)
 	validatorServer.chainStartChan <- time.Unix(0, 0)
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending ChainStart log and genesis time to connected validator clients")
+	testutil.AssertLogsContain(t, hook, "Sending genesis time")
 }
 
 func BenchmarkAssignment(b *testing.B) {

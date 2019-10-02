@@ -20,6 +20,7 @@ go_library(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
@@ -33,7 +34,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "block_operations_test.go",
         "block_test.go",
