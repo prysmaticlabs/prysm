@@ -266,8 +266,8 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("Context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
-	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
+	testutil.AssertLogsContain(t, hook, "Waiting")
+	testutil.AssertLogsContain(t, hook, "Genesis time reached")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
@@ -310,7 +310,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+	testutil.AssertLogsContain(t, hook, "data already exists")
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
@@ -322,7 +322,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
-	deposits, _ := testutil.SetupInitialDeposits(t, count)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, count)
 	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
