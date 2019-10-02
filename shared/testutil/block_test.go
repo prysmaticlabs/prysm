@@ -204,8 +204,8 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	exitedIndice := block.Body.VoluntaryExits[0].ValidatorIndex
-	if beaconState.Validators[exitedIndice].ExitEpoch == params.BeaconConfig().FarFutureEpoch {
+	exitedIndex := block.Body.VoluntaryExits[0].ValidatorIndex
+	if beaconState.Validators[exitedIndex].ExitEpoch == params.BeaconConfig().FarFutureEpoch {
 		t.Fatal("expected exiting validator index to be marked as exiting")
 	}
 }
