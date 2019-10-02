@@ -73,6 +73,8 @@ func GenerateFullBlock(
 		t.Fatal(err)
 	}
 
+	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
 	bState.Slot++
 	reveal, err := CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
 	if err != nil {
@@ -107,6 +109,8 @@ func GenerateFullBlock(
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
 	bState.Slot++
 	proposerIdx, err := helpers.BeaconProposerIndex(bState)
 	if err != nil {
