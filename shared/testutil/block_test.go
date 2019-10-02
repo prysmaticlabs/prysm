@@ -31,6 +31,27 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	}
 }
 
+func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
+	deposits, _, privs := SetupInitialDeposits(t, 1024)
+	eth1Data := GenerateEth1Data(t, deposits)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := &BlockGenConfig{
+		MaxProposerSlashings: 0,
+		MaxAttesterSlashings: 0,
+		MaxAttestations:      16,
+		MaxDeposits:          0,
+		MaxVoluntaryExits:    0,
+	}
+	block := GenerateFullBlock(t, beaconState, privs, conf)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
