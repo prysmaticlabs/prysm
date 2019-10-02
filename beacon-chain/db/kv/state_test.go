@@ -135,16 +135,17 @@ func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
 	defer teardownDB(t, db)
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	deposits, privs := testutil.SetupInitialDeposits(t, 128)
+	deposits, _, privs := testutil.SetupInitialDeposits(t, 128)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 1
 
-	blocks := make([]*ethpb.BeaconBlock, savingInterval-2)
-	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+	}
+	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs, conf)
 	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -157,9 +158,10 @@ func TestGenerateStateAtSlot_GeneratesCorrectState(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	blocks := make([]*ethpb.BeaconBlock, savingInterval-1)
 	blocks[0] = firstBlock
 	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(t, newState, privs)
+		block := testutil.GenerateFullBlock(t, newState, privs, conf)
 		blocks[i] = block
 		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
@@ -213,31 +215,33 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 	defer teardownDB(t, db)
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	deposits, privs := testutil.SetupInitialDeposits(t, 128)
+	deposits, _, privs := testutil.SetupInitialDeposits(t, 128)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 1
 
-	blocks := make([]*ethpb.BeaconBlock, savingInterval-2)
-	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+	}
+	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs, conf)
 	root, err := ssz.SigningRoot(firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(context.Background(), genesisState, root); err != nil {
-		t.Fatal(err)
-	}
-
-	blocks[0] = firstBlock
 	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveState(context.Background(), newState, root); err != nil {
+		t.Fatal(err)
+	}
+
+	blocks := make([]*ethpb.BeaconBlock, savingInterval-1)
+	blocks[0] = firstBlock
 	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(t, newState, privs)
+		block := testutil.GenerateFullBlock(t, newState, privs, conf)
 		blocks[i] = block
 		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
@@ -249,12 +253,12 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 	}
 
 	// Slot at this point is 7, so we generate 2 blocks but only save the second one to simulate that the saving slot was skipped.
-	skipBlock := testutil.GenerateFullBlock(t, newState, privs)
+	skipBlock := testutil.GenerateFullBlock(t, newState, privs, conf)
 	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, skipBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := testutil.GenerateFullBlock(t, newState, privs)
+	block := testutil.GenerateFullBlock(t, newState, privs, conf)
 	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -270,7 +274,7 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 	blocks = make([]*ethpb.BeaconBlock, savingInterval-2)
 	blocks[0] = block
 	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(t, newState, privs)
+		block := testutil.GenerateFullBlock(t, newState, privs, conf)
 		blocks[i] = block
 		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
@@ -281,7 +285,7 @@ func TestGenerateStateAtSlot_SkippedSavingSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Slot starting from 2, after 6 blocks, a slot skipped, and
+	// Slot starting from 1, after 7 blocks, a slot skipped, and
 	// 6 more blocks, state slot should be 14.
 	generatedState, err := db.GenerateStateAtSlot(context.Background(), (savingInterval*2)-2)
 	if err != nil {
@@ -309,15 +313,17 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 	defer teardownDB(t, db)
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	deposits, privs := testutil.SetupInitialDeposits(t, 128)
+	deposits, _, privs := testutil.SetupInitialDeposits(t, 128)
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 1
 
-	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs)
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+	}
+	firstBlock := testutil.GenerateFullBlock(t, genesisState, privs, conf)
 	newState, err := state.ExecuteStateTransitionNoVerify(context.Background(), genesisState, firstBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -334,7 +340,7 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 	}
 
 	// Process 14 slots to skip over the normal interval
-	postSkipBlock := testutil.GenerateFullBlock(t, newState, privs)
+	postSkipBlock := testutil.GenerateFullBlock(t, newState, privs, conf)
 	postSkipBlock.Slot = savingInterval + (savingInterval - 2)
 	newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, postSkipBlock)
 	if err != nil {
@@ -352,7 +358,7 @@ func TestGenerateStateAtSlot_SkippedSavingIntervalSlots(t *testing.T) {
 	}
 
 	// Save one more block so we can generate a state that isn't latest.
-	extraBlock := testutil.GenerateFullBlock(t, newState, privs)
+	extraBlock := testutil.GenerateFullBlock(t, newState, privs, conf)
 	root, err = ssz.SigningRoot(extraBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -389,16 +395,18 @@ func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
 	defer teardownDB(b, db)
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	deposits, privs := testutil.SetupInitialDeposits(b, 256)
+	deposits, _, privs := testutil.SetupInitialDeposits(b, 256)
 	eth1Data := testutil.GenerateEth1Data(b, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
 		b.Fatal(err)
 	}
-	genesisState.Slot = 1
 
-	blocks := make([]*ethpb.BeaconBlock, savingInterval-2)
-	firstBlock := testutil.GenerateFullBlock(b, genesisState, privs)
+	blocks := make([]*ethpb.BeaconBlock, savingInterval-1)
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+	}
+	firstBlock := testutil.GenerateFullBlock(b, genesisState, privs, conf)
 	root, err := ssz.SigningRoot(firstBlock)
 	if err != nil {
 		b.Fatal(err)
@@ -413,7 +421,7 @@ func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
 
 	blocks[0] = firstBlock
 	for i := 1; i < len(blocks); i++ {
-		block := testutil.GenerateFullBlock(b, newState, privs)
+		block := testutil.GenerateFullBlock(b, newState, privs, conf)
 		blocks[i] = block
 		newState, err = state.ExecuteStateTransitionNoVerify(context.Background(), newState, block)
 		if err != nil {
