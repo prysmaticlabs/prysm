@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -119,8 +118,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
-	currentTime := roughtime.Now()
-	currentSlot := (uint64(currentTime.Unix()) - v.genesisTime) / params.BeaconConfig().SecondsPerSlot
 	for _, status := range validatorStatuses {
 		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
