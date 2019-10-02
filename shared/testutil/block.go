@@ -392,7 +392,7 @@ func generateDepositsAndEth1Data(
 	*ethpb.Eth1Data,
 ) {
 	previousDepsLen := bState.Eth1DepositIndex
-	currentDeposits, _ := SetupInitialDeposits(t, previousDepsLen+maxDeposits)
+	currentDeposits, _, _ := SetupInitialDeposits(t, previousDepsLen+maxDeposits)
 	eth1Data := GenerateEth1Data(t, currentDeposits)
 	return currentDeposits[previousDepsLen:], eth1Data
 }
