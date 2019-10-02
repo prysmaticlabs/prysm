@@ -61,7 +61,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 		rStr := hex.EncodeToString(r[:2])
 		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr
 		dotN := graph.Node(rStr).Box().Attr("label", label)
-		// Set the node box to green if it's the block is canonical.
+		// Set the node box to green if the block is canonical.
 		if bytes.Equal(r[:], s.CanonicalRoot(b.Slot)) {
 			dotN = dotN.Attr("color", "green")
 		}
@@ -72,7 +72,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 		m[r] = n
 	}
 
-	// Construct an edge if node block's parent exist in the tree.
+	// Construct an edge only if block's parent exist in the tree.
 	for _, n := range m {
 		if _, ok := m[n.parentRoot]; ok {
 			graph.Edge(*n.dothNode, *m[n.parentRoot].dothNode)
@@ -137,7 +137,7 @@ func (s *Service) currentSlot() uint64 {
 	return uint64(diff) / params.BeaconConfig().SecondsPerSlot
 }
 
-// This converts a dot raw data to svg
+// This converts a raw dot data to svg
 func dotToSvg(dot []byte) (string, error) {
 	format := "svg"
 	dotExe, err := exec.LookPath("dot")
