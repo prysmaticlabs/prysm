@@ -807,48 +807,15 @@ func TestValidatorStatus_Exited(t *testing.T) {
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
-
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
-	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-	genesisRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey,
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-	}
-
-	deposit := &ethpb.Deposit{
-		Data: depData,
-	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
-	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
-	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
-		TimesByHeight: map[int]uint64{
-			0: uint64(height),
-		},
-	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{Root: genesisRoot[:]},
+		depositFetcher: depositCache,
+		headFetcher: &mockChain.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot: 0,
+			},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
