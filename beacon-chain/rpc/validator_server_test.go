@@ -328,39 +328,11 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-	genesisRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	// Pending active because activation epoch is still defaulted at far future slot.
-	state := &pbp2p.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKey,
-			},
-		},
-		Slot: 5000,
-	}
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
 		WithdrawalCredentials: []byte("hey"),
 	}
-
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
@@ -370,7 +342,6 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
-
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -378,11 +349,12 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		beaconDB:       db,
+		depositFetcher: depositCache,
+		blockFetcher:   p,
+		headFetcher: &mockChain.ChainService{
+			State: &pbp2p.BeaconState{},
+		},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -391,8 +363,8 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_PENDING_ACTIVE {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
+	if resp.Status != pb.ValidatorStatus_DEPOSIT_RECEIVED {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_DEPOSIT_RECEIVED, resp.Status)
 	}
 }
 
