@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -118,6 +119,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
+	currentTime := roughtime.Now()
+	currentSlot := (uint64(currentTime.Unix()) - v.genesisTime) / params.BeaconConfig().SecondsPerSlot
 	for _, status := range validatorStatuses {
 		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
@@ -132,8 +135,9 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.DepositInclusionSlot == 0 {
-			log.Info("Validator not included in state")
+		if status.Status.Status == pb.ValidatorStatus_DEPOSIT_RECEIVED {
+			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+				"Deposit for validator received but not processed into state")
 			continue
 		}
 		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
