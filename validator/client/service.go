@@ -2,13 +2,13 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -59,7 +59,7 @@ func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
 		pubkey := v.keys[i].PublicKey.Marshal()
-		log.WithField("pubKey", fmt.Sprintf("0x%s...", hex.EncodeToString(pubkey)[:8])).Info("New validator service")
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubkey))).Info("New validator service")
 		pubkeys = append(pubkeys, pubkey)
 	}
 

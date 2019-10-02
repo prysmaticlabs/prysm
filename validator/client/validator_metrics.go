@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -38,7 +37,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
 	for i, pkey := range v.pubkeys {
-		pubKey := fmt.Sprintf("0x%s", hex.EncodeToString(pkey)[:8])
+		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
 			log.Info("Validator not in beacon chain")

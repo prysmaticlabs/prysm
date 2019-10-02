@@ -108,7 +108,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 	}
 	for _, pk := range validatorActivatedRecords {
-		pubKey := fmt.Sprintf("0x%s", hex.EncodeToString(pk)[:8])
+		pubKey := fmt.Sprintf("%#x", pk[:8])
 		log.WithField("pubKey", pubKey).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
@@ -119,7 +119,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
-		pubKey := fmt.Sprintf("0x%s", hex.EncodeToString(status.PublicKey)[:8])
+		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
 			"pubKey": pubKey,
 			"status": status.Status.Status.String(),
@@ -204,7 +204,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		for _, assignment := range v.assignments.ValidatorAssignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
-			pubKey := fmt.Sprintf("0x%s", hex.EncodeToString(assignment.PublicKey)[:8])
+			pubKey := fmt.Sprintf("%#x", assignment.PublicKey[:8])
 
 			lFields := logrus.Fields{
 				"pubKey": pubKey,

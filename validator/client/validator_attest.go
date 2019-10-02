@@ -27,7 +27,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
 	span.AddAttributes(trace.StringAttribute("validator", tpk))
-	log := log.WithField("pubKey", fmt.Sprintf("0x%s", tpk[:8]))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -111,7 +111,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		return
 	}
 
-	headRoot := fmt.Sprintf("0x%s", hex.EncodeToString(data.BeaconBlockRoot)[:8])
+	headRoot := fmt.Sprintf("%#x", data.BeaconBlockRoot[:8])
 	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
 
 	span.AddAttributes(

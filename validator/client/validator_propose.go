@@ -29,7 +29,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 
 	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
 	span.AddAttributes(trace.StringAttribute("validator", tpk))
-	log := log.WithField("pubKey", fmt.Sprintf("0x%s", tpk[:8]))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
@@ -76,7 +76,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	blkRoot := fmt.Sprintf("0x%s", hex.EncodeToString(blkResp.BlockRoot)[:8])
+	blkRoot := fmt.Sprintf("%#x", blkResp.BlockRoot[:8])
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
