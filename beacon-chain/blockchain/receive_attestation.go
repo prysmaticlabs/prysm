@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -35,14 +36,14 @@ func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	attRoot, err := ssz.HashTreeRoot(att.Data)
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash attestation")
 	}
 
 	log.WithFields(logrus.Fields{
-		"attRoot":     hex.EncodeToString(attRoot[:]),
-		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attRoot":   fmt.Sprintf("%#x", attDataRoot),
+		"blockRoot": fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
 	if err := s.ReceiveAttestationNoPubsub(ctx, att); err != nil {
@@ -67,11 +68,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	if err != nil {
 		return errors.Wrap(err, "could not process block from fork choice service")
 	}
-
-	log.WithFields(logrus.Fields{
-		"attTargetSlot": attSlot,
-		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Debug("Finished updating validator vote for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := s.forkChoiceStore.Head(ctx)
