@@ -2,6 +2,8 @@ package blocks_test
 
 import (
 	"context"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"io/ioutil"
 	"testing"
@@ -16,8 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var validatorCount = 8192
-var runAmount = 25
+var validatorCount = 32768
+var runAmount = 40
 var conditions = "SML"
 
 func benchmarkConfig() *testutil.BlockGenConfig {
@@ -34,17 +36,17 @@ func benchmarkConfig() *testutil.BlockGenConfig {
 		}
 	} else if conditions == "SML" {
 		return &testutil.BlockGenConfig{
-			MaxProposerSlashings: 1,
-			MaxAttesterSlashings: 1,
+			MaxProposerSlashings: 0,
+			MaxAttesterSlashings: 0,
 			MaxAttestations:      128,
-			MaxDeposits:          1,
-			MaxVoluntaryExits:    1,
+			MaxDeposits:          0,
+			MaxVoluntaryExits:    0,
 		}
 	}
 	return nil
 }
 
-func TestBenchmarkProcessBlock_PerformsSuccessfully(t *testing.T) {
+func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
@@ -116,6 +118,11 @@ func BenchmarkProcessDeposits(b *testing.B) {
 	beaconState, block := createBeaconStateAndBlock(b)
 	cleanStates := createCleanStates(beaconState)
 
+	// conf := benchmarkConfig()
+	// deposits, _, _ = testutil.SetupInitialDeposits(b, uint64(validatorCount)+conf.MaxDeposits)
+	// eth1Data = testutil.GenerateEth1Data(b, deposits)
+	// genesisState.Eth1Data = eth1Data
+
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -172,17 +179,20 @@ func BenchmarkCrosslinkCommitee(b *testing.B) {
 }
 
 func createBeaconStateAndBlock(b testing.TB) (*pb.BeaconState, *ethpb.BeaconBlock) {
-	deposits, _, privs := testutil.SetupInitialDeposits(&testing.B{}, uint64(validatorCount))
-	eth1Data := testutil.GenerateEth1Data(b, deposits)
-	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
+	beaconSSZ, err := ioutil.ReadFile("genesisState.ssz")
 	if err != nil {
 		b.Fatal(err)
 	}
-	conf := benchmarkConfig()
+	genesisState := &pb.BeaconState{}
+	if err := ssz.Unmarshal(beaconSSZ, genesisState); err != nil {
+		b.Fatal(err)
+	}
 
-	deposits, _, privs = testutil.SetupInitialDeposits(b, uint64(validatorCount)+conf.MaxDeposits)
-	eth1Data = testutil.GenerateEth1Data(b, deposits)
-	genesisState.Eth1Data = eth1Data
+	conf := benchmarkConfig()
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
+	if err != nil {
+		b.Fatal(err)
+	}
 	fullBlock := testutil.GenerateFullBlock(b, genesisState, privs, conf)
 
 	return genesisState, fullBlock
@@ -194,4 +204,21 @@ func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
 		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
 	return cleanStates
+}
+
+func BenchmarkSaveStateToDisk(b *testing.B) {
+	deposits, _, _ := testutil.SetupInitialDeposits(b, uint64(validatorCount))
+	eth1Data := testutil.GenerateEth1Data(b, deposits)
+	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	stateSSZ, err := ssz.Marshal(genesisState)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err = ioutil.WriteFile("genesisState.ssz", stateSSZ, 0644); err != nil {
+		b.Fatal(err)
+	}
 }

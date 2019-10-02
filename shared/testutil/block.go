@@ -378,6 +378,7 @@ func generateAttestations(
 		att.AggregationBits = aggregationBits
 
 		att.Signature = bls.AggregateSignatures(sigs).Marshal()
+
 		attestations[i/bitsPerAtt] = att
 	}
 	return attestations
