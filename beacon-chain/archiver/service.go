@@ -50,14 +50,12 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 
 // Start the archiver service event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.run(s.ctx)
 }
 
 // Stop the archiver service event loop.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -167,24 +165,13 @@ func (s *Service) run(ctx context.Context) {
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived committee info during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived active validator set changes during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived validator balances during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived validator participation during epoch")
+			).Debug("Successfully archived beacon chain data during epoch")
 		case <-s.ctx.Done():
-			log.Info("Context closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-sub.Err():
 			log.WithError(err).Error("Subscription to new chain head notifier failed")
+			return
 		}
 	}
 }

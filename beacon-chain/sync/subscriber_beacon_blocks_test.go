@@ -39,12 +39,12 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Received a block that's older than finalized checkpoint, 1 < 64")
+	testutil.AssertLogsContain(t, hook, "Received a block older than finalized checkpoint, 1 < 64")
 
 	hook.Reset()
 	b.Slot = params.BeaconConfig().SlotsPerEpoch
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	testutil.AssertLogsDoNotContain(t, hook, "Received a block that's older than finalized checkpoint")
+	testutil.AssertLogsDoNotContain(t, hook, "Received a block older than finalized checkpoint")
 }

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -16,8 +15,8 @@ import (
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
-		// Do nothing if we are not at the start of a new epoch.
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot < params.BeaconConfig().SlotsPerEpoch {
+		// Do nothing if we are not at the start of a new epoch and before the first epoch.
 		return nil
 	}
 	if !v.logValidatorBalances {
@@ -33,28 +32,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return err
 	}
 
-	log.WithFields(logrus.Fields{
-		"slot":  slot,
-		"epoch": slot / params.BeaconConfig().SlotsPerEpoch,
-	}).Info("Start of a new epoch!")
-	log.WithFields(logrus.Fields{
-		"totalValidators":     resp.TotalValidators,
-		"numActiveValidators": resp.TotalActiveValidators,
-	}).Info("Validator registry information")
-	log.Info("Generating validator performance report from the previous epoch...")
-	avgBalance := resp.AverageActiveValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
-	log.WithField(
-		"averageEthBalance", fmt.Sprintf("%f", avgBalance),
-	).Info("Average eth balance per active validator in the beacon chain")
-
 	missingValidators := make(map[[48]byte]bool)
 	for _, val := range resp.MissingValidators {
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
 	for i, pkey := range v.pubkeys {
-		log := log.WithField("pubKey", hex.EncodeToString(pkey)[:12])
+		pubKey := fmt.Sprintf("%#x", pkey[:8])
+		log := log.WithField("pubKey", pubKey)
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
-			log.Info("Validator not able to be retrieved from beacon node")
+			log.Info("Validator not in beacon chain")
 			continue
 		}
 		if slot < params.BeaconConfig().SlotsPerEpoch {
@@ -66,14 +52,13 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			prevBalance := float64(v.prevBalance[bytesutil.ToBytes48(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
+				"epoch":         (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
 				"prevBalance":   prevBalance,
 				"newBalance":    newBalance,
-				"delta":         fmt.Sprintf("%.8f", newBalance-prevBalance),
 				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
-			}).Info("Net gains/losses in eth")
+			}).Info("New Balance")
 		}
 		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
 	}
-
 	return nil
 }
