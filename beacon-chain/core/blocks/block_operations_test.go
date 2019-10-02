@@ -1161,6 +1161,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
+
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
 		{
