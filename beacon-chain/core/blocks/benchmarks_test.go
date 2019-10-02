@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var validatorCount = 2048
+var validatorCount = 8192
 var runAmount = 25
 var conditions = "SML"
 
@@ -36,7 +36,7 @@ func benchmarkConfig() *testutil.BlockGenConfig {
 		return &testutil.BlockGenConfig{
 			MaxProposerSlashings: 1,
 			MaxAttesterSlashings: 1,
-			MaxAttestations:      4,
+			MaxAttestations:      128,
 			MaxDeposits:          1,
 			MaxVoluntaryExits:    1,
 		}
@@ -139,7 +139,7 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := state.ExecuteStateTransitionNoVerify(context.Background(), cleanStates[i], block); err != nil {
+		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
 			b.Fatal(err)
 		}
 	}
