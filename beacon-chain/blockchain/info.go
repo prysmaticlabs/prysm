@@ -25,7 +25,7 @@ import (
 const latestSlotCount = 10
 const maxTreeSize = 64
 
-// For treehandler, each node is a representation of a node in the graph
+// Used for TreeHandler, each node is a representation of a node in the graph
 type node struct {
 	parentRoot [32]byte
 	dothNode   *dot.Node
@@ -38,7 +38,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	graph.Attr("label", "Canonical block = green")
 	graph.Attr("labeljust", "l")
 
-	// Determine block tree range. Current slot to epoch number of slots back.
+	// Determine block tree range. Current slot to maxTreeSize slots back.
 	currentSlot := s.currentSlot()
 	startSlot := uint64(1)
 	if currentSlot > maxTreeSize {
