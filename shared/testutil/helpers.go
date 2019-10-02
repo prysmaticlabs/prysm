@@ -31,7 +31,7 @@ var trie *trieutil.MerkleTrie
 // account is key n and the withdrawal account is key n+1.  As such,
 // if all secret keys for n validators are required then numDeposits
 // should be n+1
-func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey) {
+func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [][32]byte, []*bls.SecretKey) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -89,7 +89,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 	}
 
 	d, _ := GenerateDepositProof(t, deposits[0:numDeposits])
-	return d, privKeys[0:numDeposits]
+	return d, depositDataRoots[0:numDeposits], privKeys[0:numDeposits]
 }
 
 // GenerateDepositProof takes an array of deposits and generates the deposit trie for them and proofs.

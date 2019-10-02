@@ -24,9 +24,8 @@ func (r *RegularSync) processPendingBlocksQueue() {
 		case <-ticker.C:
 			r.processPendingBlocks(ctx)
 		case <-r.ctx.Done():
-			log.Debug("p2p context is closed, exiting routine")
+			log.Debug("Context closed, exiting routine")
 			break
-
 		}
 	}
 }
@@ -77,7 +76,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
-		log.Infof("Processed ancestor block %d and cleared pending block cache", s)
+		log.Infof("Processed ancestor block with slot %d and cleared pending block cache", s)
 	}
 	return nil
 }

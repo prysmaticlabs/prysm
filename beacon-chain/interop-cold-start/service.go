@@ -50,7 +50,7 @@ type Config struct {
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
 func NewColdStartService(ctx context.Context, cfg *Config) *Service {
-	log.Warn("Saving generated genesis state in database for interop testing.")
+	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
 	s := &Service{
