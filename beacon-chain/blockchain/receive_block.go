@@ -19,7 +19,6 @@ type BlockReceiver interface {
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error
 	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error
 	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error
-	ParentExists(ctx context.Context, block *ethpb.BeaconBlock) bool
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -209,12 +208,4 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 		}).Warn("Calculated head diffs from new block")
 		competingBlks.Inc()
 	}
-}
-
-//ParentExists checks block parent is in store.
-func (s *Service) ParentExists(ctx context.Context, block *ethpb.BeaconBlock) bool {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ParentExists")
-	defer span.End()
-	hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot))
-	return hasBlock
 }

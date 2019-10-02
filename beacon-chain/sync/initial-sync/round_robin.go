@@ -205,7 +205,7 @@ func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlo
 }
 
 func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
-	ok := s.chain.ParentExists(ctx, blk)
+	ok := s.parentExists(ctx, blk)
 
 	if !ok {
 		bl, err := s.requestBlocksByRoot(ctx, [][32]byte{bytesutil.ToBytes32(blk.ParentRoot)}, id)
