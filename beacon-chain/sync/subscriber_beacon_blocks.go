@@ -27,6 +27,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		log.Errorf("Could not sign root block: %v", err)
 		return nil
 	}
+	invalidKey := invalid + string(blockRoot[:]) + string(block.Signature)
 
 	// Handle block when the parent is unknown
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
@@ -39,6 +40,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 
 	err = r.chain.ReceiveBlockNoPubsub(ctx, block)
 	if err != nil {
+		recentlySeenRoots.Set(invalidKey, true, oneYear)
 		interop.WriteBlockToDisk(block, true /*failed*/)
 	}
 	return err

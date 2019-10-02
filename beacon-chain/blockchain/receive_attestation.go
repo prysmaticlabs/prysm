@@ -66,7 +66,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	// Update forkchoice store for the new attestation
 	attSlot, err := s.forkChoiceStore.OnAttestation(ctx, att)
 	if err != nil {
-		return errors.Wrap(err, "could not process block from fork choice service")
+		return errors.Wrap(err, "could not process attestation from fork choice service")
 	}
 
 	// Run fork choice for head block after updating fork choice store.

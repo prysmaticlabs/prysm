@@ -44,6 +44,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	if recentlySeenRoots.Get(string(attRoot[:])) != nil {
 		return false, nil
 	}
+	invalidKey := invalid + string(attRoot[:])
+	if recentlySeenRoots.Get(invalidKey) != nil {
+		return false, nil
+	}
 
 	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 

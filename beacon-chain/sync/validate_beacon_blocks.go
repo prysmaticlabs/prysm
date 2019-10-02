@@ -28,6 +28,7 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	if err != nil {
 		return false, errors.Wrap(err, "could not get signing root of beacon block")
 	}
+	invalidKey := invalid + string(blockRoot[:]) + string(m.Signature)
 
 	r.pendingQueueLock.RLock()
 	if r.seenPendingBlocks[blockRoot] {
@@ -39,6 +40,11 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
 		return false, nil
 	}
+
+	if recentlySeenRoots.Get(invalidKey) != nil {
+		return false, nil
+	}
+
 	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if fromSelf {
