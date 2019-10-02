@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -59,80 +57,6 @@ func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
 	}
 }
 
-func BenchmarkProcessValidatorExits(b *testing.B) {
-	beaconState, block := createBeaconStateAndBlock(b)
-	cleanStates := createCleanStates(beaconState)
-
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessVoluntaryExits(cleanStates[i], block.Body)
-		if err != nil {
-			b.Fatalf("run %d, %v", i, err)
-		}
-	}
-}
-
-func BenchmarkProcessProposerSlashings(b *testing.B) {
-	beaconState, block := createBeaconStateAndBlock(b)
-	cleanStates := createCleanStates(beaconState)
-
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessProposerSlashings(cleanStates[i], block.Body)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	beaconState, block := createBeaconStateAndBlock(b)
-	cleanStates := createCleanStates(beaconState)
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessAttesterSlashings(cleanStates[i], block.Body)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkProcessAttestations(b *testing.B) {
-	beaconState, block := createBeaconStateAndBlock(b)
-	cleanStates := createCleanStates(beaconState)
-
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessAttestations(cleanStates[i], block.Body)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkProcessDeposits(b *testing.B) {
-	beaconState, block := createBeaconStateAndBlock(b)
-	cleanStates := createCleanStates(beaconState)
-
-	// conf := benchmarkConfig()
-	// deposits, _, _ = testutil.SetupInitialDeposits(b, uint64(validatorCount)+conf.MaxDeposits)
-	// eth1Data = testutil.GenerateEth1Data(b, deposits)
-	// genesisState.Eth1Data = eth1Data
-
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := blocks.ProcessDeposits(cleanStates[i], block.Body)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 func BenchmarkExecuteStateTransition(b *testing.B) {
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
@@ -147,32 +71,6 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkBeaconProposerIndex(b *testing.B) {
-	beaconState, _ := createBeaconStateAndBlock(b)
-
-	b.N = 100
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := helpers.BeaconProposerIndex(beaconState)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkCrosslinkCommitee(b *testing.B) {
-	beaconState, _ := createBeaconStateAndBlock(b)
-
-	b.N = 100
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := helpers.CrosslinkCommittee(beaconState, helpers.CurrentEpoch(beaconState), 0)
-		if err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -206,6 +104,8 @@ func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
 	return cleanStates
 }
 
+// Using benchmark here so I can run the function from VS code and not have it timeout
+// like a normal test.
 func BenchmarkSaveStateToDisk(b *testing.B) {
 	deposits, _, _ := testutil.SetupInitialDeposits(b, uint64(validatorCount))
 	eth1Data := testutil.GenerateEth1Data(b, deposits)
