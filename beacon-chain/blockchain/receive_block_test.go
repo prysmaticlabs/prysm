@@ -87,16 +87,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-	ok := chainService.ParentExists(ctx, block)
-	if ok {
-		t.Fatal("block parent should not exist before save")
-	}
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
-	}
-	ok = chainService.ParentExists(ctx, block)
-	if !ok {
-		t.Fatal("block parent should exist")
 	}
 	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 	if err != nil {
