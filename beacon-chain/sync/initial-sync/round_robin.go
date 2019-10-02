@@ -182,7 +182,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlock, counter *ratecounter.RateCounter, peers []peer.ID, genesis time.Time, depth uint8) error {
 	for _, blk := range blocks {
 		logSyncStatus(genesis, blk, peers, counter)
-		prBlocks, err := s.checkParentExists(ctx, peers[0], blk)
+		prBlocks, err := s.requestParentsIfMissing(ctx, peers[0], blk)
 		if err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func (s *InitialSync) receiveBlocks(ctx context.Context, blocks []*eth.BeaconBlo
 	return nil
 }
 
-func (s *InitialSync) checkParentExists(ctx context.Context, id peer.ID, blk *eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
+func (s *InitialSync) requestParentsIfMissing(ctx context.Context, id peer.ID, blk *eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
 	ok := s.parentExists(ctx, blk)
 
 	if !ok {

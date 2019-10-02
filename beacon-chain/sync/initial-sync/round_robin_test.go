@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
+	//"github.com/paulbellamy/ratecounter"
+	//"context"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -191,7 +194,8 @@ func TestRoundRobinSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			peerstatus.Clear()
-
+			db := dbTest.SetupDB(t)
+			defer dbTest.TeardownDB(t, db)
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers)
 
@@ -203,6 +207,7 @@ func TestRoundRobinSync(t *testing.T) {
 				p2p:          p,
 				synced:       false,
 				chainStarted: true,
+				db:           db,
 			}
 
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
@@ -304,6 +309,34 @@ func TestMakeGenesisTime(t *testing.T) {
 		t.Fatalf("Wanted %d, got %d", currentSlot, slotsSinceGenesis(gt))
 	}
 }
+
+//// sanity test on helper function
+//func TestReceiveBlocks(t *testing.T) {
+//	ctx:=context.Background()
+//	var blocks []*eth.BeaconBlock
+//	blocks=append(blocks,&eth.BeaconBlock{ParentRoot:[]byte("hello")})
+//	currentSlot := uint64(64)
+//	db := dbTest.SetupDB(t)
+//	p := p2pt.NewTestP2P(t)
+//	peers:= []*peerData{
+//		{
+//			blocks:         makeSequence(1, 131),
+//			finalizedEpoch: 1,
+//			headSlot:       131,
+//		},
+//	}
+//	connectPeers(t, p, peers)
+//	defer dbTest.TeardownDB(t, db)
+//	gt := makeGenesisTime(currentSlot)
+//	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
+//
+//	s := &InitialSync{
+//
+//		db:db,
+//	}
+//
+//	s.receiveBlocks(ctx,blocks,counter,peers,gt,0)
+//}
 
 // helper function for sequences of block slots
 func makeSequence(start, end uint64) []uint64 {
