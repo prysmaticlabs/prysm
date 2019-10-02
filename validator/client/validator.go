@@ -132,8 +132,9 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.DepositInclusionSlot == 0 {
-			log.Info("Validator not included in state")
+		if status.Status.Status == pb.ValidatorStatus_DEPOSIT_RECEIVED {
+			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+				"Deposit for validator received but not processed into state")
 			continue
 		}
 		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
