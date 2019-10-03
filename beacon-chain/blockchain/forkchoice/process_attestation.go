@@ -109,8 +109,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		// Use the target state to to validate attestation and calculate the committees.
 		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 		if err != nil {
-			delete(s.attsQueue, root)
 			log.WithError(err).Warn("Removing attestation from queue.")
+			delete(s.attsQueue, root)
 			continue
 		}
 
