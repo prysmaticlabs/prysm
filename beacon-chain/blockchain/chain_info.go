@@ -37,6 +37,11 @@ type CanonicalRootFetcher interface {
 	CanonicalRoot(slot uint64) []byte
 }
 
+// ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
+type ForkFetcher interface {
+	CurrentFork() *pb.Fork
+}
+
 // FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieves finalization related data.
 type FinalizationFetcher interface {
@@ -101,4 +106,9 @@ func (s *Service) CanonicalRoot(slot uint64) []byte {
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
+}
+
+// CurrentFork retrieves the latest fork information of the beacon chain.
+func (s *Service) CurrentFork() *pb.Fork {
+	return proto.Clone(s.headState.Fork).(*pb.Fork)
 }

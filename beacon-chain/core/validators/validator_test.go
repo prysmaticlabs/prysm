@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -160,5 +161,179 @@ func TestSlashValidator_OK(t *testing.T) {
 	if state.Balances[slashedIdx] != params.BeaconConfig().MaxEffectiveBalance-(state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
 		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
 			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])
+	}
+}
+
+func TestActivatedValidatorIndices(t *testing.T) {
+	tests := []struct {
+		state  *pb.BeaconState
+		wanted []uint64
+	}{
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+					},
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+					},
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(5),
+					},
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+					},
+				},
+			},
+			wanted: []uint64{0, 1, 3},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(10),
+					},
+				},
+			},
+			wanted: []uint64{},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+					},
+				},
+			},
+			wanted: []uint64{0},
+		},
+	}
+	for _, tt := range tests {
+		activatedIndices := ActivatedValidatorIndices(tt.state)
+		if !reflect.DeepEqual(tt.wanted, activatedIndices) {
+			t.Errorf("Wanted %v, received %v", tt.wanted, activatedIndices)
+		}
+	}
+}
+
+func TestSlashedValidatorIndices(t *testing.T) {
+	tests := []struct {
+		state  *pb.BeaconState
+		wanted []uint64
+	}{
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
+						Slashed:           true,
+					},
+					{
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
+						Slashed:           false,
+					},
+					{
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
+						Slashed:           true,
+					},
+				},
+			},
+			wanted: []uint64{0, 2},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
+					},
+				},
+			},
+			wanted: []uint64{},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
+						Slashed:           true,
+					},
+				},
+			},
+			wanted: []uint64{0},
+		},
+	}
+	for _, tt := range tests {
+		slashedIndices := SlashedValidatorIndices(tt.state)
+		if !reflect.DeepEqual(tt.wanted, slashedIndices) {
+			t.Errorf("Wanted %v, received %v", tt.wanted, slashedIndices)
+		}
+	}
+}
+
+func TestExitedValidatorIndices(t *testing.T) {
+	tests := []struct {
+		state  *pb.BeaconState
+		wanted []uint64
+	}{
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+					{
+						ExitEpoch:         0,
+						WithdrawableEpoch: 10,
+					},
+					{
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wanted: []uint64{0, 2},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wanted: []uint64{},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot: 0,
+				Validators: []*ethpb.Validator{
+					{
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wanted: []uint64{0},
+		},
+	}
+	for _, tt := range tests {
+		exitedIndices, err := ExitedValidatorIndices(tt.state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tt.wanted, exitedIndices) {
+			t.Errorf("Wanted %v, received %v", tt.wanted, exitedIndices)
+		}
 	}
 }

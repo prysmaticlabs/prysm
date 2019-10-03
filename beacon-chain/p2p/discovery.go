@@ -80,7 +80,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
 	node := listener.Self()
-	log.Infof("Started Discovery: %s", node.ID())
+	log.WithField("nodeID", node.ID()).Info("Started discovery v5")
 	return listener, nil
 }
 
@@ -100,6 +100,10 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
 	for _, addr := range addrs {
+		if addr == "" {
+			// Ignore empty entries
+			continue
+		}
 		_, err := enode.Parse(enode.ValidSchemes, addr)
 		if err == nil {
 			discv5Nodes = append(discv5Nodes, addr)
@@ -111,6 +115,9 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []st
 			continue
 		}
 		log.Errorf("Invalid bootstrap address of %s provided", addr)
+	}
+	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
+		log.Warn("No bootstrap addresses supplied")
 	}
 	return discv5Nodes, kadDHTNodes
 }

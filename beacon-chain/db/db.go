@@ -18,10 +18,11 @@ type Database interface {
 	DatabasePath() string
 	ClearDB() error
 	// Attestation related methods.
-	Attestation(ctx context.Context, attRoot [32]byte) (*ethpb.Attestation, error)
+	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
-	HasAttestation(ctx context.Context, attRoot [32]byte) bool
-	DeleteAttestation(ctx context.Context, attRoot [32]byte) error
+	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
+	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
+	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
 	SaveAttestation(ctx context.Context, att *ethpb.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error
 	// Block related methods.
@@ -31,6 +32,7 @@ type Database interface {
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
+	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
@@ -40,6 +42,7 @@ type Database interface {
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
+	SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*pb.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error

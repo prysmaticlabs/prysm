@@ -8,11 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,14 +50,12 @@ func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 
 // Start the archiver service event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.run(s.ctx)
 }
 
 // Stop the archiver service event loop.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -101,60 +98,18 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 
 // We archive active validator set changes that happened during the epoch.
 func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState) error {
-	currentEpoch := helpers.CurrentEpoch(headState)
-	activations := make([]uint64, 0)
-	slashings := make([]uint64, 0)
-	exited := make([]uint64, 0)
-	exitEpochs := make([]uint64, 0)
-	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	for i := 0; i < len(headState.Validators); i++ {
-		val := headState.Validators[i]
-		if val.ActivationEpoch == delayedActivationEpoch {
-			activations = append(activations, uint64(i))
-		}
-		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
-		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
-			slashings = append(slashings, uint64(i))
-		}
-		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch)
-		}
-	}
-	exitQueueEpoch := uint64(0)
-	for _, i := range exitEpochs {
-		if exitQueueEpoch < i {
-			exitQueueEpoch = i
-		}
-	}
-
-	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := 0
-	for _, val := range headState.Validators {
-		if val.ExitEpoch == exitQueueEpoch {
-			exitQueueChurn++
-		}
-	}
-	churn, err := helpers.ValidatorChurnLimit(headState)
+	activations := validators.ActivatedValidatorIndices(headState)
+	slashings := validators.SlashedValidatorIndices(headState)
+	exited, err := validators.ExitedValidatorIndices(headState)
 	if err != nil {
-		return errors.Wrap(err, "could not get churn limit")
+		return errors.Wrap(err, "could not determine exited validator indices")
 	}
-
-	if uint64(exitQueueChurn) >= churn {
-		exitQueueEpoch++
-	}
-	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	for i, val := range headState.Validators {
-		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
-			exited = append(exited, uint64(i))
-		}
-	}
-
 	activeSetChanges := &ethpb.ArchivedActiveSetChanges{
 		Activated: activations,
 		Exited:    exited,
 		Slashed:   slashings,
 	}
-	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(ctx, currentEpoch, activeSetChanges); err != nil {
+	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(ctx, helpers.CurrentEpoch(headState), activeSetChanges); err != nil {
 		return errors.Wrap(err, "could not archive active validator set changes")
 	}
 	return nil
@@ -210,24 +165,13 @@ func (s *Service) run(ctx context.Context) {
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived committee info during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived active validator set changes during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived validator balances during epoch")
-			log.WithField(
-				"epoch",
-				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived validator participation during epoch")
+			).Debug("Successfully archived beacon chain data during epoch")
 		case <-s.ctx.Done():
-			log.Info("Context closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-sub.Err():
 			log.WithError(err).Error("Subscription to new chain head notifier failed")
+			return
 		}
 	}
 }

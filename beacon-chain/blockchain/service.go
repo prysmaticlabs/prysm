@@ -5,17 +5,17 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -25,6 +25,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -106,7 +107,7 @@ func (s *Service) Start() {
 	}
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
-		log.Info("Beacon chain data already exists, starting service")
+		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
@@ -124,7 +125,7 @@ func (s *Service) Start() {
 		}
 		s.stateInitializedFeed.Send(s.genesisTime)
 	} else {
-		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 		if s.chainStartFetcher == nil {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
@@ -159,7 +160,7 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	log.Info("ChainStart time reached, starting the beacon chain!")
+	log.Info("Genesis time reached, starting the beacon chain")
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
@@ -172,14 +173,19 @@ func (s *Service) initializeBeaconChain(
 		return errors.Wrap(err, "could not save genesis data")
 	}
 
+	// Update committee shuffled indices for genesis epoch.
+	if featureconfig.FeatureConfig().EnableNewCache {
+		if err := helpers.UpdateCommitteeCache(genesisState); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -225,9 +231,9 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slots": b.Slot,
-		"root":  hex.EncodeToString(r[:]),
-	}).Debug("Saved head info")
+		"slot":     b.Slot,
+		"headRoot": fmt.Sprintf("%#x", r),
+	}).Debug("Saved new head info")
 	return nil
 }
 
@@ -288,28 +294,31 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	return nil
 }
 
-// This gets called to initialize chain info variables using the head stored in DB
+// This gets called to initialize chain info variables using the finalized checkpoint stored in DB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	headBlock, err := s.beaconDB.HeadBlock(ctx)
+	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head block in db")
+		return errors.Wrap(err, "could not get finalized checkpoint from db")
 	}
-	headState, err := s.beaconDB.HeadState(ctx)
+	if finalized == nil {
+		// This should never happen. At chain start, the finalized checkpoint
+		// would be the genesis state and block.
+		return errors.New("no finalized epoch in the database")
+	}
+	s.headState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
-		return errors.Wrap(err, "could not get head state in db")
+		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	s.headSlot = headBlock.Slot
-	s.headBlock = headBlock
-	s.headState = headState
+	s.headBlock, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized block from db")
+	}
 
-	headRoot, err := ssz.SigningRoot(headBlock)
-	if err != nil {
-		return errors.Wrap(err, "could not sign root on head block")
-	}
-	s.canonicalRoots[s.headSlot] = headRoot[:]
+	s.headSlot = s.headState.Slot
+	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil
 }

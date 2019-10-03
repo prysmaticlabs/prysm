@@ -178,20 +178,16 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
 
-	s, err := state.ExecuteStateTransitionNoVerify(
+	root, err := state.CalculateStateRoot(
 		ctx,
 		beaconState,
 		block,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not execute state transition for state at slot %d", beaconState.Slot)
+		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot)
 	}
 
-	root, err := ssz.HashTreeRoot(s)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash beacon state")
-	}
-	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state hash")
+	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
 }
 

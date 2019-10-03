@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -47,6 +49,56 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 	if db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to have been deleted from the db")
+	}
+}
+
+func TestStore_BlocksBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	numBlocks := 1000
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	oddBlocks := make([]*ethpb.BeaconBlock, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: []byte("parent"),
+		}
+		if i%2 == 0 {
+			r, err := ssz.SigningRoot(totalBlocks[i])
+			if err != nil {
+				t.Fatal(err)
+			}
+			blockRoots = append(blockRoots, r)
+		} else {
+			oddBlocks = append(oddBlocks, totalBlocks[i])
+		}
+	}
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != numBlocks {
+		t.Errorf("Received %d blocks, wanted 1000", len(retrieved))
+	}
+	// We delete all even indexed blocks.
+	if err := db.DeleteBlocks(ctx, blockRoots); err != nil {
+		t.Fatal(err)
+	}
+	// When we retrieve the data, only the odd indexed blocks should remain.
+	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Slice(retrieved, func(i, j int) bool {
+		return retrieved[i].Slot < retrieved[j].Slot
+	})
+	if !reflect.DeepEqual(retrieved, oddBlocks) {
+		t.Errorf("Wanted %v, received %v", oddBlocks, retrieved)
 	}
 }
 
@@ -128,11 +180,6 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		{
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
 			expectedNumBlocks: 2,
-		},
-		{
-			// No specified filter should return all blocks.
-			filter:            nil,
-			expectedNumBlocks: 5,
 		},
 		{
 			// No block meets the criteria below.

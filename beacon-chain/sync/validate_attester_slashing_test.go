@@ -20,7 +20,7 @@ import (
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 5)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 5)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	for _, vv := range state.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
@@ -44,7 +44,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainAttestation)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -101,8 +101,12 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if !r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
-		t.Error("Failed validation")
+	valid, err := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if err != nil {
+		t.Errorf("Failed validation: %v", err)
+	}
+	if !valid {
+		t.Error("Failed Validation")
 	}
 
 	if !p2p.BroadcastCalled {
@@ -112,7 +116,9 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ = r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+
+	if valid {
 		t.Error("Passed validation when should have failed")
 	}
 
@@ -133,7 +139,8 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/) {
+	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/)
+	if valid {
 		t.Error("Passed validation")
 	}
 
@@ -156,7 +163,8 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }
@@ -173,7 +181,8 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 
-	if r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/) {
+	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Passed validation")
 	}
 
