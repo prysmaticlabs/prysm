@@ -8,6 +8,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -32,6 +33,7 @@ func (k *Store) Backup(ctx context.Context) error {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("slot_%07d.backup", head.Slot))
+	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 	return k.db.View(func(tx *bolt.Tx) error {
 		return tx.CopyFile(backupPath, 0666)
 	})
