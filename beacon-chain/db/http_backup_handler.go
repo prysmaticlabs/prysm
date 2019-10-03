@@ -22,6 +22,8 @@ func BackupHandler(db Database) func(http.ResponseWriter, *http.Request) {
 		}
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprint(w, "OK")
-		log.WithError(err).Error("Failed to write OK")
+		if err != nil {
+			log.WithError(err).Error("Failed to write OK")
+		}
 	}
 }
