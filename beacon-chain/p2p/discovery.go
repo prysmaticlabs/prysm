@@ -127,7 +127,7 @@ func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 	for _, node := range nodes {
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
-			log.WithError(err).Error("Could not convert to multiAddr")
+			log.WithError(err).Debug("Could not convert to multiAddr")
 			continue
 		}
 		multiAddrs = append(multiAddrs, multiAddr)
