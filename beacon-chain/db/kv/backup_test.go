@@ -21,7 +21,7 @@ func TestStore_Backup(t *testing.T) {
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(head)
+	root, err := ssz.SigningRoot(head)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestStore_Backup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	files, err := ioutil.ReadDir(path.Join(db.databasePath+backupsDirectoryName))
+	files, err := ioutil.ReadDir(path.Join(db.databasePath, backupsDirectoryName))
 	if err != nil {
 		t.Fatal(err)
 	}

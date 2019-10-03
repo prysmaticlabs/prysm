@@ -3,9 +3,11 @@ package kv
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
@@ -22,7 +24,14 @@ func (k *Store) Backup(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("slot_%7d.backup", head.Slot))
+	if head == nil {
+		return errors.New("no head block")
+	}
+	// Ensure the backups directory exists.
+	if err := os.MkdirAll(backupsDir, os.ModePerm); err != nil {
+		return err
+	}
+	backupPath := path.Join(backupsDir, fmt.Sprintf("slot_%07d.backup", head.Slot))
 	return k.db.View(func(tx *bolt.Tx) error {
 		return tx.CopyFile(backupPath, 0666)
 	})
