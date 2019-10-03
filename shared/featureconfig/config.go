@@ -30,11 +30,13 @@ type FeatureFlagConfig struct {
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	SkipBLSVerify            bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
 
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache    bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -87,6 +89,14 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
+	}
+	if ctx.GlobalBool(enableBackupWebhookFlag.Name) {
+		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
+		cfg.EnableBackupWebhook = true
+	}
+	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
+		log.Warn("Enabled BLS pubkey cache.")
+		cfg.EnableBLSPubkeyCache = true
 	}
 	InitFeatureConfig(cfg)
 }

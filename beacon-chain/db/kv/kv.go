@@ -21,6 +21,8 @@ const VotesCacheSize = 1000000
 // ValidatorIndexCacheSize of 1M * 8 bytes, ~8 Mb
 const ValidatorIndexCacheSize = 1000000
 
+const databaseFileName = "beaconchain.db"
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
@@ -38,7 +40,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "beaconchain.db")
+	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -88,13 +90,13 @@ func NewKVStore(dirPath string) (*Store, error) {
 	return kv, err
 }
 
-// ClearDB removes the previously stored directory at the data directory.
+// ClearDB removes the previously stored database in the data directory.
 func (k *Store) ClearDB() error {
 	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
 		return nil
 	}
 	prometheus.Unregister(createBoltCollector(k.db))
-	return os.RemoveAll(k.databasePath)
+	return os.Remove(path.Join(k.databasePath, databaseFileName))
 }
 
 // Close closes the underlying BoltDB database.

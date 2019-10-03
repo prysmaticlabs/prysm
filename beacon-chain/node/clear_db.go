@@ -14,8 +14,8 @@ func confirmDelete(d db.Database, path string) (db.Database, error) {
 	var err error
 	reader := bufio.NewReader(os.Stdin)
 
-	log.Warn("This will delete all the chain data stored in your data directory - " +
-		"do you want to proceed? (Y/N)")
+	log.Warn("This will delete your beacon chain data base stored in your data directory. " +
+		"Your database backups will not be removed - do you want to proceed? (Y/N)")
 
 	for {
 		fmt.Print(">> ")
@@ -31,11 +31,11 @@ func confirmDelete(d db.Database, path string) (db.Database, error) {
 			continue
 		}
 		if lineInput == "Y" {
-			log.Warn("Deleting all chain data from data directory")
+			log.Warn("Deleting beaconchain.db from data directory")
 			clearDB = true
 			break
 		}
-		log.Info("Not deleting chain data, the db will be initialized" +
+		log.Info("Not deleting chain database, the db will be initialized" +
 			" with the current data directory.")
 		break
 	}
