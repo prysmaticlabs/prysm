@@ -87,14 +87,6 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "status")
-
-	// return if hello already exists
-	hello := peerstatus.Get(stream.Conn().RemotePeer())
-	if hello != nil {
-		log.Debugf("Peer %s already exists", stream.Conn().RemotePeer())
-		return nil
-	}
-
 	m := msg.(*pb.Status)
 
 	peerstatus.Set(stream.Conn().RemotePeer(), m)
