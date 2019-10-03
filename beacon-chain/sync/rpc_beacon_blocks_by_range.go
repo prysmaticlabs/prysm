@@ -39,6 +39,7 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 	// TODO(3147): Only return blocks on the chain of the head root.
 	blks, err := r.db.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 	if err != nil {
+		log.WithError(err).Error("Failed to retrieve blocks")
 		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
