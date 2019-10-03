@@ -48,6 +48,10 @@ var (
 		Name: "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
 	}
+	enableBLSPubkeyCacheFlag = cli.BoolFlag{
+		Name: "enable-bls-pubkey-cache",
+		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -66,4 +70,5 @@ var BeaconChainFlags = []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	enableBackupWebhookFlag,
+	enableBLSPubkeyCacheFlag,
 }
