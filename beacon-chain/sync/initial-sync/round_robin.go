@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -98,6 +99,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					if err != nil {
 						// fail over to other peers by splitting this requests evenly across them.
 						ps := append(peers[:i], peers[i+1:]...)
+						rand.Seed(time.Now().UnixNano())
+						rand.Shuffle(len(ps), func(i, j int) { ps[i], ps[j] = ps[j], ps[i] })
 						log.WithError(err).WithField(
 							"remaining peers",
 							len(ps),
