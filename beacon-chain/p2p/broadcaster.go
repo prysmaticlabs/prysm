@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -31,6 +32,12 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 		err := errors.Wrap(err, "could not encode message")
 		traceutil.AnnotateError(span, err)
 		return err
+	}
+
+	if span.IsRecordingEvents() {
+		id := hashutil.FastSum64(buf.Bytes())
+		messageLen := int64(buf.Len())
+		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 
 	if err := s.pubsub.Publish(topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {

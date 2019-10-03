@@ -1245,3 +1245,10 @@ go_repository(
     sum = "h1:O/TkcedJgb93OKv4IoC1fS/XCBdnSkw7+18lZJEn2kY=",
     version = "v0.0.0-20190930171448-0e0109c48123",
 )
+
+go_repository(
+    name = "com_github_minio_highwayhash",
+    importpath = "github.com/minio/highwayhash",
+    sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
+    version = "v1.0.0",
+)
