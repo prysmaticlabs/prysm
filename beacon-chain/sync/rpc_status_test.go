@@ -41,7 +41,6 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
