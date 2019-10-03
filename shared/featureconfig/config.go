@@ -36,6 +36,7 @@ type FeatureFlagConfig struct {
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache    bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -92,6 +93,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
+	}
+	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
+		log.Warn("Enabled BLS pubkey cache.")
+		cfg.EnableBLSPubkeyCache = true
 	}
 	InitFeatureConfig(cfg)
 }
