@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "archive.go",
         "attestations.go",
+        "backup.go",
         "blocks.go",
         "checkpoint.go",
         "deposit_contract.go",
@@ -40,6 +41,7 @@ go_test(
     srcs = [
         "archive_test.go",
         "attestations_test.go",
+        "backup_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
