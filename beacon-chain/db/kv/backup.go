@@ -15,7 +15,7 @@ import (
 const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
-// Example for backup at slot 345: $DATADIR/backups/slot_0000345.backup
+// Example for backup at slot 345: $DATADIR/backups/prysm_beacondb_at_slot_0000345.backup
 func (k *Store) Backup(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
@@ -32,7 +32,7 @@ func (k *Store) Backup(ctx context.Context) error {
 	if err := os.MkdirAll(backupsDir, os.ModePerm); err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("slot_%07d.backup", head.Slot))
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 	return k.db.View(func(tx *bolt.Tx) error {
 		return tx.CopyFile(backupPath, 0666)
