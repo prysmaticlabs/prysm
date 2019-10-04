@@ -1,8 +1,10 @@
-package trieutil
+package trieutil_test
 
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestNextPowerOf2(t *testing.T) {
@@ -19,7 +21,7 @@ func TestNextPowerOf2(t *testing.T) {
 		{input: 20, result: 32},
 	}
 	for _, tt := range tests {
-		if got := NextPowerOf2(tt.input); got != tt.result {
+		if got := trieutil.NextPowerOf2(tt.input); got != tt.result {
 			t.Errorf("NextPowerOf2() = %d, result %d", got, tt.result)
 		}
 	}
@@ -39,7 +41,7 @@ func TestPrevPowerOf2(t *testing.T) {
 		{input: 20, result: 16},
 	}
 	for _, tt := range tests {
-		if got := PrevPowerOf2(tt.input); got != tt.result {
+		if got := trieutil.PrevPowerOf2(tt.input); got != tt.result {
 			t.Errorf("PrevPowerOf2() = %d, result %d", got, tt.result)
 		}
 	}
@@ -55,7 +57,7 @@ func TestMerkleTreeLength(t *testing.T) {
 		{[][]byte{{'A'}, {'B'}, {'C'}, {'D'}, {'E'}}, 16},
 	}
 	for _, tt := range tests {
-		if got := MerkleTree(tt.leaves); len(got) != tt.length {
+		if got := trieutil.MerkleTree(tt.leaves); len(got) != tt.length {
 			t.Errorf("len(MerkleTree()) = %d, result %d", got, tt.length)
 		}
 	}
@@ -72,7 +74,7 @@ func TestConcatGeneralizedIndices(t *testing.T) {
 		{[]int{1, 2, 5, 10}, 74},
 	}
 	for _, tt := range tests {
-		if got := ConcatGeneralizedIndices(tt.indices); got != tt.result {
+		if got := trieutil.ConcatGeneralizedIndices(tt.indices); got != tt.result {
 			t.Errorf("ConcatGeneralizedIndices() = %d, result %d", got, tt.result)
 		}
 	}
@@ -90,7 +92,7 @@ func TestGeneralizedIndexLength(t *testing.T) {
 		{index: 97282, result: 16},
 	}
 	for _, tt := range tests {
-		result := GeneralizedIndexLength(tt.index)
+		result := trieutil.GeneralizedIndexLength(tt.index)
 		if tt.result != result {
 			t.Errorf("GeneralizedIndexLength() = %d, result %d", tt.result, result)
 		}
@@ -109,7 +111,7 @@ func TestGeneralizedIndexBit(t *testing.T) {
 		{index: 10, pos: 3, result: true},
 	}
 	for _, tt := range tests {
-		result := GeneralizedIndexBit(tt.index, tt.pos)
+		result := trieutil.GeneralizedIndexBit(tt.index, tt.pos)
 		if result != tt.result {
 			t.Errorf("GeneralizedIndexBit() = %v, result %v", tt.result, result)
 		}
@@ -128,7 +130,7 @@ func TestGeneralizedIndexChild(t *testing.T) {
 		{index: 9999, right: false, result: 19998},
 	}
 	for _, tt := range tests {
-		result := GeneralizedIndexChild(tt.index, tt.right)
+		result := trieutil.GeneralizedIndexChild(tt.index, tt.right)
 		if result != tt.result {
 			t.Errorf("GeneralizedIndexChild() = %v, result %v", tt.result, result)
 		}
@@ -146,7 +148,7 @@ func TestGeneralizedIndexSibling(t *testing.T) {
 		{index: 9999, result: 9998},
 	}
 	for _, tt := range tests {
-		result := GeneralizedIndexSibling(tt.index)
+		result := trieutil.GeneralizedIndexSibling(tt.index)
 		if result != tt.result {
 			t.Errorf("GeneralizedIndexSibling() = %v, result %v", tt.result, result)
 		}
@@ -164,7 +166,7 @@ func TestGeneralizedIndexParent(t *testing.T) {
 		{index: 9999, result: 4999},
 	}
 	for _, tt := range tests {
-		result := GeneralizedIndexParent(tt.index)
+		result := trieutil.GeneralizedIndexParent(tt.index)
 		if result != tt.result {
 			t.Errorf("GeneralizedIndexParent() = %v, result %v", tt.result, result)
 		}
@@ -181,6 +183,6 @@ func BenchmarkMerkleTree_Generate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		MerkleTree(leaves)
+		trieutil.MerkleTree(leaves)
 	}
 }

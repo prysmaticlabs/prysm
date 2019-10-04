@@ -1,18 +1,19 @@
-package featureconfig
+package featureconfig_test
 
 import (
 	"flag"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli"
 )
 
 func TestInitFeatureConfig(t *testing.T) {
-	cfg := &FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		NoGenesisDelay: true,
 	}
-	InitFeatureConfig(cfg)
-	if c := FeatureConfig(); !c.NoGenesisDelay {
+	featureconfig.InitFeatureConfig(cfg)
+	if c := featureconfig.FeatureConfig(); !c.NoGenesisDelay {
 		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
@@ -20,10 +21,10 @@ func TestInitFeatureConfig(t *testing.T) {
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(NoGenesisDelayFlag.Name, true, "enable attestation verification")
+	set.Bool(featureconfig.NoGenesisDelayFlag.Name, true, "enable attestation verification")
 	context := cli.NewContext(app, set, nil)
-	ConfigureBeaconFeatures(context)
-	if c := FeatureConfig(); !c.NoGenesisDelay {
+	featureconfig.ConfigureBeaconFeatures(context)
+	if c := featureconfig.FeatureConfig(); !c.NoGenesisDelay {
 		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
