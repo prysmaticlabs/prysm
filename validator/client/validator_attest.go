@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -26,8 +25,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
-	span.AddAttributes(trace.StringAttribute("validator", tpk))
+	tpk := v.keys[pk].PublicKey.Marshal()
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", tpk)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	// We fetch the validator index as it is necessary to generate the aggregation
