@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"io/ioutil"
 	"testing"
 
@@ -26,11 +27,11 @@ func benchmarkConfig() *testutil.BlockGenConfig {
 	logrus.SetOutput(ioutil.Discard)
 	if conditions == "BIG" {
 		return &testutil.BlockGenConfig{
-			MaxProposerSlashings: 16,
-			MaxAttesterSlashings: 1,
-			MaxAttestations:      128,
-			MaxDeposits:          16,
-			MaxVoluntaryExits:    16,
+			MaxProposerSlashings: 0,
+			MaxAttesterSlashings: 0,
+			MaxAttestations:      256,
+			MaxDeposits:          0,
+			MaxVoluntaryExits:    0,
 		}
 	} else if conditions == "SML" {
 		return &testutil.BlockGenConfig{
@@ -51,7 +52,15 @@ func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 
-	beaconState, block := createBeaconStateAndBlock(t)
+	beaconState := createBeaconState(t)
+
+	conf := benchmarkConfig()
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := testutil.GenerateFullBlock(t, beaconState, privs, conf)
+
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
 	}
@@ -61,10 +70,62 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
+	c.TargetCommitteeSize = 256
+	c.MaxAttestations = benchmarkConfig().MaxAttestations
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 
-	beaconState, block := createBeaconStateAndBlock(b)
+	beaconState := createBeaconState(b)
+
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
+	if err != nil {
+		b.Fatal(err)
+	}
+	atts := []*ethpb.Attestation{}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		attsForSlot := testutil.GenerateAttestations(b, beaconState, privs, 2)
+		atts = append(atts, attsForSlot...)
+		conf := &testutil.BlockGenConfig{
+			MaxAttestations: 0,
+		}
+		block := testutil.GenerateFullBlock(b, beaconState, privs, conf)
+		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+	}
+	block := testutil.GenerateFullBlock(b, beaconState, privs, conf)
+	block.Body.Attestations = append(atts, block.Body.Attestations...)
+	b.Log(len(atts))
+
+	s, err := state.CalculateStateRoot(context.Background(), beaconState, block)
+	if err != nil {
+		b.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		b.Fatal(err)
+	}
+	block.StateRoot = root[:]
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		b.Fatal(err)
+	}
+	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		b.Fatal(err)
+	}
+	beaconState.Slot--
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
+
 	cleanStates := createCleanStates(beaconState)
 
 	b.N = runAmount
@@ -76,7 +137,7 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	}
 }
 
-func createBeaconStateAndBlock(b testing.TB) (*pb.BeaconState, *ethpb.BeaconBlock) {
+func createBeaconState(b testing.TB) *pb.BeaconState {
 	beaconSSZ, err := ioutil.ReadFile("genesisState.ssz")
 	if err != nil {
 		b.Fatal(err)
@@ -86,14 +147,7 @@ func createBeaconStateAndBlock(b testing.TB) (*pb.BeaconState, *ethpb.BeaconBloc
 		b.Fatal(err)
 	}
 
-	conf := benchmarkConfig()
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
-	if err != nil {
-		b.Fatal(err)
-	}
-	fullBlock := testutil.GenerateFullBlock(b, genesisState, privs, conf)
-
-	return genesisState, fullBlock
+	return genesisState
 }
 
 func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
@@ -109,12 +163,12 @@ func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
 func BenchmarkSaveStateToDisk(b *testing.B) {
 	deposits, _, _ := testutil.SetupInitialDeposits(b, uint64(validatorCount))
 	eth1Data := testutil.GenerateEth1Data(b, deposits)
-	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	stateSSZ, err := ssz.Marshal(genesisState)
+	stateSSZ, err := ssz.Marshal(beaconState)
 	if err != nil {
 		b.Fatal(err)
 	}

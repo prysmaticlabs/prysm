@@ -49,7 +49,7 @@ func GenerateFullBlock(
 
 	atts := []*ethpb.Attestation{}
 	if conf.MaxAttestations > 0 {
-		atts = generateAttestations(t, bState, privs, conf.MaxAttestations)
+		atts = GenerateAttestations(t, bState, privs, conf.MaxAttestations)
 	}
 
 	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data
@@ -262,11 +262,12 @@ func generateAttesterSlashings(
 	return attesterSlashings
 }
 
-// generateAttestations creates attestations that are entirely valid, for the current state slot.
-// This function always returns all validators participating, if maxAttestations is 1, then it will
+// GenerateAttestations creates attestations that are entirely valid, for all the committees of the current state slot.
+// This function always returns all validators participating.
+// Attestations requested must be cleanly divisible by committees per slot. then it will
 // return 1 attestation with all validators aggregated into it. If maxAttestations is set to 4, then
 // it will return 4 attestations for the same data with their aggregation bits split uniformly.
-func generateAttestations(
+func GenerateAttestations(
 	t testing.TB,
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
@@ -279,21 +280,96 @@ func generateAttestations(
 	}
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	attestations := make([]*ethpb.Attestation, maxAttestations)
-
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	shardCount := params.BeaconConfig().ShardCount
 	committeeCount, err := helpers.CommitteeCount(bState, currentEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	offSet := committeesPerSlot * (bState.Slot % params.BeaconConfig().SlotsPerEpoch)
+	committeesPerSlot := committeeCount / slotsPerEpoch
+	if maxAttestations < committeesPerSlot {
+		t.Fatalf(
+			"requested %d attestations per block but there are %d committees attesting for this slot",
+			maxAttestations,
+			committeesPerSlot,
+		)
+	}
+	if maxAttestations%committeesPerSlot != 0 {
+		t.Fatalf(
+			"requested %d attestations but this is not cleanly divisble with the %d committees for this slot",
+			maxAttestations,
+			committeesPerSlot,
+		)
+	}
+	attsPerCommittee := maxAttestations / committeesPerSlot
+
+	offset := committeesPerSlot * (bState.Slot % params.BeaconConfig().SlotsPerEpoch)
 	startShard, err := helpers.StartShard(bState, currentEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	shard := (startShard + offSet) % params.BeaconConfig().ShardCount
+	slotStartShard := (startShard + offset) % shardCount
 
+	attCounter := 0
+	attestations := make([]*ethpb.Attestation, maxAttestations)
+	for i := uint64(0); i < committeesPerSlot; i++ {
+		shard := (slotStartShard + i) % shardCount
+		committee, err := helpers.CrosslinkCommittee(bState, currentEpoch, shard)
+		if err != nil {
+			t.Fatal(err)
+		}
+		committeeSize := uint64(len(committee))
+
+		if maxAttestations > committeeSize*committeesPerSlot {
+			t.Fatalf(
+				"requested %d attestations per block but there are only %d attesting validators this slot",
+				maxAttestations,
+				len(committee),
+			)
+		}
+
+		att := generateAttestation(t, bState, headState, shard)
+
+		custodyBits := bitfield.NewBitlist(committeeSize)
+		att.CustodyBits = custodyBits
+
+		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+			Data:       att.Data,
+			CustodyBit: false,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		domain := helpers.Domain(bState.Fork, att.Data.Crosslink.StartEpoch+1, params.BeaconConfig().DomainAttestation)
+
+		bitsPerAtt := committeeSize / attsPerCommittee
+		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
+			aggregationBits := bitfield.NewBitlist(committeeSize)
+			sigs := []*bls.Signature{}
+			for b := i; b < i+bitsPerAtt; b++ {
+				aggregationBits.SetBitAt(b, true)
+				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+			}
+			att.AggregationBits = aggregationBits
+
+			att.Signature = bls.AggregateSignatures(sigs).Marshal()
+			attestations[attCounter] = att
+			attCounter++
+		}
+	}
+
+	return attestations
+}
+
+func generateAttestation(
+	t testing.TB,
+	bState *pb.BeaconState,
+	headState *pb.BeaconState,
+	shard uint64,
+) *ethpb.Attestation {
+	currentEpoch := helpers.CurrentEpoch(bState)
 	parentCrosslink := bState.CurrentCrosslinks[shard]
+
 	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
 	if currentEpoch < endEpoch {
 		endEpoch = currentEpoch
@@ -309,11 +385,6 @@ func generateAttestations(
 		ParentRoot: parentRoot[:],
 		DataRoot:   params.BeaconConfig().ZeroHash[:],
 	}
-	committee, err := helpers.CrosslinkCommittee(bState, currentEpoch, shard)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committeeSize := uint64(len(committee))
 	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
 	if err != nil {
 		panic(err)
@@ -336,7 +407,6 @@ func generateAttestations(
 		}
 	}
 
-	custodyBits := bitfield.NewBitlist(committeeSize)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: headRoot,
@@ -347,40 +417,9 @@ func generateAttestations(
 				Root:  targetRoot,
 			},
 		},
-		CustodyBits: custodyBits,
 	}
 
-	dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if maxAttestations > committeeSize {
-		t.Fatalf(
-			"requested %d attestations per block but there are only %d committee members",
-			maxAttestations,
-			len(committee),
-		)
-	}
-
-	bitsPerAtt := committeeSize / maxAttestations
-	domain := helpers.Domain(bState.Fork, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainAttestation)
-	for i := uint64(0); i < committeeSize; i += bitsPerAtt {
-		aggregationBits := bitfield.NewBitlist(committeeSize)
-		sigs := []*bls.Signature{}
-		for b := i; b < i+bitsPerAtt; b++ {
-			aggregationBits.SetBitAt(b, true)
-			sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
-		}
-		att.AggregationBits = aggregationBits
-
-		att.Signature = bls.AggregateSignatures(sigs).Marshal()
-		attestations[i/bitsPerAtt] = att
-	}
-	return attestations
+	return att
 }
 
 func generateDepositsAndEth1Data(
