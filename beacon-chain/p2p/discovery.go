@@ -133,6 +133,10 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []st
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 	var multiAddrs []ma.Multiaddr
 	for _, node := range nodes {
+		// ignore nodes with no ip address stored
+		if node.IP() == nil {
+			continue
+		}
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to multiAddr")

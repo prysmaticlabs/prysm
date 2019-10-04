@@ -1,10 +1,11 @@
-package helpers
+package helpers_test
 
 import (
 	"bytes"
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -57,7 +58,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
 			wantedSlot := tt.slot
-			result, err := BlockRootAtSlot(s, wantedSlot)
+			result, err := helpers.BlockRootAtSlot(s, wantedSlot)
 			if err != nil {
 				t.Fatalf("failed to get block root at slot %d: %v",
 					wantedSlot, err)
@@ -108,7 +109,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		_, err := BlockRootAtSlot(state, tt.slot)
+		_, err := helpers.BlockRootAtSlot(state, tt.slot)
 		if err == nil {
 			t.Errorf("Expected error %s, got nil", tt.expectedErr)
 		}
