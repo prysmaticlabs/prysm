@@ -123,7 +123,11 @@ contract in order to activate the validator client`,
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(joonix.NewFormatter())
+			f := joonix.NewFormatter()
+			if err := joonix.DisableTimestampFormat(f); err != nil {
+				panic(err)
+			}
+			logrus.SetFormatter(f)
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
