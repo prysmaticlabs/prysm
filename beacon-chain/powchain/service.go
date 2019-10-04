@@ -401,7 +401,7 @@ func (s *Service) run(done <-chan struct{}) {
 			log.WithError(s.runError).Error("Subscription to new head notifier failed")
 			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
 			if err != nil {
-				log.Errorf("Unable to re-subscribe to incoming ETH1.0 chain headers: %v", err)
+				log.WithError(err).Error("Unable to re-subscribe to incoming ETH1.0 chain headers")
 				s.runError = err
 				return
 			}
