@@ -1,10 +1,11 @@
-package epoch
+package epoch_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -12,7 +13,7 @@ import (
 
 func TestComputeValidatorParticipation(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	epoch := uint64(1)
+	e := uint64(1)
 	attestedBalance := uint64(1)
 	validatorCount := uint64(100)
 
@@ -36,7 +37,7 @@ func TestComputeValidatorParticipation(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Slot:                       e*params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:                 validators,
 		Balances:                   balances,
 		BlockRoots:                 make([][]byte, 128),
@@ -51,7 +52,7 @@ func TestComputeValidatorParticipation(t *testing.T) {
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
 	}
 
-	res, err := ComputeValidatorParticipation(s)
+	res, err := epoch.ComputeValidatorParticipation(s)
 	if err != nil {
 		t.Fatal(err)
 	}
