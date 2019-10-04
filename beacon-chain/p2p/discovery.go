@@ -42,6 +42,14 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
+	if cfg.HostAddress != "" {
+		hostIP := net.ParseIP(cfg.HostAddress)
+		if hostIP.To4() == nil {
+			log.Errorf("Invalid host address given: %s", hostIP.String())
+		} else {
+			localNode.SetFallbackIP(hostIP)
+		}
+	}
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
 	}
