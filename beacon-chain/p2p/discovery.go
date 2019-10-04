@@ -43,7 +43,6 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 		log.Fatal(err)
 	}
 	if cfg.HostAddress != "" {
-		log.Error("Configure host addr")
 		hostIP := net.ParseIP(cfg.HostAddress)
 		if hostIP.To4() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
