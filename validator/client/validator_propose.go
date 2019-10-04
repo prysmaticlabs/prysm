@@ -4,7 +4,6 @@ package client
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -28,8 +27,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
-	span.AddAttributes(trace.StringAttribute("validator", tpk))
+	tpk := v.keys[pk].PublicKey.Marshal()
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", tpk)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
