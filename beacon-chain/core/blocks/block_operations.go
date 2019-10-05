@@ -96,7 +96,7 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 	voteCount := uint64(0)
 	var eth1DataHash [32]byte
 	var err error
-	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+	if featureconfig.Get().EnableEth1DataVoteCache {
 		eth1DataHash, err = hashutil.HashProto(data)
 		if err != nil {
 			return false, errors.Wrap(err, "could not hash eth1data")
@@ -117,7 +117,7 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 		voteCount++
 	}
 
-	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+	if featureconfig.Get().EnableEth1DataVoteCache {
 		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
 			Eth1DataHash: eth1DataHash,
 			VoteCount:    voteCount,

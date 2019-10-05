@@ -125,7 +125,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		reportEpochMetrics(postState)
 
 		// Update committee shuffled indices at the end of every epoch
-		if featureconfig.FeatureConfig().EnableNewCache {
+		if featureconfig.Get().EnableNewCache {
 			if err := helpers.UpdateCommitteeCache(postState); err != nil {
 				return err
 			}
