@@ -100,15 +100,18 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	defer s.attsQueueLock.Unlock()
 	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
-		log.WithFields(logrus.Fields{
+		log := log.WithFields(logrus.Fields{
 			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
-		}).Debug("Updating latest votes")
+		})
+		log.Debug("Updating latest votes")
 
 		// Use the target state to to validate attestation and calculate the committees.
 		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 		if err != nil {
-			return 0, err
+			log.WithError(err).Warn("Removing attestation from queue.")
+			delete(s.attsQueue, root)
+			continue
 		}
 
 		// Update every validator's latest vote.

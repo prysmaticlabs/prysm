@@ -21,7 +21,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, pid peer.ID) (n
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
-	const deadline = 15*time.Second
+	const deadline = 15 * time.Second
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 

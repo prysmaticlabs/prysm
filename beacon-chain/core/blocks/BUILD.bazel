@@ -7,7 +7,10 @@ go_library(
         "block_operations.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil:__pkg__",
+    ],
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -39,7 +42,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",

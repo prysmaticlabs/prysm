@@ -5,6 +5,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -77,6 +78,23 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	c := &Service{headState: s}
 	if !reflect.DeepEqual(s, c.HeadState()) {
 		t.Error("incorrect head state received")
+	}
+}
+
+func TestGenesisTime_CanRetrieve(t *testing.T) {
+	c := &Service{genesisTime: time.Unix(999, 0)}
+	wanted := time.Unix(999, 0)
+	if c.GenesisTime() != wanted {
+		t.Error("Did not get wanted genesis time")
+	}
+}
+
+func TestCurrentFork_CanRetrieve(t *testing.T) {
+	f := &pb.Fork{Epoch: 999}
+	s := &pb.BeaconState{Fork: f}
+	c := &Service{headState: s}
+	if !reflect.DeepEqual(c.CurrentFork(), f) {
+		t.Error("Recieved incorrect fork version")
 	}
 }
 

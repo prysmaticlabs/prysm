@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -111,18 +110,8 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("testing"))
-	copy(sig[:], []byte("testing"))
-	copy(withdrawalCreds[:], []byte("testing"))
-
-	data := &ethpb.Deposit_Data{
-		PublicKey:             pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
+	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
@@ -182,18 +171,8 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-	copy(pubkey[:], []byte("pubkey"))
-	copy(sig[:], []byte("sig"))
-	copy(withdrawalCreds[:], []byte("withdrawCreds"))
-
-	data := &ethpb.Deposit_Data{
-		PublicKey:             pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-	}
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
+	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000

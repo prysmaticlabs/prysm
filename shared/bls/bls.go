@@ -66,7 +66,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return &PublicKey{}, nil
 	}
 	cv := pubkeyCache.Get(string(pub))
-	if cv != nil && cv.Value() != nil {
+	if cv != nil && cv.Value() != nil && featureconfig.FeatureConfig().EnableBLSPubkeyCache {
 		return cv.Value().(*PublicKey).Copy(), nil
 	}
 	b := bytesutil.ToBytes48(pub)
