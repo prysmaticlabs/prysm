@@ -16,14 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-// Allow for blocks "from the future" within a certain tolerance.
-const timeShiftTolerance = 10 // ms
 
 // OnBlock is called when a gossip block is received. It runs regular state transition on the block and
 // update fork choice store.
@@ -214,7 +209,7 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	}
 
 	// Verify block slot time is not from the feature.
-	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime, b.Slot); err != nil {
 		return nil, err
 	}
 
@@ -363,14 +358,4 @@ func (s *Store) clearSeenAtts() {
 	s.seenAttsLock.Lock()
 	s.seenAttsLock.Unlock()
 	s.seenAtts = make(map[[32]byte]bool)
-}
-
-// verifyBlkSlotTime validates the input block slot is not from the future.
-func verifyBlkSlotTime(gensisTime uint64, blkSlot uint64) error {
-	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(roughtime.Now().Unix())
-	if slotTime > currentTime+timeShiftTolerance {
-		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, currentTime)
-	}
-	return nil
 }
