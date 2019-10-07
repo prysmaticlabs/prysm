@@ -25,11 +25,14 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				log.Debug("Performing handshake with peer")
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Debug("Could not send successful hello rpc request")
-					log.Debug("Not disconnecting for interop testing :)")
-					//if err := s.Disconnect(conn.RemotePeer()); err != nil {
-					//	log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-					//	return
-					//}
+					if err.Error() == "protocol not supported" {
+						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+						return
+					}
+					if err := s.Disconnect(conn.RemotePeer()); err != nil {
+						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+						return
+					}
 					return
 				}
 				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
