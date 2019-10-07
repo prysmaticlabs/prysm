@@ -1242,8 +1242,8 @@ go_repository(
 go_repository(
     name = "com_github_kilic_bls12-381",
     importpath = "github.com/kilic/bls12-381",
-    sum = "h1:O/TkcedJgb93OKv4IoC1fS/XCBdnSkw7+18lZJEn2kY=",
-    version = "v0.0.0-20190930171448-0e0109c48123",
+    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
+    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
