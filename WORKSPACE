@@ -343,7 +343,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "a5c136c9742a7057dd70ba3af384a5bf0b9f17bc",  # v0.1.0
+    commit = "c9acf9f27c5020e78925937dc3de142d2d393cd1",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -422,13 +422,13 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.1
+    commit = "aeb5743691b968cfa3365c9da59ef872a3133c87",  # v0.2.0
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_logging",
-    commit = "0457bb6b88fc1973573aaf6b5145d8d3ae972390",
+    commit = "d89ec39241781fab261571aeddb2a4177bb57bf3",  # v0.0.1
     importpath = "github.com/whyrusleeping/go-logging",
 )
 
@@ -720,7 +720,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "507733cb3c352085b791341655a0b7ef52a17533",  # v0.1.0
+    commit = "d0ca9bc39f9d5b77bd602abe1a897473e105be7f",  # v0.1.1
     importpath = "github.com/ipfs/go-datastore",
 )
 
