@@ -83,7 +83,7 @@ func IsEpochEnd(slot uint64) bool {
 	return IsEpochStart(slot + 1)
 }
 
-// Allow for blocks "from the future" within a certain tolerance.
+// Allow for slots "from the future" within a certain tolerance.
 const timeShiftTolerance = 10 // ms
 
 // VerifySlotTime validates the input slot is not from the future.
