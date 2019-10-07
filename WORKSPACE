@@ -942,7 +942,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pkg_errors",
-    commit = "27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7",
+    commit = "ba968bfe8b2f7e042a574c888954fccecfa385b4",  # v0.8.1
     importpath = "github.com/pkg/errors",
 )
 
