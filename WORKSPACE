@@ -246,7 +246,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v0.4.0
+    commit = "9356373d00ab1aef3e20c8202b682f93799acf78",  # v6.0.23
     importpath = "github.com/libp2p/go-libp2p",
 )
 
