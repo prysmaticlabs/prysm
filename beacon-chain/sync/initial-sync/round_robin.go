@@ -211,6 +211,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				return err
 			}
 		}
+		if len(resp) == 0 {
+			break
+		}
 	}
 
 	return nil
