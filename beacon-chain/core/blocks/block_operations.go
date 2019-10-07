@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blocks")
@@ -445,10 +447,10 @@ func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.Atteste
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att1); err != nil {
+	if err := VerifyIndexedAttestation(context.TODO(), beaconState, att1); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att2); err != nil {
+	if err := VerifyIndexedAttestation(context.TODO(), beaconState, att2); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
 	return nil
@@ -490,7 +492,7 @@ func ProcessAttestations(
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestation(beaconState, attestation)
+		beaconState, err = ProcessAttestation(context.TODO(), beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -506,7 +508,7 @@ func ProcessAttestationsNoVerify(
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerify(nil, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -555,17 +557,20 @@ func ProcessAttestationsNoVerify(
 //
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerify(beaconState, att)
+func ProcessAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, VerifyAttestation(beaconState, att)
+	return beaconState, VerifyAttestation(ctx, beaconState, att)
 }
 
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
-func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
+	defer span.End()
+
 	data := att.Data
 
 	if data.Crosslink.Shard > params.BeaconConfig().ShardCount {
@@ -707,7 +712,10 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
+	defer span.End()
+
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
@@ -782,7 +790,10 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*e
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+	defer span.End()
+
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -881,12 +892,12 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
+func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
+	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
-	return VerifyIndexedAttestation(beaconState, indexedAtt)
+	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
 // ProcessDeposits is one of the operations performed on each processed

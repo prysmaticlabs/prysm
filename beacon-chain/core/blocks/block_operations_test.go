@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -1281,12 +1282,12 @@ func TestProcessAttestation_OverlappedBitfields(t *testing.T) {
 	aggBits1.SetBitAt(2, true)
 	custodyBits1 := bitfield.NewBitlist(4)
 	att1 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits1,
 		CustodyBits:     custodyBits1,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard:      0,StartEpoch: 0}}
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard: 0, StartEpoch: 0}}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -1321,7 +1322,7 @@ func TestProcessAttestation_OverlappedBitfields(t *testing.T) {
 	aggBits2.SetBitAt(3, true)
 	custodyBits2 := bitfield.NewBitlist(4)
 	att2 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits2,
 		CustodyBits:     custodyBits2,
 	}
@@ -1411,7 +1412,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	att.Data.Crosslink.ParentRoot = encoded[:]
 	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
-	if _, err := blocks.ProcessAttestationNoVerify(beaconState, att); err != nil {
+	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -1482,7 +1483,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Data:                attestation.Data,
 			Signature:           attestation.Signature,
 		}
-		ia, err := blocks.ConvertToIndexed(state, attestation)
+		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}
@@ -1582,7 +1583,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 
 		tt.attestation.Signature = marshalledSig
 
-		err = blocks.VerifyIndexedAttestation(state, tt.attestation)
+		err = blocks.VerifyIndexedAttestation(context.Background(), state, tt.attestation)
 		if err != nil {
 			t.Errorf("failed to verify indexed attestation: %v", err)
 		}
@@ -1600,7 +1601,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "over max number of allowed indices"
-	if err := blocks.VerifyIndexedAttestation(&pb.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
+	if err := blocks.VerifyIndexedAttestation(context.Background(), &pb.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected verification to fail return false, received: %v", err)
 	}
 }
