@@ -64,11 +64,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		stop:     make(chan struct{}),
 	}
 
-	featureconfig.ConfigureValidatorFeatures(ctx)
+	featureconfig.ConfigureValidator(ctx)
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		if featureconfig.FeatureConfig().MinimalConfig {
+		if featureconfig.Get().MinimalConfig {
 			log.Warn("Using Minimal Config")
 			params.UseMinimalConfig()
 		} else {
