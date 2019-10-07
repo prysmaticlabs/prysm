@@ -3,7 +3,7 @@ package cache
 import "github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 func init() {
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+	featureconfig.Init(&featureconfig.Flag{
 		EnableAttestationCache:  true,
 		EnableEth1DataVoteCache: true,
 	})
