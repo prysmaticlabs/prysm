@@ -13,7 +13,7 @@ import (
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
 func WriteBlockToDisk(block *ethpb.BeaconBlock, failed bool) {
-	if !featureconfig.FeatureConfig().WriteSSZStateTransitions {
+	if !featureconfig.Get().WriteSSZStateTransitions {
 		return
 	}
 
