@@ -184,7 +184,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "e0441b2f28bbdc36667f55d3fdb7494eb8708558",
+    commit = "09745575a923640154bcf307fba8aedff47f240a",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -246,7 +246,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "9356373d00ab1aef3e20c8202b682f93799acf78",  # v6.0.23
+    commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v6.0.23
     importpath = "github.com/libp2p/go-libp2p",
 )
 
