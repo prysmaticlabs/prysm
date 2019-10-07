@@ -9,7 +9,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// RecoveryHandlerFuncContext is a function that recovers from the panic `p` by returning an `error`.
+// RecoveryHandlerFunc is a function that recovers from the panic `p` by returning an `error`.
 // The context can be used to extract request scoped metadata and context values.
 func RecoveryHandlerFunc(ctx context.Context, p interface{}) error {
 	span := trace.FromContext(ctx)
