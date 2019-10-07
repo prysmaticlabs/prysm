@@ -1,4 +1,4 @@
-package interop
+package interop_test
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-yaml/yaml"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
 type TestCase struct {
@@ -31,7 +32,7 @@ func TestKeyGenerator(t *testing.T) {
 	if err := yaml.Unmarshal(file, testCases); err != nil {
 		t.Fatal(err)
 	}
-	priv, _, err := DeterministicallyGenerateKeys(0, 1000)
+	priv, _, err := interop.DeterministicallyGenerateKeys(0, 1000)
 	if err != nil {
 		t.Error(err)
 	}

@@ -1,8 +1,10 @@
-package bytesutil
+package bytesutil_test
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestToBytes(t *testing.T) {
@@ -42,7 +44,7 @@ func TestToBytes(t *testing.T) {
 		{9223372036854775807, []byte{255, 255, 255, 255, 255, 255, 255, 127}},
 	}
 	for _, tt := range tests {
-		b := ToBytes(tt.a, len(tt.b))
+		b := bytesutil.ToBytes(tt.a, len(tt.b))
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes1(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -62,7 +64,7 @@ func TestBytes1(t *testing.T) {
 		{255, []byte{255}},
 	}
 	for _, tt := range tests {
-		b := Bytes1(tt.a)
+		b := bytesutil.Bytes1(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes1(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -82,7 +84,7 @@ func TestBytes2(t *testing.T) {
 		{65535, []byte{255, 255}},
 	}
 	for _, tt := range tests {
-		b := Bytes2(tt.a)
+		b := bytesutil.Bytes2(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes2(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -102,7 +104,7 @@ func TestBytes3(t *testing.T) {
 		{16777215, []byte{255, 255, 255}},
 	}
 	for _, tt := range tests {
-		b := Bytes3(tt.a)
+		b := bytesutil.Bytes3(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes3(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -122,7 +124,7 @@ func TestBytes4(t *testing.T) {
 		{4294967295, []byte{255, 255, 255, 255}},
 	}
 	for _, tt := range tests {
-		b := Bytes4(tt.a)
+		b := bytesutil.Bytes4(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes4(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -142,7 +144,7 @@ func TestBytes8(t *testing.T) {
 		{9223372036854775807, []byte{255, 255, 255, 255, 255, 255, 255, 127}},
 	}
 	for _, tt := range tests {
-		b := Bytes8(tt.a)
+		b := bytesutil.Bytes8(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes8(%d) = %v, want = %d", tt.a, b, tt.b)
 		}
@@ -160,8 +162,8 @@ func TestFromBytes4(t *testing.T) {
 		3894948296,
 	}
 	for _, tt := range tests {
-		b := ToBytes(tt, 4)
-		c := FromBytes4(b)
+		b := bytesutil.ToBytes(tt, 4)
+		c := bytesutil.FromBytes4(b)
 		if c != tt {
 			t.Errorf("Wanted %d but got %d", tt, c)
 		}
@@ -179,8 +181,8 @@ func TestFromBytes8(t *testing.T) {
 		18446744073709551615,
 	}
 	for _, tt := range tests {
-		b := ToBytes(tt, 8)
-		c := FromBytes8(b)
+		b := bytesutil.ToBytes(tt, 8)
+		c := bytesutil.FromBytes8(b)
 		if c != tt {
 			t.Errorf("Wanted %d but got %d", tt, c)
 		}
@@ -199,7 +201,7 @@ func TestTruncate(t *testing.T) {
 		{[]byte{}, []byte{}},
 	}
 	for _, tt := range tests {
-		b := Trunc(tt.a)
+		b := bytesutil.Trunc(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
 		}

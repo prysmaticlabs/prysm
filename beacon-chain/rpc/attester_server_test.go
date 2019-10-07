@@ -272,11 +272,11 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 
 func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+	featureconfig.Init(&featureconfig.Flag{
 		EnableAttestationCache: true,
 	})
 	defer func() {
-		featureconfig.InitFeatureConfig(nil)
+		featureconfig.Init(nil)
 	}()
 
 	ctx := context.Background()

@@ -1,7 +1,9 @@
-package mathutil
+package mathutil_test
 
 import (
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func TestIntegerSquareRoot(t *testing.T) {
@@ -32,7 +34,7 @@ func TestIntegerSquareRoot(t *testing.T) {
 	}
 
 	for _, testVals := range tt {
-		root := IntegerSquareRoot(testVals.number)
+		root := mathutil.IntegerSquareRoot(testVals.number)
 		if testVals.root != root {
 			t.Fatalf("expected root and computed root are not equal %d, %d", testVals.root, root)
 		}
@@ -67,7 +69,7 @@ func TestCeilDiv8(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		div8 := CeilDiv8(tt.number)
+		div8 := mathutil.CeilDiv8(tt.number)
 		if tt.div8 != div8 {
 			t.Fatalf("Div8 was not an expected value. Wanted: %d, got: %d", tt.div8, div8)
 		}
@@ -101,8 +103,8 @@ func TestIsPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != IsPowerOf2(tt.a) {
-			t.Fatalf("IsPowerOf2(%d) = %v, wanted: %v", tt.a, IsPowerOf2(tt.a), tt.b)
+		if tt.b != mathutil.IsPowerOf2(tt.a) {
+			t.Fatalf("IsPowerOf2(%d) = %v, wanted: %v", tt.a, mathutil.IsPowerOf2(tt.a), tt.b)
 		}
 	}
 }
@@ -130,8 +132,8 @@ func TestPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != PowerOf2(tt.a) {
-			t.Fatalf("PowerOf2(%d) = %d, wanted: %d", tt.a, PowerOf2(tt.a), tt.b)
+		if tt.b != mathutil.PowerOf2(tt.a) {
+			t.Fatalf("PowerOf2(%d) = %d, wanted: %d", tt.a, mathutil.PowerOf2(tt.a), tt.b)
 		}
 	}
 }
@@ -159,8 +161,8 @@ func TestClosestPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != ClosestPowerOf2(tt.a) {
-			t.Fatalf("ClosestPowerOf2(%d) = %d, wanted: %d", tt.a, ClosestPowerOf2(tt.a), tt.b)
+		if tt.b != mathutil.ClosestPowerOf2(tt.a) {
+			t.Fatalf("ClosestPowerOf2(%d) = %d, wanted: %d", tt.a, mathutil.ClosestPowerOf2(tt.a), tt.b)
 		}
 	}
 }
@@ -198,8 +200,8 @@ func TestMaxValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != Max(tt.a, tt.b) {
-			t.Fatalf("Max(%d) = %d, wanted: %d", tt.a, Max(tt.a, tt.b), tt.result)
+		if tt.result != mathutil.Max(tt.a, tt.b) {
+			t.Fatalf("Max(%d) = %d, wanted: %d", tt.a, mathutil.Max(tt.a, tt.b), tt.result)
 		}
 	}
 }
@@ -237,8 +239,8 @@ func TestMinValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != Min(tt.a, tt.b) {
-			t.Fatalf("Min(%d) = %d, wanted: %d", tt.a, Min(tt.a, tt.b), tt.result)
+		if tt.result != mathutil.Min(tt.a, tt.b) {
+			t.Fatalf("Min(%d) = %d, wanted: %d", tt.a, mathutil.Min(tt.a, tt.b), tt.result)
 		}
 	}
 }
