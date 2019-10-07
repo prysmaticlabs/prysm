@@ -508,7 +508,7 @@ func ProcessAttestationsNoVerify(
 ) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(nil, beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerify(context.TODO(), beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
