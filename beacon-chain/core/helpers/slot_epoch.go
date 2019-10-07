@@ -1,8 +1,11 @@
 package helpers
 
 import (
+	"fmt"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // SlotToEpoch returns the epoch number of the input slot.
@@ -78,4 +81,17 @@ func IsEpochStart(slot uint64) bool {
 // number.
 func IsEpochEnd(slot uint64) bool {
 	return IsEpochStart(slot + 1)
+}
+
+// Allow for slots "from the future" within a certain tolerance.
+const timeShiftTolerance = 10 // ms
+
+// VerifySlotTime validates the input slot is not from the future.
+func VerifySlotTime(genesisTime uint64, slot uint64) error {
+	slotTime := genesisTime + slot*params.BeaconConfig().SecondsPerSlot
+	currentTime := uint64(roughtime.Now().Unix())
+	if slotTime > currentTime+timeShiftTolerance {
+		return fmt.Errorf("could not process slot from the future, slot time %d > current time %d", slotTime, currentTime)
+	}
+	return nil
 }

@@ -155,7 +155,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
-			if featureconfig.FeatureConfig().InitSyncNoVerify {
+			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
 					return err
 				}

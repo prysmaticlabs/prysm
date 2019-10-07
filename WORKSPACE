@@ -28,9 +28,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "6b438f4d8c698f69ed4473cba12da3c3a7febf90ce8e3c383533d5a64d8c8f19",
-    strip_prefix = "bazel-tools-6fbc36c639a8f376182bb0057dd557eb2440d4ed",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/6fbc36c639a8f376182bb0057dd557eb2440d4ed.tar.gz"],
+    sha256 = "60821f298a7399450b51b9020394904bbad477c18718d2ad6c789f231e5b8b45",
+    strip_prefix = "bazel-tools-a2138311856f55add11cd7009a5abc8d4fd6f163",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/a2138311856f55add11cd7009a5abc8d4fd6f163.tar.gz"],
 )
 
 http_archive(
@@ -42,8 +42,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "1249a60f88e4c0a46d78de06be04d3d41e7421dcfa0c956de65309a7b7ecf6f4",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.0/rules_nodejs-0.38.0.tar.gz"],
+    sha256 = "0942d188f4d0de6ddb743b9f6642a26ce1ad89f09c0035a9a5ca5ba9615c96aa",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.1/rules_nodejs-0.38.1.tar.gz"],
 )
 
 git_repository(
@@ -104,16 +104,16 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-    sha256 = "92c8e4d408704cd636ae528aeae9b4dd7da8448ae951e76ed93c2700e56d4735",
-    strip_prefix = "prysm-testnet-site-5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5afe7bf22b10a2b65c4c6a7a767280c9f32c49a8.tar.gz",
+    sha256 = "1184e44a7a9b8b172e68e82c02cc3b15a80122340e05a92bd1edeafe5e68debe",
+    strip_prefix = "prysm-testnet-site-ec6a4a4e421bf4445845969167d06e93ee8d7acc",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/ec6a4a4e421bf4445845969167d06e93ee8d7acc.tar.gz",
 )
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "d2e7e1dd746adc1d3fe4a4d2baef7eb90117ca6f6520ebb6cdf1f2131cf5a221",
-    strip_prefix = "repo-infra-b6d1648c80a25e36e5855f91eab0605e9d1de236",
-    url = "https://github.com/kubernetes/repo-infra/archive/b6d1648c80a25e36e5855f91eab0605e9d1de236.tar.gz",
+    sha256 = "5ab110312cd7665a1940ba0523b67b9fbb6053beb9dd4e147643867bebd7e809",
+    strip_prefix = "repo-infra-db6ceb5f992254db76af7c25db2edc5469b5ea82",
+    url = "https://github.com/kubernetes/repo-infra/archive/db6ceb5f992254db76af7c25db2edc5469b5ea82.tar.gz",
 )
 
 http_archive(
@@ -210,7 +210,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "2655bc1ee68f69d1e40c01d141f9423a6a7ebb7a",
+    commit = "7e767fb53d02ea220428a6cc0850ee6e17d71bb1",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -222,7 +222,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",  # v2.2.2
+    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -343,7 +343,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "a5c136c9742a7057dd70ba3af384a5bf0b9f17bc",  # v0.1.0
+    commit = "c9acf9f27c5020e78925937dc3de142d2d393cd1",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -355,7 +355,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    commit = "8029fb3788e5a4a9c00e415f586a6d033f5d38b3",  # v0.1.2
+    commit = "98ec13f34aabf44cc914c65a1cfb7b9bc815aef1",  # v0.1.4
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -422,13 +422,13 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "fc9a9eabad5035b23eb95c167621aee7f0083b34",  # v0.1.1
+    commit = "aeb5743691b968cfa3365c9da59ef872a3133c87",  # v0.2.0
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_logging",
-    commit = "0457bb6b88fc1973573aaf6b5145d8d3ae972390",
+    commit = "d89ec39241781fab261571aeddb2a4177bb57bf3",  # v0.0.1
     importpath = "github.com/whyrusleeping/go-logging",
 )
 
@@ -720,7 +720,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "507733cb3c352085b791341655a0b7ef52a17533",  # v0.1.0
+    commit = "d0ca9bc39f9d5b77bd602abe1a897473e105be7f",  # v0.1.1
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -850,7 +850,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",  # v2.2.2
+    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
     importpath = "gopkg.in/yaml.v2",
 )
 
@@ -942,7 +942,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pkg_errors",
-    commit = "27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7",
+    commit = "ba968bfe8b2f7e042a574c888954fccecfa385b4",  # v0.8.1
     importpath = "github.com/pkg/errors",
 )
 
@@ -1242,8 +1242,8 @@ go_repository(
 go_repository(
     name = "com_github_kilic_bls12-381",
     importpath = "github.com/kilic/bls12-381",
-    sum = "h1:O/TkcedJgb93OKv4IoC1fS/XCBdnSkw7+18lZJEn2kY=",
-    version = "v0.0.0-20190930171448-0e0109c48123",
+    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
+    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
