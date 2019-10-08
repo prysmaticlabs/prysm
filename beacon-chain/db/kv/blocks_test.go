@@ -12,6 +12,30 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
+func TestStore_BlocksDedup(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	slot := uint64(20)
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	ctx := context.Background()
+	for i := 0; i < 5; i++ {
+		if err := db.SaveBlock(ctx, block); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+	retrieved, err := db.Blocks(ctx, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 1 {
+		t.Errorf("Expected 1, received %d: %v", len(retrieved), retrieved)
+	}
+}
+
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
