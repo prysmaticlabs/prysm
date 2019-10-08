@@ -13,7 +13,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	blsintern "github.com/phoreproject/bls"
-	"github.com/protolambda/messagediff"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
