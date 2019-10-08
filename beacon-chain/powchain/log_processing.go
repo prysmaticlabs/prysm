@@ -157,6 +157,8 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
+			"block":           depositLog.BlockHash.Hex(),
+			"tx":              depositLog.TxHash.Hex(),
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
