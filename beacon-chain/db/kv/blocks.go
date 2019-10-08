@@ -253,11 +253,14 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		return nil
 	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
+			return nil
+		}
 		enc, err := proto.Marshal(block)
 		if err != nil {
 			return err
 		}
-		bkt := tx.Bucket(blocksBucket)
 		indicesByBucket := createBlockIndicesFromBlock(block)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")

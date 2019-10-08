@@ -232,6 +232,9 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
 
+	// Increment this number after a full testnet tear down.
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
+
 	return demoConfig
 }
 
