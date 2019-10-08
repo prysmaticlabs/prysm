@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -77,19 +78,15 @@ func (k *Store) PruneSavedStates(
 	defer span.End()
 
 	startSlot := helpers.StartSlot(prevFinalizedEpoch)
-	endSlot := helpers.StartSlot(finalizedEpoch) - params.BeaconConfig().SavingInterval
-	filter := filters.NewFilter()
-	filter.SetStartSlot(startSlot)
-	filter.SetEndSlot(endSlot)
-	blockRoots, err := k.BlockRoots(ctx, filter)
+	// Subtracting one here since the search will be inclusive.
+	endSlot := helpers.StartSlot(finalizedEpoch) - 1
+	blockRoots, err := k.savedStateKeys(ctx, startSlot, endSlot)
 	if err != nil {
 		return errors.Wrap(err, "could not get block roots")
 	}
 
-	var root [32]byte
-	for i := startSlot; i < endSlot; i += params.BeaconConfig().SavingInterval {
-		copy(root[:], blockRoots[i-startSlot])
-		if err := k.DeleteState(ctx, root); err != nil {
+	for i := 0; i < len(blockRoots); i++ {
+		if err := k.DeleteState(ctx, bytesutil.ToBytes32(blockRoots[i])); err != nil {
 			return errors.Wrap(err, "could not delete saved state")
 		}
 	}
@@ -126,6 +123,7 @@ func (k *Store) savedStateKeys(ctx context.Context, fromSlot uint64, toSlot uint
 	return savedStateKeys, nil
 }
 
+// savedBlocks returns all the blocks since the last saved beacon state.
 func (k *Store) savedBlocks(ctx context.Context, untilSlot uint64) ([]*ethpb.BeaconBlock, error) {
 	savingInterval := params.BeaconConfig().SavingInterval
 	// Filtering from the slot we know we have a saved state for.
