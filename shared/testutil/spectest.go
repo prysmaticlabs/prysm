@@ -77,7 +77,7 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 
-	beaconState, err := operationFn(preState, body)
+	beaconState, err := operationFn(context.Background(), preState, body)
 	if postSSZExists {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
