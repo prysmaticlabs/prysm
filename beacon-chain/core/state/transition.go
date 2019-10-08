@@ -237,7 +237,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slots", int64(state.Slot)-int64(slot)))
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
 	if state.Slot > slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 		traceutil.AnnotateError(span, err)
