@@ -38,6 +38,9 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 
 // GenerateStateAtSlot generates state from the latest saved slot till the specified slot.
 func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenerateStateAtSlot")
+	defer span.End()
+
 	pBlocks, err := k.savedBlocks(ctx, slot)
 	savedRoot, err := ssz.SigningRoot(pBlocks[0])
 	if err != nil {
@@ -118,6 +121,36 @@ func (k *Store) PruneSavedStates(
 		}
 	}
 	return nil
+}
+
+// savedStateKeys retrieves the DB keys for the states that we have saved. Used for pruning.
+func (k *Store) savedStateKeys(ctx context.Context, fromSlot uint64, toSlot uint64) ([][]byte, error) {
+	savingInterval := params.BeaconConfig().SavingInterval
+	// Filtering from the slot we know we have a saved state for.
+	startSlot := fromSlot - (fromSlot % savingInterval)
+	endSlot := toSlot - (toSlot % savingInterval)
+	currentSlot := startSlot
+	var savedStateKeys [][]byte
+	for currentSlot < endSlot {
+		// Looping through until we find a state we have saved.
+		untilSlot := (currentSlot + savingInterval) - ((currentSlot + savingInterval) % savingInterval)
+		filter := filters.NewFilter()
+		filter.SetStartSlot(currentSlot)
+		// Minus one since the search is inclusive, we'll check untilSlot on the next iteration.
+		filter.SetEndSlot(untilSlot - 1)
+		blockRoots, err := k.BlockRoots(ctx, filter)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get block roots")
+		}
+
+		// Get the first saved block root of this interval as it's what we should save.
+		// This covers against savingInterval slots being skipped over.
+		if len(blockRoots) > 0 {
+			savedStateKeys = append(savedStateKeys, blockRoots[0])
+		}
+		currentSlot = untilSlot
+	}
+	return savedStateKeys, nil
 }
 
 // DeleteState removes the state of the passed in DB key from the DB.
