@@ -1,21 +1,15 @@
 package initialsync
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -30,7 +24,7 @@ type blockchainService interface {
 }
 
 const (
-	minHelloCount            = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
+	minStatusCount           = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
@@ -60,94 +54,60 @@ func NewInitialSync(cfg *Config) *InitialSync {
 
 // Start the initial sync service.
 func (s *InitialSync) Start() {
+	var genesis time.Time
+
+	// Wait for state to be initialized, if not already.
 	ch := make(chan time.Time)
 	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
+	if s.chain.HeadState() == nil {
+		// Wait until chain start.
+		genesis = <-ch
+	} else {
+		genesis = time.Unix(int64(s.chain.HeadState().GenesisTime), 0)
+	}
 
-	// Wait until chain start.
-	genesis := <-ch
 	if genesis.After(roughtime.Now()) {
+		log.WithField(
+			"genesis time",
+			genesis,
+		).Warn("Genesis time is in the future - waiting to start sync...")
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch. Not syncing.")
+		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		return
 	}
-
+	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
-		log.Info("Already synced to the current epoch.")
+		log.Info("Already synced to the current chain head")
 		s.synced = true
 		return
 	}
 
 	// Every 5 sec, report handshake count.
 	for {
-		helloCount := peerstatus.Count()
+		count := peerstatus.Count()
 		log.WithField(
-			"hellos",
-			fmt.Sprintf("%d/%d", helloCount, minHelloCount),
-		).Info("Waiting for enough peer handshakes before syncing.")
+			"handshakes",
+			fmt.Sprintf("%d/%d", count, minStatusCount),
+		).Info("Waiting for enough peer handshakes before syncing")
 
-		if helloCount >= minHelloCount {
+		if count >= minStatusCount {
 			break
 		}
 		time.Sleep(handshakePollingInterval)
 	}
 
-	pid, best := bestStatus()
-
-	var last *eth.BeaconBlock
-	for headSlot := s.chain.HeadSlot(); headSlot < slotsSinceGenesis(genesis); {
-		req := &pb.BeaconBlocksByRangeRequest{
-			StartSlot:     headSlot + 1,
-			HeadBlockRoot: s.chain.HeadRoot(),
-			Count:         64,
-			Step:          1,
-		}
-
-		log.WithField("data", fmt.Sprintf("%+v", req)).Info("Sending msg")
-
-		strm, err := s.p2p.Send(context.Background(), req, pid)
-		if err != nil {
-			panic(err)
-		}
-
-		for i := 0; i < int(req.Count); i++ {
-			blk, err := sync.ReadChunkedBlock(strm, s.p2p)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				log.Error(err)
-				break
-			}
-			if blk.Slot <= headSlot {
-				continue
-			}
-			if blk.Slot < helpers.StartSlot(best.FinalizedEpoch+1) {
-				if err := s.chain.ReceiveBlockNoPubsubForkchoice(context.Background(), blk); err != nil {
-					panic(err)
-				}
-			} else {
-				if err := s.chain.ReceiveBlockNoPubsub(context.Background(), blk); err != nil {
-					panic(err)
-				}
-			}
-			last = blk
-		}
-		headSlot = s.chain.HeadSlot()
-	}
-
-	// Force a fork choice update since fork choice was not run during initial sync.
-	if err := s.chain.ReceiveBlockNoPubsub(context.Background(), last); err != nil {
+	if err := s.roundRobinSync(genesis); err != nil {
 		panic(err)
 	}
 
-	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
 }
 
@@ -167,11 +127,6 @@ func (s *InitialSync) Status() error {
 // Syncing returns true if initial sync is still running.
 func (s *InitialSync) Syncing() bool {
 	return !s.synced
-}
-
-func bestStatus() (peer.ID, *pb.Status) {
-	keys := peerstatus.Keys()
-	return keys[0], peerstatus.Get(keys[0])
 }
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {

@@ -2,9 +2,6 @@
 
 This README details how to setup Prysm for interop testing for usage with other Ethereum 2.0 clients.
 
-**WARNING**: The tool can only generate up to 190 private keys at the moment, as there is a BLS bug that
-prevents deterministically generating more keys than those. 
-
 ## Installation & Setup
 
 1. Install [Bazel](https://docs.bazel.build/versions/master/install.html) **(Recommended)**
@@ -28,16 +25,16 @@ You can use `bazel run //tools/genesis-state-gen` to create a deterministic gene
 
 ### Usage
 
-- **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state
+- **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state (defaults to now)
 - **--mainnet-config** bool: Select whether genesis state should be generated with mainnet or minimal (default) params
 - **--num-validators** int: Number of validators to deterministically include in the generated genesis state
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
 
 The example below creates 64 validator keys, instantiates a genesis state with those 64 validators and with genesis unix timestamp 1567542540,
-and finally writes a YAML encoded output to ~/Desktop/genesis.yaml. This file can be used to kickstart the beacon chain in the next section.
+and finally writes a ssz encoded output to ~/Desktop/genesis.ssz. This file can be used to kickstart the beacon chain in the next section.
 
 ```
-bazel run //tools/genesis-state-gen -- --output-yaml ~/Desktop/genesis.yaml --num-validators 64 --genesis-time 1567542540
+bazel run //tools/genesis-state-gen -- --output-ssz ~/Desktop/genesis.ssz --num-validators 64 --genesis-time 1567542540
 ```
 
 ## Launching a Beacon Node + Validator Client
@@ -53,7 +50,6 @@ bazel run //beacon-chain -- \
 --deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
 --clear-db \
 --interop-num-validators 64 \
---interop-genesis-time=$(date +%s) \
 --interop-eth1data-votes
 ```
 

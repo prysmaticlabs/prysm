@@ -179,12 +179,13 @@ message BlockTreeResponse {
 
 enum ValidatorStatus {
   UNKNOWN_STATUS = 0;
-  PENDING_ACTIVE = 1;
-  ACTIVE = 2;
-  INITIATED_EXIT = 3;
-  WITHDRAWABLE = 4;
-  EXITED = 5;
-  EXITED_SLASHED = 6;
+  DEPOSIT_RECEIVED = 1;
+  PENDING_ACTIVE = 2;
+  ACTIVE = 3;
+  INITIATED_EXIT = 4;
+  WITHDRAWABLE = 5;
+  EXITED = 6;
+  EXITED_SLASHED = 7;
 }
 
 message TreeBlockSlotRequest {

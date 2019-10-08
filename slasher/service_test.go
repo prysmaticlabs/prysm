@@ -1,7 +1,6 @@
 package slasher
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +18,7 @@ func init() {
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewRPCService(&Config{
 		Port:     "7348",
 		CertFlag: "alice.crt",
 		KeyFlag:  "alice.key",
@@ -38,7 +37,7 @@ func TestLifecycle_OK(t *testing.T) {
 func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewRPCService(&Config{
 		Port: "ralph merkle!!!",
 	})
 
@@ -65,7 +64,7 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{
+	rpcService := NewRPCService(&Config{
 		Port: "7777",
 	})
 

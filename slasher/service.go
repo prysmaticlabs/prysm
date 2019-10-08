@@ -2,12 +2,9 @@
 package slasher
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"time"
-
-	"google.golang.org/grpc/credentials"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -18,19 +15,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
 var log logrus.FieldLogger
 
 func init() {
-	log = logrus.WithField("prefix", "rpc")
+	log = logrus.WithField("prefix", "slasherRPC")
 }
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
 	port            string
@@ -38,6 +34,7 @@ type Service struct {
 	withKey         string
 	listener        net.Listener
 	credentialError error
+	failStatus      error
 }
 
 // Config options for the slasher server.
@@ -50,11 +47,8 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewRPCService(cfg *Config) *Service {
 	return &Service{
-		ctx:       ctx,
-		cancel:    cancel,
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
 	}
@@ -97,7 +91,6 @@ func (s *Service) Start() {
 
 	slasherServer := Server{
 		slasherDb: s.slasherDb,
-		ctx:       s.ctx,
 	}
 
 	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
@@ -120,7 +113,6 @@ func (s *Service) Start() {
 // Stop the service.
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
-	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
@@ -128,10 +120,13 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns nil or credentialError
+// Status returns nil, credentialError or fail status.
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
+	}
+	if s.failStatus != nil {
+		return s.failStatus
 	}
 	return nil
 }

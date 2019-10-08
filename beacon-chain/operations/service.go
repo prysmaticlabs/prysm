@@ -81,7 +81,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start an beacon block operation pool service's main event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.removeOperations()
 }
 
@@ -89,7 +88,6 @@ func (s *Service) Start() {
 // and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -214,10 +212,6 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return err
 	}
 
-	lock := s.retrieveLock(root)
-	lock.Lock()
-	defer lock.Unlock()
-
 	savedAtt, ok := s.attestationPool[root]
 	if !ok {
 		s.attestationPool[root] = attestation
@@ -242,10 +236,12 @@ func (s *Service) removeOperations() {
 	for {
 		ctx := context.TODO()
 		select {
-		case <-incomingBlockSub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
+		case err := <-incomingBlockSub.Err():
+			log.WithError(err).Error("Subscription to incoming block sub failed")
+			return
 		case <-s.ctx.Done():
-			log.Debug("operations service context closed, exiting remove goroutine")
+			log.Debug("Context closed, exiting goroutine")
+			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
 			handler.SafelyHandleMessage(ctx, s.handleProcessedBlock, block)
@@ -275,10 +271,17 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 			return err
 		}
 
-		_, ok := s.attestationPool[root]
+		retAtt, ok := s.attestationPool[root]
 		if ok {
-			delete(s.attestationPool, root)
-			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
+			// only delete if the processed attestation has included all the validators
+			// from the attestation pool for that attestation.
+			if attestation.AggregationBits.Contains(retAtt.AggregationBits) {
+				delete(s.attestationPool, root)
+				log.WithField(
+					"attDataRoot",
+					fmt.Sprintf("%#x", root),
+				).Debug("Attestation removed from pool")
+			}
 		}
 	}
 	return nil

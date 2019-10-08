@@ -6,7 +6,7 @@ test --build_tests_only
 test --test_output=errors
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
-build --host_force_python=PY2
+build --host_force_python=PY2 --incompatible_strict_action_env
 test --host_force_python=PY2
 run --host_force_python=PY2
 

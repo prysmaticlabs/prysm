@@ -196,7 +196,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PruneSlasherStoragePeriod: 10,
 
 	// Testnet misc values.
-	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
+	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
@@ -231,6 +231,9 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
+
+	// Increment this number after a full testnet tear down.
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
 
 	return demoConfig
 }

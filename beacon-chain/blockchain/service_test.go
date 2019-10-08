@@ -27,6 +27,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -46,6 +47,10 @@ type store struct {
 }
 
 func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+	return nil
+}
+
+func (s *store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -261,8 +266,8 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("Context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
-	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
+	testutil.AssertLogsContain(t, hook, "Waiting")
+	testutil.AssertLogsContain(t, hook, "Genesis time reached")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
@@ -305,7 +310,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+	testutil.AssertLogsContain(t, hook, "data already exists")
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
@@ -317,7 +322,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
-	deposits, _ := testutil.SetupInitialDeposits(t, count)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, count)
 	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
@@ -349,16 +354,20 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
-	headBlock := &ethpb.BeaconBlock{Slot: 1}
-	headState := &pb.BeaconState{Slot: 1}
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot}
+	headState := &pb.BeaconState{Slot: finalizedSlot}
 	headRoot, _ := ssz.SigningRoot(headBlock)
+	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
+		Epoch: helpers.SlotToEpoch(finalizedSlot),
+		Root:  headRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		t.Fatal(err)
 	}
 	c := &Service{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}

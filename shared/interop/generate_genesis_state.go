@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -22,6 +23,7 @@ var (
 )
 
 // GenerateGenesisState deterministically given a genesis time and number of validators.
+// If a genesis time of 0 is supplied it is set to the current time.
 func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
@@ -43,6 +45,9 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
 	root := trie.Root()
+	if genesisTime == 0 {
+		genesisTime = uint64(roughtime.Now().Unix())
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),

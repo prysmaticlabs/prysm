@@ -41,7 +41,11 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 		},
 	}
 
-	if !rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
+	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	if err != nil {
+		t.Errorf("Beacon attestation failed validation: %v", err)
+	}
+	if !valid {
 		t.Error("Beacon attestation failed validation")
 	}
 
@@ -51,7 +55,8 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 
 	// It should ignore duplicate identical attestations.
 	p.BroadcastCalled = false
-	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
+	valid, _ = rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	if valid {
 		t.Error("Second identical beacon attestation passed validation when it should not have")
 	}
 	if p.BroadcastCalled {
@@ -76,7 +81,8 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 		},
 	}
 
-	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
+	valid, _ := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	if valid {
 		t.Error("Invalid beacon attestation passed validation when it should not have")
 	}
 	if p.BroadcastCalled {
@@ -113,7 +119,8 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 		},
 	}
 
-	if rs.validateBeaconAttestation(ctx, msg, p, true /*fromSelf*/) {
+	valid, _ := rs.validateBeaconAttestation(ctx, msg, p, true /*fromSelf*/)
+	if valid {
 		t.Error("Beacon attestation passed validation")
 	}
 
@@ -151,7 +158,8 @@ func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 		},
 	}
 
-	if rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/) {
+	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	if valid {
 		t.Error("Beacon attestation passed validation")
 	}
 }

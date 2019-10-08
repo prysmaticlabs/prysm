@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 const defaultReadDuration = ttfbTimeout
@@ -16,9 +15,13 @@ func setRPCStreamDeadlines(stream network.Stream) {
 }
 
 func setStreamReadDeadline(stream network.Stream, duration time.Duration) {
-	stream.SetReadDeadline(roughtime.Now().Add(duration))
+	// libp2p uses the system clock time for determining the deadline so we use
+	// time.Now() instead of the synchronized roughtime.Now().
+	stream.SetReadDeadline(time.Now().Add(duration))
 }
 
 func setStreamWriteDeadline(stream network.Stream, duration time.Duration) {
-	stream.SetWriteDeadline(roughtime.Now().Add(duration))
+	// libp2p uses the system clock time for determining the deadline so we use
+	// time.Now() instead of the synchronized roughtime.Now().
+	stream.SetWriteDeadline(time.Now().Add(duration))
 }

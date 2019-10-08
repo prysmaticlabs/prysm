@@ -23,7 +23,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -112,11 +112,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
-	testutil.AssertLogsContain(t, hook, "Finished applying fork choice for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 }
 
 func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
+	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -146,6 +146,38 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	if !reflect.DeepEqual(headBlk, chainService.HeadBlock()) {
 		t.Error("Incorrect head block saved")
 	}
+
+	testutil.AssertLogsContain(t, hook, "Saved new head info")
+}
+
+func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db)
+
+	headBlk := &ethpb.BeaconBlock{}
+	if err := db.SaveBlock(ctx, headBlk); err != nil {
+		t.Fatal(err)
+	}
+	newBlk := &ethpb.BeaconBlock{
+		Slot: 1,
+		Body: &ethpb.BeaconBlockBody{}}
+	newRoot, _ := ssz.SigningRoot(newBlk)
+	if err := db.SaveBlock(ctx, newBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.forkChoiceStore = &store{headRoot: newRoot[:]}
+	chainService.canonicalRoots[0] = newRoot[:]
+
+	if err := chainService.ReceiveBlockNoPubsub(ctx, newBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	testutil.AssertLogsDoNotContain(t, hook, "Saved new head info")
 }
 
 func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
@@ -155,7 +187,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -238,6 +270,6 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlockNoPubsubForkchoice(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
 }

@@ -6,8 +6,8 @@ import (
 	"net"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/peer"
 	filter "github.com/libp2p/go-maddr-filter"
+	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -29,6 +29,17 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	if cfg.RelayNodeAddr != "" {
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	}
+	if cfg.HostAddress != "" {
+		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
+			if err != nil {
+				log.WithError(err).Error("Unable to create external multiaddress")
+			} else {
+				addrs = append(addrs, external)
+			}
+			return addrs
+		}))
+	}
 	return options
 }
 
@@ -37,13 +48,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 // private key contents cannot be marshaled, an exception is thrown.
 func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 	return func(cfg *libp2p.Config) error {
-		convertedKey := convertToInterfacePrivkey(privkey)
-		id, err := peer.IDFromPrivateKey(convertedKey)
-		if err != nil {
-			return err
-		}
-		log.WithField("peer id", id.Pretty()).Info("Private key generated. Announcing peer id")
-		return cfg.Apply(libp2p.Identity(convertedKey))
+		log.Debug("ECDSA private key generated")
+		return cfg.Apply(libp2p.Identity(convertToInterfacePrivkey(privkey)))
 	}
 }
 

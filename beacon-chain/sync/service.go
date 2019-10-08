@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -74,6 +75,7 @@ func (r *RegularSync) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	go r.processPendingBlocksQueue()
+	go r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.
@@ -83,14 +85,10 @@ func (r *RegularSync) Stop() error {
 
 // Status of the currently running regular sync service.
 func (r *RegularSync) Status() error {
+	if r.chainStarted && r.initialSync.Syncing() {
+		return errors.New("waiting for initial sync")
+	}
 	return nil
-}
-
-// ClearPendingBlocks clears outstanding pending blocks waiting to be processed,
-// this should be called during new finalization.
-func (r *RegularSync) ClearPendingBlocks() {
-	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
-	r.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
 // Checker defines a struct which can verify whether a node is currently

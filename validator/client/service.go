@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -55,8 +58,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 func (v *ValidatorService) Start() {
 	pubkeys := make([][]byte, 0)
 	for i := range v.keys {
-		log.WithField("publicKey", fmt.Sprintf("%#x", v.keys[i].PublicKey.Marshal())).Info("Initializing new validator service")
 		pubkey := v.keys[i].PublicKey.Marshal()
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubkey))).Info("New validator service")
 		pubkeys = append(pubkeys, pubkey)
 	}
 
@@ -72,7 +75,17 @@ func (v *ValidatorService) Start() {
 		dialOpt = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpt, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
+	opts := []grpc.DialOption{
+		dialOpt,
+		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+			grpc_opentracing.StreamClientInterceptor(),
+		)),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+			grpc_opentracing.UnaryClientInterceptor(),
+		)),
+	}
+	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return

@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -39,12 +40,13 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		if err := as.operationsHandler.HandleAttestation(ctx, att); err != nil {
-			log.WithError(err).Error("could not handle attestation in operations service")
-			return
-		}
+		attCopy := proto.Clone(att).(*ethpb.Attestation)
 		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
+			return
+		}
+		if err := as.operationsHandler.HandleAttestation(ctx, attCopy); err != nil {
+			log.WithError(err).Error("could not handle attestation in operations service")
 			return
 		}
 	}()

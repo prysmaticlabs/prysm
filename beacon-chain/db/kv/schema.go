@@ -20,7 +20,6 @@ var (
 	archivedCommitteeInfoBucket          = []byte("archived-committee-info")
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
-	archivedActiveIndicesBucket          = []byte("archived-active-indices")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
