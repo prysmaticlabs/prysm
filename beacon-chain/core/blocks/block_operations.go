@@ -332,10 +332,7 @@ func ProcessRandaoNoVerify(
 //        assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
-func ProcessProposerSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessProposerSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if int(slashing.ProposerIndex) >= len(beaconState.Validators) {
@@ -1042,10 +1039,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessVoluntaryExits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessVoluntaryExits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	exits := body.VoluntaryExits
 
