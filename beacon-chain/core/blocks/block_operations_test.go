@@ -13,6 +13,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	blsintern "github.com/phoreproject/bls"
+	"github.com/protolambda/messagediff"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -446,10 +447,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 		},
 	}
 	want := "mismatched header epochs"
-	if _, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -479,10 +477,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 		},
 	}
 	want := "expected slashing headers to differ"
-	if _, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -525,10 +520,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		beaconState.Validators[0].PublicKey,
 	)
 
-	if _, err := blocks.ProcessProposerSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -613,7 +605,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessProposerSlashings(beaconState, block.Body)
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -2012,10 +2004,7 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 
 	want := "non-active validator cannot exit"
 
-	if _, err := blocks.ProcessVoluntaryExits(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -2043,10 +2032,7 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 
 	want := "expected current epoch >= exit epoch"
 
-	if _, err := blocks.ProcessVoluntaryExits(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -2074,10 +2060,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	}
 
 	want := "validator has not been active long enough to exit"
-	if _, err := blocks.ProcessVoluntaryExits(
-		state,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -2123,7 +2106,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessVoluntaryExits(state, block.Body)
+	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}

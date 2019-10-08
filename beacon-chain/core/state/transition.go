@@ -407,7 +407,7 @@ func ProcessOperations(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
@@ -423,7 +423,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -484,7 +484,7 @@ func processOperationsNoVerify(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
