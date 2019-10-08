@@ -483,13 +483,10 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 // ProcessAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
-func ProcessAttestations(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestations(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestation(context.TODO(), beaconState, attestation)
+		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -499,13 +496,10 @@ func ProcessAttestations(
 
 // ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
-func ProcessAttestationsNoVerify(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(context.TODO(), beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
