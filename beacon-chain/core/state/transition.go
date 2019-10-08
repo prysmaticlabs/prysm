@@ -411,7 +411,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
@@ -488,7 +488,7 @@ func processOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}

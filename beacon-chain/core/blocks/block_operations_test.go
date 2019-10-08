@@ -682,10 +682,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	}
 	want := fmt.Sprint("attestations are not slashable")
 
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -731,10 +728,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	}
 	want := fmt.Sprint("expected no bit 1 indices")
 
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
@@ -766,10 +760,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	block.Body.AttesterSlashings = slashings
 	want = fmt.Sprint("over max number of allowed indices")
 
-	if _, err := blocks.ProcessAttesterSlashings(
-		beaconState,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -844,7 +835,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(beaconState, block.Body)
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1282,12 +1273,12 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	aggBits1.SetBitAt(2, true)
 	custodyBits1 := bitfield.NewBitlist(4)
 	att1 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits1,
 		CustodyBits:     custodyBits1,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard:      0,StartEpoch: 0}}
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard: 0, StartEpoch: 0}}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -1322,7 +1313,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	aggBits2.SetBitAt(3, true)
 	custodyBits2 := bitfield.NewBitlist(4)
 	att2 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits2,
 		CustodyBits:     custodyBits2,
 	}
@@ -1389,12 +1380,12 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	aggBits1.SetBitAt(1, true)
 	custodyBits1 := bitfield.NewBitlist(4)
 	att1 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits1,
 		CustodyBits:     custodyBits1,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard:      0,StartEpoch: 0}}
+	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard: 0, StartEpoch: 0}}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
@@ -1428,7 +1419,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	aggBits2.SetBitAt(3, true)
 	custodyBits2 := bitfield.NewBitlist(4)
 	att2 := &ethpb.Attestation{
-		Data: data,
+		Data:            data,
 		AggregationBits: aggBits2,
 		CustodyBits:     custodyBits2,
 	}

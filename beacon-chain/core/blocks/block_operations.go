@@ -406,12 +406,9 @@ func VerifyProposerSlashing(
 //            slash_validator(state, index)
 //            slashed_any = True
 //    assert slashed_any
-func ProcessAttesterSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttesterSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := VerifyAttesterSlashing(beaconState, slashing); err != nil {
+		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -439,7 +436,7 @@ func ProcessAttesterSlashings(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -447,10 +444,10 @@ func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.Atteste
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(context.TODO(), beaconState, att1); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att1); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
-	if err := VerifyIndexedAttestation(context.TODO(), beaconState, att2); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att2); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
 	return nil
