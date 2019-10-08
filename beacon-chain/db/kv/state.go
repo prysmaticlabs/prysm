@@ -66,33 +66,6 @@ func (k *Store) GenerateStateAtSlot(ctx context.Context, slot uint64) (*pb.Beaco
 	return savedState, nil
 }
 
-func (k *Store) savedBlocks(ctx context.Context, slot uint64) ([]*ethpb.BeaconBlock, error) {
-	savingInterval := params.BeaconConfig().SavingInterval
-	// Filtering from the slot we know we have a saved state for.
-	currentSlot := slot - (slot % savingInterval)
-	savedSlot := slot
-	var err error
-	var pBlocks []*ethpb.BeaconBlock
-	for savedSlot == slot {
-		// Looping through recursively until we find a state we have saved.
-		filter := filters.NewFilter()
-		filter.SetStartSlot(currentSlot)
-		filter.SetEndSlot(slot)
-		pBlocks, err = k.Blocks(ctx, filter)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve block")
-		}
-		if pBlocks[0].Slot < savedSlot {
-			savedSlot = pBlocks[0].Slot
-		} else if currentSlot != 0 {
-			currentSlot = currentSlot - savingInterval
-		} else {
-			return nil, errors.New("could not find a saved state")
-		}
-	}
-	return pBlocks, nil
-}
-
 // PruneSavedStates starts from the passed in previous finalized epoch, and
 // deletes the state for all slots until just before the current finalized epoch.
 func (k *Store) PruneSavedStates(
@@ -151,6 +124,41 @@ func (k *Store) savedStateKeys(ctx context.Context, fromSlot uint64, toSlot uint
 		currentSlot = untilSlot
 	}
 	return savedStateKeys, nil
+}
+
+func (k *Store) savedBlocks(ctx context.Context, untilSlot uint64) ([]*ethpb.BeaconBlock, error) {
+	savingInterval := params.BeaconConfig().SavingInterval
+	// Filtering from the slot we know we have a saved state for.
+	currentSlot := untilSlot - (untilSlot % savingInterval)
+	savedSlot := untilSlot
+	var err error
+	var pBlocks []*ethpb.BeaconBlock
+	for savedSlot == untilSlot {
+		// Looping through recursively until we find a state we have saved.
+		filter := filters.NewFilter()
+		filter.SetStartSlot(currentSlot)
+		filter.SetEndSlot(untilSlot)
+		pBlocks, err = k.Blocks(ctx, filter)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve block")
+		}
+
+		// If theres no blocks in the range of currentSlot to untilSlot
+		// we go back another saving interval until we find one.
+		if len(pBlocks) < 1 {
+			currentSlot = currentSlot - savingInterval
+			continue
+		}
+		if pBlocks[0].Slot < savedSlot {
+			savedSlot = pBlocks[0].Slot
+		} else if currentSlot != 0 {
+			currentSlot = currentSlot - savingInterval
+		} else {
+			return nil, errors.New("could not find a saved state")
+		}
+
+	}
+	return pBlocks, nil
 }
 
 // DeleteState removes the state of the passed in DB key from the DB.

@@ -437,7 +437,7 @@ func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
 	defer teardownDB(b, db)
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	deposits, _, privs := testutil.SetupInitialDeposits(b, 256)
+	deposits, _, privs := testutil.SetupInitialDeposits(b, 2048)
 	eth1Data := testutil.GenerateEth1Data(b, deposits)
 	genesisState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
@@ -446,7 +446,7 @@ func BenchmarkGenerateStateAtSlot_WorstCase(b *testing.B) {
 
 	blocks := make([]*ethpb.BeaconBlock, savingInterval-1)
 	conf := &testutil.BlockGenConfig{
-		MaxAttestations: 2,
+		MaxAttestations: 32,
 	}
 	firstBlock := testutil.GenerateFullBlock(b, genesisState, privs, conf)
 	root, err := ssz.SigningRoot(firstBlock)
