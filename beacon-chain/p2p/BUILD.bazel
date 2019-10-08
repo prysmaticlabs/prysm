@@ -32,6 +32,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/iputils:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",

@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -74,10 +73,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	slotTime := baseState.GenesisTime + tgtSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(roughtime.Now().Unix())
-	if slotTime > currentTime {
-		return 0, fmt.Errorf("could not process attestation from the future epoch, time %d > time %d", slotTime, currentTime)
+	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
+		return 0, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
 	// Store target checkpoint state if not yet seen.
@@ -100,15 +97,18 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	defer s.attsQueueLock.Unlock()
 	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
-		log.WithFields(logrus.Fields{
+		log := log.WithFields(logrus.Fields{
 			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
-		}).Debug("Updating latest votes")
+		})
+		log.Debug("Updating latest votes")
 
 		// Use the target state to to validate attestation and calculate the committees.
 		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 		if err != nil {
-			return 0, err
+			log.WithError(err).Warn("Removing attestation from queue.")
+			delete(s.attsQueue, root)
+			continue
 		}
 
 		// Update every validator's latest vote.
@@ -229,12 +229,7 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return errors.Wrap(err, "could not get attestation slot")
 	}
-	slotTime := baseState.GenesisTime + (aSlot+1)*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(time.Now().Unix())
-	if slotTime > currentTime+timeShiftTolerance {
-		return fmt.Errorf("could not process attestation for fork choice until inclusion delay, time %d > time %d", slotTime, currentTime)
-	}
-	return nil
+	return helpers.VerifySlotTime(baseState.GenesisTime, aSlot+1)
 }
 
 // verifyAttestation validates input attestation is valid.

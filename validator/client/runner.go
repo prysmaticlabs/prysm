@@ -64,9 +64,9 @@ func run(ctx context.Context, v Validator) {
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			slotCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
+			log := log.WithField("slot", slot)
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
-					slot, err)
+				log.WithError(err).Error("Could not report validator's rewards/penalties")
 			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
@@ -83,6 +83,14 @@ func run(ctx context.Context, v Validator) {
 				wg.Add(1)
 				go func(role pb.ValidatorRole, id string) {
 					defer wg.Done()
+					tpk := id
+					if len(id) > 16 {
+						tpk = id[:16]
+					}
+					log := log.WithFields(logrus.Fields{
+						"pubKey": "0x" + tpk,
+						"role":   role,
+					})
 					switch role {
 					case pb.ValidatorRole_ATTESTER:
 						v.AttestToBlockHead(slotCtx, slot, id)
@@ -90,17 +98,9 @@ func run(ctx context.Context, v Validator) {
 						v.ProposeBlock(slotCtx, slot, id)
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:
-						pk12Char := id
-						if len(id) > 12 {
-							pk12Char = id[:12]
-						}
-						log.WithFields(logrus.Fields{
-							"public_key": pk12Char,
-							"slot":       slot,
-							"role":       role,
-						}).Debug("No active assignment, doing nothing")
+						log.Debug("No active role, doing nothing")
 					default:
-						// Do nothing :)
+						log.Warn("Unhandled role")
 					}
 
 				}(role, id)

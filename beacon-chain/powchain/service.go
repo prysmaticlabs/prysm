@@ -398,8 +398,13 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
-			log.WithError(err).Error("Subscription to new head notifier failed")
-			return
+			log.WithError(s.runError).Error("Subscription to new head notifier failed")
+			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
+			if err != nil {
+				log.WithError(err).Error("Unable to re-subscribe to incoming ETH1.0 chain headers")
+				s.runError = err
+				return
+			}
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)
