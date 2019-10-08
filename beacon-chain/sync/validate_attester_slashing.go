@@ -66,7 +66,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		}
 	}
 
-	if err := blocks.VerifyAttesterSlashing(s, slashing); err != nil {
+	if err := blocks.VerifyAttesterSlashing(ctx, s, slashing); err != nil {
 		seenAttesterSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
 		return false, errors.Wrap(err, "Received invalid attester slashing")
 	}
