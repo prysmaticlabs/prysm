@@ -186,6 +186,60 @@ func BenchmarkExecuteStateTransition_ReadSaved(b *testing.B) {
 		MaxAttestations: 0,
 	}
 
+	blockBytes, err := ioutil.ReadFile("127Attblock.ssz")
+	if err != nil {
+		b.Fatal(err)
+	}
+	block := &ethpb.BeaconBlock{}
+	if err := ssz.Unmarshal(blockBytes, block); err != nil {
+		b.Fatal(err)
+	}
+
+	// Process beacon state to mid-epoch to prevent epoch calculations from manipulating benchmarks.
+	for i := uint64(0); i < 6+params.BeaconConfig().SlotsPerEpoch-1; i++ {
+		fmt.Printf("state at slot %d\n", beaconState.Slot)
+		block := testutil.GenerateFullBlock(b, beaconState, privs, conf)
+		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+	cleanStates := createCleanStates(beaconState)
+
+	fmt.Println("states generated")
+
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		fmt.Println(i)
+		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (benchmarkConfig().MaxAttestations / slotsPerEpoch)
+	c := params.BeaconConfig()
+	c.PersistentCommitteePeriod = 0
+	c.MinValidatorWithdrawabilityDelay = 0
+	c.TargetCommitteeSize = committeeSize
+	c.MaxAttestations = benchmarkConfig().MaxAttestations
+	params.OverrideBeaconConfig(c)
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
+
+	beaconState := createBeaconState(b)
+
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	conf := &testutil.BlockGenConfig{
+		MaxAttestations: 0,
+	}
+
 	// Process beacon state to mid-epoch to prevent epoch calculations from manipulating benchmarks.
 	for i := uint64(0); i < 6+params.BeaconConfig().SlotsPerEpoch-1; i++ {
 		fmt.Printf("state at slot %d\n", beaconState.Slot)
@@ -196,24 +250,11 @@ func BenchmarkExecuteStateTransition_ReadSaved(b *testing.B) {
 		}
 	}
 
-	blockBytes, err := ioutil.ReadFile("128Attblock.ssz")
-	if err != nil {
-		b.Fatal(err)
-	}
-	block := &ethpb.BeaconBlock{}
-	if err := ssz.Unmarshal(blockBytes, block); err != nil {
-		b.Fatal(err)
-	}
-
-	cleanStates := createCleanStates(beaconState)
-
-	fmt.Println("states generated")
-
-	b.N = runAmount
+	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		fmt.Println(i)
-		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
+		if _, err := ssz.HashTreeRoot(beaconState); err != nil {
 			b.Fatal(err)
 		}
 	}
