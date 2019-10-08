@@ -12,16 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	// VotesCacheSize with 1M validators will only be around 50Mb.
+	VotesCacheSize   = 1000000
+	databaseFileName = "beaconchain.db"
+)
+
 // BlockCacheSize specifies 4 epochs worth of blocks cached.
-const BlockCacheSize = 256
-
-// VotesCacheSize with 1M validators will only be around 50Mb.
-const VotesCacheSize = 1000000
-
-// ValidatorIndexCacheSize of 1M * 8 bytes, ~8 Mb
-const ValidatorIndexCacheSize = 1000000
-
-const databaseFileName = "beaconchain.db"
+var BlockCacheSize = int64(256)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
