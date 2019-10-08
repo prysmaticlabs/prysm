@@ -1737,7 +1737,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	want := "deposit root did not verify"
-	if _, err := blocks.ProcessDeposits(beaconState, block.Body); !strings.Contains(err.Error(), want) {
+	if _, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
@@ -1767,10 +1767,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	}
-	newState, err := blocks.ProcessDeposits(
-		beaconState,
-		block.Body,
-	)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
@@ -1840,7 +1837,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			BlockHash:   root[:],
 		},
 	}
-	newState, err := blocks.ProcessDeposits(beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}

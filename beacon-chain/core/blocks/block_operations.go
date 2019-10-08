@@ -898,10 +898,7 @@ func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *et
 // Spec pseudocode definition:
 //   For each deposit in block.body.deposits:
 //     process_deposit(state, deposit)
-func ProcessDeposits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
 
