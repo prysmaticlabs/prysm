@@ -42,6 +42,14 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
+	if cfg.HostAddress != "" {
+		hostIP := net.ParseIP(cfg.HostAddress)
+		if hostIP.To4() == nil {
+			log.Errorf("Invalid host address given: %s", hostIP.String())
+		} else {
+			localNode.SetFallbackIP(hostIP)
+		}
+	}
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
 	}
@@ -125,6 +133,10 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []st
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 	var multiAddrs []ma.Multiaddr
 	for _, node := range nodes {
+		// ignore nodes with no ip address stored
+		if node.IP() == nil {
+			continue
+		}
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to multiAddr")

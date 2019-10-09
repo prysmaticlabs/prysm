@@ -83,13 +83,10 @@ func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	return convertFromInterfacePrivKey(unmarshalledKey), nil
 }
 
-func ipAddr(cfg *Config) net.IP {
-	if cfg.HostAddress == "" {
-		ip, err := iputils.ExternalIPv4()
-		if err != nil {
-			log.Fatalf("Could not get IPv4 address: %v", err)
-		}
-		return net.ParseIP(ip)
+func ipAddr() net.IP {
+	ip, err := iputils.ExternalIPv4()
+	if err != nil {
+		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
-	return net.ParseIP(cfg.HostAddress)
+	return net.ParseIP(ip)
 }

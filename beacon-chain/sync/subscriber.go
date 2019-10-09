@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -115,6 +116,12 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		if data == nil {
 			log.Warn("Received nil message on pubsub")
 			return
+		}
+
+		if span.IsRecordingEvents() {
+			id := hashutil.FastSum64(data)
+			messageLen := int64(len(data))
+			span.AddMessageReceiveEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 		}
 
 		msg := proto.Clone(base)

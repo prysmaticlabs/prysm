@@ -1,10 +1,10 @@
-package blocks
+package blocks_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -88,8 +88,6 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			eth1DataCache = cache.NewEth1DataVoteCache()
-
 			c := params.BeaconConfig()
 			c.SlotsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
@@ -97,7 +95,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			s := &pb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
 			}
-			result, err := Eth1DataHasEnoughSupport(s, tt.data)
+			result, err := blocks.Eth1DataHasEnoughSupport(s, tt.data)
 			if err != nil {
 				t.Fatal(err)
 			}

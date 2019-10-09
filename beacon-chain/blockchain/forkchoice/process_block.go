@@ -16,14 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-// Allow for blocks "from the future" within a certain tolerance.
-const timeShiftTolerance = 10 // ms
 
 // OnBlock is called when a gossip block is received. It runs regular state transition on the block and
 // update fork choice store.
@@ -125,7 +120,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		reportEpochMetrics(postState)
 
 		// Update committee shuffled indices at the end of every epoch
-		if featureconfig.FeatureConfig().EnableNewCache {
+		if featureconfig.Get().EnableNewCache {
 			if err := helpers.UpdateCommitteeCache(postState); err != nil {
 				return err
 			}
@@ -223,7 +218,7 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	}
 
 	// Verify block slot time is not from the feature.
-	if err := verifyBlkSlotTime(preState.GenesisTime, b.Slot); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime, b.Slot); err != nil {
 		return nil, err
 	}
 
@@ -270,7 +265,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(baseState, att)
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -372,14 +367,4 @@ func (s *Store) clearSeenAtts() {
 	s.seenAttsLock.Lock()
 	s.seenAttsLock.Unlock()
 	s.seenAtts = make(map[[32]byte]bool)
-}
-
-// verifyBlkSlotTime validates the input block slot is not from the future.
-func verifyBlkSlotTime(gensisTime uint64, blkSlot uint64) error {
-	slotTime := gensisTime + blkSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(roughtime.Now().Unix())
-	if slotTime > currentTime+timeShiftTolerance {
-		return fmt.Errorf("could not process block from the future, slot time %d > current time %d", slotTime, currentTime)
-	}
-	return nil
 }

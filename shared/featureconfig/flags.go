@@ -44,6 +44,14 @@ var (
 		Name:  "skip-bls-verify",
 		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
 	}
+	enableBackupWebhookFlag = cli.BoolFlag{
+		Name:  "enable-db-backup-webhook",
+		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+	}
+	enableBLSPubkeyCacheFlag = cli.BoolFlag{
+		Name:  "enable-bls-pubkey-cache",
+		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -61,4 +69,6 @@ var BeaconChainFlags = []cli.Flag{
 	InitSyncNoVerifyFlag,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
+	enableBackupWebhookFlag,
+	enableBLSPubkeyCacheFlag,
 }
