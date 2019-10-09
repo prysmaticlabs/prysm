@@ -66,7 +66,7 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
-		if err != nil || blk == nil {
+		if err != nil {
 			if err != nil {
 				log.WithError(err).Error("Failed to fetch block")
 			}
@@ -79,6 +79,9 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 				}
 			}
 			return err
+		}
+		if blk == nil {
+			continue
 		}
 		if err := r.chunkWriter(stream, blk); err != nil {
 			return err
