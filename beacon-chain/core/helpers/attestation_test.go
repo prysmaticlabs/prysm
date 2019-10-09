@@ -87,29 +87,65 @@ func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *
 	}
 }
 
-func TestAggregateAttestation(t *testing.T) {
+func TestAggregateAttestation_NoOverlap(t *testing.T) {
+	_, _, privKeys := testutil.SetupInitialDeposits(t, 100)
+	f := &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	sig := privKeys[0].Sign([]byte{}, domain)
+
 	tests := []struct {
 		a1   *ethpb.Attestation
 		a2   *ethpb.Attestation
 		want *ethpb.Attestation
 	}{
-		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
-			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
-			want: &ethpb.Attestation{AggregationBits: []byte{}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}, Signature: sig.Marshal()},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}, Signature: sig.Marshal()},
+			want: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}, Signature: sig.Marshal()}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x06}, Signature: sig.Marshal()},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x05}, Signature: sig.Marshal()},
+			want: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x07}, Signature: sig.Marshal()}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x32}, Signature: sig.Marshal()},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x21}, Signature: sig.Marshal()},
+			want: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x33}, Signature: sig.Marshal()}},
 	}
 	for _, tt := range tests {
 		got, err := helpers.AggregateAttestation(tt.a1, tt.a2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !ssz.DeepEqual(got, tt.want) {
+		if !ssz.DeepEqual(got.AggregationBits, tt.want.AggregationBits) {
 			t.Errorf("AggregateAttestation() = %v, want %v", got, tt.want)
+		}
+	}
+}
+
+func TestAggregateAttestation_OverlapFails(t *testing.T) {
+	_, _, privKeys := testutil.SetupInitialDeposits(t, 100)
+	f := &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	sig := privKeys[0].Sign([]byte{}, domain)
+
+	tests := []struct {
+		a1 *ethpb.Attestation
+		a2 *ethpb.Attestation
+	}{
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x1F}, Signature: sig.Marshal()},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}, Signature: sig.Marshal()}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0xFF, 0x85}, Signature: sig.Marshal()},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x13, 0x8F}, Signature: sig.Marshal()}},
+	}
+	for _, tt := range tests {
+		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
+		if err != helpers.ErrAttestationAggregationBitsOverlap {
+			t.Error("Did not receive wanted error")
 		}
 	}
 }
