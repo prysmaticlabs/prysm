@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,7 +17,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(*pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
+type blockOperation func(context.Context, *pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
 type epochOperation func(*testing.T, *pb.BeaconState) (*pb.BeaconState, error)
 
 // TestFolders sets the proper config and returns the result of ReadDir
@@ -76,7 +77,7 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 
-	beaconState, err := operationFn(preState, body)
+	beaconState, err := operationFn(context.Background(), preState, body)
 	if postSSZExists {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
