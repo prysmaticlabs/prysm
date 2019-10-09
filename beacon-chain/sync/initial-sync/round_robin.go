@@ -109,7 +109,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
 							return
 						}
-						_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
+						_, err = request(start, step/uint64(len(peers)), count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
 						if err != nil {
 							errChan <- err
 							return
