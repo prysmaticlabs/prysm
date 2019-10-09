@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/sirupsen/logrus"
 	wasm "github.com/wasmerio/go-ext-wasm/wasmer"
@@ -18,7 +19,11 @@ type shardState struct {
 }
 
 type shardBlock struct {
-	Slot             uint64
+	Slot         uint64
+	Transactions []*transaction
+}
+
+type transaction struct {
 	EnvironmentIndex uint64
 	Data             []byte
 }
@@ -37,33 +42,56 @@ func main() {
 	}
 
 	block := &shardBlock{
-		Slot:             1,
-		EnvironmentIndex: 0,
-		Data:             []byte{1, 2, 3, 4, 5},
+		Slot: 1,
+		Transactions: []*transaction{
+			{
+				EnvironmentIndex: 0,
+				Data:             []byte{1, 2, 3, 4, 5},
+			},
+			{
+				EnvironmentIndex: 0,
+				Data:             []byte{1, 2, 3, 4, 5},
+			},
+			{
+				EnvironmentIndex: 0,
+				Data:             []byte{1, 2, 3, 4, 5},
+			},
+		},
 	}
 	// Get the code from the beacon state exec env index.
 	logrus.WithField(
 		"slot",
 		block.Slot,
 	).Info("Processing shard block")
-	code := bState.ExecutionScripts[block.EnvironmentIndex]
-	shardPreStateRoot := sState.ExecEnvStateRoots[block.EnvironmentIndex]
-	logrus.WithFields(logrus.Fields{
-		"stateRoot":        fmt.Sprintf("%#x", shardPreStateRoot),
-		"environmentIndex": block.EnvironmentIndex,
-	}).Info("Running WASM code for shard block execution environment")
-	shardPostStateRoot, err := ExecuteCode(code, shardPreStateRoot, block.Data)
-	if err != nil {
-		logrus.Fatal(err)
+	if _, err := processShardBlock(bState, sState, block); err != nil {
+		log.Fatal(err)
 	}
-	sState.ExecEnvStateRoots[block.EnvironmentIndex] = shardPostStateRoot
-	logrus.WithField(
-		"stateRoot",
-		fmt.Sprintf("%#x", shardPostStateRoot),
-	).Info("Updated shard state root")
 }
 
-func ExecuteCode(code []byte, preStateRoot [32]byte, shardData []byte) ([32]byte, error) {
+func processShardBlock(bState *beaconState, sState *shardState, block *shardBlock) (*shardState, error) {
+	for i := 0; i < len(block.Transactions); i++ {
+		tx := block.Transactions[i]
+		code := bState.ExecutionScripts[tx.EnvironmentIndex]
+		shardPreStateRoot := sState.ExecEnvStateRoots[tx.EnvironmentIndex]
+		logrus.WithFields(logrus.Fields{
+			"stateRoot":        fmt.Sprintf("%#x", shardPreStateRoot),
+			"environmentIndex": tx.EnvironmentIndex,
+			"transactionID":    i,
+		}).Info("Running WASM code for shard block transaction")
+		shardPostStateRoot, err := executeCode(code, shardPreStateRoot, tx.Data)
+		if err != nil {
+			return nil, err
+		}
+		sState.ExecEnvStateRoots[tx.EnvironmentIndex] = shardPostStateRoot
+		logrus.WithFields(logrus.Fields{
+			"stateRoot":        fmt.Sprintf("%#x", shardPostStateRoot),
+			"environmentIndex": tx.EnvironmentIndex,
+		}).Info("Updated shard state root for environment index")
+	}
+	return sState, nil
+}
+
+func executeCode(code []byte, preStateRoot [32]byte, shardData []byte) ([32]byte, error) {
 	// Instantiates the WebAssembly module.
 	instance, _ := wasm.NewInstance(code)
 	defer instance.Close()
