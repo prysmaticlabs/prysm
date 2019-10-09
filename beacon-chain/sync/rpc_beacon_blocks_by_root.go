@@ -67,9 +67,7 @@ func (r *RegularSync) beaconBlocksRootRPCHandler(ctx context.Context, msg interf
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
 		if err != nil {
-			if err != nil {
-				log.WithError(err).Error("Failed to fetch block")
-			}
+			log.WithError(err).Error("Failed to fetch block")
 			resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
 				log.WithError(err).Error("Failed to generate a response error")
