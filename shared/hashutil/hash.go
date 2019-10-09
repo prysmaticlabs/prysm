@@ -5,7 +5,9 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -75,4 +77,13 @@ func HashProto(msg proto.Message) (result [32]byte, err error) {
 		return [32]byte{}, err
 	}
 	return Hash(data), nil
+}
+
+// Key used for FastSum64
+var fastSumHashKey = bytesutil.ToBytes32([]byte("hash_fast_sum64_key"))
+
+// FastSum64 returns a hash sum of the input data using highwayhash. This method is not secure, but
+// may be used as a quick identifier for objects where collisions are acceptable.
+func FastSum64(data []byte) uint64 {
+	return highwayhash.Sum64(data, fastSumHashKey[:])
 }

@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"time"
 
@@ -48,7 +49,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
 	for {
-		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
+		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
 		chainStartRes, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
@@ -67,7 +68,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain initialized")
+	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
 
@@ -107,7 +108,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 	}
 	for _, pk := range validatorActivatedRecords {
-		log.WithField("pubKey", hex.EncodeToString(pk)[:12]).Info("Validator activated")
+		pubKey := fmt.Sprintf("%#x", pk[:8])
+		log.WithField("pubKey", pubKey).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
@@ -117,21 +119,22 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
+		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
-			"pubKey": hex.EncodeToString(status.PublicKey)[:12],
+			"pubKey": pubKey,
 			"status": status.Status.Status.String(),
 		})
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
-			log.Info("Validator has been activated")
 			continue
 		}
 		if status.Status.Status == pb.ValidatorStatus_EXITED {
-			log.Info("Validator has been ejected")
+			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.DepositInclusionSlot == 0 {
-			log.Info("Not yet included in state...")
+		if status.Status.Status == pb.ValidatorStatus_DEPOSIT_RECEIVED {
+			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+				"Deposit for validator received but not processed into state")
 			continue
 		}
 		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
@@ -202,11 +205,14 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		for _, assignment := range v.assignments.ValidatorAssignment {
 			var proposerSlot uint64
 			var attesterSlot uint64
+			pubKey := fmt.Sprintf("%#x", assignment.PublicKey[:8])
+
 			lFields := logrus.Fields{
-				"pubKey": hex.EncodeToString(assignment.PublicKey)[:12],
-				"status": assignment.Status,
+				"pubKey": pubKey,
+				"epoch":  slot / params.BeaconConfig().SlotsPerEpoch,
 			}
 			if assignment.Status != pb.ValidatorStatus_ACTIVE {
+				lFields["status"] = assignment.Status
 				log.WithFields(lFields).Info("New assignment")
 				continue
 			} else if assignment.IsProposer {
@@ -216,20 +222,14 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 				attesterSlot = assignment.Slot
 			}
 			lFields["attesterSlot"] = attesterSlot
-			lFields["proposerSlot"] = "Not proposing"
-			lFields["shard"] = assignment.Shard
+			lFields["proposerSlot"] = "N/A"
 
 			if assignment.IsProposer {
 				lFields["proposerSlot"] = proposerSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
-
 		}
 	}
-
-	log.WithFields(logrus.Fields{
-		"assignments": len(v.assignments.ValidatorAssignment),
-	}).Info("Updated validator assignments")
 
 	return nil
 }

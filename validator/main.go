@@ -87,11 +87,11 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(ctx *cli.Context) {
-						featureconfig.ConfigureValidatorFeatures(ctx)
+						featureconfig.ConfigureValidator(ctx)
 						// Use custom config values if the --no-custom-config flag is set.
 						if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 							log.Info("Using custom parameter configuration")
-							if featureconfig.FeatureConfig().MinimalConfig {
+							if featureconfig.Get().MinimalConfig {
 								log.Warn("Using Minimal Config")
 								params.UseMinimalConfig()
 							} else {
@@ -123,7 +123,11 @@ contract in order to activate the validator client`,
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(joonix.NewFormatter())
+			f := joonix.NewFormatter()
+			if err := joonix.DisableTimestampFormat(f); err != nil {
+				panic(err)
+			}
+			logrus.SetFormatter(f)
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})

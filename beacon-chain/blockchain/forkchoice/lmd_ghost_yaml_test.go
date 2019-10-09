@@ -134,5 +134,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 		}
 
 		helpers.ClearAllCaches()
+		testDB.TeardownDB(t, db)
+
 	}
 }

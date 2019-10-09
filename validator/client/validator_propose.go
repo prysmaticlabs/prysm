@@ -4,11 +4,11 @@ package client
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -27,9 +27,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())
-	span.AddAttributes(trace.StringAttribute("validator", tpk))
-	log := log.WithField("pubKey", tpk[:12])
+	tpk := v.keys[pk].PublicKey.Marshal()
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", tpk)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
@@ -76,10 +76,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
-		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
+		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-	}).Info("Proposed new beacon block")
+	}).Info("Submitted new block")
 }

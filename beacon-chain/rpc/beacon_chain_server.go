@@ -93,10 +93,7 @@ func (bs *BeaconChainServer) ListAttestations(
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	default:
-		atts, err = bs.beaconDB.Attestations(ctx, nil)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
-		}
+		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))

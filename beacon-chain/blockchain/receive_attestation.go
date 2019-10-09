@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -35,14 +36,14 @@ func (s *Service) ReceiveAttestation(ctx context.Context, att *ethpb.Attestation
 		return errors.Wrap(err, "could not broadcast attestation")
 	}
 
-	attRoot, err := ssz.HashTreeRoot(att.Data)
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		log.WithError(err).Error("Failed to hash attestation")
 	}
 
 	log.WithFields(logrus.Fields{
-		"attRoot":     hex.EncodeToString(attRoot[:]),
-		"attDataRoot": hex.EncodeToString(att.Data.BeaconBlockRoot),
+		"attRoot":   fmt.Sprintf("%#x", attDataRoot),
+		"blockRoot": fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 	}).Debug("Broadcasting attestation")
 
 	if err := s.ReceiveAttestationNoPubsub(ctx, att); err != nil {
@@ -65,27 +66,24 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	// Update forkchoice store for the new attestation
 	attSlot, err := s.forkChoiceStore.OnAttestation(ctx, att)
 	if err != nil {
-		return errors.Wrap(err, "could not process block from fork choice service")
+		return errors.Wrap(err, "could not process attestation from fork choice service")
 	}
-
-	log.WithFields(logrus.Fields{
-		"attTargetSlot": attSlot,
-		"attDataRoot":   hex.EncodeToString(att.Data.BeaconBlockRoot),
-	}).Debug("Finished updating fork choice store for attestation")
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := s.forkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
+	// Only save head if it's different than the current head.
+	if !bytes.Equal(headRoot, s.HeadRoot()) {
+		headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			return errors.Wrap(err, "could not compute state from block head")
+		}
+		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
 	}
-	log.WithFields(logrus.Fields{
-		"headSlot": headBlk.Slot,
-		"headRoot": hex.EncodeToString(headRoot),
-	}).Debug("Finished applying fork choice for attestation")
 
 	// Skip checking for competing attestation's target roots at epoch boundary.
 	if !helpers.IsEpochStart(attSlot) {
@@ -96,11 +94,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 			return errors.Wrapf(err, "could not get target root for epoch %d", att.Data.Target.Epoch)
 		}
 		isCompetingAtts(targetRoot, att.Data.Target.Root[:])
-	}
-
-	// Save head info after running fork choice.
-	if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
-		return errors.Wrap(err, "could not save head")
 	}
 
 	processedAttNoPubsub.Inc()

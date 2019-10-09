@@ -17,6 +17,8 @@ type Database interface {
 	io.Closer
 	DatabasePath() string
 	ClearDB() error
+	// Backup and restore methods
+	Backup(ctx context.Context) error
 	// Attestation related methods.
 	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
@@ -42,6 +44,7 @@ type Database interface {
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
 	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
 	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
+	SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*pb.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error

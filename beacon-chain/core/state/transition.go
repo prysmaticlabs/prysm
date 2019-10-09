@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -145,16 +146,17 @@ func CalculateStateRoot(
 	state *pb.BeaconState,
 	block *ethpb.BeaconBlock,
 ) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
+	defer span.End()
 	if ctx.Err() != nil {
+		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
 
 	stateCopy := proto.Clone(state).(*pb.BeaconState)
 	b.ClearEth1DataVoteCache()
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
-	defer span.End()
-	var err error
 
+	var err error
 	// Execute per slots transition.
 	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
 	if err != nil {
@@ -200,6 +202,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 
 	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
@@ -211,6 +214,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	}
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
@@ -231,20 +235,28 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //        state.slot += 1
 //    ]
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
 	if state.Slot > slot {
-		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
+		traceutil.AnnotateError(span, err)
+		return nil, err
 	}
 	for state.Slot < slot {
 		if ctx.Err() != nil {
+			traceutil.AnnotateError(span, ctx.Err())
 			return nil, ctx.Err()
 		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
+				traceutil.AnnotateError(span, err)
 				return nil, errors.Wrap(err, "could not process epoch")
 			}
 		}
@@ -274,21 +286,25 @@ func ProcessBlock(
 
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
@@ -320,21 +336,25 @@ func processBlockNoVerify(
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = processOperationsNoVerify(ctx, state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
@@ -387,23 +407,23 @@ func ProcessOperations(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestations(state, body)
+	state, err = b.ProcessAttestations(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -464,19 +484,19 @@ func processOperationsNoVerify(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(state, body)
+	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}

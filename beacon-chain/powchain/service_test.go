@@ -198,12 +198,6 @@ func TestStop_OK(t *testing.T) {
 		t.Fatalf("Unable to stop web3 ETH1.0 chain service: %v", err)
 	}
 
-	msg := hook.LastEntry().Message
-	want := "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-
 	// The context should have been canceled.
 	if web3Service.ctx.Err() == nil {
 		t.Error("context was not canceled")

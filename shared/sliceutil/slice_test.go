@@ -1,8 +1,10 @@
-package sliceutil
+package sliceutil_test
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func TestSubsetUint64(t *testing.T) {
@@ -19,7 +21,7 @@ func TestSubsetUint64(t *testing.T) {
 		{[]uint64{1, 2, 3, 4, 5}, []uint64{1, 2, 3, 4}, false},
 	}
 	for _, tt := range testCases {
-		result := SubsetUint64(tt.setA, tt.setB)
+		result := sliceutil.SubsetUint64(tt.setA, tt.setB)
 		if result != tt.out {
 			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
 		}
@@ -42,7 +44,7 @@ func TestIntersectionUint64(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		result := IntersectionUint64(tt.setA, tt.setB)
+		result := sliceutil.IntersectionUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -60,7 +62,7 @@ func TestIsSortedUint64(t *testing.T) {
 		{[]uint64{}, true},
 	}
 	for _, tt := range testCases {
-		result := IsUint64Sorted(tt.setA)
+		result := sliceutil.IsUint64Sorted(tt.setA)
 		if result != tt.out {
 			t.Errorf("got %v, want %v", result, tt.out)
 		}
@@ -83,7 +85,7 @@ func TestIntersectionInt64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{1}},
 	}
 	for _, tt := range testCases {
-		result := IntersectionInt64(tt.setA, tt.setB)
+		result := sliceutil.IntersectionInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -105,7 +107,7 @@ func TestUnionUint64(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		result := UnionUint64(tt.setA, tt.setB)
+		result := sliceutil.UnionUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -116,7 +118,7 @@ func TestUnionUint64(t *testing.T) {
 		{6, 7, 8},
 		{9, 10, 11},
 	}
-	variadicResult := UnionUint64(items...)
+	variadicResult := sliceutil.UnionUint64(items...)
 	want := []uint64{3, 4, 5, 6, 7, 8, 9, 10, 11}
 	if !reflect.DeepEqual(want, variadicResult) {
 		t.Errorf("Received %v, wanted %v", variadicResult, want)
@@ -138,7 +140,7 @@ func TestUnionInt64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{1}},
 	}
 	for _, tt := range testCases {
-		result := UnionInt64(tt.setA, tt.setB)
+		result := sliceutil.UnionInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -148,7 +150,7 @@ func TestUnionInt64(t *testing.T) {
 		{6, 7, 8},
 		{9, 10, 11},
 	}
-	variadicResult := UnionInt64(items...)
+	variadicResult := sliceutil.UnionInt64(items...)
 	want := []int64{3, 4, 5, 6, 7, 8, 9, 10, 11}
 	if !reflect.DeepEqual(want, variadicResult) {
 		t.Errorf("Received %v, wanted %v", variadicResult, want)
@@ -170,7 +172,7 @@ func TestNotUint64(t *testing.T) {
 		{[]uint64{1}, []uint64{1}, []uint64{}},
 	}
 	for _, tt := range testCases {
-		result := NotUint64(tt.setA, tt.setB)
+		result := sliceutil.NotUint64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -192,7 +194,7 @@ func TestNotInt64(t *testing.T) {
 		{[]int64{1}, []int64{1}, []int64{}},
 	}
 	for _, tt := range testCases {
-		result := NotInt64(tt.setA, tt.setB)
+		result := sliceutil.NotInt64(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -211,7 +213,7 @@ func TestIsInUint64(t *testing.T) {
 		{100, []uint64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
-		result := IsInUint64(tt.a, tt.b)
+		result := sliceutil.IsInUint64(tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
@@ -231,7 +233,7 @@ func TestIsInInt64(t *testing.T) {
 		{100, []int64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
-		result := IsInInt64(tt.a, tt.b)
+		result := sliceutil.IsInInt64(tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
@@ -257,7 +259,7 @@ func TestUnionByteSlices(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		result := UnionByteSlices(tt.setA, tt.setB)
+		result := sliceutil.UnionByteSlices(tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -273,7 +275,7 @@ func TestUnionByteSlices(t *testing.T) {
 			{7, 8, 9},
 		},
 	}
-	variadicResult := UnionByteSlices(items...)
+	variadicResult := sliceutil.UnionByteSlices(items...)
 	want := [][]byte{
 		{1, 2, 3},
 		{4, 5, 6},
@@ -345,7 +347,7 @@ func TestIntersectionByteSlices(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		result := IntersectionByteSlices(tt.input...)
+		result := sliceutil.IntersectionByteSlices(tt.input...)
 		if !reflect.DeepEqual(result, tt.result) {
 			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v",
 				tt.input, result, tt.result)
@@ -373,7 +375,7 @@ func TestSplitCommaSeparated(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if result := SplitCommaSeparated(tt.input); !reflect.DeepEqual(result, tt.output) {
+		if result := sliceutil.SplitCommaSeparated(tt.input); !reflect.DeepEqual(result, tt.output) {
 			t.Errorf("SplitCommaSeparated(%v) = %v; wanted %v", tt.input, result, tt.output)
 		}
 	}
@@ -396,7 +398,7 @@ func TestSplitOffset_OK(t *testing.T) {
 		{23, 3, 9, 69},
 	}
 	for _, tt := range testCases {
-		result := SplitOffset(tt.listSize, tt.chunks, tt.index)
+		result := sliceutil.SplitOffset(tt.listSize, tt.chunks, tt.index)
 		if result != tt.offset {
 			t.Errorf("got %d, want %d", result, tt.offset)
 		}
