@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -17,6 +16,9 @@ var (
 	// ErrAttestationDataSlotNilData is returned when a nil attestation data
 	// argument is provided to AttestationDataSlot.
 	ErrAttestationDataSlotNilData = errors.New("nil data provided for AttestationDataSlot")
+	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
+	// bits overlap with each other.
+	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
 )
 
 // AttestationDataSlot returns current slot of AttestationData for given state
@@ -53,30 +55,26 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 }
 
 // AggregateAttestation aggregates attestations a1 and a2 together.
+// Returns error if attestations aggregation bitfields overlap each other,
+// since it's not possible to aggregate them.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
-	baseAtt := proto.Clone(a1).(*ethpb.Attestation)
-	newAtt := proto.Clone(a2).(*ethpb.Attestation)
-	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
-		baseAtt, newAtt = newAtt, baseAtt
+	if a1.AggregationBits.Overlaps(a2.AggregationBits) {
+		return nil, ErrAttestationAggregationBitsOverlap
 	}
 
-	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
-		return baseAtt, nil
-	}
-
-	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
-	newSig, err := bls.SignatureFromBytes(newAtt.Signature)
+	newBits := a1.AggregationBits.Or(a2.AggregationBits)
+	s1, err := bls.SignatureFromBytes(a1.Signature)
 	if err != nil {
 		return nil, err
 	}
-	baseSig, err := bls.SignatureFromBytes(baseAtt.Signature)
+	s2, err := bls.SignatureFromBytes(a2.Signature)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{baseSig, newSig})
-	baseAtt.Signature = aggregatedSig.Marshal()
-	baseAtt.AggregationBits = newBits
+	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{s1, s2})
+	a1.Signature = aggregatedSig.Marshal()
+	a1.AggregationBits = newBits
 
-	return baseAtt, nil
+	return a1, nil
 }
