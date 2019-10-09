@@ -95,15 +95,14 @@ func executeCode(code []byte, preStateRoot [32]byte, shardData []byte) ([32]byte
 	// Instantiates the WebAssembly module.
 	instance, _ := wasm.NewInstance(code)
 	defer instance.Close()
-	sum := instance.Exports["sum"]
+	processBlock := instance.Exports["processBlock"]
 
 	// Calls that exported function with Go standard values. The WebAssembly
 	// types are inferred and values are casted automatically.
-	logrus.Infof("Executing sum function on %d and %d", 492, 3222)
-	result, err := sum(492, 3222)
+	postStateRoot, err := processBlock(preStateRoot, shardData)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	logrus.Infof("Code ran successfully - result = %s", result.String())
-	return [32]byte{1}, nil
+	logrus.Infof("Code ran successfully - result = %s", postStateRoot.String())
+	return postStateRoot.ToVoid().([32]byte), nil
 }

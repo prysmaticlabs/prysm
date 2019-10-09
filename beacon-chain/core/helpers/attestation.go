@@ -60,7 +60,8 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 		baseAtt, newAtt = newAtt, baseAtt
 	}
 
-	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
+	// We should only aggregate attestations if they are properly overlapping bits.
+	if baseAtt.AggregationBits.Overlaps(newAtt.AggregationBits) {
 		return baseAtt, nil
 	}
 
