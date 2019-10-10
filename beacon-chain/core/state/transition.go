@@ -407,23 +407,23 @@ func ProcessOperations(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestations(state, body)
+	state, err = b.ProcessAttestations(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -484,19 +484,19 @@ func processOperationsNoVerify(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(state, body)
+	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}

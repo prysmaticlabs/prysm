@@ -130,6 +130,9 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
 
+	ctx, span := trace.StartSpan(ctx, "operations.AttestationPool")
+	defer span.End()
+
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
 	bState, err := s.beaconDB.HeadState(ctx)
@@ -151,7 +154,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			return nil, err
 		}
 
-		if _, err = blocks.ProcessAttestation(bState, att); err != nil {
+		if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
 			delete(s.attestationPool, root)
 			continue
 		}
