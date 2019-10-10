@@ -31,7 +31,7 @@ type transaction struct {
 func main() {
 	// Reads the WebAssembly module as bytes.
 	// TODO: Load multiple execution environment scripts in initialization.
-	rawWasmCode, _ := wasm.ReadBytes("scripts/simple.wasm")
+	rawWasmCode, _ := wasm.ReadBytes("envs/naive-ee/wasm.wasm")
 	bState := &beaconState{
 		Slot:             0,
 		ExecutionScripts: [][]byte{rawWasmCode},
@@ -93,16 +93,26 @@ func processShardBlock(bState *beaconState, sState *shardState, block *shardBloc
 
 func executeCode(code []byte, preStateRoot [32]byte, shardData []byte) ([32]byte, error) {
 	// Instantiates the WebAssembly module.
-	instance, _ := wasm.NewInstance(code)
-	defer instance.Close()
-	processBlock := instance.Exports["processBlock"]
-
-	// Calls that exported function with Go standard values. The WebAssembly
-	// types are inferred and values are casted automatically.
-	postStateRoot, err := processBlock(preStateRoot, shardData)
+	imports := wasm.NewImports().Namespace("env")
+	instance, err := wasm.NewInstanceWithImports(code, imports)
 	if err != nil {
+		fmt.Println(wasm.GetLastError())
 		return [32]byte{}, err
 	}
-	logrus.Infof("Code ran successfully - result = %s", postStateRoot.String())
-	return postStateRoot.ToVoid().([32]byte), nil
+	defer instance.Close()
+	sum := instance.Exports["sum"]
+	fmt.Println(instance.Exports)
+	res, _ := sum(2, 3)
+	fmt.Println(res)
+	//processBlock := instance.Exports["processBlock"]
+	//
+	//// Calls that exported function with Go standard values. The WebAssembly
+	//// types are inferred and values are casted automatically.
+	//postStateRoot, err := processBlock(preStateRoot, shardData)
+	//if err != nil {
+	//	return [32]byte{}, err
+	//}
+	//logrus.Infof("Code ran successfully - result = %s", postStateRoot.String())
+	//return postStateRoot.ToVoid().([32]byte), nil
+	return [32]byte{}, nil
 }
