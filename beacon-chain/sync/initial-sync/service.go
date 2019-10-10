@@ -1,8 +1,10 @@
 package initialsync
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"go.opencensus.io/trace"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -10,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -41,6 +45,7 @@ type InitialSync struct {
 	p2p          p2p.P2P
 	synced       bool
 	chainStarted bool
+	db           db.Database
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -49,6 +54,7 @@ func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
 		chain: cfg.Chain,
 		p2p:   cfg.P2P,
+		db:    cfg.DB,
 	}
 }
 
@@ -131,4 +137,11 @@ func (s *InitialSync) Syncing() bool {
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {
 	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
+}
+
+func (s *InitialSync) parentExists(ctx context.Context, block *eth.BeaconBlock) bool {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.parentExists")
+	defer span.End()
+	hasBlock := s.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot))
+	return hasBlock
 }

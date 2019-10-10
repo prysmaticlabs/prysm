@@ -38,25 +38,159 @@ func TestRoundRobinSync(t *testing.T) {
 		expectedBlockSlots []uint64
 		peers              []*peerData
 	}{
+		//{
+		//	name:               "Single peer with all blocks",
+		//	currentSlot:        131,
+		//	expectedBlockSlots: makeSequence(1, 131),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         makeSequence(1, 131),
+		//			finalizedEpoch: 1,
+		//			headSlot:       131,
+		//		},
+		//	},
+		//},
+		//{
+		//	name:               "Multiple peers with all blocks",
+		//	currentSlot:        131,
+		//	expectedBlockSlots: makeSequence(1, 131),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         makeSequence(1, 131),
+		//			finalizedEpoch: 1,
+		//			headSlot:       131,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 131),
+		//			finalizedEpoch: 1,
+		//			headSlot:       131,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 131),
+		//			finalizedEpoch: 1,
+		//			headSlot:       131,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 131),
+		//			finalizedEpoch: 1,
+		//			headSlot:       131,
+		//		},
+		//	},
+		//},
+		//{
+		//	name:               "Multiple peers with failures",
+		//	currentSlot:        320, // 5 epochs
+		//	expectedBlockSlots: makeSequence(1, 320),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//			failureSlots:   makeSequence(1, 64), // first epoch
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//		},
+		//	},
+		//},
+		//{
+		//	name:               "Multiple peers with many skipped slots",
+		//	currentSlot:        640, // 10 epochs
+		//	expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+		//			finalizedEpoch: 9,
+		//			headSlot:       640,
+		//		},
+		//		{
+		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+		//			finalizedEpoch: 9,
+		//			headSlot:       640,
+		//		},
+		//		{
+		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+		//			finalizedEpoch: 9,
+		//			headSlot:       640,
+		//		},
+		//	},
+		//},
+		//{
+		//	name:               "Multiple peers with multiple failures",
+		//	currentSlot:        320, // 5 epochs
+		//	expectedBlockSlots: makeSequence(1, 320),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//			failureSlots:   makeSequence(1, 320),
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//			failureSlots:   makeSequence(1, 320),
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//			failureSlots:   makeSequence(1, 320),
+		//		},
+		//	},
+		//},
+		//{
+		//	name:               "Multiple peers with different finalized epoch",
+		//	currentSlot:        320, // 5 epochs
+		//	expectedBlockSlots: makeSequence(1, 320),
+		//	peers: []*peerData{
+		//		{
+		//			blocks:         makeSequence(1, 320),
+		//			finalizedEpoch: 4,
+		//			headSlot:       320,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 256),
+		//			finalizedEpoch: 3,
+		//			headSlot:       256,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 256),
+		//			finalizedEpoch: 3,
+		//			headSlot:       256,
+		//		},
+		//		{
+		//			blocks:         makeSequence(1, 192),
+		//			finalizedEpoch: 2,
+		//			headSlot:       192,
+		//		},
+		//	},
+		//},
 		{
-			name:               "Single peer with all blocks",
+			name:               "Multiple peers with missing block",
 			currentSlot:        131,
 			expectedBlockSlots: makeSequence(1, 131),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
-				},
-			},
-		},
-		{
-			name:               "Multiple peers with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
-			peers: []*peerData{
-				{
-					blocks:         makeSequence(1, 131),
+					blocks:         append(makeSequence(1, 60), makeSequence(62, 131)...),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
@@ -74,113 +208,6 @@ func TestRoundRobinSync(t *testing.T) {
 					blocks:         makeSequence(1, 131),
 					finalizedEpoch: 1,
 					headSlot:       131,
-				},
-			},
-		},
-		{
-			name:               "Multiple peers with failures",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
-			peers: []*peerData{
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-					failureSlots:   makeSequence(1, 64), // first epoch
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-				},
-			},
-		},
-		{
-			name:               "Multiple peers with many skipped slots",
-			currentSlot:        640, // 10 epochs
-			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
-			peers: []*peerData{
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 9,
-					headSlot:       640,
-				},
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 9,
-					headSlot:       640,
-				},
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 9,
-					headSlot:       640,
-				},
-			},
-		},
-		{
-			name:               "Multiple peers with multiple failures",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
-			peers: []*peerData{
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-					failureSlots:   makeSequence(1, 320),
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-					failureSlots:   makeSequence(1, 320),
-				},
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-					failureSlots:   makeSequence(1, 320),
-				},
-			},
-		},
-		{
-			name:               "Multiple peers with different finalized epoch",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
-			peers: []*peerData{
-				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-				},
-				{
-					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
-					headSlot:       256,
-				},
-				{
-					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
-					headSlot:       256,
-				},
-				{
-					blocks:         makeSequence(1, 192),
-					finalizedEpoch: 2,
-					headSlot:       192,
 				},
 			},
 		},
@@ -301,18 +328,6 @@ func TestMakeGenesisTime(t *testing.T) {
 	if slotsSinceGenesis(gt) != currentSlot {
 		t.Fatalf("Wanted %d, got %d", currentSlot, slotsSinceGenesis(gt))
 	}
-}
-
-// helper function for sequences of block slots
-func makeSequence(start, end uint64) []uint64 {
-	if end < start {
-		panic("cannot make sequence where end is before start")
-	}
-	seq := make([]uint64, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		seq = append(seq, i)
-	}
-	return seq
 }
 
 // sanity test on helper function

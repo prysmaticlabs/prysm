@@ -123,6 +123,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 							return
 						}
 					}
+
 					blocks = append(blocks, resp...)
 				}(i, pid)
 			}
@@ -161,15 +162,29 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Slot < blocks[j].Slot
 		})
 
-		for _, blk := range blocks {
+		for i := 0; i < len(blocks); i++ {
+			blk := blocks[i]
 			logSyncStatus(genesis, blk, peers, counter)
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
-					return err
+					log.WithError(err).Debug("Missing slots, trying to retrieve from other peers")
+					blocks, err = s.retrieveMissingSlots(ctx, peers, blk.Slot, blocks, s.chain.HeadSlot()+1, root)
+					if err != nil {
+						return err
+					}
+					i = 0
+					continue
+
 				}
 			} else {
 				if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-					return err
+					log.WithError(err).Debug("Missing slots, trying to retrieve from other peers")
+					blocks, err = s.retrieveMissingSlots(ctx, peers, blk.Slot, blocks, s.chain.HeadSlot()+1, root)
+					if err != nil {
+						return err
+					}
+					i = 0
+					continue
 				}
 			}
 		}
@@ -225,6 +240,83 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	}
 
 	return nil
+}
+func (s *InitialSync) retrieveMissingSlots(ctx context.Context, peers []peer.ID, failedSlot uint64, blocks []*eth.BeaconBlock, firstSlot uint64, root []byte) ([]*eth.BeaconBlock, error) {
+	var err error
+	initialBlockNumber := len(blocks)
+	for _, peer := range peers {
+		missingSlots := s.missingSlotsFromBlocks(blocks, firstSlot, failedSlot)
+		if len(missingSlots) == 0 {
+			continue
+		}
+		missingBlocks, err := s.requestMissingPreviousSlots(ctx, peer, missingSlots, root)
+		if err != nil {
+			continue
+		}
+		blocks = append(blocks, missingBlocks...)
+		// Since the block responses were appended to the list, we must sort them in order to
+		// process sequentially. This method doesn't make much wall time compared to block
+		// processing.
+		sort.Slice(blocks, func(i, j int) bool {
+			return blocks[i].Slot < blocks[j].Slot
+		})
+	}
+	if initialBlockNumber == len(blocks) {
+		return blocks, errors.Wrap(err, "couldn't retrieve missing blocks from available peers. please try again later")
+	}
+	return blocks, nil
+}
+
+func (s *InitialSync) requestMissingPreviousSlots(ctx context.Context, id peer.ID, slots []uint64, root []byte) ([]*eth.BeaconBlock, error) {
+	var blocks []*eth.BeaconBlock
+	for _, slot := range slots {
+		req := &p2ppb.BeaconBlocksByRangeRequest{
+			HeadBlockRoot: root,
+			StartSlot:     slot,
+			Count:         1,
+			Step:          1,
+		}
+		bl, err := s.requestBlocks(ctx, req, id)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, bl...)
+	}
+
+	return blocks, nil
+
+}
+
+// helper function for sequences of block slots
+func makeSequence(start, end uint64) []uint64 {
+	if end < start {
+		panic("cannot make sequence where end is before start")
+	}
+	seq := make([]uint64, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		seq = append(seq, i)
+	}
+	return seq
+}
+
+// helper function that creates a list of missing slots provided by list of blocks.
+// blocks must be sorted
+func (s *InitialSync) missingSlotsFromBlocks(blocks []*eth.BeaconBlock, firstSlot uint64, failedSlot uint64) []uint64 {
+	var lastSlot uint64
+	var missingSlots []uint64
+	if blocks[0].Slot > firstSlot {
+		missingSlots = append(missingSlots, makeSequence(firstSlot, blocks[0].Slot-1)...)
+	}
+	for _, blk := range blocks {
+		if blk.Slot > failedSlot {
+			break
+		}
+		if lastSlot+1 < blk.Slot {
+			missingSlots = append(missingSlots, makeSequence(lastSlot+1, blk.Slot)...)
+		}
+		lastSlot = blk.Slot
+	}
+	return missingSlots
 }
 
 // requestBlocks by range to a specific peer.
