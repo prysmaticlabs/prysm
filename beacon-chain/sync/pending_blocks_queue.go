@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/exp/rand"
 )
 
 var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
@@ -65,8 +66,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 				"parentRoot":  hex.EncodeToString(b.ParentRoot),
 			}).Info("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
-			// TODO(3450): Use round robin sync API to rotate peers for sending recent block request
-			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[0]); err != nil {
+			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[rand.Int()%len(pids)]); err != nil {
 				traceutil.AnnotateError(span, err)
 				log.Errorf("Could not send recent block request: %v", err)
 			}
