@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"time"
 
-	bls2 "github.com/herumi/bls-go-binary/bls"
+	"github.com/herumi/bls-go-binary/bls"
 	"github.com/karlseguin/ccache"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -23,15 +23,15 @@ const CurveOrder = "524358751751261904794477405081859658376905525005276378226036
 var curveOrder, _ = new(big.Int).SetString(CurveOrder, 10)
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey() *bls2.SecretKey {
-	secKey := &bls2.SecretKey{}
+func RandKey() *bls.SecretKey {
+	secKey := &bls.SecretKey{}
 	secKey.SetByCSPRNG()
 	return secKey
 }
 
 // SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
-func SecretKeyFromBytes(priv []byte) (*bls2.SecretKey, error) {
-	secKey := &bls2.SecretKey{}
+func SecretKeyFromBytes(priv []byte) (*bls.SecretKey, error) {
+	secKey := &bls.SecretKey{}
 	if err := secKey.Deserialize(priv); err != nil {
 		return nil, err
 	}
@@ -39,15 +39,15 @@ func SecretKeyFromBytes(priv []byte) (*bls2.SecretKey, error) {
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
-func PublicKeyFromBytes(pub []byte) (*bls2.PublicKey, error) {
+func PublicKeyFromBytes(pub []byte) (*bls.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
-		return &bls2.PublicKey{}, nil
+		return &bls.PublicKey{}, nil
 	}
 	cv := pubkeyCache.Get(string(pub))
 	if cv != nil && cv.Value() != nil && featureconfig.Get().EnableBLSPubkeyCache {
-		return cv.Value().(*bls2.PublicKey), nil
+		return cv.Value().(*bls.PublicKey), nil
 	}
-	pubkey := &bls2.PublicKey{}
+	pubkey := &bls.PublicKey{}
 	if err := pubkey.Deserialize(pub); err != nil {
 		return pubkey, nil
 	}
@@ -56,11 +56,11 @@ func PublicKeyFromBytes(pub []byte) (*bls2.PublicKey, error) {
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
-func SignatureFromBytes(sig []byte) (*bls2.Sign, error) {
+func SignatureFromBytes(sig []byte) (*bls.Sign, error) {
 	if featureconfig.Get().SkipBLSVerify {
-		return &bls2.Sign{}, nil
+		return &bls.Sign{}, nil
 	}
-	s := &bls2.Sign{}
+	s := &bls.Sign{}
 	if err := s.Deserialize(sig); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func SignatureFromBytes(sig []byte) (*bls2.Sign, error) {
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
-func VerifyWithDomain(signature *bls2.Sign, msg [32]byte, pub *bls2.PublicKey, domain uint64) bool {
+func VerifyWithDomain(signature *bls.Sign, msg [32]byte, pub *bls.PublicKey, domain uint64) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -82,7 +82,7 @@ func VerifyWithDomain(signature *bls2.Sign, msg [32]byte, pub *bls2.PublicKey, d
 // VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func VerifyAggregate(signature *bls2.Sign, pubKeys []*bls2.PublicKey, msg [][32]byte, domain uint64) bool {
+func VerifyAggregate(signature *bls.Sign, pubKeys []*bls.PublicKey, msg [][32]byte, domain uint64) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -96,7 +96,7 @@ func VerifyAggregate(signature *bls2.Sign, pubKeys []*bls2.PublicKey, msg [][32]
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
 	messageHashes := make([][]byte, len(msg))
-	deRefPubkeys := make([]bls2.PublicKey, len(pubKeys))
+	deRefPubkeys := make([]bls.PublicKey, len(pubKeys))
 
 	for i, singleMsg := range msg {
 		messageHashes[i] = HashWithDomain(singleMsg, b)
@@ -109,7 +109,7 @@ func VerifyAggregate(signature *bls2.Sign, pubKeys []*bls2.PublicKey, msg [][32]
 // VerifyAggregateCommon verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func VerifyAggregateCommon(signature *bls2.Sign, pubKeys []*bls2.PublicKey, msg []byte, domain uint64) bool {
+func VerifyAggregateCommon(signature *bls.Sign, pubKeys []*bls.PublicKey, msg []byte, domain uint64) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -125,7 +125,7 @@ func VerifyAggregateCommon(signature *bls2.Sign, pubKeys []*bls2.PublicKey, msg 
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
-func AggregateSignatures(sigs []*bls2.Sign) *bls2.Sign {
+func AggregateSignatures(sigs []*bls.Sign) *bls.Sign {
 	if featureconfig.Get().SkipBLSVerify {
 		return sigs[0]
 	}
@@ -136,7 +136,7 @@ func AggregateSignatures(sigs []*bls2.Sign) *bls2.Sign {
 	return firstSig
 }
 
-func AggregatePubkeys(pubkeys []*bls2.PublicKey) *bls2.PublicKey {
+func AggregatePubkeys(pubkeys []*bls.PublicKey) *bls.PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
 		return pubkeys[0]
 	}
