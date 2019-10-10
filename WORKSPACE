@@ -1252,3 +1252,10 @@ go_repository(
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
     version = "v1.0.0",
 )
+
+go_repository(
+    name = "com_github_herumi_bls_go_binary",
+    importpath = "github.com/herumi/bls-go-binary",
+    sum = "h1:lwa+R3jyNKVPeCclJtFCqndf8WB/IkjcEdW+kHY+C8g=",
+    version = "v0.0.0-20191010073155-28d7e9d31640",
+)
