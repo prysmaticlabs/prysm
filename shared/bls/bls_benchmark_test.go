@@ -8,10 +8,8 @@ import (
 )
 
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		b.Fatal(err)
-	}
+	sk := bls.RandKey(rand.Reader)
+
 	msg := []byte("Some msg")
 	domain := uint64(42)
 	sig := sk.Sign(msg, domain)
@@ -26,18 +24,19 @@ func BenchmarkSignature_Verify(b *testing.B) {
 
 func BenchmarkSignature_VerifyAggregate(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
-	msg := []byte("signed message")
+	msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd'}
 	domain := uint64(0)
 
 	var aggregated *bls.Signature
 	var pks []*bls.PublicKey
 	for i := 0; i < sigN; i++ {
-		sk, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			b.Fatal(err)
+		sk := bls.RandKey(rand.Reader)
+		sig := sk.Sign(msg[:], domain)
+		if aggregated == nil {
+			aggregated = bls.AggregateSignatures([]*bls.Signature{sig})
+		} else {
+			aggregated = bls.AggregateSignatures([]*bls.Signature{aggregated, sig})
 		}
-		sig := sk.Sign(msg, domain)
-		aggregated = bls.AggregateSignatures([]*bls.Signature{aggregated, sig})
 		pks = append(pks, sk.PublicKey())
 	}
 
