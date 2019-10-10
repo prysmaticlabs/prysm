@@ -184,33 +184,33 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-		//{
-		//	name:               "Multiple peers with missing block",
-		//	currentSlot:        131,
-		//	expectedBlockSlots: makeSequence(1, 131),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         append(makeSequence(1, 60), makeSequence(62, 131)...),
-		//			finalizedEpoch: 1,
-		//			headSlot:       131,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 131),
-		//			finalizedEpoch: 1,
-		//			headSlot:       131,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 131),
-		//			finalizedEpoch: 1,
-		//			headSlot:       131,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 131),
-		//			finalizedEpoch: 1,
-		//			headSlot:       131,
-		//		},
-		//	},
-		//},
+		{
+			name:               "Multiple peers with missing block",
+			currentSlot:        131,
+			expectedBlockSlots: makeSequence(1, 131),
+			peers: []*peerData{
+				{
+					blocks:         append(makeSequence(1, 60), makeSequence(62, 131)...),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 1,
+					headSlot:       131,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
