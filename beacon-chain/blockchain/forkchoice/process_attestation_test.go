@@ -249,24 +249,35 @@ func TestStore_AggregateAttestation(t *testing.T) {
 }
 
 func TestStore_ReturnAggregatedAttestation(t *testing.T) {
+	_, _, privKeys := testutil.SetupInitialDeposits(t, 100)
+	f := &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	sig := privKeys[0].Sign([]byte{}, domain)
+
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}, Signature: sig.Marshal()}
 	err := store.db.SaveAttestation(ctx, a1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}, Signature: sig.Marshal()}
 	saved, err := store.aggregatedAttestation(ctx, a2)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual(a2.AggregationBits, saved.AggregationBits) {
+		t.Error("did not retrieve saved attestation")
+	}
+	if !reflect.DeepEqual(a2.Data, saved.Data) {
 		t.Error("did not retrieve saved attestation")
 	}
 }
