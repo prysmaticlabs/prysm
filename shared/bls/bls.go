@@ -223,7 +223,7 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 	if len(sigs) == 0 {
 		return nil
 	}
-	marshalled := sigs[0].Marshal()
+	marshalled := sigs[0].s.Serialize()
 	signature := &bls12.Sign{}
 	//#nosec G104
 	signature.Deserialize(marshalled)

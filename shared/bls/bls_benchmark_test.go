@@ -4,9 +4,35 @@ import (
 	"crypto/rand"
 	"testing"
 
+	bls2 "github.com/herumi/bls-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+func BenchmarkPairing(b *testing.B) {
+	bls2.Init(bls2.BLS12_381)
+	newGt := &bls2.GT{}
+	newG1 := &bls2.G1{}
+	newG2 := &bls2.G2{}
+
+	newGt.SetInt64(10)
+	hash := hashutil.Hash([]byte{})
+	err := newG1.HashAndMapTo(hash[:])
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = newG2.HashAndMapTo(hash[:])
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		bls2.Pairing(newGt, newG1, newG2)
+	}
+
+}
 func BenchmarkSignature_Verify(b *testing.B) {
 	sk := bls.RandKey(rand.Reader)
 
