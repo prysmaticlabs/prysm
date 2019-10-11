@@ -9,10 +9,12 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_OnAttestation(t *testing.T) {
@@ -202,22 +204,32 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 }
 
 func TestStore_AggregateAttestation(t *testing.T) {
+	_, _, privKeys := testutil.SetupInitialDeposits(t, 100)
+	f := &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	sig := privKeys[0].Sign([]byte{}, domain)
+
 	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}
 
-	bits := bitfield.NewBitlist(8)
-	bits.SetBitAt(0, true)
-	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	b1 := bitfield.NewBitlist(8)
+	b1.SetBitAt(0, true)
+	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: b1, Signature: sig.Marshal()}
 
 	if err := store.aggregateAttestation(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 	r, _ := ssz.HashTreeRoot(a.Data)
-	if !bytes.Equal(store.attsQueue[r].AggregationBits, bits) {
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, b1) {
 		t.Error("Received incorrect aggregation bitfield")
 	}
 
-	bits.SetBitAt(1, true)
-	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	b2 := bitfield.NewBitlist(8)
+	b2.SetBitAt(1, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: b2, Signature: sig.Marshal()}
 	if err := store.aggregateAttestation(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
@@ -225,8 +237,9 @@ func TestStore_AggregateAttestation(t *testing.T) {
 		t.Error("Received incorrect aggregation bitfield")
 	}
 
-	bits.SetBitAt(7, true)
-	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	b3 := bitfield.NewBitlist(8)
+	b3.SetBitAt(7, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: b3, Signature: sig.Marshal()}
 	if err := store.aggregateAttestation(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
