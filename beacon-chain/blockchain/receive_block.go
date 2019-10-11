@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -63,7 +64,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 
 	// Apply state transition on the new block.
 	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
-		return errors.Wrap(err, "could not process block from fork choice service")
+		err := errors.Wrap(err, "could not process block from fork choice service")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 	root, err := ssz.SigningRoot(block)
 	if err != nil {
@@ -118,7 +121,9 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 
 	// Apply state transition on the incoming newly received block.
 	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
-		return errors.Wrap(err, "could not process block from fork choice service")
+		err := errors.Wrap(err, "could not process block from fork choice service")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 	root, err := ssz.SigningRoot(block)
 	if err != nil {
@@ -166,7 +171,9 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 
 	if !bytes.Equal(root[:], s.HeadRoot()) {
 		if err := s.saveHead(ctx, block, root); err != nil {
-			return errors.Wrap(err, "could not save head")
+			err := errors.Wrap(err, "could not save head")
+			traceutil.AnnotateError(span, err)
+			return err
 		}
 	}
 
