@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -394,8 +395,9 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att2); err != nil {
 		t.Error(err)
 	}
-	if err := service.HandleAttestation(context.Background(), att1); err != nil {
-		t.Error(err)
+	wanted := "overlapping aggregation bits"
+	if err := service.HandleAttestation(context.Background(), att1); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
 	}
 
 	attDataHash, err := ssz.HashTreeRoot(att2.Data)
@@ -414,8 +416,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		t.Error("Expected aggregated signatures to be equal")
 	}
 
-	if err := service.HandleAttestation(context.Background(), att2); err != nil {
-		t.Error(err)
+	if err := service.HandleAttestation(context.Background(), att2); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
 	}
 	dbAtt = service.attestationPool[attDataHash]
 
@@ -428,8 +430,8 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		t.Error("Expected aggregated signatures to be equal")
 	}
 
-	if err := service.HandleAttestation(context.Background(), att3); err != nil {
-		t.Error(err)
+	if err := service.HandleAttestation(context.Background(), att3); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
 	}
 	dbAtt = service.attestationPool[attDataHash]
 
