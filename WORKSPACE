@@ -1099,7 +1099,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "a6479422943a734f4a0ba2729095fb20c6a233b2",
+    commit = "86fe9e5ca27c0e04bca469c796517bb911b93425",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1251,4 +1251,11 @@ go_repository(
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
     version = "v1.0.0",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    importpath = "golang.org/x/exp",
+    sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
+    version = "v0.0.0-20191002040644-a1355ae1e2c3",
 )
