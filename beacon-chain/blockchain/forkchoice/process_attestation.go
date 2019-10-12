@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -204,6 +205,9 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 
 // aggregateAttestation aggregates the attestations in the pending queue.
 func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.aggregateAttestation")
+	defer span.End()
+
 	s.attsQueueLock.Lock()
 	defer s.attsQueueLock.Unlock()
 	root, err := ssz.HashTreeRoot(att.Data)
@@ -214,6 +218,7 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	if a, ok := s.attsQueue[root]; ok {
 		a, err := helpers.AggregateAttestation(a, att)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return err
 		}
 		s.attsQueue[root] = a
