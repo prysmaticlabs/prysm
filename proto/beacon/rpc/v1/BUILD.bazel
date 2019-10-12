@@ -59,9 +59,3 @@ proto_library(
         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
     ],
 )
-
-protoc_gen_swagger(
-    name = "swagger",
-    proto = ":v1_proto",
-    visibility = ["//visibility:public"],
-)
