@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -23,9 +25,9 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RolesAt(slot uint64) map[string]pb.ValidatorRole // validatorIndex -> role
-	AttestToBlockHead(ctx context.Context, slot uint64, idx string)
-	ProposeBlock(ctx context.Context, slot uint64, idx string)
+	RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole // validator pubKey -> role
+	AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte)
+	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -81,14 +83,9 @@ func run(ctx context.Context, v Validator) {
 			var wg sync.WaitGroup
 			for id, role := range v.RolesAt(slot) {
 				wg.Add(1)
-				go func(role pb.ValidatorRole, id string) {
-					defer wg.Done()
-					tpk := id
-					if len(id) > 16 {
-						tpk = id[:16]
-					}
+				go func(role pb.ValidatorRole, id [48]byte) {
 					log := log.WithFields(logrus.Fields{
-						"pubKey": "0x" + tpk,
+						"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
 						"role":   role,
 					})
 					switch role {
