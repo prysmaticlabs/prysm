@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "epoch_processing.go",
         "participation.go",
+        "precompute.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch",
     visibility = ["//beacon-chain:__subpackages__"],
