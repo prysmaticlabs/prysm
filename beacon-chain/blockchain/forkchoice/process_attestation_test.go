@@ -86,7 +86,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not process attestation from the future epoch",
+			wantErrString: "could not process slot from the future",
 		},
 	}
 

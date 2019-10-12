@@ -73,7 +73,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
-	featureconfig.ConfigureBeaconFeatures(ctx)
+	featureconfig.ConfigureBeaconChain(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -84,7 +84,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		if featureconfig.FeatureConfig().MinimalConfig {
+		if featureconfig.Get().MinimalConfig {
 			log.WithField(
 				"config", "minimal-spec",
 			).Info("Using custom chain parameters")
@@ -477,6 +477,10 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 		panic(err)
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/heads", Handler: c.HeadsHandler})
+
+	if featureconfig.Get().EnableBackupWebhook {
+		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
+	}
 
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),

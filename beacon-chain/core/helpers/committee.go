@@ -33,7 +33,7 @@ var committeeCache = cache.NewCommitteeCache()
 //    ))
 //    return committees_per_slot * SLOTS_PER_EPOCH
 func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	if featureconfig.FeatureConfig().EnableNewCache {
+	if featureconfig.Get().EnableNewCache {
 		count, exists, err := committeeCache.CommitteeCount(epoch)
 		if err != nil {
 			return 0, errors.Wrap(err, "could not interface with committee cache")
@@ -80,7 +80,7 @@ func CommitteeCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //        count=get_committee_count(state, epoch),
 //    )
 func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64, error) {
-	if featureconfig.FeatureConfig().EnableNewCache {
+	if featureconfig.Get().EnableNewCache {
 		indices, err := committeeCache.ShuffledIndices(epoch, shard)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
@@ -338,7 +338,7 @@ func shardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
 //        shard = Shard((shard + SHARD_COUNT - get_shard_delta(state, check_epoch)) % SHARD_COUNT)
 //    return shard
 func StartShard(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	if featureconfig.FeatureConfig().EnableNewCache {
+	if featureconfig.Get().EnableNewCache {
 		startShard, exists, err := committeeCache.StartShard(epoch)
 		if err != nil {
 			return 0, errors.Wrap(err, "could not interface with committee cache")

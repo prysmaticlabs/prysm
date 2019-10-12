@@ -157,6 +157,8 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
+			"eth1Block":       depositLog.BlockHash.Hex(),
+			"eth1Tx":          depositLog.TxHash.Hex(),
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
@@ -210,7 +212,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) setGenesisTime(timeStamp uint64) {
-	if featureconfig.FeatureConfig().NoGenesisDelay {
+	if featureconfig.Get().NoGenesisDelay {
 		s.eth2GenesisTime = uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
 	} else {
 		timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay

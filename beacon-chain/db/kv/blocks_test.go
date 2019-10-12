@@ -12,6 +12,43 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
+func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
+	BlockCacheSize = 1
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	slot := uint64(20)
+	ctx := context.Background()
+	// First we save a previous block to ensure the cache max size is reached.
+	prevBlock := &ethpb.BeaconBlock{
+		Slot:       slot - 1,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	if err := db.SaveBlock(ctx, prevBlock); err != nil {
+		t.Fatal(err)
+	}
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	// Even with a full cache, saving new blocks should not cause
+	// duplicated blocks in the DB.
+	for i := 0; i < 100; i++ {
+		if err := db.SaveBlock(ctx, block); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+	retrieved, err := db.Blocks(ctx, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 1 {
+		t.Errorf("Expected 1, received %d: %v", len(retrieved), retrieved)
+	}
+	// We reset the block cache size.
+	BlockCacheSize = 256
+}
+
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
