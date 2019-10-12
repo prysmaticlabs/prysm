@@ -65,3 +65,29 @@ type BalanceInfo struct {
 	// correctly for head block during prev epoch.
 	PrevEpochHeadAttesters uint64
 }
+
+func NewPrecompute(state *pb.BeaconState) ([]*ValidatorInfo, *BalanceInfo) {
+	vInfo := make([]*ValidatorInfo, len(state.Validators))
+	bInfo := &BalanceInfo{}
+
+	for i, v := range state.Validators {
+		currentEpoch := helpers.CurrentEpoch(state)
+		prevEpoch := helpers.PrevEpoch(state)
+		withdrawable := currentEpoch > v.WithdrawableEpoch
+		info := &ValidatorInfo{
+			IsSlashed:                    v.Slashed,
+			IsWithdrawableCurrentEpoch:   withdrawable,
+			CurrentEpochEffectiveBalance: v.EffectiveBalance,
+		}
+		if helpers.IsActiveValidator(v, currentEpoch) {
+			info.IsActiveCurrentEpoch = true
+			bInfo.CurrentEpoch += v.EffectiveBalance
+		}
+		if helpers.IsActiveValidator(v, prevEpoch) {
+			info.IsActivePrevEpoch = true
+			bInfo.PrevEpoch += v.EffectiveBalance
+		}
+		vInfo[i] = info
+	}
+	return vInfo, bInfo
+}
