@@ -66,6 +66,7 @@ type BalanceInfo struct {
 	PrevEpochHeadAttesters uint64
 }
 
+// NewPrecompute returns new instances of ValidatorInfo and BalanceInfo.
 func NewPrecompute(state *pb.BeaconState) ([]*ValidatorInfo, *BalanceInfo) {
 	vInfo := make([]*ValidatorInfo, len(state.Validators))
 	bInfo := &BalanceInfo{}
