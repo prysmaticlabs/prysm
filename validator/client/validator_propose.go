@@ -19,7 +19,7 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
 	if slot == 0 {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
@@ -27,9 +27,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	tpk := v.keys[pk].PublicKey.Marshal()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", tpk)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
@@ -39,7 +38,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	randaoReveal := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
+	randaoReveal := v.keys[pubKey].SecretKey.Sign(buf, domain.SignatureDomain)
 
 	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
@@ -60,7 +59,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
-	signature := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain)
+	signature := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
 	b.Signature = signature.Marshal()
 
 	// Broadcast network the signed block via beacon chain node.
