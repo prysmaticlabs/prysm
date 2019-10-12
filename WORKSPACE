@@ -172,6 +172,13 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
 
+http_archive(
+    name = "herumi_bls",
+    sha256 = "04bb336c901e4503651b36fac6eb74b60dde992bde61f90dfdf257d274d2a5c7",
+    strip_prefix = "bls-go-binary-b9e65a4057e8629ed0570155bd9e748d6c21a5cf",
+    url = "https://github.com/nisdas/bls-go-binary/archive/b9e65a4057e8629ed0570155bd9e748d6c21a5cf.zip",
+)
+
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
 
 buildifier_dependencies()
@@ -1251,12 +1258,4 @@ go_repository(
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
     version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_herumi_bls_go_binary",
-    commit = "99ea20101cc8345bd0f93672019f3dd864350a0f",
-    importpath = "github.com/herumi/bls-go-binary",
-    remote = "https://github.com/nisdas/bls-go-binary",
-    vcs = "git",
 )
