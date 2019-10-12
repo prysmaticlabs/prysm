@@ -1255,7 +1255,8 @@ go_repository(
 
 go_repository(
     name = "com_github_herumi_bls_go_binary",
+    commit = "99ea20101cc8345bd0f93672019f3dd864350a0f",
     importpath = "github.com/herumi/bls-go-binary",
-    sum = "h1:lwa+R3jyNKVPeCclJtFCqndf8WB/IkjcEdW+kHY+C8g=",
-    version = "v0.0.0-20191010073155-28d7e9d31640",
+    remote = "https://github.com/nisdas/bls-go-binary",
+    vcs = "git",
 )
