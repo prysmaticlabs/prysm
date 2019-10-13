@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"bytes"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -53,12 +55,13 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 }
 
 // AggregateAttestations such that the minimal number of attestations are returned.
+// Note: this is currently a naive implementation to the order of O(n^2).
 func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) <= 1 {
 		return atts, nil
 	}
 
-	// Naive O(n^2) algorithm.
+	// Naive aggregation. O(n^2) time.
 	for i, a := range atts {
 		if i >= len(atts) {
 			break
@@ -75,6 +78,17 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 				atts = append(atts[:j], atts[j+1:]...)
 				j--
 				atts[i] = a
+			}
+		}
+	}
+
+	// Naive deduplication of identical aggregations. O(n^2) time.
+	for i, att := range atts {
+		for j := i+1; j < len(atts); j++ {
+			if bytes.Equal(att.AggregationBits.Bytes(), atts[j].AggregationBits.Bytes()) {
+				// Delete duplicated aggregated attestation.
+				atts = append(atts[:j], atts[j+1:]...)
+				j--
 			}
 		}
 	}
