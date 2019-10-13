@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -208,12 +207,10 @@ func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
 	return item.Committee, nil
 }
 
-func startEndIndices(c *Committee, wantedShard uint64) (uint64, uint64) {
-	shardCount := params.BeaconConfig().ShardCount
-	currentShard := (wantedShard + shardCount - c.StartShard) % shardCount
+func startEndIndices(c *Committee, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.Committee))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard+1)
+	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 
 	return start, end
 }

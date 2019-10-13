@@ -5,12 +5,11 @@ package eth
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -96,10 +95,11 @@ func (m *Attestation) GetSignature() []byte {
 }
 
 type AttestationData struct {
-	BeaconBlockRoot      []byte      `protobuf:"bytes,1,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
-	Source               *Checkpoint `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Target               *Checkpoint `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
-	Crosslink            *Crosslink  `protobuf:"bytes,4,opt,name=crosslink,proto3" json:"crosslink,omitempty"`
+	Slot                 uint64      `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	BeaconBlockRoot      []byte      `protobuf:"bytes,2,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
+	Source               *Checkpoint `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	Target               *Checkpoint `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
+	Index                uint64      `protobuf:"varint,5,opt,name=index,proto3" json:"index,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -138,6 +138,13 @@ func (m *AttestationData) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AttestationData proto.InternalMessageInfo
 
+func (m *AttestationData) GetSlot() uint64 {
+	if m != nil {
+		return m.Slot
+	}
+	return 0
+}
+
 func (m *AttestationData) GetBeaconBlockRoot() []byte {
 	if m != nil {
 		return m.BeaconBlockRoot
@@ -159,11 +166,11 @@ func (m *AttestationData) GetTarget() *Checkpoint {
 	return nil
 }
 
-func (m *AttestationData) GetCrosslink() *Crosslink {
+func (m *AttestationData) GetIndex() uint64 {
 	if m != nil {
-		return m.Crosslink
+		return m.Index
 	}
-	return nil
+	return 0
 }
 
 type Checkpoint struct {
@@ -221,90 +228,10 @@ func (m *Checkpoint) GetRoot() []byte {
 	return nil
 }
 
-type Crosslink struct {
-	Shard                uint64   `protobuf:"varint,1,opt,name=shard,proto3" json:"shard,omitempty"`
-	ParentRoot           []byte   `protobuf:"bytes,2,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
-	StartEpoch           uint64   `protobuf:"varint,3,opt,name=start_epoch,json=startEpoch,proto3" json:"start_epoch,omitempty"`
-	EndEpoch             uint64   `protobuf:"varint,4,opt,name=end_epoch,json=endEpoch,proto3" json:"end_epoch,omitempty"`
-	DataRoot             []byte   `protobuf:"bytes,5,opt,name=data_root,json=dataRoot,proto3" json:"data_root,omitempty" ssz-size:"32"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *Crosslink) Reset()         { *m = Crosslink{} }
-func (m *Crosslink) String() string { return proto.CompactTextString(m) }
-func (*Crosslink) ProtoMessage()    {}
-func (*Crosslink) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f8f395ba51cd84e0, []int{3}
-}
-func (m *Crosslink) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Crosslink) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Crosslink.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Crosslink) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Crosslink.Merge(m, src)
-}
-func (m *Crosslink) XXX_Size() int {
-	return m.Size()
-}
-func (m *Crosslink) XXX_DiscardUnknown() {
-	xxx_messageInfo_Crosslink.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Crosslink proto.InternalMessageInfo
-
-func (m *Crosslink) GetShard() uint64 {
-	if m != nil {
-		return m.Shard
-	}
-	return 0
-}
-
-func (m *Crosslink) GetParentRoot() []byte {
-	if m != nil {
-		return m.ParentRoot
-	}
-	return nil
-}
-
-func (m *Crosslink) GetStartEpoch() uint64 {
-	if m != nil {
-		return m.StartEpoch
-	}
-	return 0
-}
-
-func (m *Crosslink) GetEndEpoch() uint64 {
-	if m != nil {
-		return m.EndEpoch
-	}
-	return 0
-}
-
-func (m *Crosslink) GetDataRoot() []byte {
-	if m != nil {
-		return m.DataRoot
-	}
-	return nil
-}
-
 func init() {
 	proto.RegisterType((*Attestation)(nil), "ethereum.eth.v1alpha1.Attestation")
 	proto.RegisterType((*AttestationData)(nil), "ethereum.eth.v1alpha1.AttestationData")
 	proto.RegisterType((*Checkpoint)(nil), "ethereum.eth.v1alpha1.Checkpoint")
-	proto.RegisterType((*Crosslink)(nil), "ethereum.eth.v1alpha1.Crosslink")
 }
 
 func init() {
@@ -312,40 +239,35 @@ func init() {
 }
 
 var fileDescriptor_f8f395ba51cd84e0 = []byte{
-	// 519 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0xcd, 0x6e, 0xd3, 0x40,
-	0x10, 0x96, 0xd3, 0xb4, 0x6a, 0xc6, 0x85, 0x50, 0x0b, 0xa4, 0x08, 0xa4, 0x24, 0x58, 0x80, 0x7a,
-	0x20, 0x36, 0x4d, 0xa1, 0x52, 0x82, 0x40, 0xc2, 0x85, 0x03, 0x57, 0x1f, 0xb9, 0x44, 0x6b, 0x7b,
-	0x6b, 0xaf, 0xe2, 0x78, 0xad, 0xdd, 0x31, 0xa2, 0x7d, 0x00, 0x5e, 0x8c, 0x0b, 0xc7, 0x3e, 0x41,
-	0x84, 0xf2, 0x08, 0x3d, 0x72, 0x42, 0x9e, 0x4d, 0x48, 0x54, 0x08, 0xe2, 0xd0, 0x9b, 0x67, 0xe7,
-	0xfb, 0xdb, 0x4f, 0x2b, 0xc3, 0x93, 0x52, 0x49, 0x94, 0x3e, 0xc7, 0xcc, 0xff, 0x7c, 0xcc, 0xf2,
-	0x32, 0x63, 0xc7, 0x3e, 0x43, 0xe4, 0x1a, 0x19, 0x0a, 0x59, 0x78, 0xb4, 0x76, 0x1e, 0x70, 0xcc,
-	0xb8, 0xe2, 0xd5, 0xcc, 0xe3, 0x98, 0x79, 0x2b, 0xe0, 0xc3, 0x41, 0x2a, 0x30, 0xab, 0x22, 0x2f,
-	0x96, 0x33, 0x3f, 0x95, 0xa9, 0xf4, 0x09, 0x1d, 0x55, 0xe7, 0x34, 0x19, 0xe5, 0xfa, 0xcb, 0xa8,
-	0xb8, 0x57, 0x0d, 0xb0, 0xdf, 0xad, 0xb5, 0x9d, 0x19, 0xdc, 0x63, 0x69, 0xaa, 0x78, 0x4a, 0xe3,
-	0x24, 0x12, 0xa8, 0x3b, 0x56, 0xdf, 0x3a, 0x3a, 0x08, 0x82, 0xeb, 0x79, 0xef, 0xae, 0xd6, 0x97,
-	0x83, 0x19, 0xfb, 0x32, 0x76, 0x5f, 0xbe, 0x18, 0x9d, 0xba, 0x3f, 0xe7, 0xbd, 0xe7, 0x1b, 0x76,
-	0xa5, 0xba, 0xd0, 0x33, 0x86, 0x22, 0xce, 0x59, 0xa4, 0xfd, 0x54, 0x0e, 0x22, 0x81, 0xe7, 0x82,
-	0xe7, 0x89, 0x17, 0x08, 0xcc, 0x85, 0xc6, 0xb0, 0xbd, 0xa1, 0x1d, 0x08, 0xd4, 0xce, 0x18, 0x9a,
-	0x09, 0x43, 0xd6, 0x69, 0xf4, 0xad, 0x23, 0x7b, 0xf8, 0xcc, 0xfb, 0xeb, 0x9d, 0xbc, 0x8d, 0x80,
-	0xef, 0x19, 0xb2, 0x90, 0x38, 0x0e, 0x87, 0x83, 0xb8, 0xd2, 0x28, 0x93, 0x0b, 0x13, 0x73, 0xe7,
-	0xd6, 0x62, 0xda, 0x4b, 0x5d, 0x8a, 0xe8, 0x43, 0x4b, 0x8b, 0xb4, 0x60, 0x58, 0x29, 0xde, 0x69,
-	0x92, 0xc7, 0xe1, 0xf5, 0xbc, 0x77, 0xa7, 0xf6, 0xd0, 0xe2, 0x92, 0x8f, 0xdd, 0xd1, 0xa9, 0x1b,
-	0xae, 0x31, 0xee, 0xd7, 0x06, 0xb4, 0x6f, 0x24, 0x76, 0xde, 0xc0, 0x61, 0xc4, 0x59, 0x5c, 0x37,
-	0x9a, 0xcb, 0x78, 0x3a, 0x51, 0x52, 0xe2, 0xb2, 0xd7, 0x1b, 0x62, 0x27, 0x43, 0x37, 0x6c, 0x1b,
-	0x6c, 0x50, 0x43, 0x43, 0x29, 0xd1, 0x19, 0xc1, 0x9e, 0x96, 0x95, 0x8a, 0xf9, 0xb2, 0xa8, 0xc7,
-	0x5b, 0x8a, 0x3a, 0xcb, 0x78, 0x3c, 0x2d, 0xa5, 0x28, 0x30, 0x5c, 0x12, 0x6a, 0x2a, 0x32, 0x95,
-	0x72, 0xa4, 0x7e, 0xfe, 0x8f, 0x6a, 0x08, 0xce, 0x5b, 0x68, 0xc5, 0x4a, 0x6a, 0x9d, 0x8b, 0x62,
-	0x4a, 0x37, 0xb7, 0x87, 0xfd, 0x6d, 0xec, 0x15, 0x2e, 0x5c, 0x53, 0xdc, 0x8f, 0x00, 0x6b, 0x55,
-	0xe7, 0x3e, 0xec, 0xf2, 0x52, 0xc6, 0x19, 0x5d, 0xbb, 0x19, 0x9a, 0xc1, 0x79, 0x0a, 0x4d, 0xea,
-	0xa2, 0xb1, 0xad, 0x0b, 0x5a, 0xbb, 0xdf, 0x2c, 0x68, 0xfd, 0xf6, 0xa8, 0xa5, 0x74, 0xc6, 0x54,
-	0xb2, 0x92, 0xa2, 0xc1, 0x19, 0x82, 0x5d, 0x32, 0xc5, 0x0b, 0x9c, 0xfc, 0x5b, 0x11, 0x0c, 0x8a,
-	0x8a, 0xed, 0x81, 0xad, 0x91, 0x29, 0x9c, 0x98, 0x68, 0x3b, 0xa4, 0x07, 0x74, 0xf4, 0x81, 0xf2,
-	0x3d, 0x82, 0x16, 0x2f, 0x92, 0xe5, 0xba, 0x49, 0xeb, 0x7d, 0x5e, 0x24, 0x66, 0xe9, 0x41, 0xab,
-	0x7e, 0x89, 0xc6, 0x6f, 0x77, 0x9b, 0xdf, 0x7e, 0x8d, 0xa9, 0xdd, 0x82, 0xb3, 0xef, 0x8b, 0xae,
-	0x75, 0xb5, 0xe8, 0x5a, 0x3f, 0x16, 0x5d, 0xeb, 0xd3, 0xab, 0xad, 0x6f, 0x92, 0x26, 0xff, 0xcf,
-	0xbf, 0xc0, 0x6b, 0x8e, 0x59, 0xb4, 0x47, 0xe7, 0x27, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x9e,
-	0x9d, 0x31, 0x67, 0x26, 0x04, 0x00, 0x00,
+	// 441 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x53, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0x95, 0x8b, 0x5b, 0x89, 0x4d, 0x21, 0x74, 0x05, 0x52, 0xc4, 0x21, 0x29, 0x16, 0xa0, 0x1e,
+	0x88, 0x4d, 0x53, 0xa8, 0x94, 0x20, 0x0e, 0xb8, 0x5c, 0xb8, 0xfa, 0xc8, 0xa5, 0x5a, 0x3b, 0xd3,
+	0xf5, 0xaa, 0xb6, 0xc7, 0xda, 0x1d, 0xa3, 0xb6, 0x5f, 0xc8, 0xb1, 0x5f, 0x10, 0xa1, 0x7c, 0x01,
+	0xea, 0x91, 0x13, 0xf2, 0x38, 0x28, 0x11, 0xa5, 0x88, 0x03, 0xb7, 0x7d, 0xde, 0xf7, 0xde, 0xbc,
+	0x37, 0xd6, 0x8a, 0xe7, 0xb5, 0x45, 0xc2, 0x08, 0x28, 0x8f, 0xbe, 0x1c, 0xaa, 0xa2, 0xce, 0xd5,
+	0x61, 0xa4, 0x88, 0xc0, 0x91, 0x22, 0x83, 0x55, 0xc8, 0xd7, 0xf2, 0x09, 0x50, 0x0e, 0x16, 0x9a,
+	0x32, 0x04, 0xca, 0xc3, 0x5f, 0xc4, 0xa7, 0x63, 0x6d, 0x28, 0x6f, 0xd2, 0x30, 0xc3, 0x32, 0xd2,
+	0xa8, 0x31, 0x62, 0x76, 0xda, 0x9c, 0x31, 0xea, 0x9c, 0xdb, 0x53, 0xe7, 0x12, 0x5c, 0x6f, 0x89,
+	0xde, 0x87, 0xb5, 0xb7, 0x2c, 0xc5, 0x23, 0xa5, 0xb5, 0x05, 0xcd, 0xf0, 0x34, 0x35, 0xe4, 0x06,
+	0xde, 0xbe, 0x77, 0xb0, 0x1b, 0xc7, 0x37, 0x8b, 0xd1, 0x43, 0xe7, 0xae, 0xc6, 0xa5, 0xba, 0x98,
+	0x05, 0x6f, 0x5e, 0x4f, 0x8f, 0x83, 0x1f, 0x8b, 0xd1, 0xab, 0x8d, 0x71, 0xb5, 0xbd, 0x74, 0xa5,
+	0x22, 0x93, 0x15, 0x2a, 0x75, 0x91, 0xc6, 0x71, 0x6a, 0xe8, 0xcc, 0x40, 0x31, 0x0f, 0x63, 0x43,
+	0x85, 0x71, 0x94, 0xf4, 0x37, 0xbc, 0x63, 0x43, 0x4e, 0xce, 0x84, 0x3f, 0x57, 0xa4, 0x06, 0x5b,
+	0xfb, 0xde, 0x41, 0x6f, 0xf2, 0x32, 0xfc, 0x63, 0xa7, 0x70, 0x23, 0xe0, 0x47, 0x45, 0x2a, 0x61,
+	0x8d, 0x04, 0xb1, 0x9b, 0x35, 0x8e, 0x70, 0x7e, 0xd9, 0xc5, 0xbc, 0xf7, 0xdf, 0x62, 0xf6, 0x56,
+	0xbe, 0x1c, 0x31, 0x12, 0xf7, 0x9d, 0xd1, 0x95, 0xa2, 0xc6, 0xc2, 0xc0, 0xe7, 0x19, 0x7b, 0x37,
+	0x8b, 0xd1, 0x83, 0x76, 0x86, 0x33, 0x57, 0x30, 0x0b, 0xa6, 0xc7, 0x41, 0xb2, 0xe6, 0x04, 0xdf,
+	0x3d, 0xd1, 0xff, 0x2d, 0xb1, 0x94, 0xc2, 0x77, 0x05, 0x12, 0xaf, 0xd2, 0x4f, 0xf8, 0x2c, 0xdf,
+	0x8b, 0xbd, 0x14, 0x54, 0xd6, 0x6e, 0xb9, 0xc0, 0xec, 0xfc, 0xd4, 0x22, 0x12, 0x2f, 0xe2, 0xd6,
+	0x80, 0xa3, 0x49, 0x90, 0xf4, 0x3b, 0x6e, 0xdc, 0x52, 0x13, 0x44, 0x92, 0x53, 0xb1, 0xe3, 0xb0,
+	0xb1, 0x19, 0x70, 0xf1, 0xde, 0xe4, 0xd9, 0x1d, 0xcb, 0x3b, 0xc9, 0x21, 0x3b, 0xaf, 0xd1, 0x54,
+	0x94, 0xac, 0x04, 0xad, 0x94, 0x94, 0xd5, 0x40, 0xdc, 0xe7, 0xdf, 0xa4, 0x9d, 0x40, 0x3e, 0x16,
+	0xdb, 0xa6, 0x9a, 0xc3, 0xc5, 0x60, 0x9b, 0x9b, 0x74, 0x20, 0xf8, 0x24, 0xc4, 0x9a, 0xdb, 0x72,
+	0xa0, 0xc6, 0x2c, 0x5f, 0xb5, 0xed, 0x80, 0x7c, 0x21, 0xfc, 0xbf, 0x37, 0xe4, 0xeb, 0xf8, 0xe4,
+	0xeb, 0x72, 0xe8, 0x5d, 0x2f, 0x87, 0xde, 0xb7, 0xe5, 0xd0, 0xfb, 0xfc, 0xf6, 0xce, 0xff, 0xc6,
+	0x28, 0xba, 0xfd, 0x52, 0xde, 0x01, 0xe5, 0xe9, 0x0e, 0x7f, 0x3f, 0xfa, 0x19, 0x00, 0x00, 0xff,
+	0xff, 0x36, 0x5d, 0x95, 0x09, 0x4a, 0x03, 0x00, 0x00,
 }
 
 func (m *Attestation) Marshal() (dAtA []byte, err error) {
@@ -412,14 +334,19 @@ func (m *AttestationData) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Slot != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintAttestation(dAtA, i, uint64(m.Slot))
+	}
 	if len(m.BeaconBlockRoot) > 0 {
-		dAtA[i] = 0xa
+		dAtA[i] = 0x12
 		i++
 		i = encodeVarintAttestation(dAtA, i, uint64(len(m.BeaconBlockRoot)))
 		i += copy(dAtA[i:], m.BeaconBlockRoot)
 	}
 	if m.Source != nil {
-		dAtA[i] = 0x12
+		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintAttestation(dAtA, i, uint64(m.Source.Size()))
 		n2, err := m.Source.MarshalTo(dAtA[i:])
@@ -429,7 +356,7 @@ func (m *AttestationData) MarshalTo(dAtA []byte) (int, error) {
 		i += n2
 	}
 	if m.Target != nil {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintAttestation(dAtA, i, uint64(m.Target.Size()))
 		n3, err := m.Target.MarshalTo(dAtA[i:])
@@ -438,15 +365,10 @@ func (m *AttestationData) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n3
 	}
-	if m.Crosslink != nil {
-		dAtA[i] = 0x22
+	if m.Index != 0 {
+		dAtA[i] = 0x28
 		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(m.Crosslink.Size()))
-		n4, err := m.Crosslink.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n4
+		i = encodeVarintAttestation(dAtA, i, uint64(m.Index))
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -479,54 +401,6 @@ func (m *Checkpoint) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintAttestation(dAtA, i, uint64(len(m.Root)))
 		i += copy(dAtA[i:], m.Root)
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
-}
-
-func (m *Crosslink) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Crosslink) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Shard != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(m.Shard))
-	}
-	if len(m.ParentRoot) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(len(m.ParentRoot)))
-		i += copy(dAtA[i:], m.ParentRoot)
-	}
-	if m.StartEpoch != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(m.StartEpoch))
-	}
-	if m.EndEpoch != 0 {
-		dAtA[i] = 0x20
-		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(m.EndEpoch))
-	}
-	if len(m.DataRoot) > 0 {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintAttestation(dAtA, i, uint64(len(m.DataRoot)))
-		i += copy(dAtA[i:], m.DataRoot)
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -577,6 +451,9 @@ func (m *AttestationData) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.Slot != 0 {
+		n += 1 + sovAttestation(uint64(m.Slot))
+	}
 	l = len(m.BeaconBlockRoot)
 	if l > 0 {
 		n += 1 + l + sovAttestation(uint64(l))
@@ -589,9 +466,8 @@ func (m *AttestationData) Size() (n int) {
 		l = m.Target.Size()
 		n += 1 + l + sovAttestation(uint64(l))
 	}
-	if m.Crosslink != nil {
-		l = m.Crosslink.Size()
-		n += 1 + l + sovAttestation(uint64(l))
+	if m.Index != 0 {
+		n += 1 + sovAttestation(uint64(m.Index))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -609,35 +485,6 @@ func (m *Checkpoint) Size() (n int) {
 		n += 1 + sovAttestation(uint64(m.Epoch))
 	}
 	l = len(m.Root)
-	if l > 0 {
-		n += 1 + l + sovAttestation(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *Crosslink) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Shard != 0 {
-		n += 1 + sovAttestation(uint64(m.Shard))
-	}
-	l = len(m.ParentRoot)
-	if l > 0 {
-		n += 1 + l + sovAttestation(uint64(l))
-	}
-	if m.StartEpoch != 0 {
-		n += 1 + sovAttestation(uint64(m.StartEpoch))
-	}
-	if m.EndEpoch != 0 {
-		n += 1 + sovAttestation(uint64(m.EndEpoch))
-	}
-	l = len(m.DataRoot)
 	if l > 0 {
 		n += 1 + l + sovAttestation(uint64(l))
 	}
@@ -882,6 +729,25 @@ func (m *AttestationData) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Slot", wireType)
+			}
+			m.Slot = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAttestation
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Slot |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BeaconBlockRoot", wireType)
 			}
@@ -915,7 +781,7 @@ func (m *AttestationData) Unmarshal(dAtA []byte) error {
 				m.BeaconBlockRoot = []byte{}
 			}
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Source", wireType)
 			}
@@ -951,7 +817,7 @@ func (m *AttestationData) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Target", wireType)
 			}
@@ -987,11 +853,11 @@ func (m *AttestationData) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Crosslink", wireType)
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
 			}
-			var msglen int
+			m.Index = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAttestation
@@ -1001,28 +867,11 @@ func (m *AttestationData) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				m.Index |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Crosslink == nil {
-				m.Crosslink = &Crosslink{}
-			}
-			if err := m.Crosslink.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAttestation(dAtA[iNdEx:])
@@ -1128,185 +977,6 @@ func (m *Checkpoint) Unmarshal(dAtA []byte) error {
 			m.Root = append(m.Root[:0], dAtA[iNdEx:postIndex]...)
 			if m.Root == nil {
 				m.Root = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAttestation(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Crosslink) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAttestation
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Crosslink: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Crosslink: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Shard", wireType)
-			}
-			m.Shard = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAttestation
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Shard |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ParentRoot", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAttestation
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ParentRoot = append(m.ParentRoot[:0], dAtA[iNdEx:postIndex]...)
-			if m.ParentRoot == nil {
-				m.ParentRoot = []byte{}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field StartEpoch", wireType)
-			}
-			m.StartEpoch = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAttestation
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.StartEpoch |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EndEpoch", wireType)
-			}
-			m.EndEpoch = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAttestation
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.EndEpoch |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DataRoot", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAttestation
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAttestation
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DataRoot = append(m.DataRoot[:0], dAtA[iNdEx:postIndex]...)
-			if m.DataRoot == nil {
-				m.DataRoot = []byte{}
 			}
 			iNdEx = postIndex
 		default:

@@ -46,10 +46,8 @@ import (
 //	  # Populate active_index_roots and compact_committees_roots
 //	  indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, GENESIS_EPOCH))
 //	  active_index_root = hash_tree_root(indices_list)
-//	  committee_root = get_compact_committees_root(state, GENESIS_EPOCH)
 //	  for index in range(EPOCHS_PER_HISTORICAL_VECTOR):
 //	    state.active_index_roots[index] = active_index_root
-//	    state.compact_committees_roots[index] = committee_root
 //	  return state
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
@@ -65,14 +63,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
-	}
 
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
@@ -125,9 +115,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		// Recent state.
-		CurrentCrosslinks:         crosslinks,
-		PreviousCrosslinks:        crosslinks,
 		ActiveIndexRoots:          activeIndexRoots,
 		CompactCommitteesRoots:    compactRoots,
 		HistoricalRoots:           [][]byte{},
@@ -206,13 +193,8 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root active indices")
 	}
-	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get compact committee root")
-	}
 	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
 		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
-		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
 	}
 	return state, nil
 }

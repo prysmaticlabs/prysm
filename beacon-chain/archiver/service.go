@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,17 +69,9 @@ func (s *Service) Status() error {
 // We archive committee information pertaining to the head state's epoch.
 func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.BeaconState) error {
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
-	committeeCount, err := helpers.CommitteeCount(headState, currentEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not get committee count")
-	}
-	seed, err := helpers.Seed(headState, currentEpoch)
+	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
-	}
-	startShard, err := helpers.StartShard(headState, currentEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not get start shard")
 	}
 	proposerIndex, err := helpers.BeaconProposerIndex(headState)
 	if err != nil {
@@ -86,8 +79,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	}
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
-		StartShard:     startShard,
-		CommitteeCount: committeeCount,
+		CommitteeCount: params.BeaconConfig().CommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
 		ProposerIndex:  proposerIndex,
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {

@@ -582,7 +582,6 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 //
 //  def process_epoch(state: BeaconState) -> None:
 //    process_justification_and_finalization(state)
-//    process_crosslinks(state)
 //    process_rewards_and_penalties(state)
 //    process_registry_updates(state)
 //    # @process_reveal_deadlines
@@ -617,11 +616,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process justification")
-	}
-
-	state, err = e.ProcessCrosslinks(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process crosslink")
 	}
 
 	state, err = e.ProcessRewardsAndPenalties(state)

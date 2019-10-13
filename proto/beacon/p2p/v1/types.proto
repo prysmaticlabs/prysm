@@ -40,10 +40,6 @@ message BeaconState {
   repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
   repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
 
-  // Crosslinks [8001-9000]
-  repeated ethereum.eth.v1alpha1.Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"previous_crosslinks.size\""];
-  repeated ethereum.eth.v1alpha1.Crosslink current_crosslinks = 8002 [(gogoproto.moretags) = "ssz-size:\"current_crosslinks.size\""];
-
   // Finality [9001-10000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
   bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
