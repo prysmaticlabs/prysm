@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"crypto/rand"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -87,16 +86,11 @@ func BenchmarkAggregateAttestations(b *testing.B) {
 	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
 		atts := make([]*ethpb.Attestation, len(bl))
 		for i, b := range bl {
-			sk, err := bls.RandKey(rand.Reader)
-			if err != nil {
-				panic(err)
-			}
-			sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
 				Data:            nil,
 				CustodyBits:     nil,
-				Signature:       sig.Marshal(),
+				Signature:       bls.NewAggregateSignature().Marshal(),
 			}
 		}
 		return atts
