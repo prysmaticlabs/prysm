@@ -43,6 +43,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "attestation_aggregation_bench_test.go",
         "attestation_test.go",
         "block_test.go",
         "committee_test.go",
@@ -58,6 +59,40 @@ go_test(
         "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/sliceutil:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+    ],
+)
+
+# gazelle:exclude attestation_aggregation_bench_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "large",
+    srcs = ["attestation_aggregation_bench_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+        "//beacon-chain/core/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",

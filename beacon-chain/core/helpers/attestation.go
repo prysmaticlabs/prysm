@@ -96,6 +96,12 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 	return atts, nil
 }
 
+// BLS aggregate signature aliases for testing / benchmark substitution. These methods are
+// significantly more expensive than the inner logic of AggregateAttestations so they must be
+// substituted for benchmarks which analyze AggregateAttestations.
+var aggregateSignatures = bls.AggregateSignatures
+var signatureFromBytes = bls.SignatureFromBytes
+
 // AggregateAttestation aggregates attestations a1 and a2 together.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	baseAtt := proto.Clone(a1).(*ethpb.Attestation)
@@ -109,16 +115,16 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 	}
 
 	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
-	newSig, err := bls.SignatureFromBytes(newAtt.Signature)
+	newSig, err := signatureFromBytes(newAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
-	baseSig, err := bls.SignatureFromBytes(baseAtt.Signature)
+	baseSig, err := signatureFromBytes(baseAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{baseSig, newSig})
+	aggregatedSig := aggregateSignatures([]*bls.Signature{baseSig, newSig})
 	baseAtt.Signature = aggregatedSig.Marshal()
 	baseAtt.AggregationBits = newBits
 

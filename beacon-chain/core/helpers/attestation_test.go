@@ -161,6 +161,27 @@ func TestAggregateAttestations(t *testing.T) {
 			},
 		},
 		{
+			name:   "64 attestations with single bit set",
+			inputs: bitlistsWithSingleBitSet(64),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(64),
+			},
+		},
+		{
+			name:   "128 attestations with single bit set",
+			inputs: bitlistsWithSingleBitSet(128),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(128),
+			},
+		},
+		{
+			name:   "256 attestations with single bit set",
+			inputs: bitlistsWithSingleBitSet(256),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(256),
+			},
+		},
+		{
 			name: "two attestations with overlap",
 			inputs: []bitfield.Bitlist{
 				bitfield.Bitlist{0b00000101, 0b1},
