@@ -52,10 +52,31 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 	return StartSlot(data.Target.Epoch) + (offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)), nil
 }
 
-// AggregateAttestations -- TODO.
+// AggregateAttestations such that the minimal number of attestations are returned.
 func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) <= 1 {
 		return atts, nil
+	}
+
+	// Naive O(n^2) algorithm.
+	for i, a := range atts {
+		if i >= len(atts) {
+			break
+		}
+		for j := i+1; j < len(atts); j++ {
+			b := atts[j]
+			if !a.AggregationBits.Overlaps(b.AggregationBits) {
+				var err error
+				a, err = AggregateAttestation(a, b)
+				if err != nil {
+					return nil, err
+				}
+				// Delete b
+				atts = append(atts[:j], atts[j+1:]...)
+				j--
+				atts[i] = a
+			}
+		}
 	}
 
 	return atts, nil
