@@ -11,26 +11,71 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
+func toAttestations(ac *dbpb.AttestationContainer) []*ethpb.Attestation {
+	if ac == nil {
+		return nil
+	}
+
+	atts := make([]*ethpb.Attestation, len(ac.SignaturePairs))
+	for i, sp := range ac.SignaturePairs {
+		atts[i] = &ethpb.Attestation{
+			Data:            ac.Data,
+			AggregationBits: sp.AggregationBits,
+			Signature:       sp.Signature,
+			// TODO: Add custody bits in phase 1.
+		}
+	}
+	return atts
+}
+
+func insertAttestation(ac *dbpb.AttestationContainer, att *ethpb.Attestation) {
+	sigPairsNotEclipsed := make([]*dbpb.AttestationContainer_SignaturePair, 0, len(ac.SignaturePairs))
+	for _, sp := range ac.SignaturePairs {
+		// if att is fully contained in some existing bitfield, do nothing.
+		if sp.AggregationBits.Contains(att.AggregationBits) {
+			return
+		}
+		// filter any existing signature pairs that are fully contained within
+		// the new attestation.
+		if !att.AggregationBits.Contains(sp.AggregationBits) {
+			sigPairsNotEclipsed = append(sigPairsNotEclipsed, sp)
+		}
+	}
+	ac.SignaturePairs = append(sigPairsNotEclipsed, &dbpb.AttestationContainer_SignaturePair{
+		AggregationBits: att.AggregationBits,
+		Signature:       att.Signature,
+	})
+}
+
 // Attestation retrieval by attestation data root.
-func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
+func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
-	var att *ethpb.Attestation
+	var atts []*ethpb.Attestation
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
 			return nil
 		}
-		att = &ethpb.Attestation{}
-		return proto.Unmarshal(enc, att)
+		ac := &dbpb.AttestationContainer{}
+		if err := proto.Unmarshal(enc, ac); err != nil {
+			return err
+		}
+		atts = toAttestations(ac)
+		return nil
 	})
-	return att, err
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+	}
+	return atts, err
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
@@ -60,11 +105,11 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			att := &ethpb.Attestation{}
-			if err := proto.Unmarshal(encoded, att); err != nil {
+			ac := &dbpb.AttestationContainer{}
+			if err := proto.Unmarshal(encoded, ac); err != nil {
 				return err
 			}
-			atts = append(atts, att)
+			atts = append(atts, toAttestations(ac)...)
 		}
 		return nil
 	})
@@ -95,11 +140,11 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		if enc == nil {
 			return nil
 		}
-		att := &ethpb.Attestation{}
-		if err := proto.Unmarshal(enc, att); err != nil {
+		ac := &dbpb.AttestationContainer{}
+		if err := proto.Unmarshal(enc, ac); err != nil {
 			return err
 		}
-		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+		indicesByBucket := createAttestationIndicesFromData(ac.Data, tx)
 		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -135,22 +180,41 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	// TODO: Test with batch.
+	err := k.db.Update(func(tx *bolt.Tx) error {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
 		}
-		enc, err := proto.Marshal(att)
+
+		bkt := tx.Bucket(attestationsBucket)
+		ac := &dbpb.AttestationContainer{
+			Data: att.Data,
+		}
+		existingEnc := bkt.Get(attDataRoot[:])
+		if existingEnc != nil {
+			if err := proto.Unmarshal(existingEnc, ac); err != nil {
+				return err
+			}
+		}
+
+		insertAttestation(ac, att)
+
+		enc, err := proto.Marshal(ac)
 		if err != nil {
 			return err
 		}
-		bkt := tx.Bucket(attestationsBucket)
+
 		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
 	})
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+	}
+	return err
 }
 
 // SaveAttestations via batch updates to the db.

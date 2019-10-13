@@ -233,7 +233,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 
 	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
 
-	saved, err := store.db.Attestation(ctx, r1)
+	saved, err := store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +254,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 
 	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
 
-	saved, err = store.db.Attestation(ctx, r1)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}

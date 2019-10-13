@@ -52,6 +52,15 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 	return StartSlot(data.Target.Epoch) + (offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)), nil
 }
 
+// AggregateAttestations -- TODO.
+func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	if len(atts) <= 1 {
+		return atts, nil
+	}
+
+	return atts, nil
+}
+
 // AggregateAttestation aggregates attestations a1 and a2 together.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	baseAtt := proto.Clone(a1).(*ethpb.Attestation)

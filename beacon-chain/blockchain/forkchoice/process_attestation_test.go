@@ -248,7 +248,7 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 	}
 
 	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
-	saved, err := store.aggregatedAttestation(ctx, a2)
+	saved, err := store.aggregatedAttestations(ctx, a2)
 	if err != nil {
 		t.Fatal(err)
 	}

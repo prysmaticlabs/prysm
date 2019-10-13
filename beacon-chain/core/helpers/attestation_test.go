@@ -113,3 +113,8 @@ func TestAggregateAttestation(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregateAttestations(t *testing.T) {
+	// TODO: Test aggregation of multiple attestations uses optimal selection.
+	t.Fatal("TODO")
+}

@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"sort"
@@ -31,12 +32,12 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retrievedAtt, err := db.Attestation(ctx, attDataRoot)
+	retrievedAtts, err := db.AttestationsByDataRoot(ctx, attDataRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retrievedAtt != nil {
-		t.Errorf("Expected nil attestation, received %v", retrievedAtt)
+	if len(retrievedAtts) != 0 {
+		t.Errorf("Expected no attestations, received %v", retrievedAtts)
 	}
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
@@ -44,12 +45,12 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if !db.HasAttestation(ctx, attDataRoot) {
 		t.Error("Expected attestation to exist in the db")
 	}
-	retrievedAtt, err = db.Attestation(ctx, attDataRoot)
+	retrievedAtts, err = db.AttestationsByDataRoot(ctx, attDataRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(att, retrievedAtt) {
-		t.Errorf("Wanted %v, received %v", att, retrievedAtt)
+	if !proto.Equal(att, retrievedAtts[0]) {
+		t.Errorf("Wanted %v, received %v", att, retrievedAtts[0])
 	}
 	if err := db.DeleteAttestation(ctx, attDataRoot); err != nil {
 		t.Fatal(err)
@@ -138,12 +139,12 @@ func TestStore_BoltDontPanic(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		retrievedAtt, err := db.Attestation(ctx, attDataRoot)
+		retrievedAtts, err := db.AttestationsByDataRoot(ctx, attDataRoot)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if retrievedAtt != nil {
-			t.Errorf("Expected nil attestation, received %v", retrievedAtt)
+		if len(retrievedAtts) != 0 {
+			t.Errorf("Expected no attestation, received %v", retrievedAtts)
 		}
 		if err := db.SaveAttestation(ctx, att); err != nil {
 			t.Fatal(err)
@@ -277,5 +278,125 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		if len(retrievedAtts) != tt.expectedNumAtt {
 			t.Errorf("Expected %d attestations, received %d", tt.expectedNumAtt, len(retrievedAtts))
 		}
+	}
+}
+
+func TestStore_Attestations_BitfieldLogic(t *testing.T) {
+	commonData_0 := &ethpb.AttestationData{
+		Crosslink: &ethpb.Crosslink{
+			Shard:      5,
+			ParentRoot: []byte("parent"),
+			StartEpoch: 1,
+			EndEpoch:   2,
+		},
+	}
+
+	tests := []struct{
+		name string
+		input []*ethpb.Attestation
+		output []*ethpb.Attestation
+	} {
+		{
+			name: "all distinct aggregation bitfields",
+			input: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000001},
+				},
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000010},
+				},
+			},
+			output: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000001},
+				},
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000010},
+				},
+			},
+		},
+		{
+			name: "Incoming attestation is fully contained already",
+			input: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b11111111},
+				},
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000010},
+				},
+			},
+			output: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b11111111},
+				},
+			},
+		},
+		{
+			name: "Existing attestations are fully contained incoming attestation",
+			input: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000001},
+				},
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b10000010},
+				},
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b11111111},
+				},
+			},
+			output: []*ethpb.Attestation{
+				{
+					Data:commonData_0,
+					AggregationBits: []byte{0b11111111},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupDB(t)
+			defer teardownDB(t, db)
+			ctx := context.Background()
+			if err := db.SaveAttestations(ctx, tt.input); err != nil {
+				t.Fatal(err)
+			}
+			r, err := ssz.HashTreeRoot(tt.input[0].Data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := db.AttestationsByDataRoot(ctx, r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(output) != len(tt.output) {
+				t.Fatalf(
+					"Wrong number of attestations returned. Got %d attestations but wanted %d",
+					len(output),
+					len(tt.output),
+				)
+			}
+			sort.Slice(output, func(i, j int) bool {
+				return output[i].AggregationBits.Bytes()[0] < output[j].AggregationBits.Bytes()[0]
+			})
+			sort.Slice(tt.output, func(i, j int) bool {
+				return tt.output[i].AggregationBits.Bytes()[0] < tt.output[j].AggregationBits.Bytes()[0]
+			})
+			for i, att := range output {
+				if !bytes.Equal(att.AggregationBits, tt.output[i].AggregationBits) {
+					t.Errorf("Aggregation bits are not the same. Got %b, wanted %b", att.AggregationBits, tt.output[i].AggregationBits)
+				}
+			}
+		})
 	}
 }
