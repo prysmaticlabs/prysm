@@ -237,7 +237,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
@@ -245,20 +245,22 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
 	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
 	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}}
 
-	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
+		t.Fatal(err)
+	}
 
 	saved, err = store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
@@ -266,7 +268,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }

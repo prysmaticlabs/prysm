@@ -53,6 +53,7 @@ go_test(
         "validators_test.go",
     ],
     embed = [":go_default_library"],
+    shard_count = 2,
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

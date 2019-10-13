@@ -253,7 +253,7 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }
