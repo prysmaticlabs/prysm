@@ -78,15 +78,15 @@ func CrosslinkCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uin
 func ComputeCommittee(
 	validatorIndices []uint64,
 	seed [32]byte,
-	indexShard uint64,
+	index uint64,
 	totalCommittees uint64,
 ) ([]uint64, error) {
 	validatorCount := uint64(len(validatorIndices))
-	start := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard)
-	end := sliceutil.SplitOffset(validatorCount, totalCommittees, indexShard+1)
+	start := sliceutil.SplitOffset(validatorCount, totalCommittees, index)
+	end := sliceutil.SplitOffset(validatorCount, totalCommittees, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
-	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(indexShard, seed[:])
+	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func ComputeCommittee(
 		shuffledIndices[i-start] = validatorIndices[permutedIndex]
 	}
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
-		Index:           indexShard,
+		Index:           index,
 		Seed:            seed[:],
 		ShuffledIndices: shuffledIndices,
 	}); err != nil {
