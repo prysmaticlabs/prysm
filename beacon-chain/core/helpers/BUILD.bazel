@@ -73,7 +73,7 @@ go_test(
 # gazelle:exclude attestation_aggregation_bench_test.go
 go_test(
     name = "go_benchmark_test",
-    size = "large",
+    size = "medium",
     srcs = ["attestation_aggregation_bench_test.go"],
     args = [
         "-test.bench=.",

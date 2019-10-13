@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"bytes"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -86,11 +84,7 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 	for i, a := range atts {
 		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
-			if bytes.Equal(a.AggregationBits.Bytes(), b.AggregationBits.Bytes()) {
-				// Delete duplicated aggregated attestation.
-				atts = append(atts[:j], atts[j+1:]...)
-				j--
-			} else if a.AggregationBits.Contains(b.AggregationBits) {
+			if a.AggregationBits.Contains(b.AggregationBits) {
 				// If b is fully contained in a, then b can be removed.
 				atts = append(atts[:j], atts[j+1:]...)
 				j--
