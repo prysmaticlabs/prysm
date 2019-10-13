@@ -6,36 +6,6 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "google/api/annotations.proto";
-import "protoc-gen-swagger/options/annotations.proto";
-
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
-	info: {
-		title: "Prysm";
-		version: "0.0.0";
-		contact: {
-			name: "Prysmatic Labs";
-			url: "https://prysmaticlabs.com";
-			email: "team@prysmaticlabs.com";
-		};
-		license: {
-			name: "GNU General Public License v3.0";
-			url: "https://github.com/prysmaticlabs/prysm/blob/master/LICENSE.md";
-		};
-        description: "JSON RPC services provided by Prysm."
-	};
-    external_docs: {
-        url: "https://github.com/prysmaticlabs/prysm";
-        description : "Prysm Github";
-    };
-    host: "api.prylabs.net",
-	schemes: HTTPS;
-	consumes: "application/json";
-	consumes: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-	produces: "application/json";
-    produces: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-};
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
