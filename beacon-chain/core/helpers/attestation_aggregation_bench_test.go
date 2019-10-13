@@ -27,10 +27,6 @@ func bitlistsWithSingleBitSet(length uint64) []bitfield.Bitlist {
 	return lists
 }
 
-// TODO: Overlap can panic on when bytes() returns different lengths. Additionally, bytes() is a
-// copy which is showing as the slowest part of this algorithm. Bitslist.Overlap should not copy the
-// underlying array, rather we can ignore the overlap of the length bit. This will resolve the panic
-// issue as well as reduce the memory footprint of this method.
 func BenchmarkAggregateAttestations(b *testing.B) {
 	// Override expensive BLS aggregation method with cheap no-op such that this benchmark profiles
 	// the logic of aggregation selection rather than BLS logic.
