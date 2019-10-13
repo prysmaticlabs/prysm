@@ -181,7 +181,7 @@ func wrapperToKey(i interface{}) (string, error) {
 }
 
 func reqToKey(req *pb.AttestationRequest) (string, error) {
-	return fmt.Sprintf("%d-%d", req.Shard, req.Slot), nil
+	return fmt.Sprintf("%d-%d", req.Index, req.Slot), nil
 }
 
 type attestationReqResWrapper struct {
