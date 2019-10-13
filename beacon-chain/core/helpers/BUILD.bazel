@@ -43,7 +43,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "attestation_aggregation_bench_test.go",
         "attestation_test.go",
         "block_test.go",
         "committee_test.go",
