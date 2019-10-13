@@ -66,7 +66,7 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 		if i >= len(atts) {
 			break
 		}
-		for j := i+1; j < len(atts); j++ {
+		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
 			if !a.AggregationBits.Overlaps(b.AggregationBits) {
 				var err error
@@ -83,12 +83,22 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 	}
 
 	// Naive deduplication of identical aggregations. O(n^2) time.
-	for i, att := range atts {
-		for j := i+1; j < len(atts); j++ {
-			if bytes.Equal(att.AggregationBits.Bytes(), atts[j].AggregationBits.Bytes()) {
+	for i, a := range atts {
+		for j := i + 1; j < len(atts); j++ {
+			b := atts[j]
+			if bytes.Equal(a.AggregationBits.Bytes(), b.AggregationBits.Bytes()) {
 				// Delete duplicated aggregated attestation.
 				atts = append(atts[:j], atts[j+1:]...)
 				j--
+			} else if a.AggregationBits.Contains(b.AggregationBits) {
+				// If b is fully contained in a, then b can be removed.
+				atts = append(atts[:j], atts[j+1:]...)
+				j--
+			} else if b.AggregationBits.Contains(a.AggregationBits) {
+				// if a is fully contained in b, then a can be removed.
+				atts = append(atts[:i], atts[i+1:]...)
+				i--
+				break // Stop the inner loop, advance a.
 			}
 		}
 	}
