@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -61,7 +60,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	defer span.End()
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(req.Slot)),
-		trace.Int64Attribute("shard", int64(req.Shard)),
+		trace.Int64Attribute("shard", int64(req.Index)),
 	)
 	res, err := as.attestationCache.Get(ctx, req)
 	if err != nil {
@@ -112,28 +111,12 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}
 
-	startEpoch := headState.CurrentCrosslinks[req.Shard].EndEpoch
-	endEpoch := startEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if endEpoch > targetEpoch {
-		endEpoch = targetEpoch
-	}
-	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not tree hash crosslink for shard %d", req.Shard)
-	}
 	res = &ethpb.AttestationData{
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
 			Root:  targetRoot,
-		},
-		Crosslink: &ethpb.Crosslink{
-			Shard:      req.Shard,
-			StartEpoch: startEpoch,
-			EndEpoch:   endEpoch,
-			ParentRoot: crosslinkRoot[:],
-			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		},
 	}
 
