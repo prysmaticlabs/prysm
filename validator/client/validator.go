@@ -3,6 +3,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
@@ -24,7 +25,7 @@ type validator struct {
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	attesterClient       pb.AttesterServiceClient
-	keys                 map[[48]byte]*keystore.Key
+	keys                 map[string]*keystore.Key
 	pubkeys              [][]byte
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
@@ -236,8 +237,8 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
-	rolesAt := make(map[[48]byte]pb.ValidatorRole)
+func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
+	rolesAt := make(map[string]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
@@ -253,9 +254,7 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 		} else {
 			role = pb.ValidatorRole_UNKNOWN
 		}
-		var pubKey [48]byte
-		copy(pubKey[:], assignment.PublicKey)
-		rolesAt[pubKey] = role
+		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
 	}
 	return rolesAt
 }

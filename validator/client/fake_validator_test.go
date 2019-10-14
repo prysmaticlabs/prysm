@@ -71,20 +71,20 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
+func (fv *fakeValidator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte]pb.ValidatorRole)
-	vr[[48]byte{1}] = fv.RoleAtRet
+	vr := make(map[string]pb.ValidatorRole)
+	vr["a"] = fv.RoleAtRet
 	return vr
 }
 
-func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, idx string) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, idx string) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }

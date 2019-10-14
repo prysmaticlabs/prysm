@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -17,23 +18,19 @@ import (
 
 var _ = shared.Service(&ValidatorService{})
 var validatorKey *keystore.Key
-var validatorPubKey [48]byte
-var keyMap map[[48]byte]*keystore.Key
-var keyMapThreeValidators map[[48]byte]*keystore.Key
+var keyMap map[string]*keystore.Key
+var keyMapThreeValidators map[string]*keystore.Key
 
 func keySetup() {
-	keyMap = make(map[[48]byte]*keystore.Key)
-	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
+	keyMap = make(map[string]*keystore.Key)
+	keyMapThreeValidators = make(map[string]*keystore.Key)
 
 	validatorKey, _ = keystore.NewKey(rand.Reader)
-	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
-	keyMap[validatorPubKey] = validatorKey
+	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 
 	for i := 0; i < 3; i++ {
 		vKey, _ := keystore.NewKey(rand.Reader)
-		var pubKey [48]byte
-		copy(pubKey[:], vKey.PublicKey.Marshal())
-		keyMapThreeValidators[pubKey] = vKey
+		keyMapThreeValidators[hex.EncodeToString(vKey.PublicKey.Marshal())] = vKey
 	}
 }
 
