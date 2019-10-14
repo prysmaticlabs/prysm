@@ -188,31 +188,26 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// fork choice resolution / block processing.
 	best := bestPeer()
 	root, _, _ := bestFinalized()
-	for head := slotsSinceGenesis(genesis); s.chain.HeadSlot() < head; {
-		req := &p2ppb.BeaconBlocksByRangeRequest{
-			HeadBlockRoot: root,
-			StartSlot:     s.chain.HeadSlot() + 1,
-			Count:         mathutil.Min(slotsSinceGenesis(genesis)-s.chain.HeadSlot()+1, 256),
-			Step:          1,
-		}
+	req := &p2ppb.BeaconBlocksByRangeRequest{
+		HeadBlockRoot: root,
+		StartSlot:     s.chain.HeadSlot() + 1,
+		Count:         slotsSinceGenesis(genesis) - s.chain.HeadSlot() + 1,
+		Step:          1,
+	}
 
-		log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
-			"Sending batch block request",
-		)
+	log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
+		"Sending batch block request",
+	)
 
-		resp, err := s.requestBlocks(ctx, req, best)
-		if err != nil {
+	resp, err := s.requestBlocks(ctx, req, best)
+	if err != nil {
+		return err
+	}
+
+	for _, blk := range resp {
+		logSyncStatus(genesis, blk, []peer.ID{best}, counter)
+		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 			return err
-		}
-
-		for _, blk := range resp {
-			logSyncStatus(genesis, blk, []peer.ID{best}, counter)
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-				return err
-			}
-		}
-		if len(resp) == 0 {
-			break
 		}
 	}
 

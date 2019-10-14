@@ -23,7 +23,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -136,16 +135,12 @@ func (s *Service) Start() {
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
-			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
-			),
+			recovery.StreamServerInterceptor(),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_opentracing.StreamServerInterceptor(),
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
-			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
-			),
+			recovery.UnaryServerInterceptor(),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),
 		)),
