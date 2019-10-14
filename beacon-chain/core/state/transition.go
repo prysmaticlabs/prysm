@@ -652,7 +652,7 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
 
 	vp, bp := e.NewPrecompute(state)
-	vp, err := e.PrecomputeAttestations(state, vp)
+	vp, bp, err := e.PrecomputeAttestations(state, vp, bp)
 	if err != nil {
 		return nil, err
 	}
