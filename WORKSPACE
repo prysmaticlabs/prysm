@@ -111,9 +111,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "5ab110312cd7665a1940ba0523b67b9fbb6053beb9dd4e147643867bebd7e809",
-    strip_prefix = "repo-infra-db6ceb5f992254db76af7c25db2edc5469b5ea82",
-    url = "https://github.com/kubernetes/repo-infra/archive/db6ceb5f992254db76af7c25db2edc5469b5ea82.tar.gz",
+    sha256 = "6bbda53f40b2a4d3ece44568b4b313b969bc95e7f4e6c1526b10b18139a2f9b0",
+    strip_prefix = "repo-infra-bca2570e8f677800d702c02b0439526e37b9cc93",
+    url = "https://github.com/kubernetes/repo-infra/archive/bca2570e8f677800d702c02b0439526e37b9cc93.tar.gz",
 )
 
 http_archive(
