@@ -75,13 +75,44 @@ To understand the role that both the beacon node and validator play in Prysm, se
 ### Running via Docker
 
 **Docker on Linux/Mac:**
-1. To start your beacon node, issue the following command:
+
+To start your beacon node, issue the following command:
+
 ```
-docker run -v /tmp/prysm-data:/data -p 4000:4000 \
+docker run -v $HOME/prysm-data:/data -p 4000:4000 \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --name beacon-node \
   --datadir=/data
+```
+
+You can stop the beacon node using `Ctrl+c` or with the following command:
+
+```
+docker stop beacon-node
+```
+
+Then it can be restarted again with
+
+```
+docker start -ai beacon-node
+```
+
+If you run into issues you can always delete the container like this:
+
+```
+docker rm beacon-node
+```
+
+and re-create it again and even reset the chain database adding the parameter `--clear-db` as specified here:
+
+```
+docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
+  gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --name beacon-node \
+  --datadir=/data \
   --clear-db
 ```
+
 **Docker on Windows:**
 
 1) You will need to share the local drive you wish to mount to to container (e.g. C:).
@@ -109,9 +140,9 @@ This will sync up the Beacon Node with the latest head block in the network.
 
 ## Staking ETH: Running a Validator Client
 
-Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a *validator client* to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system,  and it is possible to spin up as many as you desire in order to have more stake in the network.
+Once your beacon node is up and **completely synced** (otherwise you will lose validator funds since the validator will not be able to operate), the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a *validator client* to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system,  and it is possible to spin up as many as you desire in order to have more stake in the network.
 
-### Activating Your Validator: Depositing 3.2 Goerli ETH 
+### Activating Your Validator: Depositing 3.2 Goerli ETH
 
 Using your validator deposit data from the previous step, follow the instructions found on https://prylabs.net/participate to make a deposit.
 

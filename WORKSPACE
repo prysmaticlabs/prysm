@@ -1014,7 +1014,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "740ef2ee80c49ed4a272e8c3b54ebf352109f572",
+    commit = "e652ba06e9067ef41c199af59b9c6c67724850d4",
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1099,7 +1099,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "73903dbbceb945c91efc26953e7e6cc6d8cbdb7b",
+    commit = "86fe9e5ca27c0e04bca469c796517bb911b93425",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1251,4 +1251,11 @@ go_repository(
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
     version = "v1.0.0",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    importpath = "golang.org/x/exp",
+    sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
+    version = "v0.0.0-20191002040644-a1355ae1e2c3",
 )
