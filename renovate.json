@@ -11,7 +11,7 @@
   "automerge": true,
   "packageRules": [{
     "packagePatterns": [
-      ".*",
+      ".*"
     ],
     "groupName": "Everything"
   }]
