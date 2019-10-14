@@ -254,7 +254,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
+			state, err = ProcessEpochPrecompute(ctx, state)
 			if err != nil {
 				traceutil.AnnotateError(span, err)
 				return nil, errors.Wrap(err, "could not process epoch")
@@ -638,6 +638,46 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slashings")
 	}
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process final updates")
+	}
+	return state, nil
+}
+
+func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+
+	vp, bp := e.NewPrecompute(state)
+	vp, err := e.PrecomputeAttestations(state, vp)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = e.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process justification")
+	}
+
+	state, err = e.ProcessCrosslinks(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process crosslink")
+	}
+
+	state, err = e.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
+	}
+
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process registry updates")
+	}
+
+	state = e.ProcessSlashingsPrecompute(state, bp)
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {

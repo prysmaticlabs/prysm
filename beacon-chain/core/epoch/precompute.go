@@ -96,7 +96,7 @@ func NewPrecompute(state *pb.BeaconState) ([]*ValidatorPrecompute, *BalancePreco
 	return vPrecompute, bPrecompute
 }
 
-func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) error {
+func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) ([]*ValidatorPrecompute, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
@@ -106,7 +106,7 @@ func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) err
 			p.IsCurrentEpochAttester = true
 			votedTarget, err := sameTargetBlockRoot(state, a, currentEpoch)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if votedTarget {
 				p.IsCurrentEpochTargetAttester = true
@@ -116,7 +116,7 @@ func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) err
 			p.IsPrevEpochAttester = true
 			votedTarget, err := sameTargetBlockRoot(state, a, prevEpoch)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if votedTarget {
 				p.IsPrevEpochAttester = true
@@ -125,7 +125,7 @@ func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) err
 			// Inclusion slot and distance are only required for prev epoch attesters.
 			aSlot, err := helpers.AttestationDataSlot(state, a.Data)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			p.InclusionSlot = aSlot + a.InclusionDelay
 			p.InclusionDistance = a.InclusionDelay
@@ -134,7 +134,7 @@ func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) err
 			// Check if validator voted for canonical blocks.
 			votedHead, err := sameHeadBlockRoot(state, a)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if votedHead {
 				p.IsHeadAttester = true
@@ -144,14 +144,14 @@ func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) err
 		// Update the precompute fields for each attested validators.
 		indices, err := helpers.AttestingIndices(state, a.Data, a.AggregationBits)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, i := range indices {
 			update(v[i], p)
 		}
 
 	}
-	return nil
+	return v, nil
 }
 
 func sameTargetBlockRoot(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
