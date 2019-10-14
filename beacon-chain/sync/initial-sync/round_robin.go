@@ -69,9 +69,15 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if ctx.Err() != nil {
 					return nil, ctx.Err()
 				}
+
+				originalStart := start
+				originalCount := count
 				start := start + uint64(i)*step
 				step := step * uint64(len(peers))
-				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
+				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-originalStart)/step)
+				if len(peers) == 1 {
+					count = originalCount
+				}
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
 				if i < remainder {
