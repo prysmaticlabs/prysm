@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"reflect"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -30,22 +29,13 @@ type ValidatorPrecompute struct {
 	IsPrevEpochTargetAttester bool
 	// IsHeadAttester is true if the validator attested head.
 	IsHeadAttester bool
-	// IsProposer is true if the validator was a proposer.
-	IsProposer bool
 	// CurrentEpochEffectiveBalance is how much effective balance a validator has current epoch.
 	CurrentEpochEffectiveBalance uint64
 
-	// InclusionSlot is the earliest slot a validator had an attestation included in prev epoch.
-	InclusionSlot uint64
 	// InclusionDistance is the distance between the attestation slot and attestation was included in block.
 	InclusionDistance uint64
 	// ProposerIndex is the index of proposer at slot where attestation was included.
 	ProposerIndex uint64
-
-	//  WinningRootCommitteeBalance is the total balance of the crosslink committee.
-	WinningRootCommitteeBalance uint64
-	// WinningRootAttestingBalance is the total balance of the crosslink committee tht attested for winning root.
-	WinningRootAttestingBalance uint64
 }
 
 // BalancePrecompute track the different sets of balances during prev and current epochs.
@@ -74,84 +64,117 @@ func NewPrecompute(state *pb.BeaconState) ([]*ValidatorPrecompute, *BalancePreco
 	vPrecompute := make([]*ValidatorPrecompute, len(state.Validators))
 	bPrecompute := &BalancePrecompute{}
 
+	currentEpoch := helpers.CurrentEpoch(state)
+	prevEpoch := helpers.PrevEpoch(state)
+
 	for i, v := range state.Validators {
-		currentEpoch := helpers.CurrentEpoch(state)
-		prevEpoch := helpers.PrevEpoch(state)
 		withdrawable := currentEpoch > v.WithdrawableEpoch
-		precomp := &ValidatorPrecompute{
+		p := &ValidatorPrecompute{
 			IsSlashed:                    v.Slashed,
 			IsWithdrawableCurrentEpoch:   withdrawable,
 			CurrentEpochEffectiveBalance: v.EffectiveBalance,
 		}
 		if helpers.IsActiveValidator(v, currentEpoch) {
-			precomp.IsActiveCurrentEpoch = true
+			p.IsActiveCurrentEpoch = true
 			bPrecompute.CurrentEpoch += v.EffectiveBalance
 		}
 		if helpers.IsActiveValidator(v, prevEpoch) {
-			precomp.IsActivePrevEpoch = true
+			p.IsActivePrevEpoch = true
 			bPrecompute.PrevEpoch += v.EffectiveBalance
 		}
-		vPrecompute[i] = precomp
+		vPrecompute[i] = p
 	}
 	return vPrecompute, bPrecompute
 }
 
-func PrecomputeAttestations(state *pb.BeaconState, v []*ValidatorPrecompute) ([]*ValidatorPrecompute, error) {
+func PrecomputeAttestations(
+	state *pb.BeaconState,
+	vp []*ValidatorPrecompute,
+	bp *BalancePrecompute) ([]*ValidatorPrecompute, *BalancePrecompute, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
+
+	var currentEpochAttester, currentEpochTargetAttester, prevEpochAttester, prevEpochTargetAttester, headAttester bool
+
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
-		p := &ValidatorPrecompute{}
 		if a.Data.Target.Epoch == currentEpoch {
 			// Check how validator voted in current epoch.
-			p.IsCurrentEpochAttester = true
+			currentEpochAttester = true
 			votedTarget, err := sameTargetBlockRoot(state, a, currentEpoch)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if votedTarget {
-				p.IsCurrentEpochTargetAttester = true
+				currentEpochTargetAttester = true
 			}
 		} else if a.Data.Target.Epoch == prevEpoch {
 			// Check how validator voted in previous epoch.
-			p.IsPrevEpochAttester = true
+			prevEpochAttester = true
 			votedTarget, err := sameTargetBlockRoot(state, a, prevEpoch)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if votedTarget {
-				p.IsPrevEpochAttester = true
+				prevEpochTargetAttester = true
 			}
-
-			// Inclusion slot and distance are only required for prev epoch attesters.
-			aSlot, err := helpers.AttestationDataSlot(state, a.Data)
-			if err != nil {
-				return nil, err
-			}
-			p.InclusionSlot = aSlot + a.InclusionDelay
-			p.InclusionDistance = a.InclusionDelay
-			p.ProposerIndex = a.ProposerIndex
 
 			// Check if validator voted for canonical blocks.
 			votedHead, err := sameHeadBlockRoot(state, a)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if votedHead {
-				p.IsHeadAttester = true
+				headAttester = true
 			}
 		}
 
 		// Update the precompute fields for each attested validators.
 		indices, err := helpers.AttestingIndices(state, a.Data, a.AggregationBits)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, i := range indices {
-			update(v[i], p)
+			if currentEpochAttester {
+				vp[i].IsCurrentEpochAttester = true
+			}
+			if currentEpochTargetAttester {
+				vp[i].IsCurrentEpochTargetAttester = true
+			}
+			if prevEpochAttester {
+				vp[i].IsPrevEpochAttester = true
+			}
+			if prevEpochTargetAttester {
+				vp[i].IsPrevEpochTargetAttester = true
+			}
+			if headAttester {
+				vp[i].IsHeadAttester = true
+			}
+			vp[i].InclusionDistance = a.InclusionDelay
+			vp[i].ProposerIndex = a.ProposerIndex
 		}
-
 	}
-	return v, nil
+
+	for _, v := range vp {
+		if !v.IsSlashed {
+			if v.IsCurrentEpochAttester {
+				bp.CurrentEpochAttesters += v.CurrentEpochEffectiveBalance
+			}
+			if v.IsCurrentEpochTargetAttester {
+				bp.CurrentEpochTargetAttesters += v.CurrentEpochEffectiveBalance
+			}
+			if v.IsPrevEpochAttester {
+				bp.PrevEpoch += v.CurrentEpochEffectiveBalance
+			}
+			if v.IsPrevEpochTargetAttester {
+				bp.PrevEpochTargetAttesters += v.CurrentEpochEffectiveBalance
+			}
+			if v.IsHeadAttester {
+				bp.PrevEpochHeadAttesters += v.CurrentEpochEffectiveBalance
+			}
+		}
+	}
+
+	return vp, bp, nil
 }
 
 func sameTargetBlockRoot(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
@@ -178,15 +201,4 @@ func sameHeadBlockRoot(state *pb.BeaconState, a *pb.PendingAttestation) (bool, e
 		return true, nil
 	}
 	return false, nil
-}
-
-func update(p1 *ValidatorPrecompute, p2 *ValidatorPrecompute) *ValidatorPrecompute {
-	entityType := reflect.TypeOf(p1).Elem()
-	for i := 0; i < entityType.NumField(); i++ {
-		value := entityType.Field(i)
-		oldField := reflect.ValueOf(p1).Elem().Field(i)
-		newField := reflect.ValueOf(p2).Elem().FieldByName(value.Name)
-		oldField.Set(newField)
-	}
-	return p1
 }
