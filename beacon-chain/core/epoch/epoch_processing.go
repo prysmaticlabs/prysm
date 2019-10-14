@@ -295,7 +295,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Bal
 	// We will use that paradigm here for consistency with the godoc spec definition.
 
 	// If 2/3 or more of total balance attested in the previous epoch.
-	if 3*p.PrevEpochAttesters >= 2*p.CurrentEpoch {
+	if 3*p.PrevEpochTargetAttesters >= 2*p.CurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
@@ -305,7 +305,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Bal
 	}
 
 	// If 2/3 or more of the total balance attested in the current epoch.
-	if 3*p.CurrentEpochAttesters >= 2*p.CurrentEpoch {
+	if 3*p.CurrentEpochTargetAttesters >= 2*p.CurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
@@ -388,13 +388,17 @@ func ProcessRewardsAndPenaltiesPrecompute(state *pb.BeaconState, bp *BalancePrec
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
+	proposerRewards, err := proposerDeltaPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attestation delta")
+	}
 	clRewards, clPenalties, err := crosslinkDelta(state)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get crosslink delta")
 	}
 
 	for i := 0; i < len(state.Validators); i++ {
-		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
+		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i]+proposerRewards[i])
 		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
 	}
 	return state, nil
@@ -1053,6 +1057,22 @@ func attestationDeltaPrecompute(state *pb.BeaconState, bp *BalancePrecompute, vp
 	}
 
 	return rewards, penalties, nil
+}
+
+func proposerDeltaPrecompute(state *pb.BeaconState, bp *BalancePrecompute, vp []*ValidatorPrecompute) ([]uint64, error) {
+	rewards := make([]uint64, len(state.Validators))
+
+	totalBalance := bp.CurrentEpoch
+
+	for i, v := range vp {
+		if v.IsPrevEpochAttester {
+			vBalance := v.CurrentEpochEffectiveBalance
+			baseReward := vBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+			proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
+			rewards[i] += proposerReward
+		}
+	}
+	return rewards, nil
 }
 
 // crosslinkDelta calculates the rewards and penalties of individual
