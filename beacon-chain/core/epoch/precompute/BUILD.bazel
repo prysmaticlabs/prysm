@@ -4,5 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["store.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
 )
