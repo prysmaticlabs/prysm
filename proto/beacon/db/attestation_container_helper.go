@@ -31,7 +31,7 @@ func (ac *AttestationContainer) Contains(att *ethpb.Attestation) bool {
 	return false
 }
 
-func ToAttestations(ac *AttestationContainer) []*ethpb.Attestation {
+func (ac *AttestationContainer) ToAttestations() []*ethpb.Attestation {
 	if ac == nil {
 		return nil
 	}
@@ -48,4 +48,23 @@ func ToAttestations(ac *AttestationContainer) []*ethpb.Attestation {
 		}
 	}
 	return atts
+}
+
+func (ac *AttestationContainer) InsertAttestation(att *ethpb.Attestation) {
+	sigPairsNotEclipsed := make([]*AttestationContainer_SignaturePair, 0, len(ac.SignaturePairs))
+	for _, sp := range ac.SignaturePairs {
+		// if att is fully contained in some existing bitfield, do nothing.
+		if sp.AggregationBits.Contains(att.AggregationBits) {
+			return
+		}
+		// filter any existing signature pairs that are fully contained within
+		// the new attestation.
+		if !att.AggregationBits.Contains(sp.AggregationBits) {
+			sigPairsNotEclipsed = append(sigPairsNotEclipsed, sp)
+		}
+	}
+	ac.SignaturePairs = append(sigPairsNotEclipsed, &AttestationContainer_SignaturePair{
+		AggregationBits: att.AggregationBits,
+		Signature:       att.Signature,
+	})
 }
