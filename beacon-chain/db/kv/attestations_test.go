@@ -291,30 +291,30 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 		},
 	}
 
-	tests := []struct{
-		name string
-		input []*ethpb.Attestation
+	tests := []struct {
+		name   string
+		input  []*ethpb.Attestation
 		output []*ethpb.Attestation
-	} {
+	}{
 		{
 			name: "all distinct aggregation bitfields",
 			input: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
@@ -323,17 +323,17 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 			name: "Incoming attestation is fully contained already",
 			input: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b11111111},
 				},
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b11111111},
 				},
 			},
@@ -342,21 +342,21 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 			name: "Existing attestations are fully contained incoming attestation",
 			input: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b10000010},
 				},
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b11111111},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:commonData_0,
+					Data:            commonData_0,
 					AggregationBits: []byte{0b11111111},
 				},
 			},

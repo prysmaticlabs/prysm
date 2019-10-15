@@ -161,7 +161,7 @@ func TestAggregateAttestations(t *testing.T) {
 			},
 		},
 		{
-			name: "1024 attestations with single bit set",
+			name:   "1024 attestations with single bit set",
 			inputs: bitlistsWithSingleBitSet(1024),
 			want: []bitfield.Bitlist{
 				bitlistWithAllBitsSet(1024),
@@ -233,7 +233,7 @@ func TestAggregateAttestations(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			sig := sk.Sign([]byte("dummy_test_data"), 0/*domain*/)
+			sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
 				Data:            nil,

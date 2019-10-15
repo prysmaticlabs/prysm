@@ -26,6 +26,7 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
+    srcs = ["attestation_container_helper.go"],
     embed = [":db_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
     visibility = ["//visibility:public"],
