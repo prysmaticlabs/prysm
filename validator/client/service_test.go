@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"os"
@@ -105,5 +106,27 @@ func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
+	}
+}
+
+func TestPubKeysFromMap(t *testing.T) {
+	pubKeys := pubKeysFromMap(keyMapThreeValidators)
+	if len(pubKeys) != len(keyMapThreeValidators) {
+		t.Fatalf("Incorrect number of public keys: expected %d, obtained %d", len(keyMapThreeValidators), len(pubKeys))
+	}
+
+	for i := range pubKeys {
+		// Ensure each public key exists in the map
+		var pubKey [48]byte
+		copy(pubKey[:], pubKeys[i])
+		if _, exists := keyMapThreeValidators[pubKey]; !exists {
+			t.Fatalf("Public key %#x does not exist in original map", pubKeys[i])
+		}
+		// Ensure each public key is different from the others
+		for j := range pubKeys {
+			if i != j && bytes.Compare(pubKeys[i], pubKeys[j]) == 0 {
+				t.Fatalf("Non-unique public keys at indices %d and %d", i, j)
+			}
+		}
 	}
 }
