@@ -205,3 +205,47 @@ func proposerDeltaPrecompute(state *pb.BeaconState, bp *BalancePrecompute, vp []
 	}
 	return rewards, nil
 }
+
+func crosslinkDeltaPreCompute(state *pb.BeaconState, bp *BalancePrecompute, vp []*ValidatorPrecompute) ([]uint64, []uint64, error) {
+	rewards := make([]uint64, len(state.Validators))
+	penalties := make([]uint64, len(state.Validators))
+	epoch := helpers.PrevEpoch(state)
+	count, err := helpers.CommitteeCount(state, epoch)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not get epoch committee count")
+	}
+	startShard, err := helpers.StartShard(state, epoch)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not get epoch start shard")
+	}
+	for i := uint64(0); i < count; i++ {
+		shard := (startShard + i) % params.BeaconConfig().ShardCount
+		committee, err := helpers.CrosslinkCommittee(state, epoch, shard)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get crosslink's committee")
+		}
+		_, attestingIndices, err := winningCrosslink(state, shard, epoch)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get winning crosslink")
+		}
+
+		attested := make(map[uint64]bool)
+		// Construct a map to look up validators that voted for crosslink.
+		for _, index := range attestingIndices {
+			attested[index] = true
+		}
+		committeeBalance := helpers.TotalBalance(state, committee)
+		attestingBalance := helpers.TotalBalance(state, attestingIndices)
+
+		for _, index := range committee {
+			base := vp[i].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
+			if _, ok := attested[index]; ok {
+				rewards[index] += base * attestingBalance / committeeBalance
+			} else {
+				penalties[index] += base
+			}
+		}
+	}
+
+	return rewards, penalties, nil
+}
