@@ -21,30 +21,28 @@ import (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
-	tpk := v.keys[pk].PublicKey.Marshal()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", tpk)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", tpk[:8]))
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
-	pubKey := v.keys[pk].PublicKey.Marshal()
 	var assignment *pb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return
 	}
 	for _, assign := range v.assignments.ValidatorAssignment {
-		if bytes.Equal(pubKey, assign.PublicKey) {
+		if bytes.Equal(pubKey[:], assign.PublicKey) {
 			assignment = assign
 			break
 		}
 	}
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey,
+		PublicKey: pubKey[:],
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
@@ -96,7 +94,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		log.WithError(err).Error("Failed to sign attestation data and custody bit")
 		return
 	}
-	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
+	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
 	attestation := &ethpb.Attestation{
 		Data:            data,
