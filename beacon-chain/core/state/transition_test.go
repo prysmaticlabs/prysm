@@ -737,7 +737,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
-	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
+	validatorCount := uint64(65536)
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -754,6 +754,8 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	for i := uint64(0); i < shardCount; i++ {
 		atts = append(atts, &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
@@ -782,6 +784,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		Slashings:                 []uint64{0, 1e9, 0},
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
 	}
@@ -793,9 +796,8 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		}
 	}
 
-	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpoch(context.Background(), s)
+		_, err := state.ProcessEpochPrecompute(context.Background(), s)
 		if err != nil {
 			b.Fatal(err)
 		}
