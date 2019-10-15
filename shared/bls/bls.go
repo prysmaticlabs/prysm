@@ -25,6 +25,13 @@ func init() {
 	}
 }
 
+func Init() {
+	err := bls12.Init(bls12.BLS12_381)
+	if err != nil {
+		panic(err)
+	}
+}
+
 var pubkeyCache = ccache.New(ccache.Configure())
 
 // CurveOrder for the BLS12-381 curve.

@@ -239,11 +239,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		},
 	}
 
-	sk, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	sk := bls.RandKey(rand.Reader)
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
 	signedRoot, err := ssz.SigningRoot(deposit.Data)
 	if err != nil {

@@ -920,10 +920,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		b.Fatal(err)
-	}
+	priv := bls.RandKey(rand.Reader)
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
