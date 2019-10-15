@@ -3,7 +3,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
@@ -25,7 +24,7 @@ type validator struct {
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	attesterClient       pb.AttesterServiceClient
-	keys                 map[string]*keystore.Key
+	keys                 map[[48]byte]*keystore.Key
 	pubkeys              [][]byte
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
@@ -132,8 +131,9 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.Validator
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.DepositInclusionSlot == 0 {
-			log.Info("Validator not included in state")
+		if status.Status.Status == pb.ValidatorStatus_DEPOSIT_RECEIVED {
+			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+				"Deposit for validator received but not processed into state")
 			continue
 		}
 		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
@@ -236,8 +236,8 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
-	rolesAt := make(map[string]pb.ValidatorRole)
+func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
+	rolesAt := make(map[[48]byte]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
@@ -253,7 +253,9 @@ func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 		} else {
 			role = pb.ValidatorRole_UNKNOWN
 		}
-		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
+		var pubKey [48]byte
+		copy(pubKey[:], assignment.PublicKey)
+		rolesAt[pubKey] = role
 	}
 	return rolesAt
 }

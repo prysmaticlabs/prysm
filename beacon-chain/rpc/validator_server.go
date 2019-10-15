@@ -301,32 +301,32 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, h
 		}
 	}
 
-	defaultUnknownResponse := &pb.ValidatorStatusResponse{
-		Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+	statusResp := &pb.ValidatorStatusResponse{
+		Status:                 pb.ValidatorStatus_DEPOSIT_RECEIVED,
 		ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
 		Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 	}
 
-	idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-	if err != nil {
-		return defaultUnknownResponse
-	}
-	if !ok || headState == nil {
-		return defaultUnknownResponse
-	}
-
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
 	if err != nil {
-		return defaultUnknownResponse
+		return statusResp
+	}
+	statusResp.DepositInclusionSlot = depositBlockSlot
+
+	idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	if err != nil {
+		return statusResp
+	}
+	if !ok || headState == nil {
+		return statusResp
 	}
 
-	if helpers.IsActiveValidator(headState.Validators[idx], headState.Slot) {
-		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_ACTIVE,
-			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-			ActivationEpoch:        headState.Validators[idx].ActivationEpoch,
-			DepositInclusionSlot:   depositBlockSlot,
-		}
+	vStatus := vs.assignmentStatus(uint64(idx), headState)
+	statusResp.Status = vStatus
+
+	if vStatus == pb.ValidatorStatus_ACTIVE {
+		statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
+		return statusResp
 	}
 
 	var queuePosition uint64
@@ -339,9 +339,8 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, h
 	}
 	// Our position in the activation queue is the above index - our validator index.
 	queuePosition = uint64(idx) - lastActivatedValidatorIdx
-	status := vs.assignmentStatus(uint64(idx), headState)
 	return &pb.ValidatorStatusResponse{
-		Status:                    status,
+		Status:                    vStatus,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
 		PositionInActivationQueue: queuePosition,
 		DepositInclusionSlot:      depositBlockSlot,
@@ -432,10 +431,6 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
 	eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
-
-	if depositBlockSlot > currentSlot {
-		return 0, nil
-	}
 
 	return depositBlockSlot, nil
 }

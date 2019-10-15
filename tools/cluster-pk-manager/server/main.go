@@ -6,6 +6,7 @@ import (
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -30,6 +31,8 @@ func main() {
 	if *verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+	// use demo-config for cluster deployments
+	params.UseDemoBeaconConfig()
 
 	db := newDB(*dbPath)
 	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)

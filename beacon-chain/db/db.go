@@ -17,6 +17,8 @@ type Database interface {
 	io.Closer
 	DatabasePath() string
 	ClearDB() error
+	// Backup and restore methods
+	Backup(ctx context.Context) error
 	// Attestation related methods.
 	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)

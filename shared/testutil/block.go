@@ -245,11 +245,11 @@ func generateAttesterSlashings(
 		sig = privs[committee[i]].Sign(dataRoot[:], domain)
 		att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
-		indexedAtt1, err := blocks.ConvertToIndexed(bState, att1)
+		indexedAtt1, err := blocks.ConvertToIndexed(context.Background(), bState, att1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		indexedAtt2, err := blocks.ConvertToIndexed(bState, att2)
+		indexedAtt2, err := blocks.ConvertToIndexed(context.Background(), bState, att2)
 		if err != nil {
 			t.Fatal(err)
 		}
