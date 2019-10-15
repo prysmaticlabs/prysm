@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["store.go"],
+    srcs = ["type.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
     visibility = ["//beacon-chain:__subpackages__"],
 )
