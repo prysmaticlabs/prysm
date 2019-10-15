@@ -797,7 +797,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpochPrecompute(context.Background(), s)
+		_, err := state.ProcessEpoch(context.Background(), s)
 		if err != nil {
 			b.Fatal(err)
 		}

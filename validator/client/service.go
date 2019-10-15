@@ -62,7 +62,13 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	pubKeys := pubKeysFromMap(v.keys)
+	pubKeys := make([][]byte, 0)
+	for pubKey := range v.keys {
+		var pubKeyCopy [48]byte
+		copy(pubKeyCopy[:], pubKey[:])
+		pubKeys = append(pubKeys, pubKeyCopy[:])
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyCopy[:]))).Info("New validator service")
+	}
 
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
