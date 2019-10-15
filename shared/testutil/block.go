@@ -24,6 +24,7 @@ type BlockGenConfig struct {
 	MaxAttestations      uint64
 	MaxDeposits          uint64
 	MaxVoluntaryExits    uint64
+	Signatures           bool
 }
 
 // GenerateFullBlock generates a fully valid block with the requested parameters.
@@ -49,7 +50,7 @@ func GenerateFullBlock(
 
 	atts := []*ethpb.Attestation{}
 	if conf.MaxAttestations > 0 {
-		atts = GenerateAttestations(t, bState, privs, conf.MaxAttestations)
+		atts = GenerateAttestations(t, bState, privs, conf)
 	}
 
 	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data
@@ -73,14 +74,17 @@ func GenerateFullBlock(
 		t.Fatal(err)
 	}
 
-	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	bState.Slot++
-	reveal, err := CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
-	if err != nil {
-		t.Fatal(err)
+	reveal := []byte{1, 2, 3, 4}
+	if conf.Signatures {
+		// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+		// function deterministic on beacon state slot.
+		bState.Slot++
+		reveal, err = CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bState.Slot--
 	}
-	bState.Slot--
 
 	block := &ethpb.BeaconBlock{
 		Slot:       currentSlot + 1,
@@ -105,20 +109,23 @@ func GenerateFullBlock(
 		t.Fatal(err)
 	}
 	block.StateRoot = root[:]
-	blockRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
+
+	if conf.Signatures {
+		blockRoot, err := ssz.SigningRoot(block)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+		// function deterministic on beacon state slot.
+		bState.Slot++
+		proposerIdx, err := helpers.BeaconProposerIndex(bState)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bState.Slot--
+		domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+		block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	}
-	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	bState.Slot++
-	proposerIdx, err := helpers.BeaconProposerIndex(bState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bState.Slot--
-	domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
-	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 
 	return block
 }
@@ -271,8 +278,9 @@ func GenerateAttestations(
 	t testing.TB,
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
-	maxAttestations uint64,
+	conf *BlockGenConfig,
 ) []*ethpb.Attestation {
+	maxAttestations := conf.MaxAttestations
 	headState := proto.Clone(bState).(*pb.BeaconState)
 	headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
 	if err != nil {
@@ -332,13 +340,15 @@ func GenerateAttestations(
 
 		custodyBits := bitfield.NewBitlist(committeeSize)
 		att.CustodyBits = custodyBits
-
-		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-			Data:       att.Data,
-			CustodyBit: false,
-		})
-		if err != nil {
-			t.Fatal(err)
+		dataRoot := [32]byte{}
+		if conf.Signatures {
+			dataRoot, err = ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+				Data:       att.Data,
+				CustodyBit: false,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 		domain := helpers.Domain(bState.Fork, att.Data.Crosslink.StartEpoch+1, params.BeaconConfig().DomainAttestation)
 
@@ -348,11 +358,15 @@ func GenerateAttestations(
 			sigs := []*bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
-				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+				if conf.Signatures {
+					sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+				}
 			}
 			att.AggregationBits = aggregationBits
 
-			att.Signature = bls.AggregateSignatures(sigs).Marshal()
+			if conf.Signatures {
+				att.Signature = bls.AggregateSignatures(sigs).Marshal()
+			}
 			attestations[attCounter] = att
 			attCounter++
 		}
