@@ -362,6 +362,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 			"index":            i,
 			"root":             fmt.Sprintf("%#x", root),
 			"aggregation_bits": fmt.Sprintf("%8b", att.AggregationBits.Bytes()),
+			"shard":            att.Data.Crosslink.Shard,
 		}).Debug("block attestation")
 	}
 	return nil
