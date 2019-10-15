@@ -64,8 +64,10 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 func (v *ValidatorService) Start() {
 	pubKeys := make([][]byte, 0)
 	for pubKey := range v.keys {
-		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("New validator service")
-		pubKeys = append(pubKeys, pubKey[:])
+		var pubKeyCopy [48]byte
+		copy(pubKeyCopy[:], pubKey[:])
+		pubKeys = append(pubKeys, pubKeyCopy[:])
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyCopy[:]))).Info("New validator service")
 	}
 
 	var dialOpt grpc.DialOption
