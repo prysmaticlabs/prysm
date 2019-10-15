@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -173,7 +172,6 @@ func PrecomputeAttestations(
 				bp.PrevEpochHeadAttesters += v.CurrentEpochEffectiveBalance
 			}
 		}
-		fmt.Println(v)
 	}
 
 	return vp, bp, nil

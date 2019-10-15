@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"strings"
 	"testing"
@@ -17,11 +18,13 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
@@ -775,6 +778,23 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 
 	s := &pb.BeaconState{
+		Validators:                validators,
+		Balances:                  balances,
+		StartShard:                0,
+		FinalizedCheckpoint:       &ethpb.Checkpoint{},
+		BlockRoots:                make([][]byte, 254),
+		Slashings:                 []uint64{0, 1e9, 0},
+		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:    make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentCrosslinks:         crosslinks,
+		PreviousEpochAttestations: atts,
+	}
+	if err := helpers.UpdateCommitteeCache(s); err != nil {
+		b.Fatal(err)
+	}
+
+	s = &pb.BeaconState{
 		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:                validators,
 		Balances:                  balances,
@@ -788,16 +808,19 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
 	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < shardCount; i++ {
-		if _, err := helpers.CrosslinkCommittee(s, 0, i); err != nil {
-			b.Fatal(err)
-		}
+	if err := helpers.UpdateCommitteeCache(s); err != nil {
+		b.Fatal(err)
 	}
 
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(featureconfig.NewCacheFlag.Name, true, "new cache")
+	ctx := cli.NewContext(app, set, nil)
+	featureconfig.ConfigureBeaconChain(ctx)
+
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpoch(context.Background(), s)
+		_, err := state.ProcessEpochPrecompute(context.Background(), s)
 		if err != nil {
 			b.Fatal(err)
 		}
