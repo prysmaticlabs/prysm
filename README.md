@@ -125,7 +125,7 @@ docker rm beacon-node
 and re-create it again and even reset the chain database adding the parameter `--clear-db` as specified here:
 
 ```
-docker run -v $HOME/prysm-data:/data -p 4000:4000 \
+docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --name beacon-node \
   --datadir=/data \
