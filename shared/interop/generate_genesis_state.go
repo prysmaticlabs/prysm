@@ -1,6 +1,9 @@
 package interop
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -8,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -25,14 +29,66 @@ var (
 // GenerateGenesisState deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
 func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
-	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
+	start := time.Now()
+
+	type keys struct {
+		secrets []*bls.SecretKey
+		publics []*bls.PublicKey
 	}
-	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
+	privKeys := make([]*bls.SecretKey, numValidators)
+	pubKeys := make([]*bls.PublicKey, numValidators)
+	workers, resultsCh, errCh, err := mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+		secs, pubs, err := DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
+		if err != nil {
+			return nil, err
+		}
+		return mputil.NewScatterResults(offset, &keys{secrets: secs, publics: pubs}), nil
+	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
+		return nil, nil, errors.Wrap(err, "failed to generate keys")
 	}
+	defer close(resultsCh)
+	defer close(errCh)
+	for i := workers; i > 0; i-- {
+		select {
+		case result := <-resultsCh:
+			copy(privKeys[result.Offset:], result.Extent.(*keys).secrets)
+			copy(pubKeys[result.Offset:], result.Extent.(*keys).publics)
+		case err := <-errCh:
+			return nil, nil, errors.Wrapf(err, "failed to generate keys")
+		}
+	}
+
+	type depositData struct {
+		items []*ethpb.Deposit_Data
+		roots [][]byte
+	}
+	depositDataItems := make([]*ethpb.Deposit_Data, numValidators)
+	depositDataRoots := make([][]byte, numValidators)
+	workers, resultsCh, errCh, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+		items, roots, err := DepositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate deposit data from keys")
+		}
+		return mputil.NewScatterResults(offset, &depositData{items: items, roots: roots}), nil
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
+	}
+	defer close(resultsCh)
+	defer close(errCh)
+	for i := workers; i > 0; i-- {
+		select {
+		case result := <-resultsCh:
+			copy(depositDataItems[result.Offset:], result.Extent.(*depositData).items)
+			copy(depositDataRoots[result.Offset:], result.Extent.(*depositData).roots)
+		case err := <-errCh:
+			return nil, nil, errors.Wrapf(err, "failed to generate deposit data")
+		}
+	}
+
+	fmt.Printf("GenerateGenesisState(%d) mp took %v\n", numValidators, time.Since(start))
+
 	trie, err := trieutil.GenerateTrieFromItems(
 		depositDataRoots,
 		int(params.BeaconConfig().DepositContractTreeDepth),
@@ -40,10 +96,29 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
+
+	deposits := make([]*ethpb.Deposit, numValidators)
+	workers, resultsCh, errCh, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+		deposits, err := GenerateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate deposit from deposit data")
+		}
+		return mputil.NewScatterResults(offset, deposits), nil
+	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
+		return nil, nil, errors.Wrap(err, "failed to generate deposit from deposit data")
 	}
+	defer close(resultsCh)
+	defer close(errCh)
+	for i := workers; i > 0; i-- {
+		select {
+		case result := <-resultsCh:
+			copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
+		case err := <-errCh:
+			return nil, nil, errors.Wrapf(err, "failed to generate deposit")
+		}
+	}
+
 	root := trie.Root()
 	if genesisTime == 0 {
 		genesisTime = uint64(roughtime.Now().Unix())
@@ -60,12 +135,12 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	for i, item := range depositDataItems {
-		proof, err := trie.MerkleProof(i)
+		proof, err := trie.MerkleProof(i + offset)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not generate proof for deposit %d", i)
+			return nil, errors.Wrapf(err, "could not generate proof for deposit %d", i+offset)
 		}
 		deposits[i] = &ethpb.Deposit{
 			Proof: proof,
@@ -105,7 +180,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	domain := bls.Domain(domainDeposit[:], genesisForkVersion)
+	domain := bls.Domain(domainDeposit[:], params.BeaconConfig().GenesisForkVersion)
 	di.Signature = privKey.Sign(sr[:], domain).Marshal()
 	return di, nil
 }
