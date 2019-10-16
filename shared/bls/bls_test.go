@@ -10,7 +10,7 @@ import (
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	b := []byte("hi")
+	b := bls.RandKey(nil).Marshal()
 	b32 := bytesutil.ToBytes32(b)
 	pk, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {

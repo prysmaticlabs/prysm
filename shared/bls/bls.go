@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"io"
 	"math/big"
-	"time"
 
 	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
@@ -64,7 +63,7 @@ func RandKey(r io.Reader) *SecretKey {
 // SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	secKey := &bls12.SecretKey{}
-	err := secKey.Deserialize(priv)
+	err := secKey.SetLittleEndian(priv)
 	return &SecretKey{p: secKey}, err
 }
 
@@ -122,7 +121,7 @@ func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
-	keyBytes := s.p.GetLittleEndian()
+	keyBytes := s.p.Serialize()
 	if len(keyBytes) < 32 {
 		emptyBytes := make([]byte, 32-len(keyBytes))
 		keyBytes = append(emptyBytes, keyBytes...)
@@ -133,7 +132,7 @@ func (s *SecretKey) Marshal() []byte {
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
 	rawBytes := p.p.Serialize()
-	return reverseByteOrder(rawBytes)
+	return rawBytes
 }
 
 // Copy the public key to a new pointer reference.
