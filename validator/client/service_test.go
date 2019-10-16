@@ -1,9 +1,9 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -18,19 +18,23 @@ import (
 
 var _ = shared.Service(&ValidatorService{})
 var validatorKey *keystore.Key
-var keyMap map[string]*keystore.Key
-var keyMapThreeValidators map[string]*keystore.Key
+var validatorPubKey [48]byte
+var keyMap map[[48]byte]*keystore.Key
+var keyMapThreeValidators map[[48]byte]*keystore.Key
 
 func keySetup() {
-	keyMap = make(map[string]*keystore.Key)
-	keyMapThreeValidators = make(map[string]*keystore.Key)
+	keyMap = make(map[[48]byte]*keystore.Key)
+	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
 
 	validatorKey, _ = keystore.NewKey(rand.Reader)
-	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
+	keyMap[validatorPubKey] = validatorKey
 
 	for i := 0; i < 3; i++ {
 		vKey, _ := keystore.NewKey(rand.Reader)
-		keyMapThreeValidators[hex.EncodeToString(vKey.PublicKey.Marshal())] = vKey
+		var pubKey [48]byte
+		copy(pubKey[:], vKey.PublicKey.Marshal())
+		keyMapThreeValidators[pubKey] = vKey
 	}
 }
 
@@ -102,5 +106,27 @@ func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
+	}
+}
+
+func TestPubKeysFromMap(t *testing.T) {
+	pubKeys := pubKeysFromMap(keyMapThreeValidators)
+	if len(pubKeys) != len(keyMapThreeValidators) {
+		t.Fatalf("Incorrect number of public keys: expected %d, obtained %d", len(keyMapThreeValidators), len(pubKeys))
+	}
+
+	for i := range pubKeys {
+		// Ensure each public key exists in the map
+		var pubKey [48]byte
+		copy(pubKey[:], pubKeys[i])
+		if _, exists := keyMapThreeValidators[pubKey]; !exists {
+			t.Fatalf("Public key %#x does not exist in original map", pubKeys[i])
+		}
+		// Ensure each public key is different from the others
+		for j := range pubKeys {
+			if i != j && bytes.Compare(pubKeys[i], pubKeys[j]) == 0 {
+				t.Fatalf("Non-unique public keys at indices %d and %d", i, j)
+			}
+		}
 	}
 }

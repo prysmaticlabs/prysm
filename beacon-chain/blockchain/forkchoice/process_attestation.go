@@ -234,11 +234,11 @@ func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	indexedAtt, err := blocks.ConvertToIndexed(baseState, a)
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, a)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
-	if err := blocks.VerifyIndexedAttestation(baseState, indexedAtt); err != nil {
+	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil

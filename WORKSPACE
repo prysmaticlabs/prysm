@@ -197,7 +197,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "a1a36e6d85f19b3007d1ee56d8a4e91294f1ddd5",
+    commit = "40beaeef26d5a2a0918dec2b960c2556c71a90a0",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -1014,7 +1014,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "740ef2ee80c49ed4a272e8c3b54ebf352109f572",
+    commit = "e652ba06e9067ef41c199af59b9c6c67724850d4",
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1099,7 +1099,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "a6479422943a734f4a0ba2729095fb20c6a233b2",
+    commit = "86fe9e5ca27c0e04bca469c796517bb911b93425",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1251,4 +1251,11 @@ go_repository(
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
     version = "v1.0.0",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    importpath = "golang.org/x/exp",
+    sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
+    version = "v0.0.0-20191002040644-a1355ae1e2c3",
 )

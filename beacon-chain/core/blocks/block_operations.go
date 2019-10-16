@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blocks")
@@ -330,10 +332,7 @@ func ProcessRandaoNoVerify(
 //        assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
-func ProcessProposerSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessProposerSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if int(slashing.ProposerIndex) >= len(beaconState.Validators) {
@@ -404,12 +403,9 @@ func VerifyProposerSlashing(
 //            slash_validator(state, index)
 //            slashed_any = True
 //    assert slashed_any
-func ProcessAttesterSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttesterSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := VerifyAttesterSlashing(beaconState, slashing); err != nil {
+		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -437,7 +433,7 @@ func ProcessAttesterSlashings(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -445,10 +441,10 @@ func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.Atteste
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att1); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att1); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att2); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att2); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
 	return nil
@@ -484,13 +480,10 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 // ProcessAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
-func ProcessAttestations(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestations(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestation(beaconState, attestation)
+		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -500,13 +493,10 @@ func ProcessAttestations(
 
 // ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
-func ProcessAttestationsNoVerify(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -555,17 +545,20 @@ func ProcessAttestationsNoVerify(
 //
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerify(beaconState, att)
+func ProcessAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, VerifyAttestation(beaconState, att)
+	return beaconState, VerifyAttestation(ctx, beaconState, att)
 }
 
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
-func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
+	defer span.End()
+
 	data := att.Data
 
 	if data.Crosslink.Shard > params.BeaconConfig().ShardCount {
@@ -707,7 +700,10 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
+	defer span.End()
+
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
@@ -782,7 +778,10 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*e
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+	defer span.End()
+
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -881,12 +880,12 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
+func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
+	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
-	return VerifyIndexedAttestation(beaconState, indexedAtt)
+	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
 // ProcessDeposits is one of the operations performed on each processed
@@ -896,10 +895,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) erro
 // Spec pseudocode definition:
 //   For each deposit in block.body.deposits:
 //     process_deposit(state, deposit)
-func ProcessDeposits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
 
@@ -1040,10 +1036,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessVoluntaryExits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessVoluntaryExits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	exits := body.VoluntaryExits
 
