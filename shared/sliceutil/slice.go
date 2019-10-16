@@ -298,12 +298,11 @@ func InsertSort(data []uint64, element uint64) []uint64 {
 }
 
 // TruncateItems truncates a sorted list at a minimum uint64 value.
-func TruncateItems(data []uint64, minItemVal uint64) (truncate bool, truncatedList []uint64, itemsToTruncate []uint64) {
+func TruncateItems(data []uint64, minItemVal uint64) (itemsToTruncate []uint64) {
 	index := sort.Search(len(data), func(i int) bool { return data[i] > minItemVal })
 	if index == 0 {
-		return false, data, []uint64{}
+		return []uint64{}
 	}
 	itemsToTruncate = data[:index]
-	truncatedList = data[index:]
-	return true, truncatedList, itemsToTruncate
+	return itemsToTruncate
 }

@@ -30,14 +30,11 @@ func CheckNewProposal(currentEpoch uint64, epoch uint64, validatorID uint64) (bo
 	if _, ok := epochProposalBitlist[epoch]; !ok {
 		epochProposalBitlist[epoch] = bitfield.NewBitlist(300000)
 		epochs = sliceutil.InsertSort(epochs, epoch)
-		var truncate bool
 		var itemsToTruncate []uint64
 		if currentEpoch > weakSubjectivityPeriod {
-			truncate, epochs, itemsToTruncate = sliceutil.TruncateItems(epochs, currentEpoch-weakSubjectivityPeriod)
-			if truncate {
-				for _, key := range itemsToTruncate {
-					delete(epochProposalBitlist, key)
-				}
+			itemsToTruncate = sliceutil.TruncateItems(epochs, currentEpoch-weakSubjectivityPeriod)
+			for _, key := range itemsToTruncate {
+				delete(epochProposalBitlist, key)
 			}
 		}
 	}
