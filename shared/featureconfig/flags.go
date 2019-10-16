@@ -41,6 +41,11 @@ var ValidatorFlags = []cli.Flag{
 	DemoConfigFlag,
 }
 
+// SlasherFlags contains a list of all the feature flags that apply to the slasher server.
+var SlasherFlags = []cli.Flag{
+	DemoConfigFlag,
+}
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,

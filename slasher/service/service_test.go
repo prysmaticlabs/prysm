@@ -1,4 +1,4 @@
-package slasher
+package service
 
 import (
 	"errors"

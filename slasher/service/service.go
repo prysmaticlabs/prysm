@@ -1,5 +1,5 @@
 // Package slasher defines the service used to retrieve slashings proofs.
-package slasher
+package service
 
 import (
 	"fmt"
