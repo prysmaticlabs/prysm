@@ -215,7 +215,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	// TODO: Greed selection. Which attestations provide the most profit?
 	var validAttsCount uint64
 	for root, ac := range s.attestationPool {
-		for _, att := range dbpb.ToAttestations(ac) {
+		for _, att := range ac.ToAttestations() {
 			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
 				// TODO: Delete attestation from container?
 				continue
@@ -247,7 +247,7 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
 	for _, ac := range s.attestationPool {
-		atts = append(atts, dbpb.ToAttestations(ac)...)
+		atts = append(atts, ac.ToAttestations()...)
 	}
 
 	return atts, nil
@@ -303,7 +303,7 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 		return nil
 	}
 
-	beforeAggregation := append(dbpb.ToAttestations(ac), attestation)
+	beforeAggregation := append(ac.ToAttestations(), attestation)
 
 	// Filter any out attestation that is already fully included.
 	for i, att := range beforeAggregation {
@@ -391,7 +391,7 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 
 		ac, ok := s.attestationPool[root]
 		if ok {
-			atts := dbpb.ToAttestations(ac)
+			atts := ac.ToAttestations()
 			for i, att := range atts {
 				if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
 					log.Debug("deleting attestation")

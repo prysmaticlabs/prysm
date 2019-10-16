@@ -18,42 +18,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func toAttestations(ac *dbpb.AttestationContainer) []*ethpb.Attestation {
-	if ac == nil {
-		return nil
-	}
-
-	atts := make([]*ethpb.Attestation, len(ac.SignaturePairs))
-	for i, sp := range ac.SignaturePairs {
-		atts[i] = &ethpb.Attestation{
-			Data:            ac.Data,
-			AggregationBits: sp.AggregationBits,
-			Signature:       sp.Signature,
-			// TODO: Add custody bits in phase 1.
-		}
-	}
-	return atts
-}
-
-func insertAttestation(ac *dbpb.AttestationContainer, att *ethpb.Attestation) {
-	sigPairsNotEclipsed := make([]*dbpb.AttestationContainer_SignaturePair, 0, len(ac.SignaturePairs))
-	for _, sp := range ac.SignaturePairs {
-		// if att is fully contained in some existing bitfield, do nothing.
-		if sp.AggregationBits.Contains(att.AggregationBits) {
-			return
-		}
-		// filter any existing signature pairs that are fully contained within
-		// the new attestation.
-		if !att.AggregationBits.Contains(sp.AggregationBits) {
-			sigPairsNotEclipsed = append(sigPairsNotEclipsed, sp)
-		}
-	}
-	ac.SignaturePairs = append(sigPairsNotEclipsed, &dbpb.AttestationContainer_SignaturePair{
-		AggregationBits: att.AggregationBits,
-		Signature:       att.Signature,
-	})
-}
-
 // Attestation retrieval by attestation data root.
 func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
@@ -69,7 +33,7 @@ func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte
 		if err := proto.Unmarshal(enc, ac); err != nil {
 			return err
 		}
-		atts = toAttestations(ac)
+		atts = ac.ToAttestations()
 		return nil
 	})
 	if err != nil {
@@ -109,7 +73,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 			if err := proto.Unmarshal(encoded, ac); err != nil {
 				return err
 			}
-			atts = append(atts, toAttestations(ac)...)
+			atts = append(atts, ac.ToAttestations()...)
 		}
 		return nil
 	})
@@ -198,7 +162,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			}
 		}
 
-		insertAttestation(ac, att)
+		ac.InsertAttestation(att)
 
 		enc, err := proto.Marshal(ac)
 		if err != nil {
