@@ -1,14 +1,28 @@
 package mathutil
 
-import "math"
+import (
+	"math"
+)
 
 // IntegerSquareRoot defines a function that returns the
 // largest possible integer root of a number using the bitwise
 // Newton-Raphson method.
 func IntegerSquareRoot(n uint64) uint64 {
+	if IsPowerOf2(n) {
+		// Short circuit the computation if is a power of 2.
+		exponent := math.Floor(math.Log2(float64(n)))
+		return n >> uint64(exponent/2)
+	}
 	// Start with a large enough approximation.
-	x := uint64(1 << 16)
-	y := uint64(1 << 16)
+	var x, y uint64
+	if n < 1<<32 {
+		x = uint64(32768)
+		y = uint64(32768)
+	} else {
+		// Still fails for numbers greater than 1<<32.
+		x = uint64(1 << 32)
+		y = uint64(1 << 32)
+	}
 	for {
 		if y*y > n {
 			y ^= x

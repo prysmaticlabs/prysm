@@ -35,10 +35,6 @@ func TestIntegerSquareRoot(t *testing.T) {
 			number: 1 << 32,
 			root:   1 << 16,
 		},
-		{
-			number: 1 << 32,
-			root:   1 << 16,
-		},
 	}
 
 	for _, testVals := range tt {
