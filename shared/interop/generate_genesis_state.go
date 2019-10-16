@@ -37,7 +37,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 	privKeys := make([]*bls.SecretKey, numValidators)
 	pubKeys := make([]*bls.PublicKey, numValidators)
-	workers, resultsCh, errCh, err := mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err := mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
 		secs, pubs, err := DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
 		if err != nil {
 			return nil, err
@@ -47,14 +47,14 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate keys")
 	}
-	defer close(resultsCh)
-	defer close(errCh)
-	for i := workers; i > 0; i-- {
+	defer close(batch.ResultCh)
+	defer close(batch.ErrorCh)
+	for i := batch.Workers; i > 0; i-- {
 		select {
-		case result := <-resultsCh:
+		case result := <-batch.ResultCh:
 			copy(privKeys[result.Offset:], result.Extent.(*keys).secrets)
 			copy(pubKeys[result.Offset:], result.Extent.(*keys).publics)
-		case err := <-errCh:
+		case err := <-batch.ErrorCh:
 			return nil, nil, errors.Wrapf(err, "failed to generate keys")
 		}
 	}
@@ -65,7 +65,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 	depositDataItems := make([]*ethpb.Deposit_Data, numValidators)
 	depositDataRoots := make([][]byte, numValidators)
-	workers, resultsCh, errCh, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
 		items, roots, err := DepositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit data from keys")
@@ -75,14 +75,14 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
 	}
-	defer close(resultsCh)
-	defer close(errCh)
-	for i := workers; i > 0; i-- {
+	defer close(batch.ResultCh)
+	defer close(batch.ErrorCh)
+	for i := batch.Workers; i > 0; i-- {
 		select {
-		case result := <-resultsCh:
+		case result := <-batch.ResultCh:
 			copy(depositDataItems[result.Offset:], result.Extent.(*depositData).items)
 			copy(depositDataRoots[result.Offset:], result.Extent.(*depositData).roots)
-		case err := <-errCh:
+		case err := <-batch.ErrorCh:
 			return nil, nil, errors.Wrapf(err, "failed to generate deposit data")
 		}
 	}
@@ -98,7 +98,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 
 	deposits := make([]*ethpb.Deposit, numValidators)
-	workers, resultsCh, errCh, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
 		deposits, err := GenerateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit from deposit data")
@@ -108,13 +108,13 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate deposit from deposit data")
 	}
-	defer close(resultsCh)
-	defer close(errCh)
-	for i := workers; i > 0; i-- {
+	defer close(batch.ResultCh)
+	defer close(batch.ErrorCh)
+	for i := batch.Workers; i > 0; i-- {
 		select {
-		case result := <-resultsCh:
+		case result := <-batch.ResultCh:
 			copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
-		case err := <-errCh:
+		case err := <-batch.ErrorCh:
 			return nil, nil, errors.Wrapf(err, "failed to generate deposit")
 		}
 	}

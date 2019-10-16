@@ -43,7 +43,7 @@ func TestDouble(t *testing.T) {
 				inValues[i] = i
 			}
 			outValues := make([]int, test.inValues)
-			workers, outValuesCh, _, err := mputil.Scatter(len(inValues), func(offset int, entries int) (*mputil.ScatterResults, error) {
+			batch, err := mputil.Scatter(len(inValues), func(offset int, entries int) (*mputil.ScatterResults, error) {
 				extent := make([]int, entries)
 				result := mputil.NewScatterResults(offset, extent)
 				for i := 0; i < entries; i++ {
@@ -58,16 +58,20 @@ func TestDouble(t *testing.T) {
 				if test.err.Error() != err.Error() {
 					t.Fatalf("Unexpected error value: expected \"%v\", found \"%v\"", test.err, err)
 				}
-			}
+			} else {
+				if err != nil {
+					t.Fatalf("Unexpected error %v", test.err)
+				}
 
-			for i := workers; i > 0; i-- {
-				result := <-outValuesCh
-				copy(outValues[result.Offset:], result.Extent.([]int))
-			}
+				for i := batch.Workers; i > 0; i-- {
+					result := <-batch.ResultCh
+					copy(outValues[result.Offset:], result.Extent.([]int))
+				}
 
-			for i := 0; i < test.inValues; i++ {
-				if outValues[i] != inValues[i]*2 {
-					t.Fatalf("Outvalue at %d mismatch: expected %d, found %d", i, inValues[i]*2, outValues[i])
+				for i := 0; i < test.inValues; i++ {
+					if outValues[i] != inValues[i]*2 {
+						t.Fatalf("Outvalue at %d mismatch: expected %d, found %d", i, inValues[i]*2, outValues[i])
+					}
 				}
 			}
 		})

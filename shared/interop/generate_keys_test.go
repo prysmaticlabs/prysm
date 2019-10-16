@@ -67,7 +67,7 @@ func BenchmarkKeyGeneratorScatter(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		workers, resultsCh, _, err := mputil.Scatter(16384, func(offset int, entries int) (*mputil.ScatterResults, error) {
+		batch, err := mputil.Scatter(16384, func(offset int, entries int) (*mputil.ScatterResults, error) {
 			priv, pub, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
 			if err != nil {
 				b.Fatal(err)
@@ -81,8 +81,8 @@ func BenchmarkKeyGeneratorScatter(b *testing.B) {
 
 		privKeys := make([]*bls.SecretKey, 16384)
 		pubKeys := make([]*bls.PublicKey, 16384)
-		for i := workers; i > 0; i-- {
-			result := <-resultsCh
+		for i := batch.Workers; i > 0; i-- {
+			result := <-batch.ResultCh
 			copy(privKeys[result.Offset:], result.Extent.(*keys).secrets)
 			copy(pubKeys[result.Offset:], result.Extent.(*keys).publics)
 		}

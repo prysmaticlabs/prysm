@@ -27,7 +27,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
+	deposits, err := interop.GenerateDepositsFromData(depositDataItems, 0, trie)
 	if err != nil {
 		t.Fatal(err)
 	}
