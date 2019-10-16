@@ -81,7 +81,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start an beacon block operation pool service's main event loop.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	go s.removeOperations()
 }
 
@@ -89,7 +88,6 @@ func (s *Service) Start() {
 // and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	log.Info("Stopping service")
 	return nil
 }
 
@@ -132,6 +130,9 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
 
+	ctx, span := trace.StartSpan(ctx, "operations.AttestationPool")
+	defer span.End()
+
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
 	bState, err := s.beaconDB.HeadState(ctx)
@@ -153,7 +154,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			return nil, err
 		}
 
-		if _, err = blocks.ProcessAttestation(bState, att); err != nil {
+		if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
 			delete(s.attestationPool, root)
 			continue
 		}
@@ -238,11 +239,11 @@ func (s *Service) removeOperations() {
 	for {
 		ctx := context.TODO()
 		select {
-		case <-incomingBlockSub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
+		case err := <-incomingBlockSub.Err():
+			log.WithError(err).Error("Subscription to incoming block sub failed")
 			return
 		case <-s.ctx.Done():
-			log.Debug("operations service context closed, exiting remove goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
@@ -279,7 +280,10 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 			// from the attestation pool for that attestation.
 			if attestation.AggregationBits.Contains(retAtt.AggregationBits) {
 				delete(s.attestationPool, root)
-				log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Attestation removed from pool")
+				log.WithField(
+					"attDataRoot",
+					fmt.Sprintf("%#x", root),
+				).Debug("Attestation removed from pool")
 			}
 		}
 	}

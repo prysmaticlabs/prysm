@@ -86,7 +86,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not process attestation from the future epoch",
+			wantErrString: "could not process slot from the future",
 		},
 	}
 
@@ -235,34 +235,24 @@ func TestStore_AggregateAttestation(t *testing.T) {
 	}
 }
 
-func TestStore_SaveNewAttestation(t *testing.T) {
+func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
 	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
-	r1, _ := ssz.HashTreeRoot(a1.Data)
-
-	if err := store.saveNewAttestation(ctx, a1); err != nil {
-		t.Fatal(err)
-	}
-	saved, err := store.db.Attestation(ctx, r1)
+	err := store.db.SaveAttestation(ctx, a1)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(a1, saved) {
-		t.Error("did not retrieve saved attestation")
 	}
 
 	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
-	if err := store.saveNewAttestation(ctx, a2); err != nil {
-		t.Fatal(err)
-	}
-	saved, err = store.db.Attestation(ctx, r1)
+	saved, err := store.aggregatedAttestation(ctx, a2)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !reflect.DeepEqual(a2, saved) {
 		t.Error("did not retrieve saved attestation")
 	}

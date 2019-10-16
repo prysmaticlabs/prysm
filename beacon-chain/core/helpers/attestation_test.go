@@ -14,7 +14,7 @@ import (
 )
 
 func TestAttestationDataSlot_OK(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestAttestationDataSlot_ReturnsErrorWithNilData(t *testing.T) {
 }
 
 func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestAttestationDataSlot_ReturnsErrorWithErroneousTargetEpoch(t *testing.T) 
 }
 
 func TestAttestationDataSlot_ReturnsErrorWhenTargetEpochLessThanCurrentEpoch(t *testing.T) {
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)

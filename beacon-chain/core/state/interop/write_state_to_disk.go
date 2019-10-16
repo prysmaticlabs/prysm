@@ -13,7 +13,7 @@ import (
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
 func WriteStateToDisk(state *pb.BeaconState) {
-	if !featureconfig.FeatureConfig().WriteSSZStateTransitions {
+	if !featureconfig.Get().WriteSSZStateTransitions {
 		return
 	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot))

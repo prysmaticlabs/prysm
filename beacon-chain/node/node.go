@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -72,7 +73,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
-	featureconfig.ConfigureBeaconFeatures(ctx)
+	featureconfig.ConfigureBeaconChain(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -83,13 +84,16 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		log.Info("Using custom parameter configuration")
-		if featureconfig.FeatureConfig().DemoConfig {
-			log.Info("Using demo config")
-			params.UseDemoBeaconConfig()
-		} else {
-			log.Info("Using minimal config")
+		if featureconfig.Get().MinimalConfig {
+			log.WithField(
+				"config", "minimal-spec",
+			).Info("Using custom chain parameters")
 			params.UseMinimalConfig()
+		} else {
+			log.WithField(
+				"config", "demo",
+			).Info("Using custom chain parameters")
+			params.UseDemoBeaconConfig()
 		}
 	}
 
@@ -201,16 +205,13 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath)
+		d, err = confirmDelete(d, dbPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.WithField("path", dbPath).Info("Checking db")
+	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
 	return nil
@@ -218,7 +219,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.BootstrapNode.Name))
+	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
 	for i, addr := range bootnodeAddrs {
 		if filepath.Ext(addr) == ".enr" {
 			b, err := ioutil.ReadFile(addr)
@@ -417,12 +418,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher powchain.ChainStartFetcher
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
 			return err
@@ -445,6 +445,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
+		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
@@ -477,6 +478,10 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/heads", Handler: c.HeadsHandler})
 
+	if featureconfig.Get().EnableBackupWebhook {
+		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
+	}
+
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
 		b.services,
@@ -502,7 +507,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
 
-	if genesisTime > 0 && genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 || genesisStatePath != "" {
 		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
@@ -512,8 +517,6 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		})
 
 		return b.services.RegisterService(svc)
-	} else if genesisTime+genesisValidators > 0 {
-		log.Errorf("%s and %s must be used together", flags.InteropNumValidatorsFlag.Name, flags.InteropGenesisTimeFlag.Name)
 	}
 	return nil
 }

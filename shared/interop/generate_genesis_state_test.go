@@ -1,21 +1,22 @@
-package interop
+package interop_test
 
 import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestGenerateGenesisState(t *testing.T) {
 	numValidators := uint64(64)
-	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
+	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		t.Fatal(err)
 	}
-	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
+	deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +35,6 @@ func TestGenerateGenesisState(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
-		BlockHash:    mockEth1BlockHash,
 	})
 	if err != nil {
 		t.Fatal(err)
