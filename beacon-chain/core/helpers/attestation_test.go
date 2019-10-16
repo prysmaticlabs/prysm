@@ -214,7 +214,7 @@ func TestAggregateAttestations(t *testing.T) {
 			},
 		},
 		{
-			name: "two attestations where one is fully contained within the other reversed ",
+			name: "two attestations where one is fully contained within the other reversed",
 			inputs: []bitfield.Bitlist{
 				bitfield.Bitlist{0b00000011, 0b1},
 				bitfield.Bitlist{0b00000001, 0b1},
@@ -223,7 +223,6 @@ func TestAggregateAttestations(t *testing.T) {
 				bitfield.Bitlist{0b00000011, 0b1},
 			},
 		},
-		// TODO: Greedy scenarios?
 	}
 
 	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
