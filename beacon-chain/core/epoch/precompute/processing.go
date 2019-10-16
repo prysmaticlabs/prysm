@@ -8,7 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// New gets called at the beginning of epoch processing to return
+// New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
 func New(state *pb.BeaconState) ([]*Validator, *Balance) {
@@ -180,7 +180,7 @@ func updateBalance(vp []*Validator, bp *Balance) *Balance {
 				bp.CurrentEpochTargetAttesters += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochAttester {
-				bp.PrevEpoch += v.CurrentEpochEffectiveBalance
+				bp.PrevEpochAttesters += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {
 				bp.PrevEpochTargetAttesters += v.CurrentEpochEffectiveBalance
