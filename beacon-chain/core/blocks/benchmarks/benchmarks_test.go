@@ -18,32 +18,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var log = logrus.WithField("prefix", "operation")
+
 var validatorCount = 65536
 var runAmount = 25
-var conditions = "SML"
 
 func benchmarkConfig() *testutil.BlockGenConfig {
 	logrus.Printf("Running block benchmarks for %d validators", validatorCount)
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
-	if conditions == "BIG" {
-		return &testutil.BlockGenConfig{
-			MaxProposerSlashings: 0,
-			MaxAttesterSlashings: 0,
-			MaxAttestations:      256,
-			MaxDeposits:          0,
-			MaxVoluntaryExits:    0,
-		}
-	} else if conditions == "SML" {
-		return &testutil.BlockGenConfig{
-			MaxProposerSlashings: 0,
-			MaxAttesterSlashings: 0,
-			MaxAttestations:      128,
-			MaxDeposits:          0,
-			MaxVoluntaryExits:    0,
-		}
+
+	return &testutil.BlockGenConfig{
+		MaxProposerSlashings: 0,
+		MaxAttesterSlashings: 0,
+		MaxAttestations:      128,
+		MaxDeposits:          0,
+		MaxVoluntaryExits:    0,
 	}
-	return nil
 }
 
 func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
@@ -151,14 +142,6 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 
-	blockSSZ, err := ssz.Marshal(block)
-	if err != nil {
-		b.Fatal(err)
-	}
-	if err = ioutil.WriteFile("127Attblock.ssz", blockSSZ, 0644); err != nil {
-		b.Fatal(err)
-	}
-
 	cleanStates := createCleanStates(beaconState)
 
 	b.N = runAmount
@@ -211,67 +194,12 @@ func BenchmarkExecuteStateTransition_ProcessEpoch(b *testing.B) {
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		fmt.Println(i)
+		fmt.Printf("%d ", i)
 		if _, err := state.ProcessEpoch(context.Background(), cleanStates[i]); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
-
-// func BenchmarkExecuteStateTransition_ReadSaved(b *testing.B) {
-// 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-// 	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (benchmarkConfig().MaxAttestations / slotsPerEpoch)
-// 	c := params.BeaconConfig()
-// 	c.PersistentCommitteePeriod = 0
-// 	c.MinValidatorWithdrawabilityDelay = 0
-// 	c.TargetCommitteeSize = committeeSize
-// 	c.MaxAttestations = benchmarkConfig().MaxAttestations
-// 	params.OverrideBeaconConfig(c)
-// 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-
-// 	beaconState := genesisBeaconState(b)
-
-// 	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
-// 	if err != nil {
-// 		b.Fatal(err)
-// 	}
-
-// 	conf := &testutil.BlockGenConfig{
-// 		MaxAttestations: 0,
-//    Signatures: false,
-// 	}
-
-// 	blockBytes, err := ioutil.ReadFile("127Attblock.ssz")
-// 	if err != nil {
-// 		b.Fatal(err)
-// 	}
-// 	block := &ethpb.BeaconBlock{}
-// 	if err := ssz.Unmarshal(blockBytes, block); err != nil {
-// 		b.Fatal(err)
-// 	}
-
-// 	// Process beacon state to mid-epoch to prevent epoch calculations from manipulating benchmarks.
-// 	for i := uint64(0); i < 6+params.BeaconConfig().SlotsPerEpoch-1; i++ {
-// 		fmt.Printf("state at slot %d\n", beaconState.Slot)
-// 		block := testutil.GenerateFullBlock(b, beaconState, privs, conf)
-// 		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
-// 		if err != nil {
-// 			b.Error(err)
-// 		}
-// 	}
-// 	cleanStates := genesisBeaconState(beaconState)
-
-// 	fmt.Println("states generated")
-
-// 	b.N = runAmount
-// 	b.ResetTimer()
-// 	for i := 0; i < b.N; i++ {
-// 		fmt.Println(i)
-// 		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
-// 			b.Fatal(err)
-// 		}
-// 	}
-// }
 
 func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -296,8 +224,7 @@ func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
 		Signatures:      false,
 	}
 
-	// Process beacon state to mid-epoch to prevent epoch calculations from manipulating benchmarks.
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch/2; i++ {
+	for i := uint64(0); i < 4; i++ {
 		fmt.Printf("state at slot %d\n", beaconState.Slot)
 		block := testutil.GenerateFullBlock(b, beaconState, privs, conf)
 		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
@@ -325,7 +252,6 @@ func genesisBeaconState(b testing.TB) *pb.BeaconState {
 	if err := ssz.Unmarshal(beaconSSZ, genesisState); err != nil {
 		b.Fatal(err)
 	}
-
 	return genesisState
 }
 
