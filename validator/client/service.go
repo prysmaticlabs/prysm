@@ -62,11 +62,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	pubKeys := make([][]byte, 0)
-	for pubKey := range v.keys {
-		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("New validator service")
-		pubKeys = append(pubKeys, pubKey[:])
-	}
+	pubKeys := pubKeysFromMap(v.keys)
 
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
@@ -127,4 +123,16 @@ func (v *ValidatorService) Status() error {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
+}
+
+// pubKeysFromMap is a helper that creates an array of public keys given a map of keystores
+func pubKeysFromMap(keys map[[48]byte]*keystore.Key) [][]byte {
+	pubKeys := make([][]byte, 0)
+	for pubKey := range keys {
+		var pubKeyCopy [48]byte
+		copy(pubKeyCopy[:], pubKey[:])
+		pubKeys = append(pubKeys, pubKeyCopy[:])
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyCopy[:]))).Info("New validator service")
+	}
+	return pubKeys
 }
