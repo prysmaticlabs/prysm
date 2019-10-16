@@ -237,4 +237,6 @@ func TestProcessAttestations(t *testing.T) {
 			t.Log("Not a prev epoch head attester")
 		}
 	}
+
+	params.UseMainnetConfig()
 }
