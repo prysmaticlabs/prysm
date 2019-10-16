@@ -2,6 +2,7 @@ package interop
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -37,7 +38,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 	privKeys := make([]*bls.SecretKey, numValidators)
 	pubKeys := make([]*bls.PublicKey, numValidators)
-	batch, err := mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err := mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
 		secs, pubs, err := DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
 		if err != nil {
 			return nil, err
@@ -65,7 +66,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 	depositDataItems := make([]*ethpb.Deposit_Data, numValidators)
 	depositDataRoots := make([][]byte, numValidators)
-	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
 		items, roots, err := DepositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit data from keys")
@@ -98,7 +99,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	}
 
 	deposits := make([]*ethpb.Deposit, numValidators)
-	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int) (*mputil.ScatterResults, error) {
+	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
 		deposits, err := GenerateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit from deposit data")

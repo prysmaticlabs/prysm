@@ -2,6 +2,7 @@ package mputil_test
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -43,7 +44,7 @@ func TestDouble(t *testing.T) {
 				inValues[i] = i
 			}
 			outValues := make([]int, test.inValues)
-			batch, err := mputil.Scatter(len(inValues), func(offset int, entries int) (*mputil.ScatterResults, error) {
+			batch, err := mputil.Scatter(len(inValues), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
 				extent := make([]int, entries)
 				result := mputil.NewScatterResults(offset, extent)
 				for i := 0; i < entries; i++ {

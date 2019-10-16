@@ -3,6 +3,7 @@ package interop_test
 import (
 	"bytes"
 	"io/ioutil"
+	"sync"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -67,7 +68,7 @@ func BenchmarkKeyGeneratorScatter(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		batch, err := mputil.Scatter(16384, func(offset int, entries int) (*mputil.ScatterResults, error) {
+		batch, err := mputil.Scatter(16384, func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
 			priv, pub, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
 			if err != nil {
 				b.Fatal(err)
