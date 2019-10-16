@@ -2,16 +2,22 @@ package precompute
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(state *pb.BeaconState) ([]*Validator, *Balance) {
+func New(ctx context.Context, state *pb.BeaconState) ([]*Validator, *Balance) {
+	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
+	defer span.End()
+
 	vp := make([]*Validator, len(state.Validators))
 	bp := &Balance{}
 
@@ -20,7 +26,7 @@ func New(state *pb.BeaconState) ([]*Validator, *Balance) {
 
 	for i, v := range state.Validators {
 		// Was validator withdrawable or slashed
-		withdrawable := currentEpoch > v.WithdrawableEpoch
+		withdrawable := currentEpoch >= v.WithdrawableEpoch
 		p := &Validator{
 			IsSlashed:                    v.Slashed,
 			IsWithdrawableCurrentEpoch:   withdrawable,
@@ -44,19 +50,24 @@ func New(state *pb.BeaconState) ([]*Validator, *Balance) {
 // ProcessAttestations process the attestations in state and update individual validator's pre computes,
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
+	ctx context.Context,
 	state *pb.BeaconState,
 	vp []*Validator,
 	bp *Balance) ([]*Validator, *Balance, error) {
+	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
+	defer span.End()
 
 	v := &Validator{}
 	var err error
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = attestedCurrentEpoch(state, a)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
 		}
 		v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = attestedPrevEpoch(state, a)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 

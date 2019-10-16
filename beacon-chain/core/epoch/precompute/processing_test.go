@@ -1,6 +1,7 @@
 package precompute
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestNew(t *testing.T) {
 			{WithdrawableEpoch: ffe, ExitEpoch: 1, EffectiveBalance: 100},
 		},
 	}
-	v, b := New(s)
+	v, b := New(context.Background(), s)
 	if !reflect.DeepEqual(v[0], &Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100}) {
 		t.Error("Incorrect validator 0 status")
 	}
@@ -255,7 +256,7 @@ func TestProcessAttestations(t *testing.T) {
 		vp[i] = &Validator{CurrentEpochEffectiveBalance: 100}
 	}
 	bp := &Balance{}
-	vp, bp, err = ProcessAttestations(beaconState, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}
