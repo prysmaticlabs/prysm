@@ -4,6 +4,7 @@ package slasher
 
 import (
 	"errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -15,7 +16,7 @@ var epochs []uint64
 
 func init() {
 	epochProposalBitlist = make(map[uint64]bitfield.Bitlist)
-	weakSubjectivityPeriod = uint64(54000)
+	weakSubjectivityPeriod = params.BeaconConfig().WeakSubjectivityPeriod
 }
 
 // CheckNewProposal checks weather a new proposal is allowed or
