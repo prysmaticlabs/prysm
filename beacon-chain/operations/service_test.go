@@ -251,7 +251,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 
 	// We fetch the final attestation from the attestation pool, which should be an aggregation of
 	// all committee members effectively.
-	aggAtt := opsSrv.attestationPool[attDataRoot].ToAttestations()[0]
+	aggAtt := dbpb.ToAttestations(opsSrv.attestationPool[attDataRoot])[0]
 	b1 := aggAtt.AggregationBits.Bytes()
 	b2 := totalAggBits.Bytes()
 
@@ -403,7 +403,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err != nil {
 		t.Error(err)
 	}
-	dbAtt := service.attestationPool[attDataHash].ToAttestations()[0]
+	dbAtt := dbpb.ToAttestations(service.attestationPool[attDataHash])[0]
 
 	dbAttBits := dbAtt.AggregationBits.Bytes()
 	aggregatedBits := att1.AggregationBits.Or(att2.AggregationBits).Bytes()
@@ -418,7 +418,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att2); err != nil {
 		t.Error(err)
 	}
-	dbAtt = service.attestationPool[attDataHash].ToAttestations()[0]
+	dbAtt = dbpb.ToAttestations(service.attestationPool[attDataHash])[0]
 
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
@@ -432,7 +432,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att3); err != nil {
 		t.Error(err)
 	}
-	dbAtt = service.attestationPool[attDataHash].ToAttestations()[0]
+	dbAtt = dbpb.ToAttestations(service.attestationPool[attDataHash])[0]
 
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
