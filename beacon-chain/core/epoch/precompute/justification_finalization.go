@@ -7,7 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
-// ProcessJustificationAndFinalization processes justification and finalization during
+// ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
 func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Balance) (*pb.BeaconState, error) {
