@@ -9,7 +9,7 @@ import (
 
 // ProcessJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
-// This is an optimized version by passing in precomputed total attested and epoch balances.
+// Note: this is an optimized version by passing in precomputed total and attesting balances.
 func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Balance) (*pb.BeaconState, error) {
 	if state.Slot <= helpers.StartSlot(2) {
 		return state, nil
