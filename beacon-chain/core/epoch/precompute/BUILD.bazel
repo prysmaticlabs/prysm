@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
@@ -30,12 +29,4 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
     ],
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["type.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
-    visibility = ["//beacon-chain:__subpackages__"],
-)
 )
