@@ -3,16 +3,22 @@ package mathutil
 import "math"
 
 // IntegerSquareRoot defines a function that returns the
-// largest possible integer root of a number.
+// largest possible integer root of a number using the bitwise
+// Newton-Raphson method.
 func IntegerSquareRoot(n uint64) uint64 {
-	x := n
-	y := (x + 1) / 2
-
-	for y < x {
-		x = y
-		y = (x + n/x) / 2
+	// Start with a large enough approximation.
+	x := uint64(1 << 16)
+	y := uint64(1 << 16)
+	for {
+		if y*y > n {
+			y ^= x
+		}
+		x = x >> 1
+		if x == 0 {
+			return y
+		}
+		y |= x
 	}
-	return x
 }
 
 // CeilDiv8 divides the input number by 8
