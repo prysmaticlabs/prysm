@@ -226,47 +226,49 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x02}}
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.NewBitlist(1), CustodyBits: bitfield.NewBitlist(1)}
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.NewBitlist(1), CustodyBits: bitfield.NewBitlist(1)}
 	r1, _ := ssz.HashTreeRoot(a1.Data)
 	r2, _ := ssz.HashTreeRoot(a2.Data)
 
 	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
 
-	saved, err := store.db.Attestation(ctx, r1)
+	saved, err := store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
-	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}}
+	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}, CustodyBits: bitfield.NewBitlist(1)}
+	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}, CustodyBits: bitfield.NewBitlist(1)}
 
-	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
+		t.Fatal(err)
+	}
 
-	saved, err = store.db.Attestation(ctx, r1)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }
