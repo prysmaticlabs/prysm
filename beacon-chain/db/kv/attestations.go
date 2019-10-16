@@ -144,8 +144,7 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
-	// TODO: Test with batch.
-	err := k.db.Update(func(tx *bolt.Tx) error {
+	err := k.db.Batch(func(tx *bolt.Tx) error {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err

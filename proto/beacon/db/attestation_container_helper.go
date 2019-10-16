@@ -42,7 +42,7 @@ func (ac *AttestationContainer) ToAttestations() []*ethpb.Attestation {
 			Data:            ac.Data,
 			AggregationBits: sp.AggregationBits,
 			Signature:       sp.Signature,
-			// TODO: Add custody bits in phase 1.
+			// TODO(3791): Add custody bits in phase 1.
 			// Stub: CustodyBits must be same length as aggregation bits; committee size.
 			CustodyBits: bitfield.NewBitlist(sp.AggregationBits.Len()),
 		}
