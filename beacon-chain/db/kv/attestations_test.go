@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -26,6 +27,8 @@ func TestStore_AttestationCRUD(t *testing.T) {
 				EndEpoch:   2,
 			},
 		},
+		AggregationBits: bitfield.NewBitlist(8),
+		CustodyBits:     bitfield.NewBitlist(8),
 	}
 	ctx := context.Background()
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
@@ -80,6 +83,8 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 					EndEpoch:   2,
 				},
 			},
+			AggregationBits: bitfield.NewBitlist(8),
+			CustodyBits:     bitfield.NewBitlist(8),
 		}
 		if i%2 == 0 {
 			r, err := ssz.HashTreeRoot(totalAtts[i].Data)
