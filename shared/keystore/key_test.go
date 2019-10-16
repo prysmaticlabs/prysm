@@ -71,7 +71,7 @@ func TestNewKeyFromBLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key, err := newKeyFromBLS(blskey)
+	key, err := NewKeyFromBLS(blskey)
 	if err != nil {
 		t.Fatalf("could not get new key from bls %v", err)
 	}

@@ -135,10 +135,18 @@ func Xor(x []byte, y []byte) []byte {
 	return result
 }
 
-// Trunc truncates the byte slices to 12 bytes.
+// Trunc truncates the byte slices to 6 bytes.
 func Trunc(x []byte) []byte {
-	if len(x) > 12 {
-		return x[:12]
+	if len(x) > 6 {
+		return x[:6]
 	}
 	return x
+}
+
+// ToLowInt64 returns the lowest 8 bytes interpreted as little endian.
+func ToLowInt64(x []byte) int64 {
+	if len(x) > 8 {
+		x = x[:8]
+	}
+	return int64(binary.LittleEndian.Uint64(x))
 }

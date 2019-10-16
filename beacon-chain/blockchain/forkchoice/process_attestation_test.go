@@ -1,10 +1,13 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -83,33 +86,17 @@ func TestStore_OnAttestation(t *testing.T) {
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not process attestation from the future epoch",
-		},
-		{
-			name: "process attestation with invalid index",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithStateBadAttRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not convert attestation to indexed attestation",
-		},
-		{
-			name: "process attestation with invalid signature",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: BlkWithValidStateRoot[:]},
-				Crosslink: &ethpb.Crosslink{}}},
-			s:             &pb.BeaconState{Slot: 1},
-			wantErr:       true,
-			wantErrString: "could not verify indexed attestation",
+			wantErrString: "could not process slot from the future",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, tt.s); err != nil {
+			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 				t.Fatal(err)
 			}
 
-			err := store.OnAttestation(ctx, tt.a)
+			_, err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
@@ -118,5 +105,155 @@ func TestStore_OnAttestation(t *testing.T) {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func TestStore_SaveCheckpointState(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseDemoBeaconConfig()
+
+	store := NewForkChoiceService(ctx, db)
+
+	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
+	for i := 0; i < len(crosslinks); i++ {
+		crosslinks[i] = &ethpb.Crosslink{
+			ParentRoot: make([]byte, 32),
+			DataRoot:   make([]byte, 32),
+		}
+	}
+	s := &pb.BeaconState{
+		Fork: &pb.Fork{
+			Epoch:           0,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
+		JustificationBits:          []byte{0},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		CurrentCrosslinks:          crosslinks,
+		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+	}
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+		t.Fatal(err)
+	}
+
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	s1, err := store.saveCheckpointState(ctx, s, cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
+	s2, err := store.saveCheckpointState(ctx, s, cp2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	}
+
+	s1, err = store.saveCheckpointState(ctx, nil, cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	s1, err = store.checkpointState.StateByCheckpoint(cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	}
+
+	s2, err = store.checkpointState.StateByCheckpoint(cp2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	}
+
+	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+		t.Fatal(err)
+	}
+	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
+	s3, err := store.saveCheckpointState(ctx, s, cp3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s3.Slot != s.Slot {
+		t.Errorf("Wanted state slot: %d, got: %d", s.Slot, s3.Slot)
+	}
+}
+
+func TestStore_AggregateAttestation(t *testing.T) {
+	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}
+
+	bits := bitfield.NewBitlist(8)
+	bits.SetBitAt(0, true)
+	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	r, _ := ssz.HashTreeRoot(a.Data)
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, bits) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(1, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{3, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+
+	bits.SetBitAt(7, true)
+	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
+	if err := store.aggregateAttestation(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{131, 1}) {
+		t.Error("Received incorrect aggregation bitfield")
+	}
+}
+
+func TestStore_ReturnAggregatedAttestation(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
+	err := store.db.SaveAttestation(ctx, a1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
+	saved, err := store.aggregatedAttestation(ctx, a2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(a2, saved) {
+		t.Error("did not retrieve saved attestation")
 	}
 }

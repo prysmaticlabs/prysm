@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -38,7 +39,7 @@ type ValidatorClient struct {
 }
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
-func NewValidatorClient(ctx *cli.Context, password string) (*ValidatorClient, error) {
+func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
 		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
@@ -48,6 +49,14 @@ func NewValidatorClient(ctx *cli.Context, password string) (*ValidatorClient, er
 	); err != nil {
 		return nil, err
 	}
+
+	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	level, err := logrus.ParseLevel(verbosity)
+	if err != nil {
+		return nil, err
+	}
+	logrus.SetLevel(level)
+
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,
@@ -55,19 +64,29 @@ func NewValidatorClient(ctx *cli.Context, password string) (*ValidatorClient, er
 		stop:     make(chan struct{}),
 	}
 
+	featureconfig.ConfigureValidator(ctx)
 	// Use custom config values if the --no-custom-config flag is set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
-		params.UseDemoBeaconConfig()
+		if featureconfig.Get().MinimalConfig {
+			log.Warn("Using Minimal Config")
+			params.UseMinimalConfig()
+		} else {
+			log.Warn("Using Demo Config")
+			params.UseDemoBeaconConfig()
+		}
 	}
 
-	featureconfig.ConfigureBeaconFeatures(ctx)
+	keys, err := keysParser(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := ValidatorClient.registerClientService(ctx, password); err != nil {
+	if err := ValidatorClient.registerClientService(ctx, keys); err != nil {
 		return nil, err
 	}
 
@@ -128,15 +147,13 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(ctx *cli.Context, password string) error {
+func (s *ValidatorClient) registerClientService(ctx *cli.Context, keys map[string]*keystore.Key) error {
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
-	keystoreDirectory := ctx.GlobalString(flags.KeystorePathFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
-		KeystorePath:         keystoreDirectory,
-		Password:             password,
+		Keys:                 keys,
 		LogValidatorBalances: logValidatorBalances,
 		CertFlag:             cert,
 	})

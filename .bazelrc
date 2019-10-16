@@ -14,3 +14,6 @@ run --host_force_python=PY2
 # is required within the sandbox. This flag is no longer experimental after 0.29.0.
 # Network sandboxing only works on linux.
 --experimental_sandbox_default_allow_network=false
+
+# Use minimal protobufs at runtime
+run --define ssz=minimal

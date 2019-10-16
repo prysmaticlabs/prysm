@@ -3,9 +3,22 @@ package blockchain
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 var (
+	beaconSlot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_slot",
+		Help: "Latest slot of the beacon chain state",
+	})
+	beaconHeadSlot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_head_slot",
+		Help: "Slot of the head block of the beacon chain",
+	})
+	beaconHeadRoot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_head_root",
+		Help: "Root of the head block of the beacon chain, it returns the lowest 8 bytes interpreted as little endian",
+	})
 	competingAtts = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_attestations",
 		Help: "The # of attestations received and processed from a competing chain",
@@ -35,3 +48,9 @@ var (
 		Help: "The # of processed attestation with pubsub and fork choice, this ususally means attestations from rpc",
 	})
 )
+
+func (s *Service) reportSlotMetrics(currentSlot uint64) {
+	beaconSlot.Set(float64(currentSlot))
+	beaconHeadSlot.Set(float64(s.HeadSlot()))
+	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(s.HeadRoot())))
+}

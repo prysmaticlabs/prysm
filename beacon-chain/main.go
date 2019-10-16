@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
 )
@@ -28,13 +30,21 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.EnableDBCleanup,
 	flags.GRPCGatewayPort,
+	flags.InteropMockEth1DataVotesFlag,
+	flags.InteropGenesisStateFlag,
+	flags.InteropNumValidatorsFlag,
+	flags.InteropGenesisTimeFlag,
+	flags.ArchiveEnableFlag,
+	flags.ArchiveValidatorSetChangesFlag,
+	flags.ArchiveBlocksFlag,
+	flags.ArchiveAttestationsFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
 	cmd.RelayNode,
-	cmd.P2PPort,
+	cmd.P2PUDPPort,
+	cmd.P2PTCPPort,
 	cmd.P2PHost,
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
@@ -88,7 +98,11 @@ func main() {
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(joonix.NewFormatter())
+			f := joonix.NewFormatter()
+			if err := joonix.DisableTimestampFormat(f); err != nil {
+				panic(err)
+			}
+			logrus.SetFormatter(f)
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
@@ -121,6 +135,9 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
+	if level == logrus.TraceLevel {
+		golog.SetAllLoggers(gologging.DEBUG)
+	}
 
 	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {

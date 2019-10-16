@@ -7,9 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -17,23 +20,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-type mockBroadcaster struct{}
-
-func (m *mockBroadcaster) Broadcast(ctx context.Context, msg proto.Message) error {
-	return nil
-}
-
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		operationService: mockOperationService,
-		p2p:              &mockBroadcaster{},
-		beaconDB:         db,
-		cache:            cache.NewAttestationCache(),
+		headFetcher:       &mock.ChainService{},
+		attReceiver:       &mock.ChainService{},
+		operationsHandler: &mockOps.Operations{},
+		p2p:               &mockp2p.MockBroadcaster{},
+		beaconDB:          db,
+		attestationCache:  cache.NewAttestationCache(),
 	}
 	head := &ethpb.BeaconBlock{
 		Slot:       999,
@@ -86,10 +84,6 @@ func TestSubmitAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
-
 	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
@@ -134,30 +128,12 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
-		beaconDB: db,
-		p2p:      &mockBroadcaster{},
-		cache:    cache.NewAttestationCache(),
-	}
-	if err := db.SaveBlock(ctx, targetBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
+		p2p:              &mockp2p.MockBroadcaster{},
+		attestationCache: cache.NewAttestationCache(),
+		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
-	if err := db.SaveBlock(ctx, justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	headRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, headRoot); err != nil {
-		t.Fatal(err)
-	}
 	req := &pb.AttestationRequest{
 		Shard: 0,
 		Slot:  3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -201,12 +177,9 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	ctx := context.Background()
 
 	// Ensure HistoricalRootsLimit matches scenario
 	cfg := params.BeaconConfig()
@@ -256,29 +229,12 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
-		beaconDB: db,
-		p2p:      &mockBroadcaster{},
-		cache:    cache.NewAttestationCache(),
+		p2p:              &mockp2p.MockBroadcaster{},
+		attestationCache: cache.NewAttestationCache(),
+		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
-	if err := db.SaveBlock(ctx, epochBoundaryBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(ctx, justifiedBlock); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	headRoot, err := ssz.SigningRoot(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, headRoot); err != nil {
-		t.Fatal(err)
-	}
+
 	req := &pb.AttestationRequest{
 		Shard: 0,
 		Slot:  10000,
@@ -316,16 +272,16 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 
 func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
-	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+	featureconfig.Init(&featureconfig.Flag{
 		EnableAttestationCache: true,
 	})
 	defer func() {
-		featureconfig.InitFeatureConfig(nil)
+		featureconfig.Init(nil)
 	}()
 
 	ctx := context.Background()
 	server := &AttesterServer{
-		cache: cache.NewAttestationCache(),
+		attestationCache: cache.NewAttestationCache(),
 	}
 
 	req := &pb.AttestationRequest{
@@ -337,7 +293,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
-	if err := server.cache.MarkInProgress(req); err != nil {
+	if err := server.attestationCache.MarkInProgress(req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -359,10 +315,10 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		if err := server.cache.Put(ctx, req, res); err != nil {
+		if err := server.attestationCache.Put(ctx, req, res); err != nil {
 			t.Error(err)
 		}
-		if err := server.cache.MarkNotInProgress(req); err != nil {
+		if err := server.attestationCache.MarkNotInProgress(req); err != nil {
 			t.Error(err)
 		}
 	}()

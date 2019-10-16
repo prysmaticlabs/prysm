@@ -15,13 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func init() {
-	// TODO(2312): remove this and use the mainnet count.
-	c := params.BeaconConfig()
-	c.MinGenesisActiveValidatorCount = 16384
-	params.OverrideBeaconConfig(c)
-}
-
 func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -52,9 +45,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
-	if params.BeaconConfig().MinGenesisActiveValidatorCount != 16384 {
-		t.Error("MinGenesisActiveValidatorCount should be 16384 for these tests to pass")
-	}
 	depositsForChainStart := 100
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
@@ -62,7 +52,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
+	deposits, _, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 	newState, err := state.GenesisBeaconState(
 		deposits,
@@ -179,7 +169,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)

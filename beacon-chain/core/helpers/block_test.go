@@ -1,10 +1,11 @@
-package helpers
+package helpers_test
 
 import (
 	"bytes"
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -57,7 +58,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
 			wantedSlot := tt.slot
-			result, err := BlockRootAtSlot(s, wantedSlot)
+			result, err := helpers.BlockRootAtSlot(s, wantedSlot)
 			if err != nil {
 				t.Fatalf("failed to get block root at slot %d: %v",
 					wantedSlot, err)
@@ -91,24 +92,24 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		{
 			slot:        1000,
 			stateSlot:   500,
-			expectedErr: "slot out of bounds",
+			expectedErr: "slot 1000 out of bounds",
 		},
 		{
 			slot:        3000,
 			stateSlot:   3000,
-			expectedErr: "slot out of bounds",
+			expectedErr: "slot 3000 out of bounds",
 		},
 		{
 			// Edge case where stateSlot is over slots per historical root and
 			// slot is not within (stateSlot - HistoricalRootsLimit, statSlot]
 			slot:        1,
 			stateSlot:   params.BeaconConfig().SlotsPerHistoricalRoot + 2,
-			expectedErr: "slot out of bounds",
+			expectedErr: "slot 1 out of bounds",
 		},
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		_, err := BlockRootAtSlot(state, tt.slot)
+		_, err := helpers.BlockRootAtSlot(state, tt.slot)
 		if err == nil {
 			t.Errorf("Expected error %s, got nil", tt.expectedErr)
 		}

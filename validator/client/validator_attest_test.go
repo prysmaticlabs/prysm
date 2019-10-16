@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"sync"
 	"testing"
@@ -10,11 +9,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	bitfield "github.com/prysmaticlabs/go-bitfield"
+	ssz "github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -29,7 +29,7 @@ func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
-	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
 }
 
@@ -53,7 +53,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not request attestation to sign at slot")
 }
 
@@ -92,7 +92,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -138,8 +138,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
 
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
+	aggregationBitfield.SetBitAt(4, true)
+	custodyBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -147,12 +150,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 			Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		},
-		CustodyBits: make([]byte, (len(committee)+7)/8),
+		AggregationBits: aggregationBitfield,
+		CustodyBits:     custodyBitfield,
 	}
-	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(4, true)
-
-	expectedAttestation.AggregationBits = aggregationBitfield
 
 	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
 		Data:       expectedAttestation.Data,
@@ -163,21 +163,20 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	k := hex.EncodeToString(validatorKey.PublicKey.Marshal())
-	sig := validator.keys[k].SecretKey.Sign(root[:], 0).Marshal()
+	sig := validator.keys[validatorPubKey].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
 
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "Attested latest head")
+	testutil.AssertLogsContain(t, hook, "Submitted new attestation")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	validator.genesisTime = uint64(time.Now().Unix())
+	validator.genesisTime = uint64(roughtime.Now().Unix())
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AssignmentRequest{}),
@@ -199,9 +198,8 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
-	go validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	go validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
 	<-timer.C
 }
 
@@ -213,7 +211,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(2)
 	defer wg.Wait()
 
-	validator.genesisTime = uint64(time.Now().Unix())
+	validator.genesisTime = uint64(roughtime.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
@@ -254,8 +252,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
-	delay = 0
-	validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
@@ -297,7 +294,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
 
 	if len(generatedAttestation.AggregationBits) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))

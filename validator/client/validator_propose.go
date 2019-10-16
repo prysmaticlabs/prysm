@@ -4,11 +4,11 @@ package client
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -19,7 +19,7 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
 	if slot == 0 {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
@@ -27,9 +27,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
@@ -37,7 +38,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	randaoReveal := v.keys[pk].SecretKey.Sign(buf, domain.SignatureDomain)
+	randaoReveal := v.keys[pubKey].SecretKey.Sign(buf, domain.SignatureDomain)
 
 	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
@@ -47,7 +48,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		log.WithError(err).Error("Failed to request block from beacon node")
 		return
 	}
-	span.AddAttributes(trace.StringAttribute("validator", tpk))
 
 	domain, err = v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
@@ -56,20 +56,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 	}
 	root, err := ssz.SigningRoot(b)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to sign block")
+		log.WithError(err).Error("Failed to sign block")
 		return
 	}
-	signature := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain)
+	signature := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
 	b.Signature = signature.Marshal()
 
 	// Broadcast network the signed block via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to propose block")
+		log.WithError(err).Error("Failed to propose block")
 		return
 	}
 
@@ -79,11 +75,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pk string) {
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
-		"pubKey":          tpk,
 		"slot":            b.Slot,
-		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockRoot),
+		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-	}).Info("Proposed new beacon block")
+	}).Info("Submitted new block")
 }

@@ -9,7 +9,7 @@ var (
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = cli.StringFlag{
 		Name:  "verbosity",
-		Usage: "Logging verbosity (debug, info=default, warn, error, fatal, panic)",
+		Usage: "Logging verbosity (trace, debug, info=default, warn, error, fatal, panic)",
 		Value: "info",
 	}
 	// DataDirFlag defines a path on disk.
@@ -66,8 +66,8 @@ var (
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
-		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
-		Value: "/ip4/35.224.249.2/tcp/30001/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw",
+		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT.  Multiple nodes can be separated with a comma",
+		Value: "/dns4/prylabs.net/tcp/30001/p2p/16Uiu2HAm7Qwe19vz9WzD2Mxn7fXd1vgHHp4iccuyq7TxwRXoAGfc",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = cli.StringFlag{
@@ -76,11 +76,17 @@ var (
 			"relay node and advertise their address via the relay node to other peers",
 		Value: "",
 	}
-	// P2PPort defines the port to be used by libp2p.
-	P2PPort = cli.IntFlag{
-		Name:  "p2p-port",
-		Usage: "The port used by libp2p.",
+	// P2PUDPPort defines the port to be used by discv5.
+	P2PUDPPort = cli.IntFlag{
+		Name:  "p2p-udp-port",
+		Usage: "The port used by discv5.",
 		Value: 12000,
+	}
+	// P2PTCPPort defines the port to be used by libp2p.
+	P2PTCPPort = cli.IntFlag{
+		Name:  "p2p-tcp-port",
+		Usage: "The port used by libp2p.",
+		Value: 13000,
 	}
 	// P2PHost defines the host IP to be used by libp2p.
 	P2PHost = cli.StringFlag{

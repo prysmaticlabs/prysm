@@ -8,13 +8,25 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "accounts")
+
+// DecryptKeysFromKeystore extracts a set of validator private keys from
+// an encrypted keystore directory and a password string.
+func DecryptKeysFromKeystore(directory string, password string) (map[string]*keystore.Key, error) {
+	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
+	ks := keystore.NewKeystore(directory)
+	validatorKeys, err := ks.GetKeys(directory, validatorPrefix, password)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get private key")
+	}
+	return validatorKeys, nil
+}
 
 // VerifyAccountNotExists checks if a validator has not yet created an account
 // and keystore in the provided directory string.
@@ -74,18 +86,24 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to generate deposit data")
 	}
-	serializedData, err := ssz.Marshal(data)
+	testAcc, err := contract.Setup()
 	if err != nil {
-		return errors.Wrap(err, "could not serialize deposit data")
+		return errors.Wrap(err, "unable to create simulated backend")
 	}
-	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
+	testAcc.TxOpts.GasLimit = 1000000
+
+	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+	if err != nil {
+		return errors.Wrap(err, "unable to create deposit transaction")
+	}
+	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
-========================Deposit Data=======================
+========================Raw Transaction Data=======================
 
 %#x
 
-===========================================================
-`, serializedData)
+===================================================================
+`, tx.Data())
 	return nil
 }
 

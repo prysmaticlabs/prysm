@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -11,13 +10,8 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -29,7 +23,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +39,13 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+
+	genesisBlkRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, cp, cp); err != nil {
 		t.Fatal(err)
 	}
 
@@ -112,11 +112,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
-	testutil.AssertLogsContain(t, hook, "Finished applying fork choice for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 }
 
-func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
+func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
+	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -133,7 +133,9 @@ func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
 	}
 	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
-	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}); err != nil {
+	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{
+		Slot: 1,
+		Body: &ethpb.BeaconBlockBody{}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -144,6 +146,38 @@ func TestReceiveBlock_CanSaveHeadInfo(t *testing.T) {
 	if !reflect.DeepEqual(headBlk, chainService.HeadBlock()) {
 		t.Error("Incorrect head block saved")
 	}
+
+	testutil.AssertLogsContain(t, hook, "Saved new head info")
+}
+
+func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db)
+
+	headBlk := &ethpb.BeaconBlock{}
+	if err := db.SaveBlock(ctx, headBlk); err != nil {
+		t.Fatal(err)
+	}
+	newBlk := &ethpb.BeaconBlock{
+		Slot: 1,
+		Body: &ethpb.BeaconBlockBody{}}
+	newRoot, _ := ssz.SigningRoot(newBlk)
+	if err := db.SaveBlock(ctx, newBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.forkChoiceStore = &store{headRoot: newRoot[:]}
+	chainService.canonicalRoots[0] = newRoot[:]
+
+	if err := chainService.ReceiveBlockNoPubsub(ctx, newBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	testutil.AssertLogsDoNotContain(t, hook, "Saved new head info")
 }
 
 func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
@@ -153,7 +187,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -169,7 +203,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, beaconState); err != nil {
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,87 +270,6 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err := chainService.ReceiveBlockNoPubsubForkchoice(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Finished state transition and updated fork choice store for block")
+	testutil.AssertLogsContain(t, hook, "Finished applying state transition")
 	testutil.AssertLogsDoNotContain(t, hook, "Finished fork choice")
-}
-
-func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	ctx := context.Background()
-	epoch := uint64(1)
-	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2})
-	var validators []*ethpb.Validator
-	for i := 0; i < 3; i++ {
-		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
-		validators = append(validators, &ethpb.Validator{
-			PublicKey: pubKeyBuf,
-		})
-	}
-	state := &pb.BeaconState{
-		Validators: validators,
-		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
-	}
-	chainService := setupBeaconChain(t, db)
-	if err := chainService.saveValidatorIdx(ctx, state); err != nil {
-		t.Fatalf("Could not save validator idx: %v", err)
-	}
-
-	wantedIdx := uint64(2)
-	idx, _, err := chainService.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(validators[wantedIdx].PublicKey))
-	if err != nil {
-		t.Fatalf("Could not get validator index: %v", err)
-	}
-	if wantedIdx != idx {
-		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
-	}
-
-	if v.ActivatedValFromEpoch(epoch) != nil {
-		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
-	}
-}
-
-func TestSaveValidatorIdx_IdxNotInState(t *testing.T) {
-	db := internal.SetupDBDeprecated(t)
-	defer internal.TeardownDBDeprecated(t, db)
-	epoch := uint64(100)
-	ctx := context.Background()
-
-	// Tried to insert 5 active indices to DB with only 3 validators in state
-	v.InsertActivatedIndices(epoch+1, []uint64{0, 1, 2, 3, 4})
-	var validators []*ethpb.Validator
-	for i := 0; i < 3; i++ {
-		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		binary.PutUvarint(pubKeyBuf, uint64(i))
-		validators = append(validators, &ethpb.Validator{
-			PublicKey: pubKeyBuf,
-		})
-	}
-	state := &pb.BeaconState{
-		Validators: validators,
-		Slot:       epoch * params.BeaconConfig().SlotsPerEpoch,
-	}
-	chainService := setupBeaconChain(t, db)
-	if err := chainService.saveValidatorIdx(ctx, state); err != nil {
-		t.Fatalf("Could not save validator idx: %v", err)
-	}
-
-	wantedIdx := uint64(2)
-	idx, _, err := chainService.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(validators[wantedIdx].PublicKey))
-	if err != nil {
-		t.Fatalf("Could not get validator index: %v", err)
-	}
-	if wantedIdx != idx {
-		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
-	}
-
-	if v.ActivatedValFromEpoch(epoch) != nil {
-		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
-	}
-
-	// Verify the skipped validators are included in the next epoch
-	if !reflect.DeepEqual(v.ActivatedValFromEpoch(epoch+2), []uint64{3, 4}) {
-		t.Error("Did not get wanted validator from activation queue")
-	}
 }

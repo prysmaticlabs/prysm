@@ -35,10 +35,12 @@ go_test(
     size = "small",
     srcs = [
         "ssz_regression_test.go",
+        "ssz_static_test.go",
         "tags_test.go",
     ],
     data = [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_mainnet//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],
@@ -46,6 +48,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -54,20 +57,27 @@ go_test(
     ],
 )
 
+# Requires --define ssz=minimal
 go_test(
     name = "go_minimal_test",
     size = "small",
     srcs = [
-        "ssz_minimal_compatibility_test.go",
+        "ssz_static_minimal_test.go",
+        "ssz_static_test.go",
     ],
     data = [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
     ],
-    tags = ["spectest"],
+    tags = [
+        "manual",
+        "minimal",
+        "spectest",
+    ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -80,16 +90,18 @@ go_test(
     name = "go_mainnet_test",
     size = "small",
     srcs = [
-        "ssz_mainnet_compatibility_test.go",
+        "ssz_static_mainnet_test.go",
+        "ssz_static_test.go",
     ],
     data = [
-        "@eth2_spec_tests//:test_data",
+        "@eth2_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",

@@ -1,108 +1,70 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"runtime"
-	"strings"
-	"syscall"
 
 	joonix "github.com/joonix/log"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
+var log = logrus.WithField("prefix", "main")
+
 func startNode(ctx *cli.Context) error {
-	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(flags.PasswordFlag.Name)
-
-	exists, err := accounts.Exists(keystoreDirectory)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	if !exists {
-		// If an account does not exist, we create a new one and start the node.
-		keystoreDirectory, keystorePassword, err = createValidatorAccount(ctx)
-		if err != nil {
-			logrus.Fatalf("Could not create validator account: %v", err)
-		}
-	} else {
-		if keystorePassword == "" {
-			logrus.Info("Enter your validator account password:")
-			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				logrus.Fatalf("Could not read account password: %v", err)
-			}
-			text := string(bytePassword)
-			keystorePassword = strings.Replace(text, "\n", "", -1)
-		}
-
-		if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
-			logrus.Info("No account found, creating new validator account...")
-		}
-	}
-
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
-	level, err := logrus.ParseLevel(verbosity)
+	validatorClient, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
 	}
-	logrus.SetLevel(level)
-
-	validatorClient, err := node.NewValidatorClient(ctx, keystorePassword)
-	if err != nil {
-		return err
-	}
-
 	validatorClient.Start()
 	return nil
 }
 
-func createValidatorAccount(ctx *cli.Context) (string, string, error) {
-	keystoreDirectory := ctx.String(flags.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(flags.PasswordFlag.Name)
-	if keystorePassword == "" {
-		reader := bufio.NewReader(os.Stdin)
-		logrus.Info("Create a new validator account for eth2")
-		logrus.Info("Enter a password:")
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			logrus.Fatalf("Could not read account password: %v", err)
-		}
-		text := string(bytePassword)
-		keystorePassword = strings.Replace(text, "\n", "", -1)
-		logrus.Infof("Keystore path to save your private keys (leave blank for default %s):", keystoreDirectory)
-		text, err = reader.ReadString('\n')
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		text = strings.Replace(text, "\n", "", -1)
-		if text != "" {
-			keystoreDirectory = text
-		}
-	}
+var appFlags = []cli.Flag{
+	flags.NoCustomConfigFlag,
+	flags.BeaconRPCProviderFlag,
+	flags.CertFlag,
+	flags.KeystorePathFlag,
+	flags.PasswordFlag,
+	flags.DisablePenaltyRewardLogFlag,
+	flags.UnencryptedKeysFlag,
+	flags.InteropStartIndex,
+	flags.InteropNumValidators,
+	cmd.VerbosityFlag,
+	cmd.DataDirFlag,
+	cmd.EnableTracingFlag,
+	cmd.TracingProcessNameFlag,
+	cmd.TracingEndpointFlag,
+	cmd.TraceSampleFractionFlag,
+	cmd.BootstrapNode,
+	cmd.MonitoringPortFlag,
+	cmd.LogFormat,
+	debug.PProfFlag,
+	debug.PProfAddrFlag,
+	debug.PProfPortFlag,
+	debug.MemProfileRateFlag,
+	debug.CPUProfileFlag,
+	debug.TraceFlag,
+	cmd.LogFileName,
+	cmd.EnableUPnPFlag,
+}
 
-	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
-		return "", "", errors.Wrapf(err, "could not initialize validator account")
-	}
-	return keystoreDirectory, keystorePassword, nil
+func init() {
+	appFlags = append(appFlags, featureconfig.ValidatorFlags...)
 }
 
 func main() {
-	log := logrus.WithField("prefix", "main")
 	app := cli.NewApp()
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain,
@@ -125,41 +87,28 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(ctx *cli.Context) {
-						if keystoreDir, _, err := createValidatorAccount(ctx); err != nil {
-							logrus.Fatalf("Could not create validator at path: %s", keystoreDir)
+						featureconfig.ConfigureValidator(ctx)
+						// Use custom config values if the --no-custom-config flag is set.
+						if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
+							log.Info("Using custom parameter configuration")
+							if featureconfig.Get().MinimalConfig {
+								log.Warn("Using Minimal Config")
+								params.UseMinimalConfig()
+							} else {
+								log.Warn("Using Demo Config")
+								params.UseDemoBeaconConfig()
+							}
+						}
+
+						if keystoreDir, _, err := node.CreateValidatorAccount(ctx); err != nil {
+							log.Fatalf("Could not create validator at path: %s", keystoreDir)
 						}
 					},
 				},
 			},
 		},
 	}
-	app.Flags = []cli.Flag{
-		flags.NoCustomConfigFlag,
-		flags.BeaconRPCProviderFlag,
-		flags.CertFlag,
-		flags.KeystorePathFlag,
-		flags.PasswordFlag,
-		flags.DisablePenaltyRewardLogFlag,
-		cmd.VerbosityFlag,
-		cmd.DataDirFlag,
-		cmd.EnableTracingFlag,
-		cmd.TracingProcessNameFlag,
-		cmd.TracingEndpointFlag,
-		cmd.TraceSampleFractionFlag,
-		cmd.BootstrapNode,
-		cmd.MonitoringPortFlag,
-		cmd.LogFormat,
-		debug.PProfFlag,
-		debug.PProfAddrFlag,
-		debug.PProfPortFlag,
-		debug.MemProfileRateFlag,
-		debug.CPUProfileFlag,
-		debug.TraceFlag,
-		cmd.LogFileName,
-		cmd.EnableUPnPFlag,
-	}
-
-	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
+	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.GlobalString(cmd.LogFormat.Name)
@@ -174,7 +123,11 @@ contract in order to activate the validator client`,
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
-			logrus.SetFormatter(joonix.NewFormatter())
+			f := joonix.NewFormatter()
+			if err := joonix.DisableTimestampFormat(f); err != nil {
+				panic(err)
+			}
+			logrus.SetFormatter(f)
 			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})

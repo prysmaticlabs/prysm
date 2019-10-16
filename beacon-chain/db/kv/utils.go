@@ -61,7 +61,14 @@ func deleteValueForIndices(indicesByBucket map[string][]byte, root []byte, tx *b
 			// We clear out the root from the values at index slice. For example,
 			// If we had [0x32, 0x33, 0x45] and we wanted to clear out 0x33, the code below
 			// updates the slice to [0x32, 0x45].
-			valuesAtIndex = append(valuesAtIndex[:start], valuesAtIndex[start+len(root):]...)
+
+			valuesStart := make([]byte, len(valuesAtIndex[:start]))
+			copy(valuesStart, valuesAtIndex[:start])
+
+			valuesEnd := make([]byte, len(valuesAtIndex[start+len(root):]))
+			copy(valuesEnd, valuesAtIndex[start+len(root):])
+
+			valuesAtIndex = append(valuesStart, valuesEnd...)
 			if err := bkt.Put(idx, valuesAtIndex); err != nil {
 				return err
 			}

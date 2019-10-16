@@ -24,15 +24,26 @@ type Service struct {
 	failStatus  error
 }
 
+// Handler represents a path and handler func to serve on the same port as /metrics, /healthz, /goroutinez, etc.
+type Handler struct {
+	Path    string
+	Handler func(http.ResponseWriter, *http.Request)
+}
+
 // NewPrometheusService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Service {
+func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
 	s := &Service{svcRegistry: svcRegistry}
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/goroutinez", s.goroutinezHandler)
+
+	// Register additional handlers.
+	for _, h := range additionalHandlers {
+		mux.HandleFunc(h.Path, h.Handler)
+	}
 
 	s.server = &http.Server{Addr: addr, Handler: mux}
 
@@ -64,6 +75,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	// Write status header
 	if hasError {
 		w.WriteHeader(http.StatusInternalServerError)
+		log.WithField("statuses", buf.String()).Warn("Node is unhealthy!")
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -84,7 +96,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 
 // Start the prometheus service.
 func (s *Service) Start() {
-	log.WithField("endpoint", s.server.Addr).Info("Starting service")
+	log.WithField("endpoint", s.server.Addr).Info("Collecting metrics at endpoint")
 	go func() {
 		err := s.server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
@@ -96,7 +108,6 @@ func (s *Service) Start() {
 
 // Stop the service gracefully.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return s.server.Shutdown(ctx)

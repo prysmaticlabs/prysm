@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,14 +17,14 @@ import (
 
 // expectSuccess status code from a stream in regular sync.
 func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
-	code, errMsg, err := r.readStatusCode(stream)
+	code, errMsg, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if code != 0 {
 		t.Fatalf("Received non-zero response code: %d", code)
 	}
-	if errMsg != nil {
+	if errMsg != "" {
 		t.Fatalf("Received error message from stream: %+v", errMsg)
 	}
 }
@@ -32,7 +32,7 @@ func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
 // expectResetStream status code from a stream in regular sync.
 func expectResetStream(t *testing.T, r *RegularSync, stream network.Stream) {
 	expectedErr := "stream reset"
-	_, _, err := r.readStatusCode(stream)
+	_, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	if err.Error() != expectedErr {
 		t.Fatalf("Wanted this error %s but got %v instead", expectedErr, err)
 	}
@@ -48,7 +48,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	topic := "/testing/foobar/1"
-	handler := func(ctx context.Context, msg proto.Message, stream libp2pcore.Stream) error {
+	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m := msg.(*pb.TestSimpleMessage)
 		if !bytes.Equal(m.Foo, []byte("foo")) {
 			t.Errorf("Unexpected incoming message: %+v", m)

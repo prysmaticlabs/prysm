@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -9,6 +11,43 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
+
+func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
+	BlockCacheSize = 1
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	slot := uint64(20)
+	ctx := context.Background()
+	// First we save a previous block to ensure the cache max size is reached.
+	prevBlock := &ethpb.BeaconBlock{
+		Slot:       slot - 1,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	if err := db.SaveBlock(ctx, prevBlock); err != nil {
+		t.Fatal(err)
+	}
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	// Even with a full cache, saving new blocks should not cause
+	// duplicated blocks in the DB.
+	for i := 0; i < 100; i++ {
+		if err := db.SaveBlock(ctx, block); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+	retrieved, err := db.Blocks(ctx, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != 1 {
+		t.Errorf("Expected 1, received %d: %v", len(retrieved), retrieved)
+	}
+	// We reset the block cache size.
+	BlockCacheSize = 256
+}
 
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
@@ -47,6 +86,56 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	}
 	if db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to have been deleted from the db")
+	}
+}
+
+func TestStore_BlocksBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	numBlocks := 1000
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	oddBlocks := make([]*ethpb.BeaconBlock, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: []byte("parent"),
+		}
+		if i%2 == 0 {
+			r, err := ssz.SigningRoot(totalBlocks[i])
+			if err != nil {
+				t.Fatal(err)
+			}
+			blockRoots = append(blockRoots, r)
+		} else {
+			oddBlocks = append(oddBlocks, totalBlocks[i])
+		}
+	}
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrieved) != numBlocks {
+		t.Errorf("Received %d blocks, wanted 1000", len(retrieved))
+	}
+	// We delete all even indexed blocks.
+	if err := db.DeleteBlocks(ctx, blockRoots); err != nil {
+		t.Fatal(err)
+	}
+	// When we retrieve the data, only the odd indexed blocks should remain.
+	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot([]byte("parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Slice(retrieved, func(i, j int) bool {
+		return retrieved[i].Slot < retrieved[j].Slot
+	})
+	if !reflect.DeepEqual(retrieved, oddBlocks) {
+		t.Errorf("Wanted %v, received %v", oddBlocks, retrieved)
 	}
 }
 
@@ -128,11 +217,6 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		{
 			filter:            filters.NewFilter().SetParentRoot([]byte("parent2")),
 			expectedNumBlocks: 2,
-		},
-		{
-			// No specified filter should return all blocks.
-			filter:            nil,
-			expectedNumBlocks: 5,
 		},
 		{
 			// No block meets the criteria below.

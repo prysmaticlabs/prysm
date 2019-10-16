@@ -1,14 +1,14 @@
 package p2p
 
 import (
-	"crypto/ecdsa"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	curve "github.com/ethereum/go-ethereum/crypto"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -18,16 +18,21 @@ func TestPrivateKeyLoading(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-	key, err := ecdsa.GenerateKey(curve.S256(), rand.Reader)
+	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	if err != nil {
 		t.Fatalf("Could not generate key: %v", err)
 	}
-	keyStr := hex.EncodeToString(curve.FromECDSA(key))
-	err = ioutil.WriteFile(file.Name(), []byte(keyStr), 0600)
+	raw, err := key.Raw()
+	if err != nil {
+		panic(err)
+	}
+	out := hex.EncodeToString(raw)
+
+	err = ioutil.WriteFile(file.Name(), []byte(out), 0600)
 	if err != nil {
 		t.Fatalf("Could not write key to file: %v", err)
 	}
-	log.WithField("file", file.Name()).WithField("key", keyStr).Info("Wrote key to file")
+	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
 	cfg := &Config{
 		PrivateKey: file.Name(),
 		Encoding:   "ssz",
@@ -36,8 +41,16 @@ func TestPrivateKeyLoading(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not apply option: %v", err)
 	}
-	newEncoded := hex.EncodeToString(curve.FromECDSA(pKey))
-	if newEncoded != keyStr {
-		t.Error("Private keys do not match")
+	newPkey := convertToInterfacePrivkey(pKey)
+	rawBytes, err := key.Raw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newRaw, _ := newPkey.Raw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(newRaw, rawBytes) {
+		t.Errorf("Private keys do not match got %#x but wanted %#x", rawBytes, newRaw)
 	}
 }

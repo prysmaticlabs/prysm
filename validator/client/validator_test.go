@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -30,10 +29,10 @@ var _ = Validator(&validator{})
 
 const cancelledCtx = "context has been canceled"
 
-func publicKeys(keys map[string]*keystore.Key) [][]byte {
+func publicKeys(keys map[[48]byte]*keystore.Key) [][]byte {
 	pks := make([][]byte, 0, len(keys))
-	for _, value := range keys {
-		pks = append(pks, value.PublicKey.Marshal())
+	for key := range keys {
+		pks = append(pks, key[:])
 	}
 	return pks
 }
@@ -54,14 +53,14 @@ func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationRespons
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -87,14 +86,14 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -118,13 +117,13 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -139,13 +138,13 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -283,10 +282,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
@@ -300,10 +299,10 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconServiceClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keys:         keyMap,
-		beaconClient: client,
+		keys:            keyMap,
+		validatorClient: client,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
@@ -491,29 +490,29 @@ func TestRolesAt_OK(t *testing.T) {
 					Shard:      1,
 					Slot:       1,
 					IsProposer: true,
-					PublicKey:  []byte("pk1"),
+					PublicKey:  []byte{0x01},
 				},
 				{
 					Shard:     2,
 					Slot:      1,
-					PublicKey: []byte("pk2"),
+					PublicKey: []byte{0x02},
 				},
 				{
 					Shard:     1,
 					Slot:      2,
-					PublicKey: []byte("pk3"),
+					PublicKey: []byte{0x03},
 				},
 			},
 		},
 	}
 	roleMap := v.RolesAt(1)
-	if roleMap[hex.EncodeToString([]byte("pk1"))] != pb.ValidatorRole_PROPOSER {
+	if roleMap[[48]byte{0x01}] != pb.ValidatorRole_PROPOSER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
 	}
-	if roleMap[hex.EncodeToString([]byte("pk2"))] != pb.ValidatorRole_ATTESTER {
+	if roleMap[[48]byte{0x02}] != pb.ValidatorRole_ATTESTER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
 	}
-	if roleMap[hex.EncodeToString([]byte("pk3"))] != pb.ValidatorRole_UNKNOWN {
+	if roleMap[[48]byte{0x03}] != pb.ValidatorRole_UNKNOWN {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
 

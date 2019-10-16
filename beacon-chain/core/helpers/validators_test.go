@@ -10,13 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func init() {
-	// TODO(2312): remove this and use the mainnet count.
-	c := params.BeaconConfig()
-	c.MinGenesisActiveValidatorCount = 16384
-	params.OverrideBeaconConfig(c)
-}
-
 func TestIsActiveValidator_OK(t *testing.T) {
 	tests := []struct {
 		a uint64
@@ -156,6 +149,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -292,8 +288,8 @@ func TestDomain_OK(t *testing.T) {
 		{epoch: 3, domainType: 5, version: 216172782113783813},
 	}
 	for _, tt := range tests {
-		if Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state, tt.epoch, bytesutil.Bytes4(tt.domainType)))
+		if Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
 	}
 }

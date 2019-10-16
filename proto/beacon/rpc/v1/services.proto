@@ -6,51 +6,6 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "google/api/annotations.proto";
-import "protoc-gen-swagger/options/annotations.proto";
-
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
-	info: {
-		title: "Prysm";
-		version: "0.0.0";
-		contact: {
-			name: "Prysmatic Labs";
-			url: "https://prysmaticlabs.com";
-			email: "team@prysmaticlabs.com";
-		};
-		license: {
-			name: "GNU General Public License v3.0";
-			url: "https://github.com/prysmaticlabs/prysm/blob/master/LICENSE.md";
-		};
-        description: "JSON RPC services provided by Prysm."
-	};
-    external_docs: {
-        url: "https://github.com/prysmaticlabs/prysm";
-        description : "Prysm Github";
-    };
-    host: "api.prylabs.net",
-	schemes: HTTPS;
-	consumes: "application/json";
-	consumes: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-	produces: "application/json";
-    produces: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-};
-
-
-service BeaconService {
-  rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
-  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc BlockTree(google.protobuf.Empty) returns (BlockTreeResponse) {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-      summary: "Fetches block tree since last finalized block.";
-    };
-    option (google.api.http) = {
-      get: "/v1/beacon/blocktree";
-    };
-  }
-  rpc BlockTreeBySlots(TreeBlockSlotRequest) returns (BlockTreeResponse);
-}
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
@@ -70,6 +25,8 @@ service ValidatorService {
   rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
   rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+  rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
+  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
 }
 
 message BlockRequest {
@@ -94,14 +51,15 @@ message AttestResponse {
 
 message ValidatorPerformanceRequest {
   uint64 slot = 1;
-  bytes public_key = 2;
+  repeated bytes public_keys = 2;
 }
 
 message ValidatorPerformanceResponse {
-  uint64 balance = 1;
+  repeated uint64 balances = 1;
   uint64 total_validators = 2;
   uint64 total_active_validators = 3;
-  float average_active_validator_balance = 4;
+  repeated bytes missing_validators = 4;
+  float average_active_validator_balance = 5;
 }
 
 message ValidatorActivationRequest {
@@ -191,12 +149,13 @@ message BlockTreeResponse {
 
 enum ValidatorStatus {
   UNKNOWN_STATUS = 0;
-  PENDING_ACTIVE = 1;
-  ACTIVE = 2;
-  INITIATED_EXIT = 3;
-  WITHDRAWABLE = 4;
-  EXITED = 5;
-  EXITED_SLASHED = 6;
+  DEPOSIT_RECEIVED = 1;
+  PENDING_ACTIVE = 2;
+  ACTIVE = 3;
+  INITIATED_EXIT = 4;
+  WITHDRAWABLE = 5;
+  EXITED = 6;
+  EXITED_SLASHED = 7;
 }
 
 message TreeBlockSlotRequest {

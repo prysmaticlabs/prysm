@@ -15,7 +15,6 @@ type BeaconChainConfig struct {
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	JustificationBitsLength  uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines the length in bytes of the justification bits.
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
@@ -83,7 +82,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	SyncPollingInterval       int64         // SyncPollingInterval queries network nodes for sync status.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
@@ -96,6 +94,10 @@ type BeaconChainConfig struct {
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
+
+	// Slasher constants.
+	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 }
 
 // DepositContractConfig contains the deposits for
@@ -105,18 +107,11 @@ type DepositContractConfig struct {
 	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
-// ShardChainConfig contains configs for node to participate in shard chains.
-type ShardChainConfig struct {
-	ChunkSize         uint64 // ChunkSize defines the size of each chunk in bytes.
-	MaxShardBlockSize uint64 // MaxShardBlockSize defines the max size of each shard block in bytes.
-}
-
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      5,
 	DepositContractTreeDepth: 32,
-	JustificationBitsLength:  4,
 	SecondsPerDay:            86400,
 
 	// Misc constant.
@@ -196,13 +191,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DefaultPageSize:           250,
 	MaxPageSize:               500,
 
-	// Testnet misc values.
-	TestnetContractEndpoint: "https://beta.prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
-}
+	// Slasher related values.
+	WeakSubjectivityPeriod:    54000,
+	PruneSlasherStoragePeriod: 10,
 
-var defaultShardConfig = &ShardChainConfig{
-	ChunkSize:         uint64(256),
-	MaxShardBlockSize: uint64(32768),
+	// Testnet misc values.
+	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
@@ -212,7 +206,6 @@ var defaultDepositContractConfig = &DepositContractConfig{
 }
 
 var beaconConfig = defaultBeaconConfig
-var shardConfig = defaultShardConfig
 var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
@@ -237,9 +230,10 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
 	demoConfig.EjectionBalance = 1.6 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
-	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
-	demoConfig.MinGenesisTime = 0
 	demoConfig.Eth1FollowDistance = 16
+
+	// Increment this number after a full testnet tear down.
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
 
 	return demoConfig
 }
@@ -247,61 +241,71 @@ func DemoBeaconConfig() *BeaconChainConfig {
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
+	// Misc
 	minimalConfig.ShardCount = 8
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 4096
 	minimalConfig.MinPerEpochChurnLimit = 4
 	minimalConfig.ChurnLimitQuotient = 65536
-	minimalConfig.BaseRewardsPerEpoch = 5
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
-	minimalConfig.DepositContractTreeDepth = 32
+	minimalConfig.MinGenesisTime = 0
+
+	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
 	minimalConfig.MaxEffectiveBalance = 32e9
 	minimalConfig.EjectionBalance = 16e9
 	minimalConfig.EffectiveBalanceIncrement = 1e9
-	minimalConfig.FarFutureEpoch = 1<<64 - 1
+
+	// Initial values
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
+
+	// Time parameters
 	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.ActivationExitDelay = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
-	minimalConfig.HistoricalRootsLimit = 64
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+
+	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64
 	minimalConfig.EpochsPerSlashingsVector = 64
+	minimalConfig.HistoricalRootsLimit = 16777216
 	minimalConfig.ValidatorRegistryLimit = 1099511627776
+
+	// Reward and penalty quotients
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32
+	minimalConfig.BaseRewardsPerEpoch = 5
+
+	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
 	minimalConfig.MaxAttesterSlashings = 1
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxTransfers = 0
+
+	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
 	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
 	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
-	minimalConfig.MinGenesisTime = 1578009600
 
+	minimalConfig.DepositContractTreeDepth = 32
+	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	return &minimalConfig
-}
-
-// ShardConfig retrieves shard chain config.
-func ShardConfig() *ShardChainConfig {
-	return shardConfig
 }
 
 // ContractConfig retrieves the deposit contract config
@@ -312,6 +316,11 @@ func ContractConfig() *DepositContractConfig {
 // UseDemoBeaconConfig for beacon chain services.
 func UseDemoBeaconConfig() {
 	beaconConfig = DemoBeaconConfig()
+}
+
+// UseMinimalConfig for beacon chain services.
+func UseMinimalConfig() {
+	beaconConfig = MinimalSpecConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

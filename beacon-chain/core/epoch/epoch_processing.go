@@ -46,7 +46,7 @@ type MatchedAttestations struct {
 //  def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
 //    return [
 //        a for a in get_matching_source_attestations(state, epoch)
-//        if a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+//        if a.data.beacon_block_root == get_block_root_at_slot(state, get_attestation_data_slot(state, a.data))
 //    ]
 func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestations, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -162,6 +162,10 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 //      if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //          state.finalized_checkpoint = old_current_justified_checkpoint
 func ProcessJustificationAndFinalization(state *pb.BeaconState, prevAttestedBal uint64, currAttestedBal uint64) (*pb.BeaconState, error) {
+	if state.Slot <= helpers.StartSlot(2) {
+		return state, nil
+	}
+
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint
@@ -298,6 +302,7 @@ func ProcessRewardsAndPenalties(state *pb.BeaconState) (*pb.BeaconState, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get crosslink delta")
 	}
+
 	for i := 0; i < len(state.Validators); i++ {
 		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i])
 		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
@@ -443,8 +448,6 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 //        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
 //        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
 //            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//    # Update start shard
-//    state.start_shard = Shard((state.start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT)
 //    # Set active index root
 //    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
 //    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
@@ -461,6 +464,8 @@ func ProcessSlashings(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
 //        historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
 //        state.historical_roots.append(hash_tree_root(historical_batch))
+//    # Update start shard
+//    state.start_shard = Shard((state.start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT)
 //    # Rotate current/previous epoch attestations
 //    state.previous_epoch_attestations = state.current_epoch_attestations
 //    state.current_epoch_attestations = []
@@ -484,14 +489,6 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-
-	// Update start shard.
-	delta, err := helpers.ShardDelta(state, currentEpoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get shard delta")
-	}
-	state.StartShard = (state.StartShard + delta) %
-		params.BeaconConfig().ShardCount
 
 	// Set active index root.
 	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
@@ -540,6 +537,13 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot[:])
 	}
 
+	// Update start shard.
+	delta, err := helpers.ShardDelta(state, currentEpoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get shard delta")
+	}
+	state.StartShard = (state.StartShard + delta) % params.BeaconConfig().ShardCount
+
 	// Rotate current and previous epoch attestations.
 	state.PreviousEpochAttestations = state.CurrentEpochAttestations
 	state.CurrentEpochAttestations = []*pb.PendingAttestation{}
@@ -551,19 +555,29 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 // it sorts the indices and filters out the slashed ones.
 //
 // Spec pseudocode definition:
-//  def get_unslashed_attesting_indices(state: BeaconState, attestations: List[PendingAttestation]) -> List[ValidatorIndex]:
-//    output = set()
+//  def get_unslashed_attesting_indices(state: BeaconState,
+//                                    attestations: Sequence[PendingAttestation]) -> Set[ValidatorIndex]:
+//    output = set()  # type: Set[ValidatorIndex]
 //    for a in attestations:
-//        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bitfield))
-//    return sorted(filter(lambda index: not state.validator_registry[index].slashed, list(output)))
+//        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+//    return set(filter(lambda index: not state.validators[index].slashed, output))
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
+	seen := make(map[uint64]bool)
 	for _, att := range atts {
-		indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+		attestingIndices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attester indices")
 		}
-		setIndices = append(setIndices, indices...)
+		// Create a set for attesting indices
+		set := make([]uint64, 0, len(attestingIndices))
+		for _, index := range attestingIndices {
+			if !seen[index] {
+				set = append(set, index)
+			}
+			seen[index] = true
+		}
+		setIndices = append(setIndices, set...)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
@@ -573,6 +587,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
+
 	return setIndices, nil
 }
 
@@ -780,7 +795,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 	// Cache the validators who voted correctly for source in a map
 	// to calculate earliest attestation rewards later.
-	attestersVotedSoruce := make(map[uint64]*pb.PendingAttestation)
+	attestersVotedSource := make(map[uint64]*pb.PendingAttestation)
 	// Compute rewards / penalties for each attestation in the list and update
 	// the rewards and penalties lists.
 	for i, matchAtt := range attsPackage {
@@ -793,7 +808,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		// Construct a map to look up validators that voted for source, target or head.
 		for _, index := range indices {
 			if i == 0 {
-				attestersVotedSoruce[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
+				attestersVotedSource[index] = &pb.PendingAttestation{InclusionDelay: params.BeaconConfig().FarFutureEpoch}
 			}
 			attested[index] = true
 		}
@@ -821,15 +836,15 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			return nil, nil, errors.Wrap(err, "could not get attester indices")
 		}
 		for _, i := range indices {
-			if _, ok := attestersVotedSoruce[i]; ok {
-				if attestersVotedSoruce[i].InclusionDelay > att.InclusionDelay {
-					attestersVotedSoruce[i] = att
+			if _, ok := attestersVotedSource[i]; ok {
+				if attestersVotedSource[i].InclusionDelay > att.InclusionDelay {
+					attestersVotedSource[i] = att
 				}
 			}
 		}
 	}
 
-	for i, a := range attestersVotedSoruce {
+	for i, a := range attestersVotedSource {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
 		baseReward, err := baseReward(state, i)
@@ -839,8 +854,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		attesterRewardFactor := (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
-		rewards[i] += attesterReward * attesterRewardFactor
+		rewards[i] += attesterReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
 	}
 
 	// Apply penalties for quadratic leaks.

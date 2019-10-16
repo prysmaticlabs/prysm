@@ -13,13 +13,18 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+var _ = ChainStartFetcher(&Service{})
+var _ = ChainInfoFetcher(&Service{})
+var _ = POWBlockFetcher(&Service{})
+var _ = Chain(&Service{})
 
 type badReader struct{}
 
@@ -97,7 +102,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
-	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+	if _, err = NewService(ctx, &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
@@ -106,7 +111,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
 	endpoint = "ftp://127.0.0.1"
-	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+	if _, err = NewService(ctx, &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
@@ -115,7 +120,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
 	endpoint = "ws://127.0.0.1"
-	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+	if _, err = NewService(ctx, &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
@@ -124,7 +129,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
 	endpoint = "ipc://geth.ipc"
-	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+	if _, err = NewService(ctx, &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
@@ -136,17 +141,13 @@ func TestNewWeb3Service_OK(t *testing.T) {
 
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-
-	beaconDB, err := db.SetupDB()
-	if err != nil {
-		t.Fatalf("Could not set up simulated beacon DB: %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -179,7 +180,7 @@ func TestStop_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -197,12 +198,6 @@ func TestStop_OK(t *testing.T) {
 		t.Fatalf("Unable to stop web3 ETH1.0 chain service: %v", err)
 	}
 
-	msg := hook.LastEntry().Message
-	want := "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-
 	// The context should have been canceled.
 	if web3Service.ctx.Err() == nil {
 		t.Error("context was not canceled")
@@ -216,7 +211,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -241,7 +236,7 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &badReader{},
@@ -271,7 +266,7 @@ func TestStatus(t *testing.T) {
 	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
 	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
 
-	testCases := map[*Web3Service]string{
+	testCases := map[*Service]string{
 		// "status is ok" cases
 		{}: "",
 		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
@@ -300,7 +295,7 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
 	})

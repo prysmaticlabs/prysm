@@ -51,6 +51,34 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		s, err = createState(enc)
 		return err
 	})
+	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
+	if s != nil {
+		span.AddAttributes(trace.Int64Attribute("slot", int64(s.Slot)))
+	}
+	return s, err
+}
+
+// GenesisState returns the genesis state in beacon chain.
+func (k *Store) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
+	defer span.End()
+	var s *pb.BeaconState
+	err := k.db.View(func(tx *bolt.Tx) error {
+		// Retrieve genesis block's signing root from blocks bucket,
+		// to look up what the genesis state is.
+		bucket := tx.Bucket(blocksBucket)
+		genesisBlockRoot := bucket.Get(genesisBlockRootKey)
+
+		bucket = tx.Bucket(stateBucket)
+		enc := bucket.Get(genesisBlockRoot)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		s, err = createState(enc)
+		return err
+	})
 	return s, err
 }
 

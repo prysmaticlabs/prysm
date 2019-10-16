@@ -60,7 +60,7 @@ func NewAttestationCache() *AttestationCache {
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
-	if !featureconfig.FeatureConfig().EnableAttestationCache {
+	if !featureconfig.Get().EnableAttestationCache {
 		// Return a miss result if cache is not enabled.
 		attestationCacheMiss.Inc()
 		return nil, nil
@@ -114,7 +114,7 @@ func (c *AttestationCache) Get(ctx context.Context, req *pb.AttestationRequest) 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
-	if !featureconfig.FeatureConfig().EnableAttestationCache {
+	if !featureconfig.Get().EnableAttestationCache {
 		return nil
 	}
 
@@ -127,7 +127,7 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
 	if c.inProgress[s] {
 		return ErrAlreadyInProgress
 	}
-	if featureconfig.FeatureConfig().EnableAttestationCache {
+	if featureconfig.Get().EnableAttestationCache {
 		c.inProgress[s] = true
 	}
 	return nil
@@ -136,7 +136,7 @@ func (c *AttestationCache) MarkInProgress(req *pb.AttestationRequest) error {
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
-	if !featureconfig.FeatureConfig().EnableAttestationCache {
+	if !featureconfig.Get().EnableAttestationCache {
 		return nil
 	}
 
@@ -152,7 +152,7 @@ func (c *AttestationCache) MarkNotInProgress(req *pb.AttestationRequest) error {
 
 // Put the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *pb.AttestationRequest, res *ethpb.AttestationData) error {
-	if !featureconfig.FeatureConfig().EnableAttestationCache {
+	if !featureconfig.Get().EnableAttestationCache {
 		return nil
 	}
 

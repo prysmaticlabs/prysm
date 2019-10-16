@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -38,7 +40,7 @@ func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
 	priv, err := bls.RandKey(rand.Reader)
 	if err != nil {
 		t.Error(err)
@@ -62,11 +64,18 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &RegularSync{
-		p2p:   p2p,
-		chain: &mockChainService{headState: s},
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	if !r.validateVoluntaryExit(ctx, exit, p2p) {
+	valid, err := r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if err != nil {
+		t.Errorf("Failed validation: %v", err)
+	}
+	if !valid {
 		t.Error("Failed validation")
 	}
 
@@ -77,11 +86,60 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
-	if r.validateVoluntaryExit(ctx, exit, p2p) {
+	valid, _ = r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if valid {
 		t.Error("Passed validation when should have failed")
 	}
 
 	if p2p.BroadcastCalled {
 		t.Error("broadcast was called when it should not have been called")
+	}
+}
+
+func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+
+	r := &RegularSync{
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
+		initialSync: &mockSync.Sync{IsSyncing: false},
+	}
+
+	valid, _ := r.validateVoluntaryExit(ctx, exit, p2p, true /*fromSelf*/)
+	if valid {
+		t.Error("Validation should have failed")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
+	}
+}
+
+func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+
+	r := &RegularSync{
+		p2p: p2p,
+		chain: &mock.ChainService{
+			State: s,
+		},
+		initialSync: &mockSync.Sync{IsSyncing: true},
+	}
+
+	valid, _ := r.validateVoluntaryExit(ctx, exit, p2p, false /*fromSelf*/)
+	if valid {
+		t.Error("Validation should have failed")
+	}
+
+	if p2p.BroadcastCalled {
+		t.Error("Broadcast was called")
 	}
 }

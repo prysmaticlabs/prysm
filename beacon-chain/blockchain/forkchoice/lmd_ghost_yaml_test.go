@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"gopkg.in/yaml.v2"
 )
 
@@ -102,19 +102,21 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		s := &pb.BeaconState{Validators: validators}
 
-		if err := store.GenesisStore(ctx, s); err != nil {
+		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 			t.Fatal(err)
 		}
 
 		store.justifiedCheckpt.Root = blksRoot[0]
-		h, err := hashutil.HashProto(store.justifiedCheckpt)
-		if err != nil {
-			t.Fatal(err)
-		}
 		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)
 		}
-		store.checkptBlkRoot[h] = bytesutil.ToBytes32(blksRoot[0])
+
+		if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+			Checkpoint: store.justifiedCheckpt,
+			State:      s,
+		}); err != nil {
+			t.Fatal(err)
+		}
 
 		head, err := store.Head(ctx)
 		if err != nil {
@@ -132,5 +134,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 		}
 
 		helpers.ClearAllCaches()
+		testDB.TeardownDB(t, db)
+
 	}
 }

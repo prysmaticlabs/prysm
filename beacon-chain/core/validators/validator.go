@@ -5,28 +5,12 @@
 package validators
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-type validatorStore struct {
-	sync.RWMutex
-	// activatedValidators is a mapping that tracks validator activation epoch to validators index.
-	activatedValidators map[uint64][]uint64
-	// exitedValidators is a mapping that tracks validator exit epoch to validators index.
-	exitedValidators map[uint64][]uint64
-}
-
-//VStore validator map for quick
-var VStore = validatorStore{
-	activatedValidators: make(map[uint64][]uint64),
-	exitedValidators:    make(map[uint64][]uint64),
-}
 
 // InitiateValidatorExit takes in validator index and updates
 // validator with correct voluntary exit parameters.
@@ -92,32 +76,6 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 	return state, nil
 }
 
-// ExitValidator takes in validator index and does house
-// keeping work to exit validator with entry exit delay.
-//
-// Spec pseudocode definition:
-//  def exit_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//    """
-//    Exit the validator of the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
-//    validator = state.validator_registry[index]
-//
-//    # The following updates only occur if not previous exited
-//    if validator.exit_epoch <= get_entry_exit_effect_epoch(get_current_epoch(state)):
-//        return
-//
-//    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
-func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
-	validator := state.Validators[idx]
-
-	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return state
-	}
-	validator.ExitEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
-	return state
-}
-
 // SlashValidator slashes the malicious validator's balance and awards
 // the whistleblower's balance.
 //
@@ -171,81 +129,70 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 	return state, nil
 }
 
-// InitializeValidatorStore sets the current active validators from the current
-// state.
-func InitializeValidatorStore(bState *pb.BeaconState) error {
-	VStore.Lock()
-	defer VStore.Unlock()
+// ActivatedValidatorIndices determines the indices activated during the current epoch.
+func ActivatedValidatorIndices(state *pb.BeaconState) []uint64 {
+	currentEpoch := helpers.CurrentEpoch(state)
+	activations := make([]uint64, 0)
+	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		if val.ActivationEpoch == delayedActivationEpoch {
+			activations = append(activations, uint64(i))
+		}
+	}
+	return activations
+}
 
-	currentEpoch := helpers.CurrentEpoch(bState)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(bState, currentEpoch)
+// SlashedValidatorIndices determines the indices slashed during the current epoch.
+func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
+	currentEpoch := helpers.CurrentEpoch(state)
+	slashed := make([]uint64, 0)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
+			slashed = append(slashed, uint64(i))
+		}
+	}
+	return slashed
+}
+
+// ExitedValidatorIndices determines the indices exited during the current epoch.
+func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
+	exited := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	for i := 0; i < len(state.Validators); i++ {
+		val := state.Validators[i]
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range state.Validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+	churn, err := helpers.ValidatorChurnLimit(state)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "could not get churn limit")
 	}
-	VStore.activatedValidators[currentEpoch] = activeValidatorIndices
-	return nil
-}
-
-// InsertActivatedVal locks the validator store, inserts the activated validator
-// indices, then unlocks the store again. This method may be used by
-// external services in testing to populate the validator store.
-func InsertActivatedVal(epoch uint64, validators []uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	VStore.activatedValidators[epoch] = validators
-}
-
-// InsertActivatedIndices locks the validator store, inserts the activated validator
-// indices corresponding to their activation epochs.
-func InsertActivatedIndices(epoch uint64, indices []uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	VStore.activatedValidators[epoch] = append(VStore.activatedValidators[epoch], indices...)
-}
-
-// InsertExitedVal locks the validator store, inserts the exited validator
-// indices, then unlocks the store again. This method may be used by
-// external services in testing to remove the validator store.
-func InsertExitedVal(epoch uint64, validators []uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	VStore.exitedValidators[epoch] = validators
-}
-
-// ActivatedValFromEpoch locks the validator store, retrieves the activated validator
-// indices of a given epoch, then unlocks the store again.
-func ActivatedValFromEpoch(epoch uint64) []uint64 {
-	VStore.RLock()
-	defer VStore.RUnlock()
-	if _, exists := VStore.activatedValidators[epoch]; !exists {
-		return nil
+	if churn < uint64(exitQueueChurn) {
+		exitQueueEpoch++
 	}
-	return VStore.activatedValidators[epoch]
-}
-
-// ExitedValFromEpoch locks the validator store, retrieves the exited validator
-// indices of a given epoch, then unlocks the store again.
-func ExitedValFromEpoch(epoch uint64) []uint64 {
-	VStore.RLock()
-	defer VStore.RUnlock()
-	if _, exists := VStore.exitedValidators[epoch]; !exists {
-		return nil
+	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	for i, val := range state.Validators {
+		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
+			exited = append(exited, uint64(i))
+		}
 	}
-	return VStore.exitedValidators[epoch]
-}
-
-// DeleteActivatedVal locks the validator store, delete the activated validator
-// indices of a given epoch, then unlocks the store again.
-func DeleteActivatedVal(epoch uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	delete(VStore.activatedValidators, epoch)
-}
-
-// DeleteExitedVal locks the validator store, delete the exited validator
-// indices of a given epoch, then unlocks the store again.
-func DeleteExitedVal(epoch uint64) {
-	VStore.Lock()
-	defer VStore.Unlock()
-	delete(VStore.exitedValidators, epoch)
+	return exited, nil
 }

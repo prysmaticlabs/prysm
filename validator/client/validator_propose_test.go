@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -16,7 +15,6 @@ import (
 
 type mocks struct {
 	proposerClient  *internal.MockProposerServiceClient
-	beaconClient    *internal.MockBeaconServiceClient
 	validatorClient *internal.MockValidatorServiceClient
 	attesterClient  *internal.MockAttesterServiceClient
 }
@@ -25,13 +23,11 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		proposerClient:  internal.NewMockProposerServiceClient(ctrl),
-		beaconClient:    internal.NewMockBeaconServiceClient(ctrl),
 		validatorClient: internal.NewMockValidatorServiceClient(ctrl),
 		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
 	}
 	validator := &validator{
 		proposerClient:  m.proposerClient,
-		beaconClient:    m.beaconClient,
 		attesterClient:  m.attesterClient,
 		validatorClient: m.validatorClient,
 		keys:            keyMap,
@@ -44,7 +40,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
 	defer finish()
-	validator.ProposeBlock(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 0, validatorPubKey)
 
 	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
@@ -59,7 +55,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Failed to get domain data from beacon node")
 }
 
@@ -78,7 +74,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 		gomock.Any(), // block request
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Failed to request block from beacon node")
 }
 
@@ -107,7 +103,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Failed to propose block")
 }
 
@@ -135,5 +131,5 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), 1, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 }

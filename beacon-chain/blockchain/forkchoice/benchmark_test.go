@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func BenchmarkForkChoiceTree1(b *testing.B) {
@@ -29,7 +29,8 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
@@ -38,11 +39,12 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	h, err := hashutil.HashProto(store.justifiedCheckpt)
-	if err != nil {
-		log.Fatal(err)
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		b.Fatal(err)
 	}
-	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// Spread out the votes evenly for all 3 leaf nodes
 	for i := 0; i < len(validators); i++ {
@@ -89,7 +91,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
@@ -98,11 +100,12 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	h, err := hashutil.HashProto(store.justifiedCheckpt)
-	if err != nil {
-		log.Fatal(err)
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		b.Fatal(err)
 	}
-	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// Spread out the votes evenly for all the leaf nodes. 8 to 15
 	nodeIndex := 8
@@ -142,7 +145,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 	s := &pb.BeaconState{Validators: validators}
-	if err := store.GenesisStore(ctx, s); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
 
@@ -151,11 +154,12 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	h, err := hashutil.HashProto(store.justifiedCheckpt)
-	if err != nil {
-		log.Fatal(err)
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		b.Fatal(err)
 	}
-	store.checkptBlkRoot[h] = bytesutil.ToBytes32(roots[0])
 
 	// All validators vote on the same head
 	for i := 0; i < len(validators); i++ {
