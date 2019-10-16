@@ -48,7 +48,7 @@ func ProcessAttestations(
 	vp []*Validator,
 	bp *Balance) ([]*Validator, *Balance, error) {
 
-	var v *Validator
+	v := &Validator{}
 	var err error
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = attestedCurrentEpoch(state, a)
@@ -100,7 +100,7 @@ func attestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool,
 		votedPrevEpoch = true
 		same, err := sameTarget(s, a, prevEpoch)
 		if err != nil {
-			return false, false, false, err
+			return false, false, false, errors.Wrap(err, "could not check same target")
 		}
 		if same {
 			votedTarget = true
@@ -108,7 +108,7 @@ func attestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool,
 
 		same, err = sameHead(s, a)
 		if err != nil {
-			return false, false, false, err
+			return false, false, false, errors.Wrap(err, "could not check same head")
 		}
 		if same {
 			votedHead = true
