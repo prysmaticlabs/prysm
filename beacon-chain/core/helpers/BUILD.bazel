@@ -53,10 +53,12 @@ go_test(
         "validators_test.go",
     ],
     embed = [":go_default_library"],
+    shard_count = 2,
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
@@ -65,5 +67,29 @@ go_test(
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+    ],
+)
+
+# gazelle:exclude attestation_aggregation_bench_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "medium",
+    srcs = ["attestation_aggregation_bench_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/bls:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
