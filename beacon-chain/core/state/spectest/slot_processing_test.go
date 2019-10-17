@@ -2,7 +2,6 @@ package spectest
 
 import (
 	"context"
-	"flag"
 	"strconv"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/urfave/cli"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -68,11 +66,9 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			}
 
 			// Process slots and epoch with optimizations.
-			app := cli.NewApp()
-			set := flag.NewFlagSet("optimize-process-epoch", 0)
-			set.Bool(featureconfig.OptimizeProcessEpoch.Name, true, "optimize process epoch")
-			ctx := cli.NewContext(app, set, nil)
-			featureconfig.ConfigureBeaconChain(ctx)
+			f := featureconfig.Get()
+			f.OptimizeProcessEpoch = true
+			featureconfig.Init(f)
 			if c := featureconfig.Get(); !c.OptimizeProcessEpoch {
 				t.Errorf("OptimizeProcessEpoch in FeatureFlags incorrect. Wanted true, got false")
 			}
