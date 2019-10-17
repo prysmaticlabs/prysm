@@ -323,6 +323,11 @@ func UseMinimalConfig() {
 	beaconConfig = MinimalSpecConfig()
 }
 
+// UseMainnetConfig for beacon chain services.
+func UseMainnetConfig() {
+	beaconConfig = defaultBeaconConfig
+}
+
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
 // call BeaconConfig(), change the specific parameters, and then call
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
