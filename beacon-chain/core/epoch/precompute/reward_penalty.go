@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ProcessRewardsAndPenalties processes the rewards and penalties of individual validator.
+// ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(state *pb.BeaconState, bp *Balance, vp []*Validator) (*pb.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
