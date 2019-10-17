@@ -180,13 +180,6 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 	return item.Value().(*sync.Mutex)
 }
 
-// TODO: Remove these notes - comment block.
-// We now want to track attestations using the dbpb.AttestationContainer where the data can be
-// removed from memory as the attestations are included in blocks OR the attestation data slot is
-// older than slots_per_epoch.
-
-// TODO: This is all a mess. Do this again when not tired.
-
 // AttestationPool returns the attestations that have not seen on the beacon chain,
 // the attestations are returned in target epoch ascending order and up to MaxAttestations
 // capacity. The attestations returned will be verified against the head state up to requested slot.
@@ -212,12 +205,10 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 		}
 	}
 
-	// TODO: Greed selection. Which attestations provide the most profit?
 	var validAttsCount uint64
 	for root, ac := range s.attestationPool {
 		for _, att := range ac.ToAttestations() {
 			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
-				// TODO: Delete attestation from container?
 				continue
 			}
 
