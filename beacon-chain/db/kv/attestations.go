@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Attestation retrieval by attestation data root.
+// AttestationsByDataRoot returns any (aggregated) attestations matching this data root.
 func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
