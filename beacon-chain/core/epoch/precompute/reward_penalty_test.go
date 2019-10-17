@@ -105,7 +105,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rewards, penalties, err := attestationDeltaPrecompute(state, bp, vp)
+	rewards, penalties, err := attestationDeltas(state, bp, vp)
 	if err != nil {
 		t.Fatal(err)
 	}
