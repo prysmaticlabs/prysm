@@ -7,6 +7,7 @@ go_library(
         "justification_finalization.go",
         "new.go",
         "reward_penalty.go",
+        "slashing.go",
         "type.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
@@ -31,6 +32,7 @@ go_test(
         "justification_finalization_test.go",
         "new_test.go",
         "reward_penalty_test.go",
+        "slashing_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -41,6 +43,7 @@ go_test(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
