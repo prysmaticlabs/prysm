@@ -4,14 +4,20 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
+        "justification_finalization.go",
         "new.go",
+        "reward_penalty.go",
         "type.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/mathutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
@@ -22,7 +28,9 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_test.go",
+        "justification_finalization_test.go",
         "new_test.go",
+        "reward_penalty_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -32,5 +40,6 @@ go_test(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
