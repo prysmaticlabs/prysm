@@ -341,11 +341,11 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	attestations := make([]*ethpb.Attestation, 0, len(atts))
 	for _, att := range atts {
-		aggregated, err := s.aggregatedAttestation(ctx, att)
+		aggregated, err := s.aggregatedAttestations(ctx, att)
 		if err != nil {
 			continue
 		}
-		attestations = append(attestations, aggregated)
+		attestations = append(attestations, aggregated...)
 	}
 	if err := s.db.SaveAttestations(ctx, atts); err != nil {
 		return err
