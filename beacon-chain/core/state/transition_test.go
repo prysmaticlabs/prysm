@@ -721,6 +721,41 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	}
 }
 
+func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
+	helpers.ClearAllCaches()
+	epoch := uint64(1)
+
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
+	var crosslinks []*ethpb.Crosslink
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &ethpb.Crosslink{
+			StartEpoch: 0,
+			DataRoot:   []byte{'A'},
+		})
+	}
+	newState, err := state.ProcessEpochPrecompute(context.Background(), &pb.BeaconState{
+		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		BlockRoots:                 make([][]byte, 128),
+		Slashings:                  []uint64{0, 1e9, 1e9},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentCrosslinks:          crosslinks,
+		CurrentEpochAttestations:   atts,
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		JustificationBits:          bitfield.Bitvector4{0x00},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := uint64(0)
+	if newState.Slashings[2] != wanted {
+		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
+	}
+}
+
 func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
