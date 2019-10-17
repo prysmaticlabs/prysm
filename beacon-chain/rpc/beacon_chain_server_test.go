@@ -415,7 +415,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 				},
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits: bitfield.NewBitlist(1),
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
