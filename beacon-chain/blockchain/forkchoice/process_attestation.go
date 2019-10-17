@@ -121,11 +121,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 			return 0, err
 		}
 		delete(s.attsQueue, root)
-		att, err := s.aggregatedAttestation(ctx, a)
+		att, err := s.aggregatedAttestations(ctx, a)
 		if err != nil {
 			return 0, err
 		}
-		atts = append(atts, att)
+		atts = append(atts, att...)
 	}
 
 	if err := s.db.SaveAttestations(ctx, atts); err != nil {
@@ -285,21 +285,21 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 }
 
 // aggregatedAttestation returns the aggregated attestation after checking saved one in db.
-func (s *Store) aggregatedAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.Attestation, error) {
+func (s *Store) aggregatedAttestations(ctx context.Context, att *ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, err
 	}
-	saved, err := s.db.Attestation(ctx, r)
+	saved, err := s.db.AttestationsByDataRoot(ctx, r)
 	if err != nil {
 		return nil, err
 	}
 
 	if saved == nil {
-		return att, nil
+		return []*ethpb.Attestation{att}, nil
 	}
 
-	aggregated, err := helpers.AggregateAttestation(saved, att)
+	aggregated, err := helpers.AggregateAttestations(append(saved, att))
 	if err != nil {
 		return nil, err
 	}
