@@ -260,7 +260,7 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get crosslink committee")
 			}
-			crosslink, indices, err := winningCrosslink(state, shard, e)
+			crosslink, indices, err := WinningCrosslink(state, shard, e)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get winning crosslink")
 			}
@@ -591,7 +591,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 	return setIndices, nil
 }
 
-// winningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
+// WinningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
 // It also returns the attesting inaidces of the winning cross link.
 //
 // Spec pseudocode definition:
@@ -609,7 +609,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 //    ), default=Crosslink())
 //    winning_attestations = [a for a in attestations if a.data.crosslink == winning_crosslink]
 //    return winning_crosslink, get_unslashed_attesting_indices(state, winning_attestations)
-func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
@@ -928,7 +928,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get crosslink's committee")
 		}
-		_, attestingIndices, err := winningCrosslink(state, shard, epoch)
+		_, attestingIndices, err := WinningCrosslink(state, shard, epoch)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get winning crosslink")
 		}

@@ -333,7 +333,7 @@ func TestAttsForCrosslink_CanGetAttestations(t *testing.T) {
 func TestWinningCrosslink_CantGetMatchingAtts(t *testing.T) {
 	wanted := fmt.Sprintf("could not get matching attestations: input epoch: %d != current epoch: %d or previous epoch: %d",
 		100, 0, 0)
-	_, _, err := winningCrosslink(&pb.BeaconState{Slot: 0}, 0, 100)
+	_, _, err := WinningCrosslink(&pb.BeaconState{Slot: 0}, 0, 100)
 	if err.Error() != wanted {
 		t.Fatal(err)
 	}
@@ -357,7 +357,7 @@ func TestWinningCrosslink_ReturnGenesisCrosslink(t *testing.T) {
 		ParentRoot: params.BeaconConfig().ZeroHash[:],
 	}
 
-	crosslink, indices, err := winningCrosslink(state, 0, ge)
+	crosslink, indices, err := WinningCrosslink(state, 0, ge)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	winner, indices, err := winningCrosslink(state, 1, ge)
+	winner, indices, err := WinningCrosslink(state, 1, ge)
 	if err != nil {
 		t.Fatal(err)
 	}
