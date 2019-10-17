@@ -5,6 +5,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
+// NewContainerFromAttestations creates a new attestation contain with signature pairs from the
+// given list of attestations.
 func NewContainerFromAttestations(atts []*ethpb.Attestation) *AttestationContainer {
 	if len(atts) == 0 {
 		panic("no attestations provided")
@@ -22,15 +24,16 @@ func NewContainerFromAttestations(atts []*ethpb.Attestation) *AttestationContain
 	}
 }
 
+// Contains returns true if the attestation bits are fully contained in some attestations.
 func (ac *AttestationContainer) Contains(att *ethpb.Attestation) bool {
+	all := bitfield.NewBitlist(att.AggregationBits.Len())
 	for _, sp := range ac.SignaturePairs {
-		if sp.AggregationBits.Contains(att.AggregationBits) {
-			return true
-		}
+		all = all.Or(sp.AggregationBits)
 	}
-	return false
+	return all.Contains(att.AggregationBits)
 }
 
+// ToAttestations converts an attestationContainer signature pairs to full attestations.
 func (ac *AttestationContainer) ToAttestations() []*ethpb.Attestation {
 	if ac == nil {
 		return nil
@@ -50,13 +53,15 @@ func (ac *AttestationContainer) ToAttestations() []*ethpb.Attestation {
 	return atts
 }
 
+// InsertAttestation if bitfields do not exist already.
 func (ac *AttestationContainer) InsertAttestation(att *ethpb.Attestation) {
 	sigPairsNotEclipsed := make([]*AttestationContainer_SignaturePair, 0, len(ac.SignaturePairs))
+	// if att is fully contained in some existing bitfields, do nothing.
+	if ac.Contains(att) {
+		return
+	}
+
 	for _, sp := range ac.SignaturePairs {
-		// if att is fully contained in some existing bitfield, do nothing.
-		if sp.AggregationBits.Contains(att.AggregationBits) {
-			return
-		}
 		// filter any existing signature pairs that are fully contained within
 		// the new attestation.
 		if !att.AggregationBits.Contains(sp.AggregationBits) {

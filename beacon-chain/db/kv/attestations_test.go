@@ -27,7 +27,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 				EndEpoch:   2,
 			},
 		},
-		AggregationBits: bitfield.NewBitlist(8),
+		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 		CustodyBits:     bitfield.NewBitlist(8),
 	}
 	ctx := context.Background()
@@ -83,7 +83,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 					EndEpoch:   2,
 				},
 			},
-			AggregationBits: bitfield.NewBitlist(8),
+			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 			CustodyBits:     bitfield.NewBitlist(8),
 		}
 		if i%2 == 0 {
@@ -138,6 +138,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 					EndEpoch:   2,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
@@ -169,6 +170,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 						EndEpoch:   2,
 					},
 				},
+				AggregationBits: bitfield.Bitlist{0b11},
 			}
 			ctx := context.Background()
 			attDataRoot, err := ssz.HashTreeRoot(att.Data)
@@ -205,6 +207,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 					Epoch: 7,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -218,6 +221,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 					Epoch: 7,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -231,6 +235,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 					Epoch: 5,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 	}
 	ctx := context.Background()
@@ -287,7 +292,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 }
 
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
-	commonData_0 := &ethpb.AttestationData{
+	commonData := &ethpb.AttestationData{
 		Crosslink: &ethpb.Crosslink{
 			Shard:      5,
 			ParentRoot: []byte("parent"),
@@ -305,21 +310,21 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 			name: "all distinct aggregation bitfields",
 			input: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
@@ -328,17 +333,17 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 			name: "Incoming attestation is fully contained already",
 			input: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b11111111},
 				},
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000010},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b11111111},
 				},
 			},
@@ -347,21 +352,21 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 			name: "Existing attestations are fully contained incoming attestation",
 			input: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000001},
 				},
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b10000010},
 				},
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b11111111},
 				},
 			},
 			output: []*ethpb.Attestation{
 				{
-					Data:            commonData_0,
+					Data:            commonData,
 					AggregationBits: []byte{0b11111111},
 				},
 			},

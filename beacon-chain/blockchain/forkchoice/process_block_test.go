@@ -226,12 +226,14 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.NewBitlist(1), CustodyBits: bitfield.NewBitlist(1)}
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.NewBitlist(1), CustodyBits: bitfield.NewBitlist(1)}
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}, CustodyBits: bitfield.NewBitlist(2)}
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b110}, CustodyBits: bitfield.NewBitlist(2)}
 	r1, _ := ssz.HashTreeRoot(a1.Data)
 	r2, _ := ssz.HashTreeRoot(a2.Data)
 
-	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
+		t.Fatal(err)
+	}
 
 	saved, err := store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
@@ -249,8 +251,8 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}, CustodyBits: bitfield.NewBitlist(1)}
-	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}, CustodyBits: bitfield.NewBitlist(1)}
+	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
+	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
 
 	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
 		t.Fatal(err)

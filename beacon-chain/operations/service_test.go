@@ -549,6 +549,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
@@ -600,6 +601,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
@@ -645,6 +647,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
