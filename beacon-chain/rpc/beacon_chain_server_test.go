@@ -38,6 +38,8 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -91,6 +93,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 3,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -107,6 +110,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 4,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -123,6 +127,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 5,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 	}
 
@@ -196,6 +201,8 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -224,15 +231,21 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 3},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 4},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 5},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
@@ -249,23 +262,32 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 50},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 51},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 52},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 53},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 54},
-					}},
+					}, AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits: bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
@@ -282,7 +304,9 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 99},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
@@ -298,11 +322,16 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 0},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Crosslink:       &ethpb.Crosslink{Shard: 1},
-					}},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1),
+					},
 				},
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(count)}},
@@ -333,6 +362,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -384,6 +414,8 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -408,6 +440,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	i := 0
 	j := params.BeaconConfig().DefaultPageSize
 	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
+		t.Log(res.Attestations, atts[i:j])
 		t.Error("Incorrect attestations response")
 	}
 }
