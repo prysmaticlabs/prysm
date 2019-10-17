@@ -189,6 +189,8 @@ func TestProcessAttestations(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
 	validators := uint64(64)
 	deposits, _, _ := testutil.SetupInitialDeposits(t, validators)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
@@ -225,18 +227,16 @@ func TestProcessAttestations(t *testing.T) {
 	indices, _ := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
-			t.Log("Not a prev epoch attester")
+			t.Error("Not a prev epoch attester")
 		}
 	}
 	indices, _ = helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
-			t.Log("Not a prev epoch attester")
+			t.Error("Not a prev epoch attester")
 		}
 		if !vp[i].IsPrevEpochHeadAttester {
-			t.Log("Not a prev epoch head attester")
+			t.Error("Not a prev epoch head attester")
 		}
 	}
-
-	params.UseMainnetConfig()
 }
