@@ -4,14 +4,13 @@ package slasher
 import (
 	"fmt"
 	"net"
-	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -88,9 +87,8 @@ func (s *Service) Start() {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
-
-	slasherServer := Server{
-		slasherDb: s.slasherDb,
+	slasherServer := rpc.Server{
+		SlasherDb: s.slasherDb,
 	}
 
 	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
@@ -99,9 +97,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)
