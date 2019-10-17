@@ -63,10 +63,6 @@ func newRecentAttestationMultiMap() *recentAttestationMultiMap {
 
 // Prune removes expired attestation references from the map.
 func (r *recentAttestationMultiMap) Prune(currentSlot uint64) {
-	if true { // debug disable prune
-		return
-	}
-
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	for slot, root := range r.slotRootMap {
