@@ -66,7 +66,7 @@ func AttestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bo
 	return votedCurrentEpoch, votedTarget, nil
 }
 
-// AttestedCurrentEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
+// AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
 func AttestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
 	prevEpoch := helpers.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
