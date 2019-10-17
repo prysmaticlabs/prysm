@@ -23,6 +23,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	bls12.SetETHserialization(true)
 }
 
 func Init() {
@@ -246,8 +247,9 @@ func (s *Signature) Marshal() []byte {
 	if featureconfig.Get().SkipBLSVerify {
 		return make([]byte, 96)
 	}
+
 	rawBytes := s.s.Serialize()
-	return reverseByteOrder(rawBytes)
+	return rawBytes
 }
 
 // Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
