@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ProcessSlashings processes the slashed validators during epoch processing.
+// ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
 func ProcessSlashingsPrecompute(state *pb.BeaconState, p *Balance) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
