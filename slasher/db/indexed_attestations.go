@@ -23,8 +23,8 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIndexedAttestationList, error) {
-	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestationList{}
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIdxAttLst, error) {
+	protoIdxAtt := &ethpb.ValidatorIDToIdxAttLst{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -130,7 +130,7 @@ func createIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal indexed attestation data.")
 	}
-	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestation{
+	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot,
@@ -173,7 +173,7 @@ func (db *Store) DeleteIndexedAttestation(epoch uint64, idxAttestation *ethpb.In
 func removeIndexedAttestationIndicesFromData(epoch uint64, idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.Marshal(idxAttestation.Data)
-	protoIdxAtt := &ethpb.ValidatorIDToIndexedAttestation{
+	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot,

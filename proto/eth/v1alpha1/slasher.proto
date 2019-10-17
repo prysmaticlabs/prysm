@@ -30,14 +30,14 @@ service Slasher {
     rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
 }
 
-message ValidatorIDToIndexedAttestation {
+message ValidatorIDToIdxAtt {
     repeated uint64 indices = 1 ;
     bytes data_root = 2;
     // 96 bytes aggregate signature.
     bytes signature = 3;
 }
-message ValidatorIDToIndexedAttestationList {
-    repeated ValidatorIDToIndexedAttestation indicesList = 1 ;
+message ValidatorIDToIdxAttLst {
+    repeated ValidatorIDToIdxAtt indicesList = 1 ;
 }
 
 message ProposerSlashingRequest {
