@@ -33,7 +33,6 @@ go_test(
     srcs = ["sendDeposits_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/powchain:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/testutil:go_default_library",

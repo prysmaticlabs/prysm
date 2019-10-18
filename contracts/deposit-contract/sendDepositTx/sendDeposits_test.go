@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -31,10 +30,14 @@ func generateValidators(count int64) map[string]*prysmKeyStore.Key {
 
 }
 
-//should I explicitly return err here?
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
+
 func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
 	numberOfDeposits int64) {
-	depositAmountInGwei := uint64(contracts.Amount32Eth.Int64())
+	depositAmountInGwei := contracts.Amount32Eth.Uint64()  //how to fix an error here?
 
 	depositDelay := int64(1)
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
@@ -63,61 +66,12 @@ func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prys
 	}
 }
 
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-}
-
-type goodReader struct{}
-
-func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-type goodLogger struct{}
-
-func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	logs := make([]gethTypes.Log, 3)
-	for i := 0; i < len(logs); i++ {
-		logs[i].Address = common.Address{}
-		logs[i].Topics = make([]common.Hash, 5)
-		logs[i].Topics[0] = common.Hash{'a'}
-		logs[i].Topics[1] = common.Hash{'b'}
-		logs[i].Topics[2] = common.Hash{'c'}
-
-	}
-	return logs, nil
-}
-
-
 func TestEndtoEndDeposits(t *testing.T) {
 	log = logrus.WithField("prefix", "main")
 	testutil.ResetCache()
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-
-	endpoint := "ws://127.0.0.1"
-	
-	type goodLogger struct{}
-
-	web3Service, err := powchain.NewService(context.Background(), &powchain.Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
-		BeaconDB:        &kv.Store{},
-		DepositCache:    depositcache.NewDepositCache(),
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.Backend.Commit()
@@ -134,11 +88,11 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			testAcc.ContractAddr,
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query) //context backgrround ?
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -146,16 +100,15 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	web3Service.chainStarted = true
 
-	for _, log := range logs {
-		if err := web3Service.ProcessDepositLog(context.Background(), log); err != nil {
-			t.Fatal("Unable to process deposit log %v", err)
-		}
-	}
-	totalNumberOfDeposits := validatorsWanted * numberOfDeposits
-	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
-	if len(pendingDeposits) != int(totalNumberOfDeposits) {
-		t.Errorf("Unexpected number of deposits. Wanted %v deposits, got %+v", int(totalNumberOfDeposits), pendingDeposits)
-	}
+    // TODO to check deposit count
+	// func (_DepositContract *DepositContractCaller) DepositCount(opts *bind.CallOpts) (*big.Int, error) {
+	// 	var (
+	// 		ret0 = new(*big.Int)
+	// 	)
+	// 	out := ret0
+	// 	err := _DepositContract.contract.Call(opts, out, "deposit_count")
+	// 	return *ret0, err
+	// }
+
 }
