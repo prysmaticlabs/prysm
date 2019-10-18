@@ -24,7 +24,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	msg := &ethpb.BeaconBlock{
-		Slot: 1,
+		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  []byte("fake"),
 	}
@@ -98,7 +98,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot: 1,
+		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -154,7 +154,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot: 1,
+		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -191,7 +191,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot: 1,
+		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -228,7 +228,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot: 1,
+		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -238,7 +238,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	r := &RegularSync{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
-		chain:       &mock.ChainService{Genesis: time.Now(),},
+		chain:       &mock.ChainService{Genesis: time.Now()},
 	}
 	result, _ := r.validateBeaconBlockPubSub(
 		context.Background(),
