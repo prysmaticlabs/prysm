@@ -11,8 +11,6 @@ import (
 // This is an optimized version by passing in precomputed total epoch balances.
 func ProcessSlashingsPrecompute(state *pb.BeaconState, p *Balance) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
-
-	// Compute slashed balances in the current epoch
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
 	// Compute the sum of state slashings
