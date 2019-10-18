@@ -61,8 +61,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 
 			if !proto.Equal(postState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
+				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}
 
 			// Process slots and epoch with optimizations.
@@ -80,8 +79,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 
 			if !proto.Equal(postState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
+				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}
 		})
 	}
