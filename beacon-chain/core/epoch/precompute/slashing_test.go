@@ -20,6 +20,7 @@ func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
 	}
 	bp := &precompute.Balance{CurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
 	newState := precompute.ProcessSlashingsPrecompute(s, bp)
+
 	wanted := params.BeaconConfig().MaxEffectiveBalance
 	if newState.Balances[0] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
