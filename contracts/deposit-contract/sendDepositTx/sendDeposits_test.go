@@ -1,4 +1,4 @@
-package powchain
+package main
 
 import (
 	"crypto/rand"
@@ -8,11 +8,10 @@ import (
 	"testing"
 	"time"
 	"context"
-	
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,13 +27,14 @@ func generateValidators(count int64) map[string]*prysmKeyStore.Key {
 		}
 		validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 	}
-	return validatorKeys
+	return validatorKeys 
+
 }
 
 //should I explicitly return err here?
 func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
 	numberOfDeposits int64) {
-	depositAmountInGwei := contracts.Amount32Eth.Uint64()
+	depositAmountInGwei := uint64(contracts.Amount32Eth.Int64())
 
 	depositDelay := int64(1)
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
@@ -68,6 +68,32 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
+type goodReader struct{}
+
+func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
+
+type goodLogger struct{}
+
+func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
+
+func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+	logs := make([]gethTypes.Log, 3)
+	for i := 0; i < len(logs); i++ {
+		logs[i].Address = common.Address{}
+		logs[i].Topics = make([]common.Hash, 5)
+		logs[i].Topics[0] = common.Hash{'a'}
+		logs[i].Topics[1] = common.Hash{'b'}
+		logs[i].Topics[2] = common.Hash{'c'}
+
+	}
+	return logs, nil
+}
+
+
 func TestEndtoEndDeposits(t *testing.T) {
 	log = logrus.WithField("prefix", "main")
 	testutil.ResetCache()
@@ -76,7 +102,11 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	endpoint := "ws://127.0.0.1"
+	
+	type goodLogger struct{}
+
+	web3Service, err := powchain.NewService(context.Background(), &powchain.Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -84,6 +114,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
+		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -123,14 +154,8 @@ func TestEndtoEndDeposits(t *testing.T) {
 		}
 	}
 	totalNumberOfDeposits := validatorsWanted * numberOfDeposits
-	
-	processed, err := web3Service.AreAllDepositsProcessed()
-	if (!processed) {
-		t.Fatal("Unable to process all logs from deposit contract")
+	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	if len(pendingDeposits) != int(totalNumberOfDeposits) {
+		t.Errorf("Unexpected number of deposits. Wanted %v deposits, got %+v", int(totalNumberOfDeposits), pendingDeposits)
 	}
-	if err != nil {
-		t.Fatalf("Unable to process logs from deposit contract %v", err)
-	}
-
-
 }
