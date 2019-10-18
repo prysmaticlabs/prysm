@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -162,7 +163,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	opsSrv := NewService(ctx, &Config{
 		BeaconDB: beaconDB,
 	})
-	opsSrv.attestationPool = make(map[[32]byte]*ethpb.Attestation)
+	opsSrv.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
 	// First, we create a common attestation data.
 	data := &ethpb.AttestationData{
@@ -251,7 +252,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 
 	// We fetch the final attestation from the attestation pool, which should be an aggregation of
 	// all committee members effectively.
-	aggAtt := opsSrv.attestationPool[attDataRoot]
+	aggAtt := opsSrv.attestationPool[attDataRoot].ToAttestations()[0]
 	b1 := aggAtt.AggregationBits.Bytes()
 	b2 := totalAggBits.Bytes()
 
@@ -274,7 +275,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
-	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
+	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
@@ -404,7 +405,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err != nil {
 		t.Error(err)
 	}
-	dbAtt := service.attestationPool[attDataHash]
+	dbAtt := service.attestationPool[attDataHash].ToAttestations()[0]
 
 	dbAttBits := dbAtt.AggregationBits.Bytes()
 	aggregatedBits := att1.AggregationBits.Or(att2.AggregationBits).Bytes()
@@ -419,7 +420,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att2); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
-	dbAtt = service.attestationPool[attDataHash]
+	dbAtt = service.attestationPool[attDataHash].ToAttestations()[0]
 
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
@@ -433,7 +434,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := service.HandleAttestation(context.Background(), att3); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
-	dbAtt = service.attestationPool[attDataHash]
+	dbAtt = service.attestationPool[attDataHash].ToAttestations()[0]
 
 	dbAttBits = dbAtt.AggregationBits.Bytes()
 	if !bytes.Equal(dbAttBits, aggregatedBits) {
@@ -450,7 +451,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
-	service.attestationPool = make(map[[32]byte]*ethpb.Attestation)
+	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
@@ -514,7 +515,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	r, _ := ssz.HashTreeRoot(att.Data)
-	service.attestationPool[r] = att
+	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
 
 	headBlockRoot := [32]byte{1, 2, 3}
 	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
@@ -550,6 +551,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
@@ -601,6 +603,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
@@ -646,6 +649,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
@@ -681,5 +685,43 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	}
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
+	}
+}
+
+func TestRecentAttestationMultiMap_Contains(t *testing.T) {
+	root := [32]byte{'F', 'O', 'O', 'B', 'A', 'R'}
+
+	tests := []struct {
+		inputs   []bitfield.Bitlist
+		contains bitfield.Bitlist
+		want     bool
+	}{
+		{
+			inputs: []bitfield.Bitlist{
+				bitfield.Bitlist{0b00000001, 0b1},
+				bitfield.Bitlist{0b00000010, 0b1},
+			},
+			contains: bitfield.Bitlist{0b00000001, 0b1},
+			want:     true,
+		}, {
+			inputs: []bitfield.Bitlist{
+				bitfield.Bitlist{0b00111000, 0b1},
+				bitfield.Bitlist{0b00000011, 0b1},
+			},
+			contains: bitfield.Bitlist{0b00000100, 0b1},
+			want:     false,
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			mm := newRecentAttestationMultiMap()
+			for _, input := range tt.inputs {
+				mm.Insert(0, root, input)
+			}
+			if mm.Contains(root, tt.contains) != tt.want {
+				t.Errorf("mm.Contains(root, tt.contains) = %v, wanted %v", mm.Contains(root, tt.contains), tt.want)
+			}
+		})
 	}
 }

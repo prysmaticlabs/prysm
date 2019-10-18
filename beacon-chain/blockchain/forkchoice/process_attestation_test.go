@@ -269,15 +269,13 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}, Signature: sig.Marshal()}
-	saved, err := store.aggregatedAttestation(ctx, a2)
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
+	saved, err := store.aggregatedAttestations(ctx, a2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2.AggregationBits, saved.AggregationBits) {
-		t.Error("did not retrieve saved attestation")
-	}
-	if !reflect.DeepEqual(a2.Data, saved.Data) {
+
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }

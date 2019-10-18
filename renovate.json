@@ -11,11 +11,8 @@
   "automerge": true,
   "packageRules": [{
     "packagePatterns": [
-      ".*libp2p.*",
-      ".*multiformats.*",
-      ".*ipfs.*",
-      ".*whyrusleeping.*"
+      ".*"
     ],
-    "groupName": "libp2p"
+    "groupName": "Everything"
   }]
 }

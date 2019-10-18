@@ -54,27 +54,85 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 	return StartSlot(data.Target.Epoch) + (offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)), nil
 }
 
-// AggregateAttestation aggregates attestations a1 and a2 together.
+// AggregateAttestations such that the minimal number of attestations are returned.
+// Note: this is currently a naive implementation to the order of O(n^2).
+func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	if len(atts) <= 1 {
+		return atts, nil
+	}
+
+	// Naive aggregation. O(n^2) time.
+	for i, a := range atts {
+		if i >= len(atts) {
+			break
+		}
+		for j := i + 1; j < len(atts); j++ {
+			b := atts[j]
+			if !a.AggregationBits.Overlaps(b.AggregationBits) {
+				var err error
+				a, err = AggregateAttestation(a, b)
+				if err != nil {
+					return nil, err
+				}
+				// Delete b
+				atts = append(atts[:j], atts[j+1:]...)
+				j--
+				atts[i] = a
+			}
+		}
+	}
+
+	// Naive deduplication of identical aggregations. O(n^2) time.
+	for i, a := range atts {
+		for j := i + 1; j < len(atts); j++ {
+			b := atts[j]
+			if a.AggregationBits.Contains(b.AggregationBits) {
+				// If b is fully contained in a, then b can be removed.
+				atts = append(atts[:j], atts[j+1:]...)
+				j--
+			} else if b.AggregationBits.Contains(a.AggregationBits) {
+				// if a is fully contained in b, then a can be removed.
+				atts = append(atts[:i], atts[i+1:]...)
+				i--
+				break // Stop the inner loop, advance a.
+			}
+		}
+	}
+
+	return atts, nil
+}
+
+// BLS aggregate signature aliases for testing / benchmark substitution. These methods are
+// significantly more expensive than the inner logic of AggregateAttestations so they must be
+// substituted for benchmarks which analyze AggregateAttestations.
+var aggregateSignatures = bls.AggregateSignatures
+var signatureFromBytes = bls.SignatureFromBytes
+
+// AggregateAttestation aggregates attestations baseAtt and newAtt together.
 // Returns error if attestations aggregation bitfields overlap each other,
 // since it's not possible to aggregate them.
-func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
-	if a1.AggregationBits.Overlaps(a2.AggregationBits) {
+func AggregateAttestation(baseAtt *ethpb.Attestation, newAtt *ethpb.Attestation) (*ethpb.Attestation, error) {
+	if baseAtt.AggregationBits.Overlaps(newAtt.AggregationBits) {
 		return nil, ErrAttestationAggregationBitsOverlap
 	}
 
-	newBits := a1.AggregationBits.Or(a2.AggregationBits)
-	s1, err := bls.SignatureFromBytes(a1.Signature)
+	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
+		return baseAtt, nil
+	}
+
+	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
+	newSig, err := signatureFromBytes(newAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
-	s2, err := bls.SignatureFromBytes(a2.Signature)
+	baseSig, err := signatureFromBytes(baseAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{s1, s2})
-	a1.Signature = aggregatedSig.Marshal()
-	a1.AggregationBits = newBits
+	aggregatedSig := aggregateSignatures([]*bls.Signature{baseSig, newSig})
+	baseAtt.Signature = aggregatedSig.Marshal()
+	baseAtt.AggregationBits = newBits
 
-	return a1, nil
+	return baseAtt, nil
 }
