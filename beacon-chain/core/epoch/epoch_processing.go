@@ -260,7 +260,7 @@ func ProcessCrosslinks(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get crosslink committee")
 			}
-			crosslink, indices, err := winningCrosslink(state, shard, e)
+			crosslink, indices, err := WinningCrosslink(state, shard, e)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get winning crosslink")
 			}
@@ -591,7 +591,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 	return setIndices, nil
 }
 
-// winningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
+// WinningCrosslink returns the most staked balance-wise crosslink of a given shard and epoch.
 // It also returns the attesting inaidces of the winning cross link.
 //
 // Spec pseudocode definition:
@@ -609,7 +609,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 //    ), default=Crosslink())
 //    winning_attestations = [a for a in attestations if a.data.crosslink == winning_crosslink]
 //    return winning_crosslink, get_unslashed_attesting_indices(state, winning_attestations)
-func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
+func WinningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb.Crosslink, []uint64, error) {
 	var shardAtts []*pb.PendingAttestation
 	matchedAtts, err := MatchAttestations(state, epoch)
 	if err != nil {
@@ -678,7 +678,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 	return winnerCrosslink, crosslinkIndices, nil
 }
 
-// baseReward takes state and validator index and calculate
+// BaseReward takes state and validator index and calculate
 // individual validator's base reward quotient.
 //
 // Note: Adjusted quotient is calculated of base reward because it's too inefficient
@@ -689,7 +689,7 @@ func winningCrosslink(state *pb.BeaconState, shard uint64, epoch uint64) (*ethpb
 //      total_balance = get_total_active_balance(state)
 //	    effective_balance = state.validator_registry[index].effective_balance
 //	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
-func baseReward(state *pb.BeaconState, index uint64) (uint64, error) {
+func BaseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
@@ -816,7 +816,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
@@ -847,7 +847,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	for i, a := range attestersVotedSource {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
-		baseReward, err := baseReward(state, i)
+		baseReward, err := BaseReward(state, i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get proposer reward")
 		}
@@ -871,7 +871,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			attestedTarget[index] = true
 		}
 		for _, index := range eligible {
-			base, err := baseReward(state, index)
+			base, err := BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
@@ -928,7 +928,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get crosslink's committee")
 		}
-		_, attestingIndices, err := winningCrosslink(state, shard, epoch)
+		_, attestingIndices, err := WinningCrosslink(state, shard, epoch)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get winning crosslink")
 		}
@@ -942,7 +942,7 @@ func crosslinkDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		attestingBalance := helpers.TotalBalance(state, attestingIndices)
 
 		for _, index := range committee {
-			base, err := baseReward(state, index)
+			base, err := BaseReward(state, index)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
