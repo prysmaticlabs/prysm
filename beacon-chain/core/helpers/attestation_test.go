@@ -118,6 +118,24 @@ func TestAggregateAttestation(t *testing.T) {
 	}
 }
 
+func TestAggregateAttestation_OverlapFails(t *testing.T) {
+	tests := []struct {
+		a1 *ethpb.Attestation
+		a2 *ethpb.Attestation
+	}{
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x1F}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0xFF, 0x85}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x13, 0x8F}}},
+	}
+	for _, tt := range tests {
+		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
+		if err != helpers.ErrAttestationAggregationBitsOverlap {
+			t.Error("Did not receive wanted error")
+		}
+	}
+}
+
 func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
 	b := bitfield.NewBitlist(length)
 	for i := uint64(0); i < length; i++ {
