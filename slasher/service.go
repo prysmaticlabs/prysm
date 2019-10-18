@@ -3,8 +3,9 @@ package slasher
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"net"
+
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
