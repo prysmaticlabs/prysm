@@ -135,7 +135,13 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	if half == 0 {
 		delay = 500 * time.Millisecond
 	}
-	duration := time.Second*time.Duration(slot*params.BeaconConfig().SecondsPerSlot) + delay
-	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+	startTime := slotStartTime(v.genesisTime, slot)
+	timeToBroadcast := startTime.Add(delay)
 	time.Sleep(roughtime.Until(timeToBroadcast))
+}
+
+func slotStartTime(genesis uint64, slot uint64) time.Time {
+	duration := time.Second * time.Duration(slot*params.BeaconConfig().SecondsPerSlot)
+	startTime := time.Unix(int64(genesis), 0).Add(duration)
+	return startTime
 }
