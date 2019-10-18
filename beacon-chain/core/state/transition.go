@@ -13,10 +13,12 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -254,10 +256,18 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return nil, errors.Wrap(err, "could not process epoch")
+			if featureconfig.Get().OptimizeProcessEpoch {
+				state, err = ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			} else {
+				state, err = ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
 			}
 		}
 		state.Slot++
@@ -638,6 +648,48 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slashings")
 	}
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process final updates")
+	}
+	return state, nil
+}
+
+// ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
+// It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
+func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+
+	vp, bp := precompute.New(ctx, state)
+	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process justification")
+	}
+
+	state, err = e.ProcessCrosslinks(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process crosslink")
+	}
+
+	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
+	}
+
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process registry updates")
+	}
+
+	state = precompute.ProcessSlashingsPrecompute(state, bp)
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {
