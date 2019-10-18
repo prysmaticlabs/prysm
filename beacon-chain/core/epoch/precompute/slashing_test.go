@@ -1,9 +1,10 @@
-package precompute
+package precompute_test
 
 import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -17,8 +18,9 @@ func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	}
-	bp := &Balance{CurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
-	newState := ProcessSlashingsPrecompute(s, bp)
+	bp := &precompute.Balance{CurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
+	newState := precompute.ProcessSlashingsPrecompute(s, bp)
+
 	wanted := params.BeaconConfig().MaxEffectiveBalance
 	if newState.Balances[0] != wanted {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Balances[0])
@@ -105,10 +107,10 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 				}
 				ab += b
 			}
-			bp := &Balance{CurrentEpoch: ab}
+			bp := &precompute.Balance{CurrentEpoch: ab}
 
 			original := proto.Clone(tt.state)
-			newState := ProcessSlashingsPrecompute(tt.state, bp)
+			newState := precompute.ProcessSlashingsPrecompute(tt.state, bp)
 
 			if newState.Balances[0] != tt.want {
 				t.Errorf(
