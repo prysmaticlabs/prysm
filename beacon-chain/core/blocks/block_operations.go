@@ -549,11 +549,11 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 
 	data := att.Data
 
-	if data.Index >= params.BeaconConfig().CommitteesPerSlot {
+	if data.Index >= params.BeaconConfig().MaxCommitteesPerSlot {
 		return nil, fmt.Errorf(
 			"expected attestation index %d to be less than COMMITTEES_PER_SLOT %d",
 			data.Index,
-			params.BeaconConfig().CommitteesPerSlot,
+			params.BeaconConfig().MaxCommitteesPerSlot,
 		)
 	}
 

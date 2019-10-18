@@ -79,7 +79,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	}
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
-		CommitteeCount: params.BeaconConfig().CommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
+		CommitteeCount: params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
 		ProposerIndex:  proposerIndex,
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {

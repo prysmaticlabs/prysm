@@ -20,7 +20,7 @@ type Database interface {
 	// Backup and restore methods
 	Backup(ctx context.Context) error
 	// Attestation related methods.
-	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
+	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error

@@ -19,24 +19,51 @@ import (
 var shuffledIndicesCache = cache.NewShuffledIndicesCache()
 var committeeCache = cache.NewCommitteeCache()
 
-// CrosslinkCommittee returns the crosslink committee of a given epoch.
+// CommitteeCountAtSlot returns the number of crosslink committees of a slot.
 //
 // Spec pseudocode definition:
-//   def get_crosslink_committee(state: BeaconState, slot: Slot, index: uint64) -> Sequence[ValidatorIndex]:
+//   def get_committee_count_at_slot(state: BeaconState, slot: Slot) -> uint64:
 //    """
-//    Return the crosslink committee at ``epoch`` for ``index``.
+//    Return the number of committees at ``slot``.
 //    """
+//    epoch = compute_epoch_at_slot(slot)
+//    return min(
+//        MAX_COMMITTEES_PER_SLOT,
+//        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//    )
+func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
+	epoch := SlotToEpoch(slot)
+	count, err := ActiveValidatorCount(state, epoch)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get active count")
+	}
+	var committeePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+		return params.BeaconConfig().MaxCommitteesPerSlot, nil
+	}
+	return committeePerSlot, nil
+}
+
+// BeaconCommittee returns the crosslink committee of a given epoch.
+//
+// Spec pseudocode definition:
+//   def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
+//    """
+//    Return the beacon committee at ``slot`` for ``index``.
+//    """
+//    epoch = compute_epoch_at_slot(slot)
+//    committees_per_slot = get_committee_count_at_slot(state, slot)
+//    epoch_offset = index + (slot % SLOTS_PER_EPOCH) * committees_per_slot
 //    return compute_committee(
 //        indices=get_active_validator_indices(state, epoch),
-//        seed=get_seed(state, epoch),
-//        index=(slot % SLOTS_PER_EPOCH) * COMMITTEES_PER_SLOT + index,
-//        count=COMMITTEES_PER_SLOT * SLOTS_PER_EPOCH,
+//        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
+//        index=epoch_offset,
+//        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
-func CrosslinkCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
-	e := SlotToEpoch(slot)
-
+func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
+	epoch := SlotToEpoch(slot)
 	if featureconfig.Get().EnableNewCache {
-		indices, err := committeeCache.ShuffledIndices(e, index)
+		indices, err := committeeCache.ShuffledIndices(epoch, index)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}
@@ -45,20 +72,24 @@ func CrosslinkCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uin
 		}
 	}
 
-	seed, err := Seed(state, e, params.BeaconConfig().DomainAttestation)
+	committeesPerSlot, err := CommitteeCountAtSlot(state, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get committee count at slot")
+	}
+	epoch_offset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
+
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
 
-	indices, err := ActiveValidatorIndices(state, e)
+	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
-	i := (slot%params.BeaconConfig().SlotsPerEpoch)*params.BeaconConfig().CommitteesPerSlot + index
-	c := params.BeaconConfig().CommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch
-
-	return ComputeCommittee(indices, seed, i, c)
+	return ComputeCommittee(indices, seed, epoch_offset, count)
 }
 
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
@@ -122,10 +153,10 @@ func ComputeCommittee(
 //    """
 //    Return the set of attesting indices corresponding to ``data`` and ``bits``.
 //    """
-//    committee = get_crosslink_committee(state, data.slot, data.index)
+//    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
-	committee, err := CrosslinkCommittee(state, data.Slot, data.Index)
+	committee, err := BeaconCommittee(state, data.Slot, data.Index)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get committee")
 	}
@@ -193,8 +224,8 @@ func CommitteeAssignment(
 
 	startSlot := StartSlot(epoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		for i := uint64(0); i < params.BeaconConfig().CommitteesPerSlot; i++ {
-			committee, err := CrosslinkCommittee(state, slot, i)
+		for i := uint64(0); i < params.BeaconConfig().MaxCommitteesPerSlot; i++ {
+			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
 				return nil, 0, 0, false, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
@@ -220,7 +251,7 @@ func CommitteeAssignment(
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attestation) error {
-	committee, err := CrosslinkCommittee(bState, att.Data.Slot, att.Data.Index)
+	committee, err := BeaconCommittee(bState, att.Data.Slot, att.Data.Index)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve crosslink committees")
 	}
@@ -276,7 +307,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
 			Epoch:          epoch,
 			Committee:      committees,
-			CommitteeCount: params.BeaconConfig().CommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
+			CommitteeCount: params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
 		}); err != nil {
 			return err
 		}

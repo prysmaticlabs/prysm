@@ -182,7 +182,7 @@ func generateProposerSlashings(
 //			StartEpoch: i,
 //			EndEpoch:   i + 1,
 //		}
-//		committee, err := helpers.CrosslinkCommittee(bState, i, crosslink.Shard)
+//		committee, err := helpers.BeaconCommittee(bState, i, crosslink.Shard)
 //		if err != nil {
 //			t.Fatal(err)
 //		}
@@ -307,7 +307,7 @@ func generateProposerSlashings(
 //		ParentRoot: parentRoot[:],
 //		DataRoot:   params.BeaconConfig().ZeroHash[:],
 //	}
-//	committee, err := helpers.CrosslinkCommittee(bState, currentEpoch, shard)
+//	committee, err := helpers.BeaconCommittee(bState, currentEpoch, shard)
 //	if err != nil {
 //		t.Fatal(err)
 //	}

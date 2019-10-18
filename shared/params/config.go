@@ -25,7 +25,7 @@ type BeaconChainConfig struct {
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
-	CommitteesPerSlot              uint64 // CommitteesPerSlot defines the committee count for a single slot.
+	MaxCommitteesPerSlot           uint64                                             // MaxCommitteesPerSlot defines the max committee count for a single slot.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -116,13 +116,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      4096,
+	MaxValidatorsPerCommittee:      1024,
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 65536,
 	MinGenesisTime:                 1578009600,
-	CommitteesPerSlot:              32,
+	MaxCommitteesPerSlot:           32,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
@@ -233,7 +233,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
 
 	return demoConfig
 }
@@ -249,7 +249,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.CommitteesPerSlot = 2
+	minimalConfig.MaxCommitteesPerSlot = 2
 
 	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
@@ -321,6 +321,11 @@ func UseDemoBeaconConfig() {
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
 	beaconConfig = MinimalSpecConfig()
+}
+
+// UseMainnetConfig for beacon chain services.
+func UseMainnetConfig() {
+	beaconConfig = defaultBeaconConfig
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

@@ -25,24 +25,24 @@ message AttestationData {
     // Slot of the attestation
     uint64 slot = 1;
 
+    // Committee index voted this attestation.
+    uint64 index = 2;
+
     // Attestation data includes information on Casper the Friendly Finality Gadget's votes
     // See: https://arxiv.org/pdf/1710.09437.pdf
 
     // 32 byte root of the LMD GHOST block vote.
-    bytes beacon_block_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Source contains information relating to the recent justified epoch
     // as well as the 32 byte root of the epoch boundary block at the
     // source epoch.
-    Checkpoint source = 3;
+    Checkpoint source = 4;
 
     // Target contains information relating to the epoch the attestation
     // is targeting as well as the 32 byte root of the epoch boundary
     // block at the source epoch.
-    Checkpoint target = 4;
-
-    // Committee index voted this attestation.
-    uint64 index = 5;
+    Checkpoint target = 5;
 }
 
 message Checkpoint {

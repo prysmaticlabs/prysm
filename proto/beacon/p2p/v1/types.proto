@@ -27,8 +27,7 @@ message BeaconState {
   repeated ethereum.eth.v1alpha1.Validator validators = 4001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
   repeated uint64 balances = 4002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
-  // Shuffling [5001-6000]
-  uint64 start_shard = 5001;
+  // Randomness [5001-6000]
   repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
   repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
   repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
