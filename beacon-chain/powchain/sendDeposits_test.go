@@ -1,17 +1,18 @@
-package main
+package powchain
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"testing"
 	"time"
+	"context"
+	
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,12 +28,13 @@ func generateValidators(count int64) map[string]*prysmKeyStore.Key {
 		}
 		validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 	}
+	return validatorKeys
 }
 
 //should I explicitly return err here?
 func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
 	numberOfDeposits int64) {
-	depositAmountInGwei := uint64(contracts.Amount32Eth.Int64())
+	depositAmountInGwei := contracts.Amount32Eth.Uint64();
 
 	depositDelay := int64(1)
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
@@ -74,7 +76,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 
-	web3Service, err := powchain.NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.ContractAddr,
 		Reader:          &goodReader{},
@@ -82,7 +84,6 @@ func TestEndtoEndDeposits(t *testing.T) {
 		HTTPLogger:      &goodLogger{},
 		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
-		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -122,8 +123,14 @@ func TestEndtoEndDeposits(t *testing.T) {
 		}
 	}
 	totalNumberOfDeposits := validatorsWanted * numberOfDeposits
-	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
-	if len(pendingDeposits) != int(totalNumberOfDeposits) {
-		t.Errorf("Unexpected number of deposits. Wanted %v deposits, got %+v", int(totalNumberOfDeposits), pendingDeposits)
+	
+	processed, err := web3Service.AreAllDepositsProcessed()
+	if (!processed) {
+		t.Fatal("Unable to process all logs from deposit contract")
 	}
+	if err != nil {
+		t.Fatalf("Unable to process logs from deposit contract %v", err)
+	}
+
+
 }
