@@ -10,16 +10,19 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -45,6 +48,55 @@ type OperationFeeds interface {
 	IncomingProcessedBlockFeed() *event.Feed
 }
 
+type recentAttestationMultiMap struct {
+	lock           sync.RWMutex
+	slotRootMap    map[uint64][32]byte
+	rootBitlistMap map[[32]byte]bitfield.Bitlist
+}
+
+func newRecentAttestationMultiMap() *recentAttestationMultiMap {
+	return &recentAttestationMultiMap{
+		slotRootMap:    make(map[uint64][32]byte),
+		rootBitlistMap: make(map[[32]byte]bitfield.Bitlist),
+	}
+}
+
+// Prune removes expired attestation references from the map.
+func (r *recentAttestationMultiMap) Prune(currentSlot uint64) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	for slot, root := range r.slotRootMap {
+		// Block expiration period is slots_per_epoch, we'll keep references to attestations within
+		// twice that range to act as a short circuit for incoming attestations that may have been
+		// delayed in the network.
+		if slot+(2*params.BeaconConfig().SlotsPerEpoch)+1 < currentSlot {
+			delete(r.slotRootMap, slot)
+			delete(r.rootBitlistMap, root)
+		}
+	}
+}
+
+func (r *recentAttestationMultiMap) Insert(slot uint64, root [32]byte, bitlist bitfield.Bitlist) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.slotRootMap[slot] = root
+	if b, exists := r.rootBitlistMap[root]; exists {
+		r.rootBitlistMap[root] = b.Or(bitlist)
+	} else {
+		r.rootBitlistMap[root] = bitlist
+	}
+}
+
+func (r *recentAttestationMultiMap) Contains(root [32]byte, b bitfield.Bitlist) bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	a, ok := r.rootBitlistMap[root]
+	if !ok {
+		return false
+	}
+	return a.Contains(b)
+}
+
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
@@ -54,7 +106,8 @@ type Service struct {
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *ethpb.BeaconBlock
 	error                      error
-	attestationPool            map[[32]byte]*ethpb.Attestation
+	attestationPool            map[[32]byte]*dbpb.AttestationContainer
+	recentAttestationBitlist   *recentAttestationMultiMap
 	attestationPoolLock        sync.Mutex
 	attestationLockCache       *ccache.Cache
 }
@@ -74,7 +127,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:                   cfg.BeaconDB,
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
-		attestationPool:            make(map[[32]byte]*ethpb.Attestation),
+		attestationPool:            make(map[[32]byte]*dbpb.AttestationContainer),
+		recentAttestationBitlist:   newRecentAttestationMultiMap(),
 		attestationLockCache:       ccache.New(ccache.Configure()),
 	}
 }
@@ -148,25 +202,27 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 	}
 
 	var validAttsCount uint64
-	for _, att := range s.attestationPool {
-		root, err := ssz.HashTreeRoot(att.Data)
-		if err != nil {
-			return nil, err
-		}
+	for root, ac := range s.attestationPool {
+		for _, att := range ac.ToAttestations() {
+			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
+				continue
+			}
 
-		if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
-			delete(s.attestationPool, root)
-			continue
-		}
+			if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
+				delete(s.attestationPool, root)
+				continue
+			}
 
-		validAttsCount++
-		// Stop the max attestation number per beacon block is reached.
-		if validAttsCount == params.BeaconConfig().MaxAttestations {
-			break
-		}
+			validAttsCount++
+			// Stop the max attestation number per beacon block is reached.
+			if validAttsCount == params.BeaconConfig().MaxAttestations {
+				break
+			}
 
-		atts = append(atts, att)
+			atts = append(atts, att)
+		}
 	}
+
 	return atts, nil
 }
 
@@ -177,8 +233,8 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
-	for _, att := range s.attestationPool {
-		atts = append(atts, att)
+	for _, ac := range s.attestationPool {
+		atts = append(atts, ac.ToAttestations()...)
 	}
 
 	return atts, nil
@@ -212,21 +268,44 @@ func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) 
 	attestation := message.(*ethpb.Attestation)
 	root, err := ssz.HashTreeRoot(attestation.Data)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return err
 	}
 
-	savedAtt, ok := s.attestationPool[root]
-	if !ok {
-		s.attestationPool[root] = attestation
+	if s.recentAttestationBitlist.Contains(root, attestation.AggregationBits) {
+		log.Debug("Attestation aggregation bits already included recently")
 		return nil
 	}
 
-	savedAtt, err = helpers.AggregateAttestation(savedAtt, attestation)
+	ac, ok := s.attestationPool[root]
+	if !ok {
+		s.attestationPool[root] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{attestation})
+		return nil
+	}
+
+	// Container already has attestation(s) that fully contain the the aggregation bits of this new
+	// attestation so there is nothing to insert or aggregate.
+	if ac.Contains(attestation) {
+		log.Debug("Attestation already fully contained in container")
+		return nil
+	}
+
+	beforeAggregation := append(ac.ToAttestations(), attestation)
+
+	// Filter any out attestation that is already fully included.
+	for i, att := range beforeAggregation {
+		if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
+			beforeAggregation = append(beforeAggregation[:i], beforeAggregation[i+1:]...)
+		}
+	}
+
+	aggregated, err := helpers.AggregateAttestations(beforeAggregation)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return err
 	}
 
-	s.attestationPool[root] = savedAtt
+	s.attestationPool[root] = dbpb.NewContainerFromAttestations(aggregated)
 
 	return nil
 }
@@ -259,12 +338,28 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 	if err := s.removeAttestationsFromPool(ctx, block.Body.Attestations); err != nil {
 		return errors.Wrap(err, "could not remove processed attestations from DB")
 	}
+	s.recentAttestationBitlist.Prune(block.Slot)
+
+	for i, att := range block.Body.Attestations {
+		root, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"index":            i,
+			"root":             fmt.Sprintf("%#x", root),
+			"aggregation_bits": fmt.Sprintf("%8b", att.AggregationBits.Bytes()),
+			"shard":            att.Data.Crosslink.Shard,
+		}).Debug("block attestation")
+	}
 	return nil
 }
 
 // removeAttestationsFromPool removes a list of attestations from the DB
 // after they have been included in a beacon block.
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "operations.removeAttestationsFromPool")
+	defer span.End()
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
 
@@ -274,17 +369,35 @@ func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations [
 			return err
 		}
 
-		retAtt, ok := s.attestationPool[root]
+		// TODO(1428): Update this to attestation.Slot.
+		// References upstream issue https://github.com/ethereum/eth2.0-specs/pull/1428
+		slot := helpers.StartSlot(attestation.Data.Target.Epoch)
+		s.recentAttestationBitlist.Insert(slot, root, attestation.AggregationBits)
+
+		log = log.WithField("root", fmt.Sprintf("%#x", root))
+
+		ac, ok := s.attestationPool[root]
 		if ok {
-			// only delete if the processed attestation has included all the validators
-			// from the attestation pool for that attestation.
-			if attestation.AggregationBits.Contains(retAtt.AggregationBits) {
-				delete(s.attestationPool, root)
-				log.WithField(
-					"attDataRoot",
-					fmt.Sprintf("%#x", root),
-				).Debug("Attestation removed from pool")
+			atts := ac.ToAttestations()
+			for i, att := range atts {
+				if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
+					log.Debug("deleting attestation")
+					if i < len(atts)-1 {
+						copy(atts[i:], atts[i+1:])
+					}
+					atts[len(atts)-1] = nil
+					atts = atts[:len(atts)-1]
+				}
 			}
+
+			if len(atts) == 0 {
+				delete(s.attestationPool, root)
+				continue
+			}
+
+			s.attestationPool[root] = dbpb.NewContainerFromAttestations(atts)
+		} else {
+			log.Debug("No attestations found with this root.")
 		}
 	}
 	return nil
