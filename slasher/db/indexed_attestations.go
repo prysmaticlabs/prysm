@@ -93,7 +93,7 @@ func (db *Store) HasIndexedAttestation(epoch uint64, validatorID uint64) bool {
 	return hasAttestation
 }
 
-// SaveIndexedAttestation accepts epoch  and indexed attestation and writes it to disk.
+// SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
 func (db *Store) SaveIndexedAttestation(epoch uint64, idxAttestation *ethpb.IndexedAttestation) error {
 	key := encodeEpochSig(epoch, idxAttestation.Signature)
 	enc, err := proto.Marshal(idxAttestation)

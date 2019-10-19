@@ -12,7 +12,6 @@ import (
 
 func TestServer_IsSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -33,7 +32,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -52,14 +50,11 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
-
 	}
-
 }
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -80,7 +75,6 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -88,16 +82,13 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
-
 	if len(sr.ProposerSlashing) != 0 {
 		t.Errorf("Should return 0 slashaing proof: %v", sr)
 	}
-
 }
 
 func TestServer_DoubleBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -111,7 +102,6 @@ func TestServer_DoubleBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -119,16 +109,13 @@ func TestServer_DoubleBlock(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
-
 	if len(sr.ProposerSlashing) != 0 {
 		t.Errorf("Should return 0 slashaing proof: %v", sr)
 	}
-
 }
 
 func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -168,6 +155,5 @@ func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
-
 	}
 }
