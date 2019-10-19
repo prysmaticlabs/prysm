@@ -233,7 +233,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 0}
 
 	return demoConfig
 }
@@ -261,7 +261,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 2
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1

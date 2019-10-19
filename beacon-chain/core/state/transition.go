@@ -18,12 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 // ExecuteStateTransition defines the procedure for a state transition function.
@@ -256,18 +256,21 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			if featureconfig.Get().OptimizeProcessEpoch {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else {
-				state, err = ProcessEpoch(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
+			sCopy := proto.Clone(state).(*pb.BeaconState)
+			state, err = ProcessEpoch(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch")
+			}
+			sCopy, err = ProcessEpochPrecompute(ctx, sCopy)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			}
+			if !proto.Equal(state, sCopy) {
+				diff, _ := messagediff.PrettyDiff(state, sCopy)
+				fmt.Println(diff)
+				panic("diff states!")
 			}
 		}
 		state.Slot++
