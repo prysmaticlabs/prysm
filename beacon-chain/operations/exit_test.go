@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -22,6 +21,6 @@ func TestIncomingExits_Ok(t *testing.T) {
 		t.Error(err)
 	}
 
-	want := fmt.Sprintf("Exit request saved in DB")
+	want := "Exit request saved in DB"
 	testutil.AssertLogsContain(t, hook, want)
 }

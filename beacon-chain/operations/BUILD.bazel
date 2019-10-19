@@ -7,7 +7,7 @@ go_library(
         "block.go",
         "exit.go",
         "log.go",
-        "recent_attestation_multi_map.go",
+        "recent_att_multi_map.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations",

@@ -53,11 +53,11 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 // capacity. The attestations returned will be verified against the head state up to requested slot.
 // When fails attestation, the attestation will be removed from the pool.
 func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
-	s.attestationPoolLock.Lock()
-	defer s.attestationPoolLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "operations.AttestationPool")
 	defer span.End()
+
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
@@ -114,11 +114,11 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 
 // HandleAttestation processes a received attestation message.
 func (s *Service) HandleAttestation(ctx context.Context, message proto.Message) error {
-	s.attestationPoolLock.Lock()
-	defer s.attestationPoolLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestation")
 	defer span.End()
+
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
 
 	attestation := message.(*ethpb.Attestation)
 	root, err := ssz.HashTreeRoot(attestation.Data)

@@ -2,4 +2,4 @@ package operations
 
 import "github.com/sirupsen/logrus"
 
-var log = logrus.WithField("prefix", "operation")
+var log = logrus.WithField("prefix", "operations")

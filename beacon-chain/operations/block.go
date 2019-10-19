@@ -22,6 +22,9 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 }
 
 func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "operations.handleProcessedBlock")
+	defer span.End()
+
 	block := message.(*ethpb.BeaconBlock)
 	// Removes the attestations from the pool that have been included
 	// in the received block.
@@ -50,6 +53,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 func (s *Service) removeAttestationsFromPool(ctx context.Context, attestations []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "operations.removeAttestationsFromPool")
 	defer span.End()
+
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
 
