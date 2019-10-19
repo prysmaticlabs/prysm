@@ -23,8 +23,8 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIdxAttLst, error) {
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAttLst{}
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIdxAttList, error) {
+	protoIdxAtt := &ethpb.ValidatorIDToIdxAttList{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
