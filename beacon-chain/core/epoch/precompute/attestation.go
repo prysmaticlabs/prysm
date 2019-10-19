@@ -146,8 +146,6 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 		if record.IsPrevEpochHeadAttester {
 			vp[i].IsPrevEpochHeadAttester = true
 		}
-		vp[i].InclusionDistance = a.InclusionDelay
-		vp[i].ProposerIndex = a.ProposerIndex
 
 		// Update attestation inclusion info if inclusion slot is lower than before
 		if inclusionSlot < vp[i].InclusionSlot {
