@@ -1,9 +1,7 @@
 package interop
 
 import (
-	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -30,44 +28,98 @@ var (
 // GenerateGenesisState deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
 func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
-	start := time.Now()
-
-	type keys struct {
-		secrets []*bls.SecretKey
-		publics []*bls.PublicKey
+	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
 	}
-	privKeys := make([]*bls.SecretKey, numValidators)
-	pubKeys := make([]*bls.PublicKey, numValidators)
-	batch, err := mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
-		secs, pubs, err := DeterministicallyGenerateKeys(uint64(offset), uint64(entries))
-		if err != nil {
-			return nil, err
-		}
-		return mputil.NewScatterResults(offset, &keys{secrets: secs, publics: pubs}), nil
+
+	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
+	}
+
+	trie, err := trieutil.GenerateTrieFromItems(
+		depositDataRoots,
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
+	}
+
+	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
+	}
+
+	root := trie.Root()
+	if genesisTime == 0 {
+		genesisTime = uint64(roughtime.Now().Unix())
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: uint64(len(deposits)),
+		BlockHash:    mockEth1BlockHash,
 	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate keys")
+		return nil, nil, errors.Wrap(err, "could not generate genesis state")
+	}
+	return beaconState, deposits, nil
+}
+
+// GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
+func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+	deposits := make([]*ethpb.Deposit, len(depositDataItems))
+
+	batch, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+		deposits, err := generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate deposits from data")
+		}
+		return mputil.NewScatterResults(offset, deposits), nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate deposits from data")
 	}
 	defer close(batch.ResultCh)
 	defer close(batch.ErrorCh)
 	for i := batch.Workers; i > 0; i-- {
 		select {
 		case result := <-batch.ResultCh:
-			copy(privKeys[result.Offset:], result.Extent.(*keys).secrets)
-			copy(pubKeys[result.Offset:], result.Extent.(*keys).publics)
+			copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
 		case err := <-batch.ErrorCh:
-			return nil, nil, errors.Wrapf(err, "failed to generate keys")
+			return nil, errors.Wrapf(err, "failed to generate deposits")
 		}
 	}
+	return deposits, nil
+}
 
+// generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
+func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+	deposits := make([]*ethpb.Deposit, len(depositDataItems))
+	for i, item := range depositDataItems {
+		proof, err := trie.MerkleProof(i + offset)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not generate proof for deposit %d", i+offset)
+		}
+		deposits[i] = &ethpb.Deposit{
+			Proof: proof,
+			Data:  item,
+		}
+	}
+	return deposits, nil
+}
+
+// DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
+func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
 	type depositData struct {
 		items []*ethpb.Deposit_Data
 		roots [][]byte
 	}
-	depositDataItems := make([]*ethpb.Deposit_Data, numValidators)
-	depositDataRoots := make([][]byte, numValidators)
-	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
-		items, roots, err := DepositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
+	numKeys := len(privKeys)
+	depositDataItems := make([]*ethpb.Deposit_Data, numKeys)
+	depositDataRoots := make([][]byte, numKeys)
+	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit data from keys")
 		}
@@ -88,71 +140,10 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 		}
 	}
 
-	fmt.Printf("GenerateGenesisState(%d) mp took %v\n", numValidators, time.Since(start))
-
-	trie, err := trieutil.GenerateTrieFromItems(
-		depositDataRoots,
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
-	}
-
-	deposits := make([]*ethpb.Deposit, numValidators)
-	batch, err = mputil.Scatter(int(numValidators), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
-		deposits, err := GenerateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not generate deposit from deposit data")
-		}
-		return mputil.NewScatterResults(offset, deposits), nil
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate deposit from deposit data")
-	}
-	defer close(batch.ResultCh)
-	defer close(batch.ErrorCh)
-	for i := batch.Workers; i > 0; i-- {
-		select {
-		case result := <-batch.ResultCh:
-			copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
-		case err := <-batch.ErrorCh:
-			return nil, nil, errors.Wrapf(err, "failed to generate deposit")
-		}
-	}
-
-	root := trie.Root()
-	if genesisTime == 0 {
-		genesisTime = uint64(roughtime.Now().Unix())
-	}
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
-		DepositRoot:  root[:],
-		DepositCount: uint64(len(deposits)),
-		BlockHash:    mockEth1BlockHash,
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate genesis state")
-	}
-	return beaconState, deposits, nil
+	return depositDataItems, depositDataRoots, nil
 }
 
-// GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
-	deposits := make([]*ethpb.Deposit, len(depositDataItems))
-	for i, item := range depositDataItems {
-		proof, err := trie.MerkleProof(i + offset)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not generate proof for deposit %d", i+offset)
-		}
-		deposits[i] = &ethpb.Deposit{
-			Proof: proof,
-			Data:  item,
-		}
-	}
-	return deposits, nil
-}
-
-// DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
-func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
+func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
 	dataRoots := make([][]byte, len(privKeys))
 	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
 	for i := 0; i < len(privKeys); i++ {

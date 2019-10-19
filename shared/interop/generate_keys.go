@@ -3,10 +3,12 @@ package interop
 import (
 	"encoding/binary"
 	"math/big"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 )
 
 const (
@@ -17,6 +19,40 @@ const (
 // the algorithm specified in the Eth2.0-Specs interop mock start section found here:
 // https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
+	type keys struct {
+		secrets []*bls.SecretKey
+		publics []*bls.PublicKey
+	}
+
+	privKeys := make([]*bls.SecretKey, numKeys)
+	pubKeys := make([]*bls.PublicKey, numKeys)
+
+	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
+		if err != nil {
+			return nil, err
+		}
+		return mputil.NewScatterResults(offset, &keys{secrets: secs, publics: pubs}), nil
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to generate keys")
+	}
+	defer close(batch.ResultCh)
+	defer close(batch.ErrorCh)
+	for i := batch.Workers; i > 0; i-- {
+		select {
+		case result := <-batch.ResultCh:
+			copy(privKeys[result.Offset:], result.Extent.(*keys).secrets)
+			copy(pubKeys[result.Offset:], result.Extent.(*keys).publics)
+		case err := <-batch.ErrorCh:
+			return nil, nil, errors.Wrapf(err, "failed to generate keys")
+		}
+	}
+
+	return privKeys, pubKeys, nil
+}
+
+func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
 	privKeys := make([]*bls.SecretKey, numKeys)
 	pubKeys := make([]*bls.PublicKey, numKeys)
 	for i := startIndex; i < startIndex+numKeys; i++ {
