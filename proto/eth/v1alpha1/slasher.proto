@@ -29,6 +29,17 @@ service Slasher {
     // Subscription to receive all slashable attester slashing events found by the watchtower.
     rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
 }
+
+message ValidatorIDToIdxAtt {
+    repeated uint64 indices = 1 ;
+    bytes data_root = 2;
+    // 96 bytes aggregate signature.
+    bytes signature = 3;
+}
+message ValidatorIDToIdxAttList {
+    repeated ValidatorIDToIdxAtt indicesList = 1 ;
+}
+
 message ProposerSlashingRequest {
     ethereum.eth.v1alpha1.BeaconBlockHeader block_header=1;
     uint64 validator_index=2;
