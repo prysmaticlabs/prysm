@@ -9,7 +9,7 @@ import (
 // Batch provides details of the scatter process
 type Batch struct {
 	Workers  int
-	ResultCh chan *ScatterResults
+	ResultCh chan *WorkerResults
 	ErrorCh  chan error
 }
 
@@ -23,8 +23,7 @@ type Batch struct {
 //
 // Functions calling Scatter are responsible for closing the results and error channels supplied with the returned
 // batch.  In normal operations there should be `workers` values returned between the results and error channels.
-//
-func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (*ScatterResults, error)) (*Batch, error) {
+func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (*WorkerResults, error)) (*Batch, error) {
 	if inputLen <= 0 {
 		return nil, errors.New("input length must be greater than 0")
 	}
@@ -34,7 +33,7 @@ func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (*ScatterResults, e
 	if inputLen%chunkSize != 0 {
 		workers++
 	}
-	resultCh := make(chan *ScatterResults, workers)
+	resultCh := make(chan *WorkerResults, workers)
 	errorCh := make(chan error, workers)
 	mutex := new(sync.Mutex)
 	for worker := 0; worker < workers; worker++ {
@@ -73,14 +72,15 @@ func calculateChunkSize(items int) int {
 	return chunkSize
 }
 
-type ScatterResults struct {
+// WorkerResults are the results of a scatter worker
+type WorkerResults struct {
 	Offset int
 	Extent interface{}
 }
 
-// NewScatterResults creates a new container for results of a scatter fragment
-func NewScatterResults(offset int, extent interface{}) *ScatterResults {
-	return &ScatterResults{
+// NewWorkerResults creates a new container for results of a scatter worker
+func NewWorkerResults(offset int, extent interface{}) *WorkerResults {
+	return &WorkerResults{
 		Offset: offset,
 		Extent: extent,
 	}

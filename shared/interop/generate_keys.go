@@ -27,12 +27,12 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 	privKeys := make([]*bls.SecretKey, numKeys)
 	pubKeys := make([]*bls.PublicKey, numKeys)
 
-	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
 		if err != nil {
 			return nil, err
 		}
-		return mputil.NewScatterResults(offset, &keys{secrets: secs, publics: pubs}), nil
+		return mputil.NewWorkerResults(offset, &keys{secrets: secs, publics: pubs}), nil
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate keys")

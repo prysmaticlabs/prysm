@@ -66,12 +66,12 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 
-	batch, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+	batch, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
 		deposits, err := generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposits from data")
 		}
-		return mputil.NewScatterResults(offset, deposits), nil
+		return mputil.NewWorkerResults(offset, deposits), nil
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate deposits from data")
@@ -114,12 +114,12 @@ func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([
 	numKeys := len(privKeys)
 	depositDataItems := make([]*ethpb.Deposit_Data, numKeys)
 	depositDataRoots := make([][]byte, numKeys)
-	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
 		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate deposit data from keys")
 		}
-		return mputil.NewScatterResults(offset, &depositData{items: items, roots: roots}), nil
+		return mputil.NewWorkerResults(offset, &depositData{items: items, roots: roots}), nil
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
@@ -168,7 +168,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	domain := bls.Domain(domainDeposit[:], params.BeaconConfig().GenesisForkVersion)
+	domain := bls.Domain(domainDeposit[:], genesisForkVersion)
 	di.Signature = privKey.Sign(sr[:], domain).Marshal()
 	return di, nil
 }

@@ -44,9 +44,9 @@ func TestDouble(t *testing.T) {
 				inValues[i] = i
 			}
 			outValues := make([]int, test.inValues)
-			batch, err := mputil.Scatter(len(inValues), func(offset int, entries int, _ *sync.Mutex) (*mputil.ScatterResults, error) {
+			batch, err := mputil.Scatter(len(inValues), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
 				extent := make([]int, entries)
-				result := mputil.NewScatterResults(offset, extent)
+				result := mputil.NewWorkerResults(offset, extent)
 				for i := 0; i < entries; i++ {
 					extent[i] = inValues[offset+i] * 2
 				}
@@ -76,5 +76,30 @@ func TestDouble(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMutex(t *testing.T) {
+	totalRuns := 65536
+	val := 0
+	batch, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.Mutex) (*mputil.WorkerResults, error) {
+		for i := 0; i < entries; i++ {
+			mu.Lock()
+			val++
+			mu.Unlock()
+		}
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error %v", err)
+	}
+
+	// Ensure workers have finished
+	for i := batch.Workers; i > 0; i-- {
+		<-batch.ResultCh
+	}
+
+	if val != totalRuns {
+		t.Fatalf("Unexpected value: expected \"%v\", found \"%v\"", totalRuns, val)
 	}
 }
