@@ -26,17 +26,22 @@ func TestNew(t *testing.T) {
 			{WithdrawableEpoch: ffe, ExitEpoch: 1, EffectiveBalance: 100},
 		},
 	}
+	e := params.BeaconConfig().FarFutureEpoch
 	v, b := precompute.New(context.Background(), s)
-	if !reflect.DeepEqual(v[0], &precompute.Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[0], &precompute.Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 0 status")
 	}
-	if !reflect.DeepEqual(v[1], &precompute.Validator{IsWithdrawableCurrentEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[1], &precompute.Validator{IsWithdrawableCurrentEpoch: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 1 status")
 	}
-	if !reflect.DeepEqual(v[2], &precompute.Validator{IsActiveCurrentEpoch: true, IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[2], &precompute.Validator{IsActiveCurrentEpoch: true, IsActivePrevEpoch: true,
+		CurrentEpochEffectiveBalance: 100, InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 2 status")
 	}
-	if !reflect.DeepEqual(v[3], &precompute.Validator{IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[3], &precompute.Validator{IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 3 status")
 	}
 

@@ -25,6 +25,8 @@ type Validator struct {
 
 	// CurrentEpochEffectiveBalance is how much effective balance this validator validator has current epoch.
 	CurrentEpochEffectiveBalance uint64
+	// InclusionSlot is the slot of when the attestation gets included in the chain.
+	InclusionSlot uint64
 	// InclusionDistance is the distance between the assigned slot and this validator's attestation was included in block.
 	InclusionDistance uint64
 	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
