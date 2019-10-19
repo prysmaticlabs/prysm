@@ -10,7 +10,10 @@ import (
 	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 )
+
+var _ = iface.Database(&Store{})
 
 const (
 	// VotesCacheSize with 1M validators will only be around 50Mb.
