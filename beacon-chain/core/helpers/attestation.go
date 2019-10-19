@@ -17,6 +17,9 @@ var (
 	// ErrAttestationDataSlotNilData is returned when a nil attestation data
 	// argument is provided to AttestationDataSlot.
 	ErrAttestationDataSlotNilData = errors.New("nil data provided for AttestationDataSlot")
+	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
+	// bits overlap with each other.
+	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
 )
 
 // AttestationDataSlot returns current slot of AttestationData for given state
@@ -108,6 +111,10 @@ var signatureFromBytes = bls.SignatureFromBytes
 
 // AggregateAttestation aggregates attestations a1 and a2 together.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
+	if a1.AggregationBits.Overlaps(a2.AggregationBits) {
+		return nil, ErrAttestationAggregationBitsOverlap
+	}
+
 	baseAtt := proto.Clone(a1).(*ethpb.Attestation)
 	newAtt := proto.Clone(a2).(*ethpb.Attestation)
 	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {

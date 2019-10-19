@@ -1331,20 +1331,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	aggregatedAtt, err := helpers.AggregateAttestation(att1, att2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: []*ethpb.Attestation{aggregatedAtt},
-		},
-	}
-
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-
-	wanted := "attestation aggregation signature did not verify"
-	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), wanted) {
+	if _, err = helpers.AggregateAttestation(att1, att2); err != helpers.ErrAttestationAggregationBitsOverlap {
 		t.Error("Did not receive wanted error")
 	}
 }

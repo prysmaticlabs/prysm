@@ -1,10 +1,11 @@
-package precompute
+package precompute_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -14,24 +15,26 @@ import (
 )
 
 func TestUpdateValidator(t *testing.T) {
-	vp := []*Validator{{}, {}, {}, {}, {}, {}}
-	record := &Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
+	e := params.BeaconConfig().FarFutureEpoch
+	vp := []*precompute.Validator{{}, {InclusionSlot:e}, {}, {InclusionSlot:e}, {}, {InclusionSlot:e}}
+	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
 	// Indices 1 3 and 5 attested
-	vp = updateValidator(vp, record, []uint64{1, 3, 5}, a)
+	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a, 100)
 
-	wanted := &Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
-		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true, ProposerIndex: 2, InclusionDistance: 1}
-	wantedVp := []*Validator{{}, wanted, {}, wanted, {}, wanted}
+	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
+		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
+		ProposerIndex: 2, InclusionDistance: 1, InclusionSlot: 101}
+	wantedVp := []*precompute.Validator{{}, wanted, {}, wanted, {}, wanted}
 	if !reflect.DeepEqual(vp, wantedVp) {
 		t.Error("Incorrect attesting validator calculations")
 	}
 }
 
 func TestUpdateBalance(t *testing.T) {
-	vp := []*Validator{
+	vp := []*precompute.Validator{
 		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
 		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
 		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100},
@@ -41,20 +44,21 @@ func TestUpdateBalance(t *testing.T) {
 		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100},
 		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
 	}
-	wantedBp := &Balance{
+	wantedBp := &precompute.Balance{
 		CurrentEpochAttesters:       200,
 		CurrentEpochTargetAttesters: 200,
 		PrevEpochAttesters:          300,
 		PrevEpochTargetAttesters:    100,
 		PrevEpochHeadAttesters:      200,
 	}
-	bp := updateBalance(vp, &Balance{})
+	bp := precompute.UpdateBalance(vp, &precompute.Balance{})
 	if !reflect.DeepEqual(bp, wantedBp) {
 		t.Error("Incorrect balance calculations")
 	}
 }
 
 func TestSameHead(t *testing.T) {
+	helpers.ClearAllCaches()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
@@ -71,7 +75,7 @@ func TestSameHead(t *testing.T) {
 	r := []byte{'A'}
 	beaconState.BlockRoots[attSlot] = r
 	att.Data.BeaconBlockRoot = r
-	same, err := sameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
+	same, err := precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +83,7 @@ func TestSameHead(t *testing.T) {
 		t.Error("head in state does not match head in attestation")
 	}
 	att.Data.BeaconBlockRoot = []byte{'B'}
-	same, err = sameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
+	same, err = precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +109,7 @@ func TestSameTarget(t *testing.T) {
 	r := []byte{'A'}
 	beaconState.BlockRoots[attSlot] = r
 	att.Data.Target.Root = r
-	same, err := sameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
+	same, err := precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +117,7 @@ func TestSameTarget(t *testing.T) {
 		t.Error("head in state does not match head in attestation")
 	}
 	att.Data.Target.Root = []byte{'B'}
-	same, err = sameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
+	same, err = precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +144,7 @@ func TestAttestedPrevEpoch(t *testing.T) {
 	beaconState.BlockRoots[attSlot] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
-	votedEpoch, votedTarget, votedHead, err := attestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
+	votedEpoch, votedTarget, votedHead, err := precompute.AttestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +177,7 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 	beaconState.BlockRoots[attSlot] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
-	votedEpoch, votedTarget, err := attestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
+	votedEpoch, votedTarget, err := precompute.AttestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,12 +219,12 @@ func TestProcessAttestations(t *testing.T) {
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}}
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}}
 
-	vp := make([]*Validator, validators)
+	vp := make([]*precompute.Validator, validators)
 	for i := 0; i < len(vp); i++ {
-		vp[i] = &Validator{CurrentEpochEffectiveBalance: 100}
+		vp[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
 	}
-	bp := &Balance{}
-	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
+	bp := &precompute.Balance{}
+	vp, bp, err = precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}

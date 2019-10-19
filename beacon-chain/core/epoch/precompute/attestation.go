@@ -24,12 +24,12 @@ func ProcessAttestations(
 	v := &Validator{}
 	var err error
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
-		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = attestedCurrentEpoch(state, a)
+		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
 		}
-		v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = attestedPrevEpoch(state, a)
+		v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = AttestedPrevEpoch(state, a)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
@@ -40,22 +40,28 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		vp = updateValidator(vp, v, indices, a)
+		// Get attestation slot to find lowest inclusion delayed attestation for each attested validators.
+		aSlot, err := helpers.AttestationDataSlot(state, a.Data)
+		if err != nil {
+			return nil, nil, err
+
+		}
+		vp = UpdateValidator(vp, v, indices, a, aSlot)
 	}
 
-	bp = updateBalance(vp, bp)
+	bp = UpdateBalance(vp, bp)
 
 	return vp, bp, nil
 }
 
-// Has attestation `a` attested once in current epoch and epoch boundary block.
-func attestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
+// AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
+func AttestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
 	currentEpoch := helpers.CurrentEpoch(s)
 	var votedCurrentEpoch, votedTarget bool
 	// Did validator vote current epoch.
 	if a.Data.Target.Epoch == currentEpoch {
 		votedCurrentEpoch = true
-		same, err := sameTarget(s, a, currentEpoch)
+		same, err := SameTarget(s, a, currentEpoch)
 		if err != nil {
 			return false, false, err
 		}
@@ -66,14 +72,14 @@ func attestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bo
 	return votedCurrentEpoch, votedTarget, nil
 }
 
-// Has attestation `a` attested once in previous epoch and epoch boundary block and the same head.
-func attestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
+// AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
+func AttestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
 	prevEpoch := helpers.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
 	// Did validator vote previous epoch.
 	if a.Data.Target.Epoch == prevEpoch {
 		votedPrevEpoch = true
-		same, err := sameTarget(s, a, prevEpoch)
+		same, err := SameTarget(s, a, prevEpoch)
 		if err != nil {
 			return false, false, false, errors.Wrap(err, "could not check same target")
 		}
@@ -81,7 +87,7 @@ func attestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool,
 			votedTarget = true
 		}
 
-		same, err = sameHead(s, a)
+		same, err = SameHead(s, a)
 		if err != nil {
 			return false, false, false, errors.Wrap(err, "could not check same head")
 		}
@@ -92,8 +98,8 @@ func attestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool,
 	return votedPrevEpoch, votedTarget, votedHead, nil
 }
 
-// Has attestation `a` attested to the same target block in state.
-func sameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
+// SameTarget returns true if attestation `a` attested to the same target block in state.
+func SameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err
@@ -104,8 +110,8 @@ func sameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool
 	return false, nil
 }
 
-// Has attestation `a` attested to the same block by attestation slot in state.
-func sameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
+// SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
+func SameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
 	aSlot, err := helpers.AttestationDataSlot(state, a.Data)
 	if err != nil {
 		return false, err
@@ -120,8 +126,10 @@ func sameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
 	return false, nil
 }
 
-// This updates pre computed validator store.
-func updateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation) []*Validator {
+// UpdateValidator updates pre computed validator store.
+func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot uint64) []*Validator {
+	inclusionSlot := aSlot + a.InclusionDelay
+
 	for _, i := range indices {
 		if record.IsCurrentEpochAttester {
 			vp[i].IsCurrentEpochAttester = true
@@ -138,14 +146,19 @@ func updateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 		if record.IsPrevEpochHeadAttester {
 			vp[i].IsPrevEpochHeadAttester = true
 		}
-		vp[i].InclusionDistance = a.InclusionDelay
-		vp[i].ProposerIndex = a.ProposerIndex
+
+		// Update attestation inclusion info if inclusion slot is lower than before
+		if inclusionSlot < vp[i].InclusionSlot {
+			vp[i].InclusionSlot = aSlot + a.InclusionDelay
+			vp[i].InclusionDistance = a.InclusionDelay
+			vp[i].ProposerIndex = a.ProposerIndex
+		}
 	}
 	return vp
 }
 
-// This updates pre computed balance store.
-func updateBalance(vp []*Validator, bp *Balance) *Balance {
+// UpdateBalance updates pre computed balance store.
+func UpdateBalance(vp []*Validator, bp *Balance) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {

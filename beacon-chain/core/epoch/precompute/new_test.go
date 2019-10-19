@@ -1,10 +1,11 @@
-package precompute
+package precompute_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,21 +26,26 @@ func TestNew(t *testing.T) {
 			{WithdrawableEpoch: ffe, ExitEpoch: 1, EffectiveBalance: 100},
 		},
 	}
-	v, b := New(context.Background(), s)
-	if !reflect.DeepEqual(v[0], &Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100}) {
+	e := params.BeaconConfig().FarFutureEpoch
+	v, b := precompute.New(context.Background(), s)
+	if !reflect.DeepEqual(v[0], &precompute.Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 0 status")
 	}
-	if !reflect.DeepEqual(v[1], &Validator{IsWithdrawableCurrentEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[1], &precompute.Validator{IsWithdrawableCurrentEpoch: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 1 status")
 	}
-	if !reflect.DeepEqual(v[2], &Validator{IsActiveCurrentEpoch: true, IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[2], &precompute.Validator{IsActiveCurrentEpoch: true, IsActivePrevEpoch: true,
+		CurrentEpochEffectiveBalance: 100, InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 2 status")
 	}
-	if !reflect.DeepEqual(v[3], &Validator{IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100}) {
+	if !reflect.DeepEqual(v[3], &precompute.Validator{IsActivePrevEpoch: true, CurrentEpochEffectiveBalance: 100,
+		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 3 status")
 	}
 
-	wantedBalances := &Balance{
+	wantedBalances := &precompute.Balance{
 		CurrentEpoch: 100,
 		PrevEpoch:    200,
 	}
