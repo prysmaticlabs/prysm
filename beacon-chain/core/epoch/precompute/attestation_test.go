@@ -21,7 +21,7 @@ func TestUpdateValidator(t *testing.T) {
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
 	// Indices 1 3 and 5 attested
-	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a)
+	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a, 0)
 
 	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true, ProposerIndex: 2, InclusionDistance: 1}
