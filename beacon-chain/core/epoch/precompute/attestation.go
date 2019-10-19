@@ -151,7 +151,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 
 		// Update attestation inclusion info if inclusion slot is lower than before
 		if inclusionSlot < vp[i].InclusionSlot {
-			vp[i].InclusionSlot = inclusionSlot + a.InclusionDelay
+			vp[i].InclusionSlot = aSlot + a.InclusionDelay
 			vp[i].InclusionDistance = a.InclusionDelay
 			vp[i].ProposerIndex = a.ProposerIndex
 		}
