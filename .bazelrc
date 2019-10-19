@@ -17,3 +17,8 @@ run --host_force_python=PY2
 
 # Use minimal protobufs at runtime
 run --define ssz=minimal
+
+# Prevent PATH changes from rebuilding when switching from IDE to command line.
+build --incompatible_strict_action_env
+test --incompatible_strict_action_env
+run --incompatible_strict_action_env
