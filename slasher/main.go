@@ -28,7 +28,14 @@ func startSlasher(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
-
+	port := ctx.GlobalString(flags.RPCPort.Name)
+	cert := ctx.GlobalString(flags.CertFlag.Name)
+	key := ctx.GlobalString(flags.KeyFlag.Name)
+	cfg := service.Config{
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
+	}
 	slasher := service.NewRPCService()
 	if err != nil {
 		return err

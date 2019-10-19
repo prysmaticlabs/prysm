@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/pkg/errors"
 	"math/big"
 	"os"
 	"path"
@@ -10,10 +11,10 @@ import (
 )
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
-func SetupSlasherDB(t testing.TB) *Store {
+func SetupSlasherDB() (*Store, error) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
+		return nil, err
 	}
 	p := path.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
