@@ -69,6 +69,25 @@ bazel build //validator:validator
 ```
 Bazel will automatically pull and install any dependencies as well, including Go and necessary compilers.
 
+Note that to build with the appropriate configuration for the Prysm testnet you should run:
+
+```
+bazel build --define ssz=minimal //beacon-chain:beacon-chain
+bazel build --define ssz=minimal //validator:validator
+```
+
+The binaries will be created in an architecture-dependent subdirectory of `bazel-bin` and this information is supplied as part of bazel's build process.  For example:
+
+```
+$ bazel build --define ssz=minimal //beacon-chain:beacon-chain
+...
+Target //beacon-chain:beacon-chain up-to-date:
+  bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain
+...
+```
+
+Here it can be seen the beacon chain binary has been created at `bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain`
+
 ## Running an Ethereum 2.0 Beacon Node
 To understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical).
 
