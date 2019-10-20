@@ -62,26 +62,14 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
-
-	batch, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
-		deposits, err := generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not generate deposits from data")
-		}
-		return mputil.NewWorkerResults(offset, deposits), nil
+	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
+		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate deposits from data")
 	}
-	defer close(batch.ResultCh)
-	defer close(batch.ErrorCh)
-	for i := batch.Workers; i > 0; i-- {
-		select {
-		case result := <-batch.ResultCh:
-			copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
-		case err := <-batch.ErrorCh:
-			return nil, errors.Wrapf(err, "failed to generate deposits")
-		}
+	for _, result := range results {
+		copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
 	}
 	return deposits, nil
 }
@@ -108,29 +96,18 @@ func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([
 		items []*ethpb.Deposit_Data
 		roots [][]byte
 	}
-	numKeys := len(privKeys)
-	depositDataItems := make([]*ethpb.Deposit_Data, numKeys)
-	depositDataRoots := make([][]byte, numKeys)
-	batch, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (*mputil.WorkerResults, error) {
+	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+	depositDataRoots := make([][]byte, len(privKeys))
+	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
 		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
-		if err != nil {
-			return nil, errors.Wrap(err, "could not generate deposit data from keys")
-		}
-		return mputil.NewWorkerResults(offset, &depositData{items: items, roots: roots}), nil
+		return &depositData{items: items, roots: roots}, err
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
 	}
-	defer close(batch.ResultCh)
-	defer close(batch.ErrorCh)
-	for i := batch.Workers; i > 0; i-- {
-		select {
-		case result := <-batch.ResultCh:
-			copy(depositDataItems[result.Offset:], result.Extent.(*depositData).items)
-			copy(depositDataRoots[result.Offset:], result.Extent.(*depositData).roots)
-		case err := <-batch.ErrorCh:
-			return nil, nil, errors.Wrapf(err, "failed to generate deposit data")
-		}
+	for _, result := range results {
+		copy(depositDataItems[result.Offset:], result.Extent.(*depositData).items)
+		copy(depositDataRoots[result.Offset:], result.Extent.(*depositData).roots)
 	}
 
 	return depositDataItems, depositDataRoots, nil
