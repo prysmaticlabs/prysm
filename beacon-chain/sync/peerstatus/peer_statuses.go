@@ -13,7 +13,8 @@ import (
 
 var lock sync.RWMutex
 var peerStatuses = make(map[peer.ID]*peerStatus)
-var failureCount = make(map[peer.ID]uint64)
+var failureCount = make(map[peer.ID]int)
+var maxFailureThreshold = 3
 
 type peerStatus struct {
 	status      *pb.Status
@@ -77,6 +78,8 @@ func LastUpdated(pid peer.ID) time.Time {
 
 // BumpFailureCount increases the failure count for the particular peer.
 func BumpFailureCount(pid peer.ID) {
+	lock.Lock()
+	defer lock.Unlock()
 	count, ok := failureCount[pid]
 	if !ok {
 		return
@@ -86,7 +89,7 @@ func BumpFailureCount(pid peer.ID) {
 }
 
 // FailureCount returns the failure count for the particular peer.
-func FailureCount(pid peer.ID) uint64 {
+func FailureCount(pid peer.ID) int {
 	count, ok := failureCount[pid]
 	if !ok {
 		return 0
@@ -94,7 +97,20 @@ func FailureCount(pid peer.ID) uint64 {
 	return count
 }
 
+// IsBadPeer checks whether the given peer has
+// exceeded the number of bad handshakes threshold.
+func IsBadPeer(pid peer.ID) bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	count, ok := failureCount[pid]
+	if !ok {
+		return false
+	}
+	return count > maxFailureThreshold
+}
+
 // Clear the cache. This method should only be used for tests.
 func Clear() {
 	peerStatuses = make(map[peer.ID]*peerStatus)
+	failureCount = make(map[peer.ID]int)
 }

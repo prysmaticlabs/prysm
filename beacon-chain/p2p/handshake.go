@@ -17,7 +17,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
-				if peerstatus.FailureCount(conn.RemotePeer()) > 3 {
+				if peerstatus.IsBadPeer(conn.RemotePeer()) {
 					// Add Peer to gossipsub blacklist
 					s.pubsub.BlacklistPeer(conn.RemotePeer())
 					log.Debug("Disconnecting with bad peer")
