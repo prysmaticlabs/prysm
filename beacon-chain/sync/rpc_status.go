@@ -96,6 +96,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	peerstatus.Set(stream.Conn().RemotePeer(), m)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
+		peerstatus.BumpFailureCount(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {
