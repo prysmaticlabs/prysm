@@ -24,7 +24,10 @@ type ScoreChange struct {
 	Delta uint64
 }
 
+// ChildScore
 type ChildScore struct {
+	// BestTarget
 	BestTarget *Node
+	// Score
 	Score uint64
 }
