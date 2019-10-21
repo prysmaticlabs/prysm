@@ -354,7 +354,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
-	time.Sleep(time.Second / 10)
+	time.Sleep(100 * time.Millisecond)
 
 	if len(p1.Host.Network().Peers()) != 0 {
 		t.Error("Expected peer to be disconnected")
