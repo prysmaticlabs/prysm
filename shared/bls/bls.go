@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
-	bls12 "github.com/herumi/bls-go-binary/bls"
+	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 )
 
 func init() {
