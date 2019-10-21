@@ -48,7 +48,11 @@ func startSlasher(ctx *cli.Context) error {
 }
 
 var appFlags = []cli.Flag{
+	cmd.VerbosityFlag,
+	cmd.LogFormat,
 	flags.CertFlag,
+	flags.RPCPort,
+	flags.KeyFlag,
 }
 
 func init() {
