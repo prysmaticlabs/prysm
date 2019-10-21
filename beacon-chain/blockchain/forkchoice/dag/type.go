@@ -1,30 +1,30 @@
 package dag
 
-// Node
+// Node ...
 type Node struct {
-	// Parent
+	// Parent ...
 	Parent *Node
-	// Children
+	// Children ...
 	Children []*Node
-	// Slot
+	// Slot ...
 	Slot uint64
-	// Weight
+	// Weight ...
 	Weight uint64
-	// Key
+	// Key ...
 	Key [32]byte
-	// IndexAsChild
+	// IndexAsChild ...
 	IndexAsChild uint64
 }
 
-// ScoreChange
+// ScoreChange ...
 type ScoreChange struct {
-	// Target
+	// Target ...
 	Target *Node
-	// Delta
+	// Delta ...
 	Delta uint64
 }
 
-// ChildScore
+// ChildScore ...
 type ChildScore struct {
 	// BestTarget
 	BestTarget *Node

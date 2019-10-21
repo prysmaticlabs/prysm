@@ -6,21 +6,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// Dag
+// Dag ...
 type Dag struct {
-	// Nodes
+	// Nodes ...
 	Nodes map[[32]byte]*Node
-	// Scores
+	// Scores ...
 	Scores map[*Node]uint64
-	// Finalized
+	// Finalized ...
 	Finalized *Node
-	// Justified
+	// Justified ...
 	Justified *Node
 	synced bool
 	maxKnownSlot uint64
 }
 
-// New
+// New ...
 func New() *Dag {
 	return &Dag{
 		Nodes: make(map[[32]byte]*Node),
@@ -29,7 +29,7 @@ func New() *Dag {
 	}
 }
 
-// AddNode
+// AddNode ...
 func (d *Dag) AddNode(block *ethpb.BeaconBlock) error {
 	d.synced = false
 	blockRoot, err := ssz.SigningRoot(block)
@@ -61,7 +61,7 @@ func (d *Dag) AddNode(block *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// ApplyScoreChanges
+// ApplyScoreChanges ...
 func (d *Dag) ApplyScoreChanges(changes []ScoreChange) {
 	for _, v := range changes {
 		if v.Target.Slot >= d.Finalized.Slot {
@@ -76,7 +76,7 @@ func (d *Dag) ApplyScoreChanges(changes []ScoreChange) {
 	}
 }
 
-// Head
+// Head ...
 func (d *Dag) Head() *Node {
 	start := d.Justified
 	// Track weight for each block per height.
