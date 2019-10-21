@@ -71,7 +71,11 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	}
 	peerstatus.Set(stream.Conn().RemotePeer(), msg)
 
-	return r.validateStatusMessage(msg, stream)
+	err = r.validateStatusMessage(msg, stream)
+	if err != nil {
+		peerstatus.BumpFailureCount(stream.Conn().RemotePeer())
+	}
+	return err
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
