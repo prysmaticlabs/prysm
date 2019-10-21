@@ -12,22 +12,30 @@ import (
 )
 
 var lock sync.RWMutex
-var peerStatuses = make(map[peer.ID]*pb.Status)
+var peerStatuses = make(map[peer.ID]*PeerStatus)
 var lastUpdated = make(map[peer.ID]time.Time)
+
+type PeerStatus struct {
+	status       *pb.Status
+	lastUpdated  time.Time
+	failureCount uint64
+}
 
 // Get most recent status from peer in cache. Threadsafe.
 func Get(pid peer.ID) *pb.Status {
 	lock.RLock()
 	defer lock.RUnlock()
-	return peerStatuses[pid]
+	return peerStatuses[pid].status
 }
 
 // Set most recent status from peer in cache. Threadsafe.
 func Set(pid peer.ID, status *pb.Status) {
 	lock.Lock()
 	defer lock.Unlock()
-	peerStatuses[pid] = status
-	lastUpdated[pid] = roughtime.Now()
+	peerStatuses[pid] = &PeerStatus{
+		status:      status,
+		lastUpdated: roughtime.Now(),
+	}
 }
 
 // Delete peer status from cache. Threadsafe.
@@ -35,7 +43,6 @@ func Delete(pid peer.ID) {
 	lock.Lock()
 	defer lock.Unlock()
 	delete(peerStatuses, pid)
-	delete(lastUpdated, pid)
 }
 
 // Count of peer statuses in cache. Threadsafe.
@@ -60,10 +67,10 @@ func Keys() []peer.ID {
 func LastUpdated(pid peer.ID) time.Time {
 	lock.RLock()
 	defer lock.RUnlock()
-	return lastUpdated[pid]
+	return peerStatuses[pid].lastUpdated
 }
 
 // Clear the cache. This method should only be used for tests.
 func Clear() {
-	peerStatuses = make(map[peer.ID]*pb.Status)
+	peerStatuses = make(map[peer.ID]*PeerStatus)
 }
