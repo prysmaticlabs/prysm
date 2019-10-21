@@ -44,7 +44,6 @@ go_library(
         "@com_github_ipfs_go_datastore//sync:go_default_library",
         "@com_github_ipfs_go_ipfs_addr//:go_default_library",
         "@com_github_karlseguin_ccache//:go_default_library",
-        "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p//config:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/host/routed:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
