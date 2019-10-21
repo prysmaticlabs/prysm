@@ -73,7 +73,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 
 	err = r.validateStatusMessage(msg, stream)
 	if err != nil {
-		peerstatus.BumpFailureCount(stream.Conn().RemotePeer())
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
 	}
 	return err
 }
@@ -96,7 +96,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	peerstatus.Set(stream.Conn().RemotePeer(), m)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
-		peerstatus.BumpFailureCount(stream.Conn().RemotePeer())
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {

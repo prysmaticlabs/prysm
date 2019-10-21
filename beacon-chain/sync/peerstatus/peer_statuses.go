@@ -25,7 +25,10 @@ type peerStatus struct {
 func Get(pid peer.ID) *pb.Status {
 	lock.RLock()
 	defer lock.RUnlock()
-	return peerStatuses[pid].status
+	if pStatus, ok := peerStatuses[pid]; ok {
+		return pStatus.status
+	}
+	return nil
 }
 
 // Set most recent status from peer in cache. Threadsafe.
@@ -73,11 +76,14 @@ func Keys() []peer.ID {
 func LastUpdated(pid peer.ID) time.Time {
 	lock.RLock()
 	defer lock.RUnlock()
-	return peerStatuses[pid].lastUpdated
+	if pStatus, ok := peerStatuses[pid]; ok {
+		return pStatus.lastUpdated
+	}
+	return time.Unix(0, 0)
 }
 
-// BumpFailureCount increases the failure count for the particular peer.
-func BumpFailureCount(pid peer.ID) {
+// IncreaseFailureCount increases the failure count for the particular peer.
+func IncreaseFailureCount(pid peer.ID) {
 	lock.Lock()
 	defer lock.Unlock()
 	count, ok := failureCount[pid]
@@ -90,6 +96,8 @@ func BumpFailureCount(pid peer.ID) {
 
 // FailureCount returns the failure count for the particular peer.
 func FailureCount(pid peer.ID) int {
+	lock.RLock()
+	defer lock.RUnlock()
 	count, ok := failureCount[pid]
 	if !ok {
 		return 0

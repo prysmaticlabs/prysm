@@ -20,7 +20,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				if peerstatus.IsBadPeer(conn.RemotePeer()) {
 					// Add Peer to gossipsub blacklist
 					s.pubsub.BlacklistPeer(conn.RemotePeer())
-					log.Debug("Disconnecting with bad peer")
+					log.WithField("peerID", conn.RemotePeer().Pretty()).Debug("Disconnecting with bad peer")
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 						return
