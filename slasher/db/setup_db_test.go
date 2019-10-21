@@ -6,7 +6,10 @@ import (
 )
 
 func TestClearDB(t *testing.T) {
-	slasherDB := SetupSlasherDB(t)
+	slasherDB, err := SetupSlasherDB()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer TeardownSlasherDB(t, slasherDB)
 	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)

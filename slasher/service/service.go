@@ -3,7 +3,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"net"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -11,6 +10,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -50,6 +50,8 @@ func NewRPCService(cfg *Config) *Service {
 	return &Service{
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
+		withCert:  cfg.CertFlag,
+		withKey:   cfg.KeyFlag,
 	}
 }
 

@@ -11,12 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/service"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	_ "go.uber.org/automaxprocs"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -31,12 +31,14 @@ func startSlasher(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	db, err := db.SetupSlasherDB()
 	cfg := service.Config{
-		Port:     port,
-		CertFlag: cert,
-		KeyFlag:  key,
+		Port:      port,
+		CertFlag:  cert,
+		KeyFlag:   key,
+		SlasherDb: db,
 	}
-	slasher := service.NewRPCService()
+	slasher := service.NewRPCService(&cfg)
 	if err != nil {
 		return err
 	}

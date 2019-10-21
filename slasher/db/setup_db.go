@@ -18,14 +18,14 @@ func SetupSlasherDB() (*Store, error) {
 	}
 	p := path.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
+		return nil, errors.Wrap(err, "Failed to remove directory.")
 	}
 	db, err := NewDB(p)
 
 	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
+		return nil, errors.Wrap(err, "Failed to instantiate DB.")
 	}
-	return db
+	return db, nil
 }
 
 // TempDir returns a directory path for temporary test storage.
