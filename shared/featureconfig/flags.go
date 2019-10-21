@@ -10,10 +10,10 @@ var (
 		Name:  "no-genesis-delay",
 		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 	}
-	// DemoConfigFlag enables the demo configuration.
-	DemoConfigFlag = cli.BoolFlag{
-		Name:  "demo-config",
-		Usage: "Use demo config with lower deposit thresholds.",
+	// MinimalConfigFlag enables the minimal configuration.
+	MinimalConfigFlag = cli.BoolFlag{
+		Name:  "minimal-config",
+		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
 	writeSSZStateTransitionsFlag = cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
@@ -34,11 +34,34 @@ var (
 		Name:  "init-sync-no-verify",
 		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
 	}
+	// NewCacheFlag enables the node to use the new caching scheme.
+	NewCacheFlag = cli.BoolFlag{
+		Name:  "new-cache",
+		Usage: "Use the new shuffled indices cache for committee. Much improvement than previous caching implementations",
+	}
+	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
+	SkipBLSVerifyFlag = cli.BoolFlag{
+		Name:  "skip-bls-verify",
+		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
+	}
+	enableBackupWebhookFlag = cli.BoolFlag{
+		Name:  "enable-db-backup-webhook",
+		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+	}
+	enableBLSPubkeyCacheFlag = cli.BoolFlag{
+		Name:  "enable-bls-pubkey-cache",
+		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
+	}
+	// OptimizeProcessEpoch optimizes process epoch.
+	OptimizeProcessEpoch = cli.BoolFlag{
+		Name:  "optimize-process-epoch",
+		Usage: "Process epoch with optimizations",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = []cli.Flag{
-	DemoConfigFlag,
+	MinimalConfigFlag,
 }
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher server.
@@ -49,9 +72,14 @@ var SlasherFlags = []cli.Flag{
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	NoGenesisDelayFlag,
-	DemoConfigFlag,
+	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
 	InitSyncNoVerifyFlag,
+	NewCacheFlag,
+	SkipBLSVerifyFlag,
+	OptimizeProcessEpoch,
+	enableBackupWebhookFlag,
+	enableBLSPubkeyCacheFlag,
 }

@@ -60,7 +60,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	}
 	ns := &NodeServer{
 		beaconDB:           db,
-		genesisTimeFetcher: &mock.ChainService{},
+		genesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
 	}
 	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {

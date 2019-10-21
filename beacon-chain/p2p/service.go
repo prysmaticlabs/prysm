@@ -10,7 +10,6 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/karlseguin/ccache"
-	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -65,7 +64,7 @@ func NewService(cfg *Config) (*Service, error) {
 	cfg.Discv5BootStrapAddr = dv5Nodes
 	cfg.KademliaBootStrapAddr = kadDHTNodes
 
-	ipAddr := ipAddr(s.cfg)
+	ipAddr := ipAddr()
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
@@ -132,7 +131,7 @@ func (s *Service) Start() {
 	}
 
 	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
-		ipAddr := ipAddr(s.cfg)
+		ipAddr := ipAddr()
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
@@ -327,5 +326,10 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 			break
 		}
 	}
-	log.Infof("Node's listening multiaddr is %s", correctAddr.String()+"/p2p/"+id.String())
+	if correctAddr != nil {
+		log.WithField(
+			"multiAddr",
+			correctAddr.String()+"/p2p/"+id.String(),
+		).Info("Node started p2p server")
+	}
 }

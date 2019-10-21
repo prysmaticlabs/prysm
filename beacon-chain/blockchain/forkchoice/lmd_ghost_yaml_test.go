@@ -15,7 +15,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -134,5 +133,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 		}
 
 		helpers.ClearAllCaches()
+		testDB.TeardownDB(t, db)
+
 	}
 }

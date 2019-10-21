@@ -3,62 +3,55 @@ package client
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
-	bitfield "github.com/prysmaticlabs/go-bitfield"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-var delay = params.BeaconConfig().SecondsPerSlot / 2
 
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk string) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 
-	tpk := hex.EncodeToString(v.keys[pk].PublicKey.Marshal())[:12]
-
-	span.AddAttributes(
-		trace.StringAttribute("validator", tpk),
-	)
-
-	v.waitToSlotMidpoint(ctx, slot)
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
-	pubKey := v.keys[pk].PublicKey.Marshal()
 	var assignment *pb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
 		return
 	}
 	for _, assign := range v.assignments.ValidatorAssignment {
-		if bytes.Equal(pubKey, assign.PublicKey) {
+		if bytes.Equal(pubKey[:], assign.PublicKey) {
 			assignment = assign
 			break
 		}
 	}
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey,
+		PublicKey: pubKey[:],
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
+
+	v.waitToSlotMidpoint(ctx, slot)
+
 	req := &pb.AttestationRequest{
 		Slot:  slot,
 		Shard: assignment.Shard,
@@ -98,12 +91,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 
 	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 	if err != nil {
-		log.WithError(err).WithFields(logrus.Fields{
-			"pubKey": tpk,
-		}).Error("Failed to sign attestation data and custody bit")
+		log.WithError(err).Error("Failed to sign attestation data and custody bit")
 		return
 	}
-	sig := v.keys[pk].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
+	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
 
 	attestation := &ethpb.Attestation{
 		Data:            data,
@@ -118,13 +109,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pk strin
 		return
 	}
 
-	log.WithFields(logrus.Fields{
-		"headRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
-		"shard":       data.Crosslink.Shard,
-		"sourceEpoch": data.Source.Epoch,
-		"targetEpoch": data.Target.Epoch,
-		"pubKey":      tpk,
-	}).Info("Attested latest head")
+	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
+	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
@@ -144,8 +130,12 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToSlotMidpoint")
 	defer span.End()
 
-	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
+	half := params.BeaconConfig().SecondsPerSlot / 2
+	delay := time.Duration(half) * time.Second
+	if half == 0 {
+		delay = 500 * time.Millisecond
+	}
+	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot) + delay
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
-
 	time.Sleep(roughtime.Until(timeToBroadcast))
 }

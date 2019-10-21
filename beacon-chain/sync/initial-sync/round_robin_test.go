@@ -105,37 +105,59 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-		// TODO(3147): Handle multiple failures.
-		//{
-		//	name:               "Multiple peers with multiple failures",
-		//	currentSlot:        320, // 5 epochs
-		//	expectedBlockSlots: makeSequence(1, 320),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//	},
-		//},
+		{
+			name:               "Multiple peers with many skipped slots",
+			currentSlot:        640, // 10 epochs
+			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
+			peers: []*peerData{
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 9,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 9,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 9,
+					headSlot:       640,
+				},
+			},
+		},
+
+		{
+			name:               "Multiple peers with multiple failures",
+			currentSlot:        320, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 320),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+			},
+		},
 		{
 			name:               "Multiple peers with different finalized epoch",
 			currentSlot:        320, // 5 epochs
@@ -236,16 +258,6 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 
 			// Determine the correct subset of blocks to return as dictated by the test scenario.
 			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
-
-			if len(blocks) == 0 {
-				if _, err := stream.Write([]byte{0x01}); err != nil {
-					t.Error(err)
-				}
-				if _, err := peer.Encoding().EncodeWithLength(stream, "i don't have those blocks"); err != nil {
-					t.Error(err)
-				}
-				return
-			}
 
 			ret := make([]*eth.BeaconBlock, 0)
 			for _, slot := range blocks {

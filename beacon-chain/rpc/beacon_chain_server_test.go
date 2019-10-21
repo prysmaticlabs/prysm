@@ -33,10 +33,13 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -48,7 +51,11 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 		beaconDB: db,
 	}
 
-	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{})
+	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,6 +93,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 3,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -102,6 +110,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 4,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
 			Data: &ethpb.AttestationData{
@@ -118,6 +127,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Shard: 5,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		},
 	}
 
@@ -186,10 +196,13 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -205,60 +218,120 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 		req *ethpb.ListAttestationsRequest
 		res *ethpb.ListAttestationsResponse
 	}{
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(1),
+				PageSize:  3,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 3},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 3},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 4},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 4},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 5},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 5},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(10),
+				PageSize:  5,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 50},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 50},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 51},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 51},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 52},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 52},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 53},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 53},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 54},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 54},
+					}, AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits: bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageToken: strconv.Itoa(33),
+				PageSize:  3,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 99},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 99},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.ListAttestationsRequest{PageSize: 2},
+		{
+			req: &ethpb.ListAttestationsRequest{
+				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+					HeadBlockRoot: []byte("root"),
+				},
+				PageSize: 2,
+			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 0},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 0},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
-						Crosslink: &ethpb.Crosslink{Shard: 1},
-					}},
+						BeaconBlockRoot: []byte("root"),
+						Crosslink:       &ethpb.Crosslink{Shard: 1},
+					},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1),
+					},
 				},
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(count)}},
@@ -269,7 +342,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Error("Incorrect attestations response")
+			t.Errorf("Incorrect attestations response, wanted %v, received %v", test.res, res)
 		}
 	}
 }
@@ -284,10 +357,12 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -299,7 +374,13 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	req := &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+		PageToken: strconv.Itoa(1),
+		PageSize:  100,
+	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -328,10 +409,13 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
 				Crosslink: &ethpb.Crosslink{
 					Shard: i,
 				},
 			},
+			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -343,7 +427,11 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 		beaconDB: db,
 	}
 
-	req := &ethpb.ListAttestationsRequest{}
+	req := &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
+			HeadBlockRoot: []byte("root"),
+		},
+	}
 	res, err := bs.ListAttestations(ctx, req)
 	if err != nil {
 		t.Fatal(err)
@@ -352,6 +440,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	i := 0
 	j := params.BeaconConfig().DefaultPageSize
 	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
+		t.Log(res.Attestations, atts[i:j])
 		t.Error("Incorrect attestations response")
 	}
 }
@@ -930,6 +1019,109 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 	wanted.Epoch = 5
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 3,
+				PublicKey:                  []byte("3"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 2,
+				PublicKey:                  []byte("2"),
+			},
+			{
+				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEligibilityEpoch: 1,
+				PublicKey:                  []byte("1"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We verify the keys are properly sorted by the validators' activation eligibility epoch.
+	wanted := [][]byte{
+		[]byte("1"),
+		[]byte("2"),
+		[]byte("3"),
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
+	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
+	}
+}
+
+func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 3,
+				PublicKey:         []byte("3"),
+			},
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 2,
+				PublicKey:         []byte("2"),
+			},
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 1,
+				PublicKey:         []byte("1"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We verify the keys are properly sorted by the validators' withdrawable epoch.
+	wanted := [][]byte{
+		[]byte("1"),
+		[]byte("2"),
+		[]byte("3"),
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
+	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
 	}
 }
 

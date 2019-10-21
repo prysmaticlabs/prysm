@@ -1,8 +1,10 @@
-package pagination
+package pagination_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/pagination"
 )
 
 func TestStartAndEndPage(t *testing.T) {
@@ -49,7 +51,7 @@ func TestStartAndEndPage(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		start, end, next, err := StartAndEndPage(test.token, test.pageSize, test.totalSize)
+		start, end, next, err := pagination.StartAndEndPage(test.token, test.pageSize, test.totalSize)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,14 +69,14 @@ func TestStartAndEndPage(t *testing.T) {
 
 func TestStartAndEndPage_CannotConvertPage(t *testing.T) {
 	wanted := "could not convert page token: strconv.Atoi: parsing"
-	if _, _, _, err := StartAndEndPage("bad", 0, 0); !strings.Contains(err.Error(), wanted) {
+	if _, _, _, err := pagination.StartAndEndPage("bad", 0, 0); !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("wanted error: %v, got error: %v", wanted, err.Error())
 	}
 }
 
 func TestStartAndEndPage_ExceedsMaxPage(t *testing.T) {
 	wanted := "page start 0 >= list 0"
-	if _, _, _, err := StartAndEndPage("", 0, 0); !strings.Contains(err.Error(), wanted) {
+	if _, _, _, err := pagination.StartAndEndPage("", 0, 0); !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("wanted error: %v, got error: %v", wanted, err.Error())
 	}
 }

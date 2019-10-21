@@ -9,19 +9,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 var (
-	domainDeposit      = [4]byte{3, 0, 0, 0}
-	genesisForkVersion = []byte{0, 0, 0, 0}
-
 	// This is the recommended mock eth1 block hash according to the Eth2 interop guidelines.
 	// https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
 
 // GenerateGenesisState deterministically given a genesis time and number of validators.
+// If a genesis time of 0 is supplied it is set to the current time.
 func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
@@ -43,6 +42,9 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
 	root := trie.Root()
+	if genesisTime == 0 {
+		genesisTime = uint64(roughtime.Now().Unix())
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
@@ -100,7 +102,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	domain := bls.Domain(domainDeposit[:], genesisForkVersion)
+	domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 	di.Signature = privKey.Sign(sr[:], domain).Marshal()
 	return di, nil
 }

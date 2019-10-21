@@ -61,7 +61,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "block is from the feature",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot, Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             &pb.BeaconState{},
-			wantErrString: "could not process block from the future",
+			wantErrString: "could not process slot from the future",
 		},
 		{
 			name:          "could not get finalized block",
@@ -124,7 +124,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err := blocks.ConvertToIndexed(beaconState, att)
+	indices, err := blocks.ConvertToIndexed(ctx, beaconState, att)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -226,47 +226,51 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x02}}
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}, CustodyBits: bitfield.NewBitlist(2)}
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b110}, CustodyBits: bitfield.NewBitlist(2)}
 	r1, _ := ssz.HashTreeRoot(a1.Data)
 	r2, _ := ssz.HashTreeRoot(a2.Data)
 
-	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
+		t.Fatal(err)
+	}
 
-	saved, err := store.db.Attestation(ctx, r1)
+	saved, err := store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
-	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0x03}}
+	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
+	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
 
-	store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2})
+	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
+		t.Fatal(err)
+	}
 
-	saved, err = store.db.Attestation(ctx, r1)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a1, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a1}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	saved, err = store.db.Attestation(ctx, r2)
+	saved, err = store.db.AttestationsByDataRoot(ctx, r2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }

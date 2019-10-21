@@ -13,13 +13,16 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -79,12 +82,11 @@ func ExecuteStateTransition(
 }
 
 // ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
-// This does not validate state root, The use case of such is for state root calculation, the proposer
-// should first run state transition on an unsigned block containing a stub for the state root and signature.
-// This does not modify state.
+// This does not validate any BLS signatures in a block, it is used for performing a state transition as quickly
+// as possible. This function should only be used when we can trust the data we're receiving entirely, such as
+// initial sync or for processing past accepted blocks.
 //
-// WARNING: This method does not validate state root and proposer signature. This is used for proposer to compute
-// state root before proposing a new block, and this does not modify state.
+// WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
 //
 // Spec pseudocode definition:
 //  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
@@ -103,27 +105,80 @@ func ExecuteStateTransitionNoVerify(
 		return nil, ctx.Err()
 	}
 
-	stateCopy := proto.Clone(state).(*pb.BeaconState)
 	b.ClearEth1DataVoteCache()
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionNoVerify")
 	defer span.End()
 	var err error
 
 	// Execute per slots transition.
-	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
+	state, err = ProcessSlots(ctx, state, block.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
 	if block != nil {
-		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
+		state, err = processBlockNoVerify(ctx, state, block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
-	return stateCopy, nil
+	return state, nil
+}
+
+// CalculateStateRoot defines the procedure for a state transition function.
+// This does not validate any BLS signatures in a block, it is used for calculating the
+// state root of the state for the block proposer to use.
+// This does not modify state.
+//
+// WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
+// state root before proposing a new block, and this does not modify state.
+//
+// Spec pseudocode definition:
+//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//    # Process slots (including those with no blocks) since block
+//    process_slots(state, block.slot)
+//    # Process block
+//    process_block(state, block)
+//    # Return post-state
+//    return state
+func CalculateStateRoot(
+	ctx context.Context,
+	state *pb.BeaconState,
+	block *ethpb.BeaconBlock,
+) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
+	defer span.End()
+	if ctx.Err() != nil {
+		traceutil.AnnotateError(span, ctx.Err())
+		return [32]byte{}, ctx.Err()
+	}
+
+	stateCopy := proto.Clone(state).(*pb.BeaconState)
+	b.ClearEth1DataVoteCache()
+
+	var err error
+	// Execute per slots transition.
+	stateCopy, err = ProcessSlots(ctx, stateCopy, block.Slot)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	if block != nil {
+		stateCopy, err = processBlockNoVerify(ctx, stateCopy, block)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not process block")
+		}
+	}
+
+	root, err := ssz.HashTreeRoot(stateCopy)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not tree hash beacon state")
+	}
+
+	return root, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -149,6 +204,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 
 	prevStateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
@@ -160,6 +216,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	}
 	prevBlockRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
@@ -180,21 +237,37 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //        state.slot += 1
 //    ]
 func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
 	if state.Slot > slot {
-		return nil, fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
+		traceutil.AnnotateError(span, err)
+		return nil, err
 	}
 	for state.Slot < slot {
 		if ctx.Err() != nil {
+			traceutil.AnnotateError(span, ctx.Err())
 			return nil, ctx.Err()
 		}
 		state, err := ProcessSlot(ctx, state)
 		if err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process epoch")
+			if featureconfig.Get().OptimizeProcessEpoch {
+				state, err = ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			} else {
+				state, err = ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
 			}
 		}
 		state.Slot++
@@ -223,21 +296,25 @@ func ProcessBlock(
 
 	state, err := b.ProcessBlockHeader(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandao(state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperations(ctx, state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
@@ -269,21 +346,25 @@ func processBlockNoVerify(
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(state, block)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = processOperationsNoVerify(ctx, state, block.Body)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
@@ -336,23 +417,23 @@ func ProcessOperations(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestations(state, body)
+	state, err = b.ProcessAttestations(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -365,10 +446,10 @@ func ProcessOperations(
 }
 
 // processOperationsNoVerify processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not validate the attestation signature
+// with the operations in block. It does not verify attestation signatures or voluntary exit signatures.
 //
-// WARNING: This method does not verify attestation signature. This is used for proposer to compute state root
-// using a unsigned block.
+// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
+// This is used to perform the block operations as fast as possible.
 //
 // Spec pseudocode definition:
 //
@@ -413,23 +494,23 @@ func processOperationsNoVerify(
 		transferSet[h] = true
 	}
 
-	state, err := b.ProcessProposerSlashings(state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(state, body)
+	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(state, body)
+	state, err = b.ProcessDeposits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(state, body)
+	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -567,6 +648,48 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slashings")
 	}
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process final updates")
+	}
+	return state, nil
+}
+
+// ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
+// It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
+func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+
+	vp, bp := precompute.New(ctx, state)
+	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process justification")
+	}
+
+	state, err = e.ProcessCrosslinks(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process crosslink")
+	}
+
+	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
+	}
+
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process registry updates")
+	}
+
+	state = precompute.ProcessSlashingsPrecompute(state, bp)
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {

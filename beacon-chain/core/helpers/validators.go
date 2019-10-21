@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -62,6 +63,16 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
+	if featureconfig.Get().EnableNewCache {
+		activeIndices, err := committeeCache.ActiveIndices(epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if activeIndices != nil {
+			return activeIndices, nil
+		}
+	}
+
 	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve active indices from cache")
@@ -231,12 +242,12 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return bls_domain(domain_type, fork_version)
-func Domain(state *pb.BeaconState, epoch uint64, domainType []byte) uint64 {
+func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 	var forkVersion []byte
-	if epoch < state.Fork.Epoch {
-		forkVersion = state.Fork.PreviousVersion
+	if epoch < fork.Epoch {
+		forkVersion = fork.PreviousVersion
 	} else {
-		forkVersion = state.Fork.CurrentVersion
+		forkVersion = fork.CurrentVersion
 	}
 	return bls.Domain(domainType, forkVersion)
 }

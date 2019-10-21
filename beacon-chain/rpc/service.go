@@ -9,6 +9,7 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -22,6 +23,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -42,6 +44,7 @@ type Service struct {
 	beaconDB              db.Database
 	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
+	forkFetcher           blockchain.ForkFetcher
 	finalizationFetcher   blockchain.FinalizationFetcher
 	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
@@ -73,6 +76,7 @@ type Config struct {
 	BeaconDB              db.Database
 	StateFeedListener     blockchain.ChainFeeds
 	HeadFetcher           blockchain.HeadFetcher
+	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
@@ -98,6 +102,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
+		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
@@ -121,23 +126,28 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	log.Info("Starting service")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
-	log.WithField("port", s.port).Info("Listening on port")
+	log.WithField("port", fmt.Sprintf(":%s", s.port)).Info("RPC-API listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
-			recovery.StreamServerInterceptor(),
+			recovery.StreamServerInterceptor(
+				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+			),
 			grpc_prometheus.StreamServerInterceptor,
+			grpc_opentracing.StreamServerInterceptor(),
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
-			recovery.UnaryServerInterceptor(),
+			recovery.UnaryServerInterceptor(
+				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+			),
 			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.UnaryServerInterceptor(),
 		)),
 	}
 	// TODO(#791): Utilize a certificate for secure connections
@@ -179,6 +189,7 @@ func (s *Service) Start() {
 		ctx:                s.ctx,
 		beaconDB:           s.beaconDB,
 		headFetcher:        s.headFetcher,
+		forkFetcher:        s.forkFetcher,
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
@@ -223,7 +234,6 @@ func (s *Service) Start() {
 
 // Stop the service.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()

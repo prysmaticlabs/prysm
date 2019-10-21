@@ -75,7 +75,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	// Write status header
 	if hasError {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.WithField("statuses", statuses).Warn("Node is unhealthy!")
+		log.WithField("statuses", buf.String()).Warn("Node is unhealthy!")
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -96,7 +96,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 
 // Start the prometheus service.
 func (s *Service) Start() {
-	log.WithField("endpoint", s.server.Addr).Info("Starting service")
+	log.WithField("endpoint", s.server.Addr).Info("Collecting metrics at endpoint")
 	go func() {
 		err := s.server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
@@ -108,7 +108,6 @@ func (s *Service) Start() {
 
 // Stop the service gracefully.
 func (s *Service) Stop() error {
-	log.Info("Stopping service")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return s.server.Shutdown(ctx)

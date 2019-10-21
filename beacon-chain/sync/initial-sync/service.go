@@ -54,26 +54,37 @@ func NewInitialSync(cfg *Config) *InitialSync {
 
 // Start the initial sync service.
 func (s *InitialSync) Start() {
+	var genesis time.Time
+
+	// Wait for state to be initialized, if not already.
 	ch := make(chan time.Time)
 	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
+	if s.chain.HeadState() == nil {
+		// Wait until chain start.
+		genesis = <-ch
+	} else {
+		genesis = time.Unix(int64(s.chain.HeadState().GenesisTime), 0)
+	}
 
-	// Wait until chain start.
-	genesis := <-ch
 	if genesis.After(roughtime.Now()) {
+		log.WithField(
+			"genesis time",
+			genesis,
+		).Warn("Genesis time is in the future - waiting to start sync...")
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
 	currentSlot := slotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch. Not syncing.")
+		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		return
 	}
-
+	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
-		log.Info("Already synced to the current epoch.")
+		log.Info("Already synced to the current chain head")
 		s.synced = true
 		return
 	}
@@ -81,14 +92,13 @@ func (s *InitialSync) Start() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := peerstatus.Count()
-		log.WithField(
-			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
-		).Info("Waiting for enough peer handshakes before syncing.")
-
 		if count >= minStatusCount {
 			break
 		}
+		log.WithField(
+			"handshakes",
+			fmt.Sprintf("%d/%d", count, minStatusCount),
+		).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
 
@@ -96,7 +106,7 @@ func (s *InitialSync) Start() {
 		panic(err)
 	}
 
-	log.Infof("Synced up to %d", s.chain.HeadSlot())
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
 }
 

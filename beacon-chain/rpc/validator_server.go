@@ -7,11 +7,13 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,8 +21,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -31,6 +31,7 @@ type ValidatorServer struct {
 	ctx                context.Context
 	beaconDB           db.Database
 	headFetcher        blockchain.HeadFetcher
+	forkFetcher        blockchain.ForkFetcher
 	canonicalStateChan chan *pbp2p.BeaconState
 	blockFetcher       powchain.POWBlockFetcher
 	depositFetcher     depositcache.DepositFetcher
@@ -91,7 +92,7 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 		return nil, status.Errorf(codes.Internal, "could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
-	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
+	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
 // ValidatorPerformance reports the validator's latest balance along with other important metrics on
@@ -158,9 +159,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 		}
 	}
 
-	validatorIndexMap := stateutils.ValidatorIndexMap(s)
 	var assignments []*pb.AssignmentResponse_ValidatorAssignment
-
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -171,7 +170,10 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
-		idx, ok := validatorIndexMap[bytesutil.ToBytes32(pubKey)]
+		idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		if err != nil {
+			return nil, err
+		}
 		if ok {
 			status := vs.assignmentStatus(uint64(idx), s)
 			assignment.Status = status
@@ -218,9 +220,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
 	headState := vs.headFetcher.HeadState()
-
-	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
-	return vs.validatorStatus(ctx, req.PublicKey, validatorIndexMap, headState), nil
+	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
 // multipleValidatorStatus returns the validator status response for the set of validators
@@ -228,20 +228,17 @@ func (vs *ValidatorServer) ValidatorStatus(
 func (vs *ValidatorServer) multipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	if vs.headFetcher.HeadState() == nil {
+	headState := vs.headFetcher.HeadState()
+	if headState == nil {
 		return false, nil, nil
 	}
-
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
-	headState := vs.headFetcher.HeadState()
-
-	validatorIndexMap := stateutils.ValidatorIndexMap(headState)
 	for i, key := range pubkeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		status := vs.validatorStatus(ctx, key, validatorIndexMap, headState)
+		status := vs.validatorStatus(ctx, key, headState)
 		if status == nil {
 			continue
 		}
@@ -288,14 +285,14 @@ func (vs *ValidatorServer) ExitedValidators(
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	headState := vs.headFetcher.HeadState()
-	dv := helpers.Domain(headState, request.Epoch, request.Domain)
+	fork := vs.forkFetcher.CurrentFork()
+	dv := helpers.Domain(fork, request.Epoch, request.Domain)
 	return &pb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
 }
 
-func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, idxMap map[[32]byte]int, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
+func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
 		return &pb.ValidatorStatusResponse{
@@ -304,29 +301,32 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, i
 		}
 	}
 
-	defaultUnknownResponse := &pb.ValidatorStatusResponse{
-		Status:                 pb.ValidatorStatus_UNKNOWN_STATUS,
+	statusResp := &pb.ValidatorStatusResponse{
+		Status:                 pb.ValidatorStatus_DEPOSIT_RECEIVED,
 		ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
 		Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
 	}
 
-	idx, ok := idxMap[bytesutil.ToBytes32(pubKey)]
-	if !ok || headState == nil {
-		return defaultUnknownResponse
-	}
-
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
 	if err != nil {
-		return defaultUnknownResponse
+		return statusResp
+	}
+	statusResp.DepositInclusionSlot = depositBlockSlot
+
+	idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	if err != nil {
+		return statusResp
+	}
+	if !ok || headState == nil {
+		return statusResp
 	}
 
-	if helpers.IsActiveValidator(headState.Validators[idx], headState.Slot) {
-		return &pb.ValidatorStatusResponse{
-			Status:                 pb.ValidatorStatus_ACTIVE,
-			Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
-			ActivationEpoch:        headState.Validators[idx].ActivationEpoch,
-			DepositInclusionSlot:   depositBlockSlot,
-		}
+	vStatus := vs.assignmentStatus(uint64(idx), headState)
+	statusResp.Status = vStatus
+
+	if vStatus == pb.ValidatorStatus_ACTIVE {
+		statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
+		return statusResp
 	}
 
 	var queuePosition uint64
@@ -339,9 +339,8 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, i
 	}
 	// Our position in the activation queue is the above index - our validator index.
 	queuePosition = uint64(idx) - lastActivatedValidatorIdx
-	status := vs.assignmentStatus(uint64(idx), headState)
 	return &pb.ValidatorStatusResponse{
-		Status:                    status,
+		Status:                    vStatus,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
 		PositionInActivationQueue: queuePosition,
 		DepositInclusionSlot:      depositBlockSlot,
@@ -402,7 +401,7 @@ func (vs *ValidatorServer) WaitForChainStart(req *ptypes.Empty, stream pb.Valida
 	for {
 		select {
 		case chainStartTime := <-vs.chainStartChan:
-			log.Info("Sending ChainStart log and genesis time to connected validator clients")
+			log.Info("Sending genesis time notification to connected validator clients")
 			res := &pb.ChainStartResponse{
 				Started:     true,
 				GenesisTime: uint64(chainStartTime.Unix()),
@@ -432,10 +431,6 @@ func (vs *ValidatorServer) depositBlockSlot(ctx context.Context, currentSlot uin
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
 	eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
 	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
-
-	if depositBlockSlot > currentSlot {
-		return 0, nil
-	}
 
 	return depositBlockSlot, nil
 }
