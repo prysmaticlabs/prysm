@@ -34,6 +34,7 @@ type Flag struct {
 	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
 
 	// Cache toggles.
+	EnableSSZCache          bool // EnableSSZCache for hash tree root.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
@@ -92,7 +93,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.SkipBLSVerify = true
 	}
 	if ctx.GlobalBool(enableBackupWebhookFlag.Name) {
-		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
+		log.Warn("Allowing database backups to be triggered from HTTP webhook")
 		cfg.EnableBackupWebhook = true
 	}
 	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
@@ -102,6 +103,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(OptimizeProcessEpoch.Name) {
 		log.Warn("Processing epoch with optimizations")
 		cfg.OptimizeProcessEpoch = true
+	}
+	if ctx.GlobalBool(EnableSSZCacheFlag.Name) {
+		log.Warn("Enabled ssz hash tree root cache")
+		cfg.EnableSSZCache = true
 	}
 	Init(cfg)
 }

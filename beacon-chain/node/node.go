@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	sszTypes "github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -95,6 +96,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 			).Info("Using custom chain parameters")
 			params.UseDemoBeaconConfig()
 		}
+	}
+
+	// Enable the ssz hash tree root cache conditionally.
+	if featureconfig.Get().EnableSSZCache {
+		sszTypes.ToggleCache(true)
 	}
 
 	if err := beacon.startDB(ctx); err != nil {

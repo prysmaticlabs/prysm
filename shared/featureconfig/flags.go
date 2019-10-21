@@ -57,6 +57,11 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
+	// EnableSSZCacheFlag for hash tree root.
+	EnableSSZCacheFlag = cli.BoolFlag{
+		Name:  "enable-ssz-cache",
+		Usage: "Enable ssz hash tree root caching",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -75,6 +80,7 @@ var BeaconChainFlags = []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
+	EnableSSZCacheFlag,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 }
