@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 )
 
@@ -135,13 +136,7 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	if half == 0 {
 		delay = 500 * time.Millisecond
 	}
-	startTime := slotStartTime(v.genesisTime, slot)
+	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	timeToBroadcast := startTime.Add(delay)
 	time.Sleep(roughtime.Until(timeToBroadcast))
-}
-
-func slotStartTime(genesis uint64, slot uint64) time.Time {
-	duration := time.Second * time.Duration(slot*params.BeaconConfig().SecondsPerSlot)
-	startTime := time.Unix(int64(genesis), 0).Add(duration)
-	return startTime
 }
