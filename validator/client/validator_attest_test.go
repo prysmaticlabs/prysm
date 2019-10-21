@@ -14,6 +14,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -298,5 +299,21 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 
 	if len(generatedAttestation.AggregationBits) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))
+	}
+}
+
+func TestWaitForSlotMidPoint_WaitCorrectly(t *testing.T) {
+	validator, _, finish := setup(t)
+	defer finish()
+	currentTime := uint64(time.Now().Unix())
+	numOfSlots := uint64(4)
+	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
+	timeToSleep := params.BeaconConfig().SecondsPerSlot / 2
+	midpointTime := currentTime + timeToSleep
+	validator.waitToSlotMidpoint(context.Background(), numOfSlots)
+
+	currentTime = uint64(time.Now().Unix())
+	if currentTime != midpointTime {
+		t.Errorf("Wanted %d time for slot midpoint but got %d", midpointTime, currentTime)
 	}
 }
