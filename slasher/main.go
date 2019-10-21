@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/service"
 	"github.com/sirupsen/logrus"
@@ -31,18 +30,15 @@ func startSlasher(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
-	db, err := db.SetupSlasherDB()
 	cfg := service.Config{
-		Port:      port,
-		CertFlag:  cert,
-		KeyFlag:   key,
-		SlasherDb: db,
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
 	}
-	slasher := service.NewRPCService(&cfg)
+	slasher, err := service.NewRPCService(&cfg, ctx)
 	if err != nil {
 		return err
 	}
-
 	slasher.Start()
 	return nil
 }
@@ -50,6 +46,7 @@ func startSlasher(ctx *cli.Context) error {
 var appFlags = []cli.Flag{
 	cmd.VerbosityFlag,
 	cmd.LogFormat,
+	cmd.DataDirFlag,
 	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,

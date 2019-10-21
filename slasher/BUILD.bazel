@@ -14,7 +14,6 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
-        "//slasher/db:go_default_library",
         "//slasher/flags:go_default_library",
         "//slasher/service:go_default_library",
         "@com_github_joonix_log//:go_default_library",
