@@ -15,15 +15,15 @@ type Dag struct {
 	// Finalized ...
 	Finalized *Node
 	// Justified ...
-	Justified *Node
-	synced bool
+	Justified    *Node
+	synced       bool
 	maxKnownSlot uint64
 }
 
 // New ...
 func New() *Dag {
 	return &Dag{
-		Nodes: make(map[[32]byte]*Node),
+		Nodes:  make(map[[32]byte]*Node),
 		Scores: make(map[*Node]uint64),
 		synced: false,
 	}
@@ -37,11 +37,11 @@ func (d *Dag) AddNode(block *ethpb.BeaconBlock) error {
 		return err
 	}
 	node := &Node{
-		Parent: d.Nodes[bytesutil.ToBytes32(block.ParentRoot)],
+		Parent:   d.Nodes[bytesutil.ToBytes32(block.ParentRoot)],
 		Children: make([]*Node, 0, 8),
-		Slot: block.Slot,
-		Weight: 0,
-		Key: blockRoot,
+		Slot:     block.Slot,
+		Weight:   0,
+		Key:      blockRoot,
 	}
 
 	node.IndexAsChild = uint64(len(node.Parent.Children))
@@ -80,7 +80,7 @@ func (d *Dag) ApplyScoreChanges(changes []ScoreChange) {
 func (d *Dag) Head() *Node {
 	start := d.Justified
 	// Track weight for each block per height.
-	weightAtHeight := make([]map[*Node]uint64, d.maxKnownSlot + 1 - start.Slot)
+	weightAtHeight := make([]map[*Node]uint64, d.maxKnownSlot+1-start.Slot)
 	for i := 0; i < len(weightAtHeight); i++ {
 		weightAtHeight[i] = make(map[*Node]uint64)
 	}
@@ -89,7 +89,7 @@ func (d *Dag) Head() *Node {
 	cutoff := uint64(0)
 	for n, s := range d.Scores {
 		if n.Slot > start.Slot {
-			weightAtHeight[n.Slot - start.Slot][n] += s
+			weightAtHeight[n.Slot-start.Slot][n] += s
 			cutoff += s
 		}
 	}
@@ -98,17 +98,16 @@ func (d *Dag) Head() *Node {
 	bestChild := make(map[*Node]*ChildScore)
 	// Back propagate highest slot weights back to root of the tree,
 	// Also track the most weighted child.
-	for i:=d.maxKnownSlot - start.Slot; i > 0; i-- {
+	for i := d.maxKnownSlot - start.Slot; i > 0; i-- {
 		for n, w := range weightAtHeight[i] {
 			if w > cutoff {
 				if best, hasBest := bestChild[n]; hasBest {
 					return best.BestTarget
-				} else {
-					return n
 				}
+				return n
 			}
 			// Propagate the weight of child to parent.
-			weightAtHeight[n.Parent.Slot - start.Slot][n.Parent] = weightAtHeight[n.Parent.Slot - start.Slot][n.Parent] + w
+			weightAtHeight[n.Parent.Slot-start.Slot][n.Parent] = weightAtHeight[n.Parent.Slot-start.Slot][n.Parent] + w
 			// Track the best child for parent block.
 			children, has := bestChild[n.Parent]
 			if !has || w > children.Score {
@@ -126,7 +125,6 @@ func (d *Dag) Head() *Node {
 	// Worst case scenario, process head at justified check point height.
 	if myBest, hasBest := bestChild[start]; hasBest {
 		return myBest.BestTarget
-	} else {
-		return d.Justified
 	}
+	return d.Justified
 }
