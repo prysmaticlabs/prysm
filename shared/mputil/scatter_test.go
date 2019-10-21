@@ -78,7 +78,7 @@ func TestDouble(t *testing.T) {
 }
 
 func TestMutex(t *testing.T) {
-	totalRuns := 65536
+	totalRuns := 1048576
 	val := 0
 	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.Mutex) (interface{}, error) {
 		for i := 0; i < entries; i++ {
@@ -94,5 +94,25 @@ func TestMutex(t *testing.T) {
 
 	if val != totalRuns {
 		t.Fatalf("Unexpected value: expected \"%v\", found \"%v\"", totalRuns, val)
+	}
+}
+
+func TestError(t *testing.T) {
+	totalRuns := 1024
+	val := 0
+	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.Mutex) (interface{}, error) {
+		for i := 0; i < entries; i++ {
+			mu.Lock()
+			val++
+			if val == 1011 {
+				mu.Unlock()
+				return nil, errors.New("Bad number!")
+			}
+			mu.Unlock()
+		}
+		return nil, nil
+	})
+	if err == nil {
+		t.Fatalf("Missing expected error")
 	}
 }

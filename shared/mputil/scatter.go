@@ -6,19 +6,10 @@ import (
 	"sync"
 )
 
-// Batch provides details of the scatter process
-type Batch struct {
-	Workers  int
-	ResultCh chan *WorkerResults
-	ErrorCh  chan error
-}
-
 // Scatter scatters a computation across multiple goroutines.
 // This breaks the task in to a number of chunks and executes those chunks in parallel with the function provided.
-// Results from the function are returned in the results channel, errors in the error channel.
-// In total the number of items in the results plus error channel will equal the number of workers.
-//
-// Scatter returns the results of the workers; it is up to the calling code to piece them together.
+// Results returned are collected and presented a a set of WorkerResults, which can be reassembled by the calling function.
+// Any error that occurs in the workers will be passed back to the calling function.
 func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (interface{}, error)) ([]*WorkerResults, error) {
 	if inputLen <= 0 {
 		return nil, errors.New("input length must be greater than 0")
@@ -53,7 +44,7 @@ func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (interface{}, error
 		}(offset, entries)
 	}
 
-	// Gather
+	// Collect results from workers
 	results := make([]*WorkerResults, workers)
 	for i := 0; i < workers; i++ {
 		select {
@@ -83,12 +74,4 @@ func calculateChunkSize(items int) int {
 type WorkerResults struct {
 	Offset int
 	Extent interface{}
-}
-
-// NewWorkerResults creates a new container for results of a scatter worker
-func NewWorkerResults(offset int, extent interface{}) *WorkerResults {
-	return &WorkerResults{
-		Offset: offset,
-		Extent: extent,
-	}
 }
