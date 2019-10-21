@@ -3,9 +3,9 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
-    strip_prefix = "bazel-skylib-0.8.0",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
+    sha256 = "e5d90f0ec952883d56747b7604e2a15ee36e288bb556c3d0ed33e818a4d971f2",
+    strip_prefix = "bazel-skylib-1.0.2",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/1.0.2.tar.gz",
 )
 
 http_archive(
@@ -216,7 +216,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
+    commit = "c71fbcefd21552b70cd625b2c54466006e258ad7",  # v1.22.1
     importpath = "github.com/urfave/cli",
 )
 
@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "c9cfead9f2a36ddf3daa40ba269aa7f4bbba6b62",  # v1.0.1
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -634,7 +634,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
+    commit = "55450579111f95e3722cb93dec62fe9e847d6130",  # v1.2.1
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -1014,7 +1014,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "e652ba06e9067ef41c199af59b9c6c67724850d4",
+    commit = "ece8fdf051b731392b407fdb9a9b1b9ffb6f9793",  # v1.11.3
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1110,7 +1110,7 @@ go_ssz_dependencies()
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
+    commit = "f6d0f9ee430895e87ef1ceb5ac8f39725bafceef",  # v1.24.0
     importpath = "google.golang.org/grpc",
 )
 
@@ -1176,7 +1176,7 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
+    commit = "0ff49de124c6f76f8494e194af75bde0f1a49a29",  # v1.1.6
     importpath = "github.com/json-iterator/go",
     remote = "https://github.com/prestonvanloon/go",
     vcs = "git",
