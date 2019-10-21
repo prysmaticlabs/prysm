@@ -49,7 +49,7 @@ func Count() int {
 func Keys() []peer.ID {
 	lock.RLock()
 	defer lock.RUnlock()
-	keys := make([]peer.ID, 0, Count())
+	keys := make([]peer.ID, 0, len(peerStatuses))
 	for k := range peerStatuses {
 		keys = append(keys, k)
 	}

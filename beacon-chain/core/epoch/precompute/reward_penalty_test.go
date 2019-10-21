@@ -55,15 +55,15 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Indices that voted
-	wanted := uint64(32000001776)
+	// Indices that voted everything except for head, lost a bit money
+	wanted := uint64(31999995452)
 	if state.Balances[4] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[4])
 	}
 
-	// Indices that did not vote - lose money
-	wanted = uint64(31999797616)
+	// Indices that did not vote, lost more money
+	wanted = uint64(31999949392)
 	if state.Balances[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])

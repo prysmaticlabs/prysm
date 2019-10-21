@@ -8,6 +8,8 @@ import (
 )
 
 func TestSavesUnencryptedKeys(t *testing.T) {
+	keys := 2
+	numKeys = &keys
 	ctnr := generateUnencryptedKeys(0 /* start index */)
 	buf := new(bytes.Buffer)
 	if err := SaveUnencryptedKeysToFile(buf, ctnr); err != nil {
