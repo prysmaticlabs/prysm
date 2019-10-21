@@ -11,15 +11,16 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 )
 
-func generateValidators(count int64) map[string]*prysmKeyStore.Key {
+func generateValidators(count uint64) map[string]*prysmKeyStore.Key {
 	validatorKeys := make(map[string]*prysmKeyStore.Key)
-	for i := int64(0); i < count; i++ {
+	for i := uint64(0); i < count; i++ {
 		validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
 		if err != nil {
 			log.Errorf("Could not generate random key: %v", err)
@@ -35,8 +36,10 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
-	numberOfDeposits int64) {
+func sendDeposits(t testing.T, testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
+	numberOfDeposits, numberofValidators uint64) ([]*ethpb.Deposit_Data depositData) {
+	
+	depositData := map([]*ethpb.Deposit_Data, 0, numberofValidators)
 	depositAmountInGwei := contracts.Amount32Eth.Uint64()  //how to fix an error here?
 
 	depositDelay := int64(1)
@@ -45,14 +48,14 @@ func sendDeposits(testAcc *contracts.TestAccount, validatorKeys map[string]*prys
 	for _, validatorKey := range validatorKeys {
 		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 		if err != nil {
-			log.Errorf("Could not generate deposit input data: %v", err)
-			continue
+			t.Fatalf("Could not generate deposit input data: %v", err)
 		}
+		depositData = append(depositData, data)
 
-		for i := int64(0); i < numberOfDeposits; i++ {
+		for i := uint64(0); i < numberOfDeposits; i++ {
 			tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
 			if err != nil {
-				log.Error("unable to send transaction to contract")
+				t.Fatalf("unable to send transaction to contract", err)
 			}
 
 			testAcc.Backend.Commit()
@@ -76,15 +79,17 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	validatorsWanted := int64(16)
+	validatorsWanted := uint64(16)
 	validatorKeys := generateValidators(validatorsWanted)
 
-	numberOfDeposits := int64(16)
+	numberOfDeposits := uint64(16)
+	
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	sendDeposits(testAcc, validatorKeys, numberOfDeposits)
+	depositData := sendDeposits(t, testAcc, validatorKeys, numberOfDeposits, numberofValidators)
+
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -92,7 +97,8 @@ func TestEndtoEndDeposits(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query) //context backgrround ?
+	// should i have 256 logs here?
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query) 
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
@@ -100,15 +106,50 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
+	
+	//Match the deposit count, 
+	depositCount, err := testAcc.Contract.DepositContractCaller.DepositCount(bind.NewCallOpts()).Uint64()
+	if err != nil {
+		t.Fatalf("Unable to retrieve deposit count from deposit contract %v", err)
+	}
+	totalNumberOfDeposits := validatorsWanted * numberOfDeposits
+	if depositCount != totalNumberDeposits {
+		t.Errorf("Incorrect depositCount, expected %v, got %v", totalNumberOfDeposits, depositCount)
+	}
 
-    // TODO to check deposit count
-	// func (_DepositContract *DepositContractCaller) DepositCount(opts *bind.CallOpts) (*big.Int, error) {
-	// 	var (
-	// 		ret0 = new(*big.Int)
-	// 	)
-	// 	out := ret0
-	// 	err := _DepositContract.contract.Call(opts, out, "deposit_count")
-	// 	return *ret0, err
+	
+
+	//TODO 
+	
+	//2.validate deposit data and ensure it is accurate and the same data you sent over in a transaction,
+	//type DepositContractDepositEvent struct 
+
+	//func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Log) error {
+	depositEventIterator, err := testAcc.Contract.DepositContractFilterer.FilterDepositEvent(bind.NewCallOpts())
+	if err != nil {
+		t.Fatalf("Unable to retrieve deposit event iterator %v", err)
+	}
+    //how rto iterate with Iterator with counter 
+	for EventIterator.Next  {
+		current := depositEventIterator.Event
+		counter +16 
+		data  := depositData[i]
+	}
+
+
+
+
+	// validate merkle root of trie in the deposit contract
+	// deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
+
+	// trie, err := trieutil.GenerateTrieFromItems([][]byte{depositDataRoots[0][:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	// if err != nil {
+	// 	log.Error(err)
 	// }
+	
+	root, err := testAcc.Contract.DepositContractCaller.GetHashTreeRoot(bind.NewCallOpts())
+	if err != nil {
+		t.Fatalf("Unable to retrieve hash tree root from deposit contract %v", err)
+	}
 
 }
