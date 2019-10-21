@@ -32,11 +32,6 @@ func Get(pid peer.ID) *pb.Status {
 func Set(pid peer.ID, status *pb.Status) {
 	lock.Lock()
 	defer lock.Unlock()
-	if pStatus, ok := peerStatuses[pid]; ok {
-		pStatus.status = status
-		peerStatuses[pid] = pStatus
-		return
-	}
 	peerStatuses[pid] = &PeerStatus{
 		status:      status,
 		lastUpdated: roughtime.Now(),
