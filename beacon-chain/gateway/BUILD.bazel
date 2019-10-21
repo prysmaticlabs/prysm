@@ -13,6 +13,7 @@ go_library(
         "//beacon-chain/node:__pkg__",
     ],
     deps = [
+        "//proto/eth/v1alpha1:go_grpc_gateway_library",
         "//shared:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@grpc_ecosystem_grpc_gateway//runtime:go_default_library",
