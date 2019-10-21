@@ -16,7 +16,7 @@ import (
 
 func TestUpdateValidator(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
-	vp := []*precompute.Validator{{}, {InclusionSlot:e}, {}, {InclusionSlot:e}, {}, {InclusionSlot:e}}
+	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
