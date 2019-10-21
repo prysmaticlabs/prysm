@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/prysmaticlabs/prysm/slasher/rpc"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
