@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -24,7 +26,7 @@ type End2EndConfig struct {
 }
 
 type beaconNodeInfo struct {
-	processID   uint64
+	processID   int
 	datadir     string
 	rpcPort     uint64
 	monitorPort uint64
@@ -33,42 +35,61 @@ type beaconNodeInfo struct {
 }
 
 func main() {
-	contractAddr, keystorePath := StartEth1()
-	InitializeValidators(contractAddr, keystorePath)
+	contractAddr, _ := StartEth1()
+	StartBeaconNodes(contractAddr, 1)
+	// InitializeValidators(contractAddr, keystorePath, 64)
 }
 
 // StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
 func StartEth1() (common.Address, string) {
-	if err := exec.Command("rm", "-rf", "/tmp/eth1data").Run(); err != nil {
+	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
 		panic(err)
 	}
 	args := []string{
-		"--datadir=/tmp/eth1data",
+		"--datadir=/tmp/e2e/eth1data",
 		"--dev.period=4",
-		"--unlock=0",
-		"--password=password.txt",
 		"--rpc",
+		"--rpcvhosts=*",
+		"--rpccorsdomain=*",
+		// "--rpcapi=eth,web3",
+		"--ws",
+		// "--wsapi=eth,web3",
+		"--wsorigins='*'",
 		"--dev",
 	}
-	if err := exec.Command("geth", args...).Start(); err != nil {
+	cmd := exec.Command("geth", args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
 	time.Sleep(12 * time.Second)
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.Dial("/tmp/eth1data/geth.ipc")
+	client, err := rpc.Dial("/tmp/e2e/eth1data/geth.ipc")
 	if err != nil {
+		// read command's stdout line by line
+		in := bufio.NewScanner(stdout)
+
+		for in.Scan() {
+			log.Printf(in.Text()) // write each line to your log, or anything you need
+		}
+		if err := in.Err(); err != nil {
+			log.Printf("error: %s", err)
+		}
 		panic(err)
 	}
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", "/tmp/eth1data/keystore").Output()
+	fileName, err := exec.Command("ls", "/tmp/e2e/eth1data/keystore").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
-	keystorePath := fmt.Sprintf("/tmp/eth1data/keystore/%s", strings.TrimSpace(string(fileName)))
-	ks := keystore.NewKeyStore("/tmp/eth1data", keystore.StandardScryptN, keystore.StandardScryptP)
+	keystorePath := fmt.Sprintf("/tmp/e2e/eth1data/keystore/%s", strings.TrimSpace(string(fileName)))
+	ks := keystore.NewKeyStore("/tmp/e2e/eth1data", keystore.StandardScryptN, keystore.StandardScryptP)
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
 		log.Fatal(err)
@@ -117,7 +138,6 @@ func StartEth1() (common.Address, string) {
 		panic(err)
 	}
 	log.Printf("Contract deployed at %s\n", contractReceipt.ContractAddress.Hex())
-
 	return contractReceipt.ContractAddress, keystorePath
 }
 
@@ -130,10 +150,9 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 			"//beacon-chain",
 			"--",
 			// --no-custom-config using this?
-			"--clear-db",
-			"--http-web3provider=localhost:8545",
-			"--web3provider=/tmp/eth1data/geth.ipc",
-			fmt.Sprintf("--datadir=/tmp/eth2-beacon-node-%d", i),
+			"--http-web3provider=http://127.0.0.1:8545",
+			"--web3provider=ws://127.0.0.1:8546",
+			fmt.Sprintf("--datadir=/tmp/e2e/eth2-beacon-node-%d", i),
 			fmt.Sprintf("--deposit-contract=%s", contractAddress.Hex()),
 			fmt.Sprintf("--rpc-port=%d", 4000+i),
 			fmt.Sprintf("--monitoring-port=%d", 8080+i),
@@ -145,23 +164,71 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 				args = append(args, fmt.Sprintf("--peer=%s", nodeInfo[p].multiAddr))
 			}
 		}
-		if err := exec.Command("bazel", args...).Start(); err != nil {
+
+		cmd := exec.Command("bazel", args...)
+		stdout, err := cmd.StderrPipe()
+		if err != nil {
 			panic(err)
 		}
+		if err := cmd.Start(); err != nil {
+			panic(err)
+		}
+		time.Sleep(5 * time.Second)
+
+		// read command's stdout line by line
+		in := bufio.NewScanner(stdout)
+
+		for in.Scan() {
+			log.Printf(in.Text()) // write each line to your log, or anything you need
+		}
+		if err := in.Err(); err != nil {
+			log.Printf("error: %s", err)
+		}
+
+		response, err := http.Get("http://127.0.0.1:8080/p2p")
+		if err != nil {
+			log.Fatal(err)
+		}
+		time.Sleep(2 * time.Second)
+
+		// Get the response body as a string
+		dataInBytes, err := ioutil.ReadAll(response.Body)
+		pageContent := string(dataInBytes)
+		response.Body.Close()
+
+		startIdx := strings.Index(pageContent, "/p2p/") + 5
+		multiAddr := pageContent[startIdx : startIdx+53]
+
+		fmt.Println(multiAddr)
 
 		nodeInfo[i] = &beaconNodeInfo{
-			processID:   i,
-			datadir:     fmt.Sprintf("/tmp/eth2-beacon-node-%d", i),
+			processID:   cmd.Process.Pid,
+			datadir:     fmt.Sprintf("/tmp/e2e/eth2-beacon-node-%d", i),
 			rpcPort:     4000 + i,
 			monitorPort: 8080 + i,
 			grpcPort:    3200 + i,
-			multiAddr:   "hahahaha",
+			multiAddr:   multiAddr,
 		}
 	}
 }
 
 // InitializeValidators sends the deposits to the eth1 chain and starts the validator clients.
-func InitializeValidators(contractAddress common.Address, keystorePath string) {
+func InitializeValidators(contractAddress common.Address, keystorePath string, validatorNum uint64) {
+	for i := uint64(0); i < validatorNum; i++ {
+		args := []string{
+			"run",
+			"//validator",
+			"--",
+			"accounts",
+			"create",
+			fmt.Sprintf("--password=%d", i),
+			fmt.Sprintf("--keystore-path=%s", keystorePath),
+		}
+		if err := exec.Command("bazel", args...).Start(); err != nil {
+			panic(err)
+		}
+	}
+
 	args := []string{
 		"run",
 		"//contracts/deposit-contract/sendDepositTx",
