@@ -2,10 +2,11 @@ package rpc
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 
 	"github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"

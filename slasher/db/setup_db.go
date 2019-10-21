@@ -3,11 +3,12 @@ package db
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/pkg/errors"
 	"math/big"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.

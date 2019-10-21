@@ -1,8 +1,16 @@
-// Package slasher defines the service used to retrieve slashings proofs.
+// Package service defines the service used to retrieve slashings proofs and
+// feed attestations and block headers into the slasher db.
 package service
 
 import (
 	"fmt"
+	"net"
+	"os"
+	"os/signal"
+	"path"
+	"sync"
+	"syscall"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -12,12 +20,6 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-	"net"
-	"os"
-	"os/signal"
-	"path"
-	"sync"
-	"syscall"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
