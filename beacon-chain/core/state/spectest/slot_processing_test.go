@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runSlotProcessingTests(t *testing.T, config string) {

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/libp2p/go-libp2p"
 	filter "github.com/libp2p/go-maddr-filter"
+	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
