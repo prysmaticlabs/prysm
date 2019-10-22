@@ -133,7 +133,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := db.SaveState(context.Background(), &pb.BeaconState{Slot:uint64(i)}, r); err != nil {
+		if err := db.SaveState(context.Background(), &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
 			t.Fatal(err)
 		}
 		blockRoots = append(blockRoots, r)

@@ -101,6 +101,13 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
+		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
+		if err := s.rmStatesBySlots(ctx, startSlot, endSlot); err != nil {
+			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		}
+
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
@@ -177,11 +184,13 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
-		newFinalizedSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch)
-		if err := s.rmStatesBySlots(ctx, newFinalizedSlot, newFinalizedSlot + params.BeaconConfig().SlotsPerEpoch); err != nil {
+		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
+		if err := s.rmStatesBySlots(ctx, startSlot, endSlot); err != nil {
 			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				newFinalizedSlot, newFinalizedSlot + params.BeaconConfig().SlotsPerEpoch)
+				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
 		}
+
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
@@ -360,7 +369,7 @@ func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Atte
 	return nil
 }
 
-// clearSeenAt clears seen attestations map, it gets called upon new finalization.
+// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
 func (s *Store) clearSeenAtts() {
 	s.seenAttsLock.Lock()
 	s.seenAttsLock.Unlock()
