@@ -287,3 +287,80 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		t.Error("Expected peers to continue being connected")
 	}
 }
+
+func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+
+	// Set up a head state with data we expect.
+	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState.Slot = 111
+	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = headRoot[:]
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 5,
+		Root:  finalizedRoot[:],
+	}
+
+	r := &RegularSync{
+		p2p: p1,
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
+		},
+		ctx: context.Background(),
+	}
+
+	// Setup streams
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := &pb.Status{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+		expected := &pb.Status{
+			HeadForkVersion: []byte{1, 1, 1, 1},
+			HeadSlot:        genesisState.Slot,
+			HeadRoot:        headRoot[:],
+			FinalizedEpoch:  5,
+			FinalizedRoot:   finalizedRoot[:],
+		}
+		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+			log.WithError(err).Error("Failed to write to stream")
+		}
+		_, err := r.p2p.Encoding().EncodeWithLength(stream, expected)
+		if err != nil {
+			t.Errorf("Could not send status: %v", err)
+		}
+	})
+
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
+	p1.Connect(p2)
+
+	if testutil.WaitTimeout(&wg, time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	if len(p1.Host.Network().Peers()) != 0 {
+		t.Error("Expected peer to be disconnected")
+	}
+
+	if peerstatus.FailureCount(p2.PeerID()) != 1 {
+		t.Errorf("Failure count was not bumped to one, instead it is %d", peerstatus.FailureCount(p2.PeerID()))
+	}
+}
