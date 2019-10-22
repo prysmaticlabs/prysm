@@ -11,11 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -175,6 +177,11 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
+		newFinalizedSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch)
+		if err := s.rmStatesBySlots(ctx, newFinalizedSlot, newFinalizedSlot + params.BeaconConfig().SlotsPerEpoch); err != nil {
+			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				newFinalizedSlot, newFinalizedSlot + params.BeaconConfig().SlotsPerEpoch)
+		}
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
@@ -353,9 +360,27 @@ func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Atte
 	return nil
 }
 
-// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
+// clearSeenAt clears seen attestations map, it gets called upon new finalization.
 func (s *Store) clearSeenAtts() {
 	s.seenAttsLock.Lock()
 	s.seenAttsLock.Unlock()
 	s.seenAtts = make(map[[32]byte]bool)
+}
+
+// rmStatesBySlots deletes the states in db in between the range of slots.
+func (s *Store) rmStatesBySlots(ctx context.Context, startSlot uint64, endSlot uint64) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
+	defer span.End()
+
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	roots, err := s.db.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.DeleteStates(ctx, roots); err != nil {
+		return err
+	}
+
+	return nil
 }
