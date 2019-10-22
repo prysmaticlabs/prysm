@@ -60,8 +60,6 @@ func (g *Gateway) Start() {
 		}
 	}
 
-
-
 	g.mux.Handle("/", gwmux)
 
 	g.server = &http.Server{
