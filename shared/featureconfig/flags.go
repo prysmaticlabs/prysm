@@ -52,6 +52,11 @@ var (
 		Name:  "enable-bls-pubkey-cache",
 		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
 	}
+	// OptimizeProcessEpoch optimizes process epoch.
+	OptimizeProcessEpoch = cli.BoolFlag{
+		Name:  "optimize-process-epoch",
+		Usage: "Process epoch with optimizations",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -69,6 +74,7 @@ var BeaconChainFlags = []cli.Flag{
 	InitSyncNoVerifyFlag,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
+	OptimizeProcessEpoch,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 }

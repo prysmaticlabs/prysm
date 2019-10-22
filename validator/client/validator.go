@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -106,9 +107,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			break
 		}
 	}
-	for _, pk := range validatorActivatedRecords {
-		pubKey := fmt.Sprintf("%#x", pk[:8])
-		log.WithField("pubKey", pubKey).Info("Validator activated")
+	for _, pubKey := range validatorActivatedRecords {
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
@@ -118,9 +118,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
-		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
-			"pubKey": pubKey,
+			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
 		})
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
@@ -202,29 +201,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, assignment := range v.assignments.ValidatorAssignment {
-			var proposerSlot uint64
-			var attesterSlot uint64
-			pubKey := fmt.Sprintf("%#x", assignment.PublicKey[:8])
-
 			lFields := logrus.Fields{
-				"pubKey": pubKey,
+				"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(assignment.PublicKey)),
 				"epoch":  slot / params.BeaconConfig().SlotsPerEpoch,
+				"status": assignment.Status,
 			}
-			if assignment.Status != pb.ValidatorStatus_ACTIVE {
-				lFields["status"] = assignment.Status
-				log.WithFields(lFields).Info("New assignment")
-				continue
-			} else if assignment.IsProposer {
-				proposerSlot = assignment.Slot
-				attesterSlot = assignment.Slot
-			} else {
-				attesterSlot = assignment.Slot
-			}
-			lFields["attesterSlot"] = attesterSlot
-			lFields["proposerSlot"] = "N/A"
-
-			if assignment.IsProposer {
-				lFields["proposerSlot"] = proposerSlot
+			if assignment.Status == pb.ValidatorStatus_ACTIVE {
+				if assignment.IsProposer {
+					lFields["proposerSlot"] = assignment.Slot
+				}
+				lFields["attesterSlot"] = assignment.Slot
 			}
 			log.WithFields(lFields).Info("New assignment")
 		}

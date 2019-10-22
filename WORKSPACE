@@ -204,7 +204,7 @@ protobuf_deps()
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "a1a36e6d85f19b3007d1ee56d8a4e91294f1ddd5",
+    commit = "40beaeef26d5a2a0918dec2b960c2556c71a90a0",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -1106,7 +1106,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "86fe9e5ca27c0e04bca469c796517bb911b93425",
+    commit = "dbb55b15e92f897ee230360c8d9695e2f224b117",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
