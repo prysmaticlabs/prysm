@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["peer_statuses.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus",
-    visibility = ["//beacon-chain/sync:__subpackages__"],
+    visibility = [
+        "//beacon-chain/p2p:__subpackages__",
+        "//beacon-chain/sync:__subpackages__",
+    ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/roughtime:go_default_library",
