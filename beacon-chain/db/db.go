@@ -55,7 +55,7 @@ type Database interface {
 	GenesisState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
-	DeleteStates(ctx context.Context, blockRoots [][32]byte)
+	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error)
