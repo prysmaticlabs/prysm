@@ -2,6 +2,9 @@ package kv
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -95,6 +98,39 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 		bucket := tx.Bucket(stateBucket)
 		return bucket.Put(blockRoot[:], enc)
 	})
+}
+
+// DeleteState by block root.
+func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
+	defer span.End()
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateBucket)
+		return bkt.Delete(blockRoot[:])
+	})
+}
+
+// DeleteStatesby block roots.
+func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
+	defer span.End()
+	var wg sync.WaitGroup
+	errs := make([]string, 0)
+	wg.Add(len(blockRoots))
+	for _, r := range blockRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer w.Done()
+			if err := k.DeleteState(ctx, root); err != nil {
+				errs = append(errs, err.Error())
+				return
+			}
+		}(&wg, r)
+	}
+	wg.Wait()
+	if len(errs) > 0 {
+		return fmt.Errorf("deleting states failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // creates state from marshaled proto state bytes.
