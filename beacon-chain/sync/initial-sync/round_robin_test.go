@@ -336,7 +336,7 @@ func TestMakeSequence(t *testing.T) {
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	defer peerstatus.Clear()
 
-	for i := 0; i <= maxPeersToSync; i++ {
+	for i := 0; i <= maxPeersToSync+100; i++ {
 		peerstatus.Set(peer.ID(i), &pb.Status{
 			FinalizedEpoch: 10,
 		})
