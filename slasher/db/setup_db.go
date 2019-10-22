@@ -7,26 +7,24 @@ import (
 	"os"
 	"path"
 	"testing"
-
-	"github.com/pkg/errors"
 )
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
-func SetupSlasherDB() (*Store, error) {
+func SetupSlasherDB(t testing.TB) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
-		return nil, err
+		t.Fatalf("Could not generate random file path: %v", err)
 	}
 	p := path.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
-		return nil, errors.Wrap(err, "Failed to remove directory.")
+		t.Fatalf("Failed to remove directory: %v", err)
 	}
 	db, err := NewDB(p)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to instantiate DB.")
+		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
-	return db, nil
+	return db
 }
 
 // TempDir returns a directory path for temporary test storage.

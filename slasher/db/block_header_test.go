@@ -8,10 +8,7 @@ import (
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {
-	db, err := SetupSlasherDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
@@ -32,10 +29,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
-	db, err := SetupSlasherDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -78,10 +72,7 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 }
 
 func TestDeleteHistoryBlkHdr(t *testing.T) {
-	db, err := SetupSlasherDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -139,10 +130,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 }
 
 func TestHasHistoryBlkHdr(t *testing.T) {
-	db, err := SetupSlasherDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -191,10 +179,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 }
 
 func TestPruneHistoryBlkHdr(t *testing.T) {
-	db, err := SetupSlasherDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
