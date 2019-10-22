@@ -110,7 +110,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
-// DeleteStatesby block roots.
+// DeleteStates by block roots.
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
