@@ -7,18 +7,18 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
-	"github.com/libp2p/go-libp2p-core/peer"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 type peerData struct {
@@ -33,7 +33,7 @@ func init() {
 }
 
 func TestConstants(t *testing.T) {
-	if maxPeersToSync * blockBatchSize > 1000 {
+	if maxPeersToSync*blockBatchSize > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }
@@ -336,7 +336,7 @@ func TestMakeSequence(t *testing.T) {
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	defer peerstatus.Clear()
 
-	for i := 0;  i<=maxPeersToSync; i++ {
+	for i := 0; i <= maxPeersToSync; i++ {
 		peerstatus.Set(peer.ID(i), &pb.Status{
 			FinalizedEpoch: 10,
 		})
