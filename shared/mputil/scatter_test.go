@@ -44,7 +44,7 @@ func TestDouble(t *testing.T) {
 				inValues[i] = i
 			}
 			outValues := make([]int, test.inValues)
-			workerResults, err := mputil.Scatter(len(inValues), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
+			workerResults, err := mputil.Scatter(len(inValues), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 				extent := make([]int, entries)
 				for i := 0; i < entries; i++ {
 					extent[i] = inValues[offset+i] * 2
@@ -80,7 +80,7 @@ func TestDouble(t *testing.T) {
 func TestMutex(t *testing.T) {
 	totalRuns := 1048576
 	val := 0
-	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.Mutex) (interface{}, error) {
+	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.RWMutex) (interface{}, error) {
 		for i := 0; i < entries; i++ {
 			mu.Lock()
 			val++
@@ -100,7 +100,7 @@ func TestMutex(t *testing.T) {
 func TestError(t *testing.T) {
 	totalRuns := 1024
 	val := 0
-	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.Mutex) (interface{}, error) {
+	_, err := mputil.Scatter(totalRuns, func(offset int, entries int, mu *sync.RWMutex) (interface{}, error) {
 		for i := 0; i < entries; i++ {
 			mu.Lock()
 			val++

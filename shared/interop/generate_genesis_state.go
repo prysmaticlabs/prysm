@@ -62,7 +62,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
-	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
+	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 	})
 	if err != nil {
@@ -98,7 +98,7 @@ func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([
 	}
 	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
 	depositDataRoots := make([][]byte, len(privKeys))
-	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
+	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		return &depositData{items: items, roots: roots}, err
 	})

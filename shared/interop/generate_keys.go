@@ -25,7 +25,7 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 		secrets []*bls.SecretKey
 		publics []*bls.PublicKey
 	}
-	results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.Mutex) (interface{}, error) {
+	results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
 		return &keys{secrets: secs, publics: pubs}, err
 	})

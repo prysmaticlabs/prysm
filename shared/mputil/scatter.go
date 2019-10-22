@@ -10,7 +10,7 @@ import (
 // This breaks the task in to a number of chunks and executes those chunks in parallel with the function provided.
 // Results returned are collected and presented a a set of WorkerResults, which can be reassembled by the calling function.
 // Any error that occurs in the workers will be passed back to the calling function.
-func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (interface{}, error)) ([]*WorkerResults, error) {
+func Scatter(inputLen int, sFunc func(int, int, *sync.RWMutex) (interface{}, error)) ([]*WorkerResults, error) {
 	if inputLen <= 0 {
 		return nil, errors.New("input length must be greater than 0")
 	}
@@ -24,7 +24,7 @@ func Scatter(inputLen int, sFunc func(int, int, *sync.Mutex) (interface{}, error
 	defer close(resultCh)
 	errorCh := make(chan error, workers)
 	defer close(errorCh)
-	mutex := new(sync.Mutex)
+	mutex := new(sync.RWMutex)
 	for worker := 0; worker < workers; worker++ {
 		offset := worker * chunkSize
 		entries := chunkSize
