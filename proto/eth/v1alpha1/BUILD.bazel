@@ -55,11 +55,10 @@ go_proto_library(
     proto = ":v1alpha1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        #        "",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
+        "@com_github_gogo_protobuf//gogoproto:go_default_library",
         "@com_github_golang_protobuf//descriptor:go_default_library",
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
-        "@com_github_gogo_protobuf//gogoproto:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
     ],
 )
