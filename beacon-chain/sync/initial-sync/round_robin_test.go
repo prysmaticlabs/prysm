@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -28,6 +30,12 @@ type peerData struct {
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+}
+
+func TestConstants(t *testing.T) {
+	if maxPeersToSync*blockBatchSize > 1000 {
+		t.Fatal("rpc rejects requests over 1000 range slots")
+	}
 }
 
 func TestRoundRobinSync(t *testing.T) {
@@ -322,5 +330,20 @@ func TestMakeSequence(t *testing.T) {
 	want := []uint64{3, 4, 5}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Wanted %v, got %v", want, got)
+	}
+}
+
+func TestBestFinalized_returnsMaxValue(t *testing.T) {
+	defer peerstatus.Clear()
+
+	for i := 0; i <= maxPeersToSync+100; i++ {
+		peerstatus.Set(peer.ID(i), &pb.Status{
+			FinalizedEpoch: 10,
+		})
+	}
+
+	_, _, pids := bestFinalized()
+	if len(pids) != maxPeersToSync {
+		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeersToSync, len(pids))
 	}
 }

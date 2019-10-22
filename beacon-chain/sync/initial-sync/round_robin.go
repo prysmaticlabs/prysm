@@ -22,6 +22,7 @@ import (
 )
 
 const blockBatchSize = 64
+const maxPeersToSync = 15
 const counterSeconds = 20
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
@@ -288,6 +289,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 		s := peerstatus.Get(k)
 		if s.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, k)
+			if len(pids) >= maxPeersToSync {
+				break
+			}
 		}
 	}
 
