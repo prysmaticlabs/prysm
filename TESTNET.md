@@ -28,6 +28,8 @@ Use the [minimal config](https://github.com/ethereum/eth2.0-specs/blob/v0.8.3/co
 
 These parameters reduce the minimal config to 1/10 of the required ETH.
 
+We have a genesis.ssz file available for download [here](https://prysmaticlabs.com/uploads/genesis.ssz)
+
 ### Connecting to the network
 
 We have a libp2p bootstrap node available at `/dns4/prylabs.net/tcp/30001/p2p/16Uiu2HAm7Qwe19vz9WzD2Mxn7fXd1vgHHp4iccuyq7TxwRXoAGfc`.
