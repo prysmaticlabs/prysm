@@ -233,7 +233,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
 
 	return demoConfig
 }
@@ -321,6 +321,11 @@ func UseDemoBeaconConfig() {
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
 	beaconConfig = MinimalSpecConfig()
+}
+
+// UseMainnetConfig for beacon chain services.
+func UseMainnetConfig() {
+	beaconConfig = defaultBeaconConfig
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

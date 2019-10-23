@@ -92,14 +92,13 @@ func (s *InitialSync) Start() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := peerstatus.Count()
+		if count >= minStatusCount {
+			break
+		}
 		log.WithField(
 			"handshakes",
 			fmt.Sprintf("%d/%d", count, minStatusCount),
 		).Info("Waiting for enough peer handshakes before syncing")
-
-		if count >= minStatusCount {
-			break
-		}
 		time.Sleep(handshakePollingInterval)
 	}
 

@@ -20,7 +20,7 @@ type Database interface {
 	// Backup and restore methods
 	Backup(ctx context.Context) error
 	// Attestation related methods.
-	Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error)
+	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error)
 	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error)
 	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
@@ -54,6 +54,8 @@ type Database interface {
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	GenesisState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
+	DeleteState(ctx context.Context, blockRoot [32]byte) error
+	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error)

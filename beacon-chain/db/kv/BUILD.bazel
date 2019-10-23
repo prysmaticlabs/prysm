@@ -21,9 +21,11 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
+        "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "//shared/traceutil:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
@@ -60,6 +62,7 @@ go_test(
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
