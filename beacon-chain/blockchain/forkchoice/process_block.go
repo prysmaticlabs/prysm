@@ -381,6 +381,11 @@ func (s *Store) rmStatesBySlots(ctx context.Context, startSlot uint64, endSlot u
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
+	// Do not remove genesis state.
+	if startSlot == 0 {
+		startSlot = 1
+	}
+
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {

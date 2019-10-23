@@ -317,7 +317,8 @@ func TestRemoveStateBySlots(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if s != nil && s.Slot < endSlot {
+		// Also verifies genesis state didnt get deleted
+		if s != nil && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
 	}
@@ -333,7 +334,8 @@ func TestRemoveStateBySlots(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if s != nil && s.Slot < endSlot {
+		// Also verifies genesis state didnt get deleted
+		if s != nil && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
 	}
