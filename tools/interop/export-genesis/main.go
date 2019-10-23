@@ -31,6 +31,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	if gs == nil {
+		panic("nil genesis state")
+	}
 	b, err := ssz.Marshal(gs)
 	if err != nil {
 		panic(err)
