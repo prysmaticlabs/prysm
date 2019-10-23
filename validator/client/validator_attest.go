@@ -111,11 +111,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	}
 
 	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
-	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
+	attRoot := fmt.Sprintf("%#x", attResp.Root)
+	log.WithField("headRoot", headRoot).WithField("attRoot", attRoot).Info("Submitted new attestation")
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
-		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
+		trace.StringAttribute("attestationHash", attRoot),
 		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
