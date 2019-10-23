@@ -97,7 +97,7 @@ func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, sig *bls.Sig
 }
 
 // AggregateAttestations such that the minimal number of attestations are returned.
-// Note: this is currently a naive implementation to the order of O(n^2).g
+// Note: this is currently a naive implementation to the order of O(n^2).
 func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) <= 1 {
 		return atts, nil
