@@ -36,7 +36,7 @@ func TestLifecycle_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Listening on port")
 
-	rpcService.Stop()
+	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 }
@@ -61,7 +61,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
 
-	rpcService.Stop()
+	rpcService.Close()
 }
 
 func TestStatus_CredentialError(t *testing.T) {
@@ -90,6 +90,6 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, fmt.Sprint("Listening on port"))
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
-	rpcService.Stop()
+	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
