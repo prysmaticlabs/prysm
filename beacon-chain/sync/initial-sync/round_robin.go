@@ -38,9 +38,7 @@ const counterSeconds = 20
 func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-
 	var lastEmptyRequests int
 	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
@@ -82,6 +80,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				// the peer may return an error anyway, but we'll ask for at least one block.
 				if cnt == 0 {
 					break
+				}
+				if cnt == 1 {
+					stp = 1
 				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
