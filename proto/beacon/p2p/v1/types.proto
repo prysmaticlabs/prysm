@@ -101,3 +101,12 @@ message CompactCommittee {
   // The list of the validator indices in the committee.
   repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 }
+
+message AggregateAndProof {
+  // index is the aggregator's index
+  uint64 index = 1;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  // aggregate is the constructed aggregated attestation
+  ethereum.eth.v1alpha1.Attestation aggregate = 3;
+}
