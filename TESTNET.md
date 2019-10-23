@@ -9,7 +9,7 @@ For developers looking to connect a client other than Prysm to the test network,
 
 **Spec version** - [v0.8.3](https://github.com/ethereum/eth2.0-specs/tree/v0.8.3)
 
-**ETH 1 Deposit Contract Address** - See https://prylabs.net/contract
+**ETH 1 Deposit Contract Address** - See https://prylabs.net/contract. This contract is deployed on the [goerli](https://goerli.net/) network. 
 
 **Genesis time** - The ETH1 block time in which the 64th deposit to start ETH2 was included. This is NOT midnight of the next day as required by spec.
 
