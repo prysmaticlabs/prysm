@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer d.Close()
 	gs, err := d.GenesisState(context.Background())
 	if err != nil {
 		panic(err)
