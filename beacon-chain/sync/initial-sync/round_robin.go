@@ -45,10 +45,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()) {
-		log.WithField("head status:", s.chain.HeadSlot()).Debugf("helpers.StartSlot(highestFinalizedEpoch()+1)-1: %v", helpers.StartSlot(highestFinalizedEpoch()))
-
 		root, finalizedEpoch, peers := bestFinalized()
-
 		var blocks []*eth.BeaconBlock
 
 		// request a range of blocks to be requested from multiple peers.
