@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
-
 // A basic tool to extract genesis.ssz from existing beaconchain.db.
 // ex:
 //   bazel run //tools/interop/export-genesis:export-genesis -- /tmp/data/beaconchaindata /tmp/genesis.ssz
