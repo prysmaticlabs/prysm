@@ -250,6 +250,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
+	headState := bs.headFetcher.HeadState()
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -258,11 +259,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	case *ethpb.GetValidatorBalancesRequest_Genesis:
 		requestingGenesis = q.Genesis
 	default:
+		epoch = helpers.CurrentEpoch(headState)
 	}
 
 	var balances []uint64
 	var err error
-	headState := bs.headFetcher.HeadState()
 	validators := headState.Validators
 	if requestingGenesis {
 		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
@@ -324,7 +325,18 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			})
 		}
 	}
-	return &ethpb.ValidatorBalances{Balances: res}, nil
+
+	balancesCount := len(res)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.ValidatorBalances{
+		Epoch:         epoch,
+		Balances:      res[start:end],
+		TotalSize:     int32(balancesCount),
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 // GetValidators retrieves the current list of active validators with an optional historical epoch flag to
