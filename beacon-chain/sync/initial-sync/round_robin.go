@@ -68,9 +68,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					return nil, ctx.Err()
 				}
 				stp := step * uint64(len(peers))
-				cnt := count / uint64(len(peers))
 				str := start + uint64(i)*step
-				cnt = mathutil.Min(cnt, (helpers.StartSlot(finalizedEpoch+1)-str)/stp)
+				cnt := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-str)/stp)
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
 				if i < remainder {
@@ -80,9 +79,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				// the peer may return an error anyway, but we'll ask for at least one block.
 				if cnt == 0 {
 					break
-				}
-				if cnt == 1 {
-					stp = 1
 				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
@@ -111,7 +107,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
 							return
 						}
-						_, err = request(str, stp, cnt /*count*/, ps, int(cnt)%len(ps) /*remainder*/)
+						_, err = request(str, stp, cnt/uint64(len(ps)) /*count*/, ps, int(cnt)%len(ps) /*remainder*/)
 						if err != nil {
 							errChan <- err
 							return

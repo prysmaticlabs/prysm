@@ -135,7 +135,6 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-		// TODO(3147): Handle multiple failures.
 		{
 			name:               "Multiple peers with multiple failures",
 			currentSlot:        320, // 5 epochs
