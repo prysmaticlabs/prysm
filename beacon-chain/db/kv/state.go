@@ -116,7 +116,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 		// Safe guard against deleting genesis or finalized state.
 		if bytes.Equal(blockRoot[:], finalizedCheckpt.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
-			return nil
+			return errors.New("could not delete genesis or finalized state")
 		}
 
 		bkt = tx.Bucket(stateBucket)

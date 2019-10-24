@@ -382,6 +382,11 @@ func (s *Store) rmStatesBySlots(ctx context.Context, startSlot uint64, endSlot u
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
+	// Do not remove genesis state and epoch boundary state.
+	if startSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		startSlot++
+	}
+
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {
