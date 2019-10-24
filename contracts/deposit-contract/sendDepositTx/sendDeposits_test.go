@@ -37,7 +37,7 @@ func init() {
 }
 
 func sendDeposits(t testing.T, testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
-	numberOfDeposits, numberofValidators uint64) ([]*ethpb.Deposit_Data depositData) {
+	numberofValidators uint64) ([]*ethpb.Deposit_Data depositData) {
 	
 	depositData := map([]*ethpb.Deposit_Data, 0, numberofValidators)
 	depositAmountInGwei := contracts.Amount32Eth.Uint64()  //how to fix an error here?
@@ -52,19 +52,19 @@ func sendDeposits(t testing.T, testAcc *contracts.TestAccount, validatorKeys map
 		}
 		depositData = append(depositData, data)
 
-		for i := uint64(0); i < numberOfDeposits; i++ {
-			tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
-			if err != nil {
+		
+		tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+		if err != nil {
 				t.Fatalf("unable to send transaction to contract", err)
-			}
+		}
+			
+		testAcc.Backend.Commit()
 
-			testAcc.Backend.Commit()
+		log.WithFields(logrus.Fields{
+			"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
+		}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddrStr, validatorKey.PublicKey.Marshal())
 
-			log.WithFields(logrus.Fields{
-				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddrStr, validatorKey.PublicKey.Marshal())
-
-			time.Sleep(time.Duration(depositDelay) * time.Second)
+		time.Sleep(time.Duration(depositDelay) * time.Second)
 		}
 	}
 }
@@ -79,16 +79,17 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	validatorsWanted := uint64(16)
+    // 256 validators - each deposits ones for simplicity
+	validatorsWanted := uint64(256)
 	validatorKeys := generateValidators(validatorsWanted)
 
-	numberOfDeposits := uint64(16)
+	
 	
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	depositData := sendDeposits(t, testAcc, validatorKeys, numberOfDeposits, numberofValidators)
+	depositData := sendDeposits(t, testAcc, validatorKeys, validatorsWanted )
 
 
 	query := ethereum.FilterQuery{
@@ -97,7 +98,6 @@ func TestEndtoEndDeposits(t *testing.T) {
 		},
 	}
 
-	// should i have 256 logs here?
 	logs, err := testAcc.Backend.FilterLogs(context.Background(), query) 
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
@@ -106,50 +106,87 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
+	if len(logs) != validatorsWanted  {
+		t.Fatal("No sufficient number of logs")
+	}
 	
+	//validate deposit data 
+	for i, log := range logs {
+		
+		data := depositData[i]
+
+		loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(log.Data)
+		if err != nil {
+			t.Fatalf("Unable to unpack logs %v", err)
+		}
+
+		if binary.LittleEndian.Uint64(index) != 0 {
+			t.Errorf("Retrieved merkle tree index is incorrect %d", index)
+		}
+
+		if !bytes.Equal(loggedPubkey, data.PublicKey) {
+			t.Errorf("Pubkey is not the same as the data that was put in %v", loggedPubkey)
+		}
+
+		if !bytes.Equal(loggedSig, data.Signature) {
+			t.Errorf("Proof of Possession is not the same as the data that was put in %v", loggedSig)
+		}
+
+		if !bytes.Equal(withCreds, data.WithdrawalCredentials) {
+			t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", withCreds)
+		}
+	}
+
 	//Match the deposit count, 
 	depositCount, err := testAcc.Contract.DepositContractCaller.DepositCount(bind.NewCallOpts()).Uint64()
 	if err != nil {
 		t.Fatalf("Unable to retrieve deposit count from deposit contract %v", err)
 	}
-	totalNumberOfDeposits := validatorsWanted * numberOfDeposits
-	if depositCount != totalNumberDeposits {
-		t.Errorf("Incorrect depositCount, expected %v, got %v", totalNumberOfDeposits, depositCount)
+	if depositCount != validatorsWanted  {
+		t.Errorf("Incorrect depositCount, expected %v, got %v", validatorsWanted, depositCount)
 	}
-
-	
-
-	//TODO 
-	
-	//2.validate deposit data and ensure it is accurate and the same data you sent over in a transaction,
-	//type DepositContractDepositEvent struct 
-
-	//func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Log) error {
-	depositEventIterator, err := testAcc.Contract.DepositContractFilterer.FilterDepositEvent(bind.NewCallOpts())
-	if err != nil {
-		t.Fatalf("Unable to retrieve deposit event iterator %v", err)
-	}
-    //how rto iterate with Iterator with counter 
-	for EventIterator.Next  {
-		current := depositEventIterator.Event
-		counter +16 
-		data  := depositData[i]
-	}
-
-
-
 
 	// validate merkle root of trie in the deposit contract
-	// deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	lock.Lock()
+	defer lock.Unlock()
 
-	// trie, err := trieutil.GenerateTrieFromItems([][]byte{depositDataRoots[0][:]}, int(params.BeaconConfig().DepositContractTreeDepth))
-	// if err != nil {
-	// 	log.Error(err)
-	// }
-	
-	root, err := testAcc.Contract.DepositContractCaller.GetHashTreeRoot(bind.NewCallOpts())
+    //make deposits
+	deposits := map([]*ethpb.Deposit, 0, validatorsWanted)
+	for _, data := range depositData {
+		deposit := &ethpb.Deposit{
+			Data: data,
+		}
+        deposits = append(deposits, deposit)
+	}
+
+	//generate deposit proof
+	_, root:= helpers.GenerateDepositProof(t, deposits[0:validatorsWanted])
+   
+	//verify merkle proof for each deposit
+	receiptRoot := eth1Data.DepositRoot
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
-		t.Fatalf("Unable to retrieve hash tree root from deposit contract %v", err)
+		return errors.Wrap(err, "could not tree hash deposit data")
+	}
+	if ok := trieutil.VerifyMerkleProof(
+		receiptRoot,
+		leaf[:],
+		int(eth1Data.DepositCount-1),
+		deposit.Proof,
+	); !ok {
+		return fmt.Errorf(
+			"deposit merkle branch of deposit root did not verify for root: %#x",
+			receiptRoot,
+		)
+	}
+
+	
+
+		
+		// root, err := testAcc.Contract.DepositContractCaller.GetHashTreeRoot(bind.NewCallOpts())
+		// if err != nil {
+		// 	t.Fatalf("Unable to retrieve hash tree root from deposit contract %v", err)
+		// }
 	}
 
 }
