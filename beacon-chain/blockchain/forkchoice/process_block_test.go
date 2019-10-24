@@ -309,7 +309,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	// New finalized epoch: 1
 	finalizedEpoch := uint64(1)
 	endSlot := helpers.StartSlot(finalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesSinceLastFinalized(ctx, 0, endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, 0, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -326,7 +326,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	// New finalized epoch: 5
 	newFinalizedEpoch := uint64(5)
 	endSlot = helpers.StartSlot(newFinalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesSinceLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1), endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1), endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
