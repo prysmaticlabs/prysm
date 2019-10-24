@@ -6,6 +6,12 @@ import (
 	"sync"
 )
 
+// WorkerResults are the results of a scatter worker.
+type WorkerResults struct {
+	Offset int
+	Extent interface{}
+}
+
 // Scatter scatters a computation across multiple goroutines.
 // This breaks the task in to a number of chunks and executes those chunks in parallel with the function provided.
 // Results returned are collected and presented a a set of WorkerResults, which can be reassembled by the calling function.
@@ -68,10 +74,4 @@ func calculateChunkSize(items int) int {
 	}
 
 	return chunkSize
-}
-
-// WorkerResults are the results of a scatter worker.
-type WorkerResults struct {
-	Offset int
-	Extent interface{}
 }
