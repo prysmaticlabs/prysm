@@ -8,30 +8,22 @@ import (
 // largest possible integer root of a number using the bitwise
 // Newton-Raphson method.
 func IntegerSquareRoot(n uint64) uint64 {
-	if IsPowerOf2(n) {
-		// Short circuit the computation if is a power of 2.
-		exponent := math.Floor(math.Log2(float64(n)))
-		return n >> uint64(exponent/2)
-	}
-	// Start with a large enough approximation.
-	var x, y uint64
-	if n < 1<<32 {
-		x = uint64(32768)
-		y = uint64(32768)
-	} else {
-		// Still fails for numbers greater than 1<<32.
-		x = uint64(1 << 32)
-		y = uint64(1 << 32)
-	}
+	min := uint64(0)
+	max := uint64(1 << 32)
 	for {
-		if y*y > n {
-			y ^= x
+		if max <= 1+min {
+			return min
 		}
-		x = x >> 1
-		if x == 0 {
-			return y
+		sqt := min + (max-min)/2
+		sq := sqt * sqt
+		if sq == n {
+			return sqt
 		}
-		y |= x
+		if sq > n {
+			max = sqt
+		} else {
+			min = sqt
+		}
 	}
 }
 
