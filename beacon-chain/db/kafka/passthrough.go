@@ -113,7 +113,6 @@ func (e Exporter) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (
 	return e.db.AttesterSlashing(ctx, slashingRoot)
 }
 
-
 func (e Exporter) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	return e.db.HasProposerSlashing(ctx, slashingRoot)
 }
@@ -133,7 +132,6 @@ func (e Exporter) DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]b
 func (e Exporter) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*eth.VoluntaryExit, error) {
 	return e.db.VoluntaryExit(ctx, exitRoot)
 }
-
 
 func (e Exporter) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	return e.db.HasVoluntaryExit(ctx, exitRoot)
@@ -170,7 +168,6 @@ func (e Exporter) ArchivedValidatorParticipation(ctx context.Context, epoch uint
 func (e Exporter) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	return e.db.DepositContractAddress(ctx)
 }
-
 
 func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	return e.db.SaveHeadBlockRoot(ctx, blockRoot)

@@ -86,4 +86,3 @@ type Database interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 }
-

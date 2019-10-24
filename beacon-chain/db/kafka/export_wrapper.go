@@ -26,7 +26,7 @@ type Exporter struct {
 }
 
 func Wrap(db iface.Database) (iface.Database, error) {
-	if  featureconfig.Get().KafkaBootstrapServers == "" {
+	if featureconfig.Get().KafkaBootstrapServers == "" {
 		return db, nil
 	}
 
@@ -106,9 +106,9 @@ func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
 func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
-		if err := e.publish(ctx, "block", block); err != nil {
-			log.WithError(err).Error("Failed to publish block")
-		}
+			if err := e.publish(ctx, "block", block); err != nil {
+				log.WithError(err).Error("Failed to publish block")
+			}
 		}
 	}()
 
