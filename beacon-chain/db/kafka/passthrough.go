@@ -232,3 +232,11 @@ func (e Exporter) SaveArchivedValidatorParticipation(ctx context.Context, epoch 
 func (e Exporter) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	return e.db.SaveDepositContractAddress(ctx, addr)
 }
+
+func (e Exporter) DeleteState(ctx context.Context, blockRoot [32]byte) error {
+	return e.db.DeleteState(ctx, blockRoot)
+}
+
+func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
+	return e.db.DeleteStates(ctx, blockRoots)
+}

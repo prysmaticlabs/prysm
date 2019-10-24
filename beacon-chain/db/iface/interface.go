@@ -54,6 +54,8 @@ type Database interface {
 	HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
 	GenesisState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
 	SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error
+	DeleteState(ctx context.Context, blockRoot [32]byte) error
+	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
