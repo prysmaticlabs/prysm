@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -115,68 +113,4 @@ func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) err
 	}()
 
 	return e.db.SaveBlocks(ctx, blocks)
-}
-
-func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	return e.db.SaveHeadBlockRoot(ctx, blockRoot)
-}
-
-func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	return e.db.SaveGenesisBlockRoot(ctx, blockRoot)
-}
-
-func (e Exporter) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *ethereum_beacon_p2p_v1.ValidatorLatestVote) error {
-	return e.db.SaveValidatorLatestVote(ctx, validatorIdx, vote)
-}
-
-func (e Exporter) SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*ethereum_beacon_p2p_v1.ValidatorLatestVote) error {
-	return e.db.SaveValidatorLatestVotes(ctx, validatorIndices, votes)
-}
-
-func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
-	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
-}
-
-func (e Exporter) SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error {
-	return e.db.SaveState(ctx, state, blockRoot)
-}
-
-func (e Exporter) SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error {
-	return e.db.SaveProposerSlashing(ctx, slashing)
-}
-
-func (e Exporter) SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error {
-	return e.db.SaveAttesterSlashing(ctx, slashing)
-}
-
-func (e Exporter) SaveVoluntaryExit(ctx context.Context, exit *eth.VoluntaryExit) error {
-	return e.db.SaveVoluntaryExit(ctx, exit)
-}
-
-func (e Exporter) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error {
-	return e.db.SaveJustifiedCheckpoint(ctx, checkpoint)
-}
-
-func (e Exporter) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error {
-	return e.db.SaveFinalizedCheckpoint(ctx, checkpoint)
-}
-
-func (e Exporter) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *eth.ArchivedActiveSetChanges) error {
-	return e.db.SaveArchivedActiveValidatorChanges(ctx, epoch, changes)
-}
-
-func (e Exporter) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *eth.ArchivedCommitteeInfo) error {
-	return e.db.SaveArchivedCommitteeInfo(ctx, epoch, info)
-}
-
-func (e Exporter) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
-	return e.db.SaveArchivedBalances(ctx, epoch, balances)
-}
-
-func (e Exporter) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error {
-	return e.db.SaveArchivedValidatorParticipation(ctx, epoch, part)
-}
-
-func (e Exporter) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
-	return e.db.SaveDepositContractAddress(ctx, addr)
 }
