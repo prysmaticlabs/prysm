@@ -334,9 +334,12 @@ func TestRemoveStateBySlots(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Also verifies genesis state didnt get deleted
-		if s != nil && s.Slot != 0 && s.Slot < endSlot {
-			t.Errorf("State with slot %d should not be in DB", s.Slot)
+		// Also verifies boundary state didnt get deleted
+		if s != nil {
+			isBoundary := s.Slot%params.BeaconConfig().SlotsPerEpoch == 0
+			if !isBoundary && s.Slot < endSlot {
+				t.Errorf("State with slot %d should not be in DB", s.Slot)
+			}
 		}
 	}
 }

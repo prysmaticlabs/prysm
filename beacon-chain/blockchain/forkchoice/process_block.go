@@ -101,6 +101,10 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
+		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
+
 		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
 		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
 		if err := s.rmStatesBySlots(ctx, startSlot, endSlot); err != nil {
@@ -109,9 +113,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
-		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
-		}
 	}
 
 	// Update validator indices in database as needed.
@@ -381,9 +382,9 @@ func (s *Store) rmStatesBySlots(ctx context.Context, startSlot uint64, endSlot u
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	// Do not remove genesis state.
-	if startSlot == 0 {
-		startSlot = 1
+	// Do not remove genesis state and epoch boundary state.
+	if startSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		startSlot += 1
 	}
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
