@@ -26,6 +26,7 @@ go_test(
     ],
     deps = [
         "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",
@@ -55,6 +56,7 @@ go_test(
     ],
     deps = [
         "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params/spectest:go_default_library",

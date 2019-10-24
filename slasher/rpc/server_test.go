@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"context"
-	"github.com/gogo/protobuf/proto"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )

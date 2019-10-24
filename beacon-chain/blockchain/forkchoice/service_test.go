@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -210,6 +211,8 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 }
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -226,7 +229,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(children, [][]byte{roots[1], roots[3]}) {
+	if !reflect.DeepEqual(children, [][32]byte{bytesutil.ToBytes32(roots[1]), bytesutil.ToBytes32(roots[3])}) {
 		t.Error("Did not receive correct children roots")
 	}
 
@@ -235,7 +238,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(children, [][]byte{roots[3]}) {
+	if !reflect.DeepEqual(children, [][32]byte{bytesutil.ToBytes32(roots[3])}) {
 		t.Error("Did not receive correct children roots")
 	}
 }
