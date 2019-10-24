@@ -379,6 +379,10 @@ func (s *Store) clearSeenAtts() {
 
 // rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.
 func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, endSlot uint64) error {
+	if !featureconfig.Get().PruneFinalizedStates {
+		return nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 

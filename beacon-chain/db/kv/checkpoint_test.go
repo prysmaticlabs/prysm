@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -109,7 +109,7 @@ func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp);  err != errMissingStateForFinalizedCheckpoint {
+	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != errMissingStateForFinalizedCheckpoint {
 		t.Fatalf("wanted err %v, got %v", errMissingStateForFinalizedCheckpoint, err)
 	}
 }
