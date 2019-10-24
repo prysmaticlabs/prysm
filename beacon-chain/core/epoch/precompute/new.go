@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -39,6 +40,11 @@ func New(ctx context.Context, state *pb.BeaconState) ([]*Validator, *Balance) {
 			p.IsActivePrevEpoch = true
 			bp.PrevEpoch += v.EffectiveBalance
 		}
+		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
+		// with the lower values
+		p.InclusionSlot = params.BeaconConfig().FarFutureEpoch
+		p.InclusionDistance = params.BeaconConfig().FarFutureEpoch
+
 		vp[i] = p
 	}
 	return vp, bp

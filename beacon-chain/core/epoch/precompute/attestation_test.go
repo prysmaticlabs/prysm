@@ -15,16 +15,18 @@ import (
 )
 
 func TestUpdateValidator(t *testing.T) {
-	vp := []*precompute.Validator{{}, {}, {}, {}, {}, {}}
+	e := params.BeaconConfig().FarFutureEpoch
+	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
 	// Indices 1 3 and 5 attested
-	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a)
+	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a, 100)
 
 	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
-		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true, ProposerIndex: 2, InclusionDistance: 1}
+		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
+		ProposerIndex: 2, InclusionDistance: 1, InclusionSlot: 101}
 	wantedVp := []*precompute.Validator{{}, wanted, {}, wanted, {}, wanted}
 	if !reflect.DeepEqual(vp, wantedVp) {
 		t.Error("Incorrect attesting validator calculations")

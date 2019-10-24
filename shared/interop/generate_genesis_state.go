@@ -14,9 +14,6 @@ import (
 )
 
 var (
-	domainDeposit      = [4]byte{3, 0, 0, 0}
-	genesisForkVersion = []byte{0, 0, 0, 0}
-
 	// This is the recommended mock eth1 block hash according to the Eth2 interop guidelines.
 	// https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
@@ -105,7 +102,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	domain := bls.Domain(domainDeposit[:], genesisForkVersion)
+	domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
 	di.Signature = privKey.Sign(sr[:], domain).Marshal()
 	return di, nil
 }

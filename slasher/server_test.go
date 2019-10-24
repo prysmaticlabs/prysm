@@ -1,21 +1,22 @@
-package rpc
+package slasher
 
 import (
 	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDb: dbs,
+		ctx:       ctx,
+		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -31,7 +32,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -50,18 +50,16 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
-
 	}
-
 }
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
-
+	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDb: dbs,
+		ctx:       ctx,
+		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -77,8 +75,6 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-	ctx := context.Background()
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -86,21 +82,18 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
-
 	if len(sr.ProposerSlashing) != 0 {
 		t.Errorf("Should return 0 slashaing proof: %v", sr)
 	}
-
 }
 
 func TestServer_DoubleBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDb: dbs,
+		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -109,7 +102,6 @@ func TestServer_DoubleBlock(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-
 	if _, err := slasherServer.IsSlashableBlock(ctx, psr); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
@@ -117,21 +109,18 @@ func TestServer_DoubleBlock(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
-
 	if len(sr.ProposerSlashing) != 0 {
 		t.Errorf("Should return 0 slashaing proof: %v", sr)
 	}
-
 }
 
 func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDb: dbs,
+		slasherDb: dbs,
 	}
 	psr := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
@@ -166,6 +155,5 @@ func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
-
 	}
 }
