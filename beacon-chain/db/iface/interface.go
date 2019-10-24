@@ -31,7 +31,7 @@ type Database interface {
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.BeaconBlock, error)
 	HeadBlock(ctx context.Context) (*eth.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.BeaconBlock, error)
-	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
+	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error

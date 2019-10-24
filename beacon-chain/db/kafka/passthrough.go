@@ -53,7 +53,7 @@ func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.Be
 	return e.db.Blocks(ctx, f)
 }
 
-func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
+func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error) {
 	return e.db.BlockRoots(ctx, f)
 }
 
