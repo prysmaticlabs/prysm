@@ -106,12 +106,12 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	finalizedCheckpt, err := k.FinalizedCheckpoint(ctx)
-	if err != nil {
-		return err
-	}
-
 	return k.db.Batch(func(tx *bolt.Tx) error {
+		finalizedCheckpt, err := k.FinalizedCheckpoint(ctx)
+		if err != nil {
+			return err
+		}
+
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 		// Safe guard against deleting genesis or finalized state.

@@ -276,7 +276,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	}
 }
 
-func TestRemoveStateBySlots(t *testing.T) {
+func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -309,7 +309,7 @@ func TestRemoveStateBySlots(t *testing.T) {
 	// New finalized epoch: 1
 	finalizedEpoch := uint64(1)
 	endSlot := helpers.StartSlot(finalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesBySlots(ctx, 0, endSlot); err != nil {
+	if err := store.rmStatesSinceLastFinalized(ctx, 0, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -326,7 +326,7 @@ func TestRemoveStateBySlots(t *testing.T) {
 	// New finalized epoch: 5
 	newFinalizedEpoch := uint64(5)
 	endSlot = helpers.StartSlot(newFinalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesBySlots(ctx, helpers.StartSlot(finalizedEpoch+1), endSlot); err != nil {
+	if err := store.rmStatesSinceLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1), endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
