@@ -26,6 +26,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "generate_deposits_internal_test.go",
         "generate_genesis_state_test.go",
         "generate_keys_test.go",
     ],

@@ -10,6 +10,9 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["scatter_test.go"],
+    srcs = [
+        "benchmark_test.go",
+        "scatter_test.go",
+    ],
     embed = [":go_default_library"],
 )
