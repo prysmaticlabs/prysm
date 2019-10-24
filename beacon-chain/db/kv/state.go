@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -104,8 +105,21 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
+
+	finalizedCheckpt, err := k.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+
 	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(stateBucket)
+		bkt := tx.Bucket(blocksBucket)
+		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+		// Safe guard against deleting genesis or finalized state.
+		if bytes.Equal(blockRoot[:], finalizedCheckpt.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
+			return nil
+		}
+
+		bkt = tx.Bucket(stateBucket)
 		return bkt.Delete(blockRoot[:])
 	})
 }
