@@ -11,10 +11,16 @@ import (
 
 var input [][]byte
 
+const (
+	benchmarkElements    = 65536
+	benchmarkElementSize = 32
+	benchmarkHashRuns    = 128
+)
+
 func init() {
-	input = make([][]byte, 65536)
-	for i := 0; i < 65536; i++ {
-		input[i] = make([]byte, 32)
+	input = make([][]byte, benchmarkElements)
+	for i := 0; i < benchmarkElements; i++ {
+		input[i] = make([]byte, benchmarkElementSize)
 		rand.Read(input[i])
 	}
 }
@@ -24,7 +30,7 @@ func hash(input [][]byte) [][]byte {
 	output := make([][]byte, len(input))
 	for i := range input {
 		copy(output, input)
-		for j := 0; j < 128; j++ {
+		for j := 0; j < benchmarkHashRuns; j++ {
 			hash := sha256.Sum256(output[i])
 			output[i] = hash[:]
 		}
