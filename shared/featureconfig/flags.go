@@ -57,6 +57,10 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
+	pruneFinalizedStatesFlag = cli.BoolFlag{
+		Name: "prune-finalized-states",
+		Usage: "Delete old states from the database after reaching new finalized checkpoint",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -77,4 +81,5 @@ var BeaconChainFlags = []cli.Flag{
 	OptimizeProcessEpoch,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
+	pruneFinalizedStatesFlag,
 }
