@@ -65,7 +65,7 @@ func RandKey(r io.Reader) *SecretKey {
 // SecretKeyFromBytes creates a BLS private key from a LittleEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 	secKey := &bls12.SecretKey{}
-	err := secKey.SetLittleEndian(priv)
+	err := secKey.Deserialize(priv)
 	return &SecretKey{p: secKey}, err
 }
 
