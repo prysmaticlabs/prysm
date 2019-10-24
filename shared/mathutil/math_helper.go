@@ -16,7 +16,7 @@ func IntegerSquareRoot(n uint64) uint64 {
 		if y <= 1+x {
 			return x
 		}
-		sqt := x + (y-x)/2
+		sqt := x + ((y - x) >> 1)
 		sq := sqt * sqt
 		if sq == n {
 			return sqt
