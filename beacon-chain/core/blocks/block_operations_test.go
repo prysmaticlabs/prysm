@@ -781,7 +781,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -1220,7 +1220,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -1249,7 +1249,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1344,7 +1344,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1640,7 +1640,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CustodyBit: false,
 		}
 
-		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
 		root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 		if err != nil {

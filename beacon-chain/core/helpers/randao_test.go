@@ -179,7 +179,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		RandaoMixes:      randaoMixes,
 		Slot:             slot}
 
-	got, err := Seed(state, 10, params.BeaconConfig().DomainAttestation)
+	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}

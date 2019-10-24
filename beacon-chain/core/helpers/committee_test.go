@@ -39,7 +39,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -632,7 +632,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -671,7 +671,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -710,7 +710,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -750,7 +750,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -790,7 +790,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -222,7 +222,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -521,7 +521,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -1082,7 +1082,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			Data:       att.Data,
 			CustodyBit: false,
 		}
-		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		for i, indice := range attestingIndices {
 			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)

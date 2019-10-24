@@ -69,7 +69,7 @@ func (s *Service) Status() error {
 // We archive committee information pertaining to the head state's epoch.
 func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.BeaconState) error {
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
-	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainAttestation)
+	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
 	}

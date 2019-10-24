@@ -508,31 +508,43 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
+//    """
+//    Process ``Attestation`` operation.
+//    """
 //    data = attestation.data
-//    assert data.index < COMMITTEES_PER_SLOT
+//    assert data.crosslink.shard < SHARD_COUNT
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
 //
-//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+//    attestation_slot = get_attestation_data_slot(state, data)
+//    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
 //
-//    committee = get_crosslink_committee(state, data.slot, data.index)
+//    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
 //    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
-//        aggregation_bits=attestation.aggregation_bits,
-//        inclusion_delay=state.slot - data.slot,
+//        aggregation_bitfield=attestation.aggregation_bitfield,
+//        inclusion_delay=state.slot - attestation_slot,
 //        proposer_index=get_beacon_proposer_index(state),
 //    )
 //
-//    if data.target.epoch == get_current_epoch(state):
-//        assert data.source == state.current_justified_checkpoint
-//        state.current_epoch_attestations.append(pending_attestation)
+//    if data.target_epoch == get_current_epoch(state):
+//      assert data.source == state.current_justified_checkpoint
+//      parent_crosslink = state.current_crosslinks[data.crosslink.shard]
+//      state.current_epoch_attestations.append(pending_attestation)
 //    else:
-//        assert data.source == state.previous_justified_checkpoint
-//        state.previous_epoch_attestations.append(pending_attestation)
+//      assert data.source == state.previous_justified_checkpoint
+//      parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
+//      state.previous_epoch_attestations.append(pending_attestation)
+//
+//    # Check crosslink against expected parent crosslink
+//    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
+//    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
+//    assert data.crosslink.end_epoch == min(data.target.epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
+//    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
 //
 //    # Check signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state,
+//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
 	if err != nil {
@@ -549,11 +561,11 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 
 	data := att.Data
 
-	if data.Index >= params.BeaconConfig().MaxCommitteesPerSlot {
+	if data.Crosslink.Shard > params.BeaconConfig().ShardCount {
 		return nil, fmt.Errorf(
-			"expected attestation index %d to be less than COMMITTEES_PER_SLOT %d",
-			data.Index,
-			params.BeaconConfig().MaxCommitteesPerSlot,
+			"expected crosslink shard %d to be less than SHARD_COUNT %d",
+			data.Crosslink.Shard,
+			params.BeaconConfig().ShardCount,
 		)
 	}
 
@@ -566,12 +578,16 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 		)
 	}
 
-	minInclusionCheck := data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
-	epochInclusionCheck := beaconState.Slot <= data.Slot+params.BeaconConfig().SlotsPerEpoch
+	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attestation slot")
+	}
+	minInclusionCheck := attestationSlot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
+	epochInclusionCheck := beaconState.Slot <= attestationSlot+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
 		return nil, fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
-			data.Slot,
+			attestationSlot,
 			params.BeaconConfig().MinAttestationInclusionDelay,
 			beaconState.Slot,
 		)
@@ -580,7 +596,7 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 		return nil, fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
 			beaconState.Slot,
-			data.Slot,
+			attestationSlot,
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
@@ -596,22 +612,34 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	pendingAtt := &pb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
-		InclusionDelay:  beaconState.Slot - data.Slot,
+		InclusionDelay:  beaconState.Slot - attestationSlot,
 		ProposerIndex:   proposerIndex,
 	}
 
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
+	var parentCrosslink *ethpb.Crosslink
 	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
+		crosslinkShard := data.Crosslink.Shard
+		if int(crosslinkShard) >= len(beaconState.CurrentCrosslinks) {
+			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
+		}
+
+		parentCrosslink = beaconState.CurrentCrosslinks[crosslinkShard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
+		crosslinkShard := data.Crosslink.Shard
+		if int(crosslinkShard) >= len(beaconState.PreviousCrosslinks) {
+			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
+		}
+		parentCrosslink = beaconState.PreviousCrosslinks[crosslinkShard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
@@ -623,7 +651,34 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	if data.Target.Epoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
+	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
+	if data.Target.Epoch < endEpoch {
+		endEpoch = data.Target.Epoch
+	}
+	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
+		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
+			parentCrosslink.EndEpoch, data.Crosslink.StartEpoch)
+	}
+	if data.Crosslink.EndEpoch != endEpoch {
+		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
+			endEpoch, data.Crosslink.EndEpoch)
+	}
+	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not tree hash parent crosslink")
+	}
+	if !bytes.Equal(data.Crosslink.ParentRoot, crosslinkParentRoot[:]) {
+		return nil, fmt.Errorf(
+			"mismatched parent crosslink root, expected %#x, received %#x",
+			crosslinkParentRoot,
+			data.Crosslink.ParentRoot,
+		)
+	}
 
+	// To be removed in Phase 1
+	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
+		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
+	}
 	return beaconState, nil
 }
 
@@ -761,7 +816,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkeys []*bls.PublicKey
 	if len(custodyBit0Indices) > 0 {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)
