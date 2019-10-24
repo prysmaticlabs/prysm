@@ -70,7 +70,7 @@ func calculateChunkSize(items int) int {
 	return chunkSize
 }
 
-// WorkerResults are the results of a scatter worker
+// WorkerResults are the results of a scatter worker.
 type WorkerResults struct {
 	Offset int
 	Extent interface{}
