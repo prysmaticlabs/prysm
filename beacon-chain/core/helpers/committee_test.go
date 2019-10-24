@@ -39,7 +39,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,6 +134,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -143,34 +144,30 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 
 	tests := []struct {
 		attestationSlot uint64
-		stateSlot       uint64
 		bitfield        bitfield.Bitlist
 		wanted          []uint64
 	}{
 		{
 			attestationSlot: 3,
-			stateSlot:       5,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{219, 476},
+			wanted:          []uint64{290, 402},
 		},
 		{
 			attestationSlot: 2,
-			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{123},
+			wanted:          []uint64{853},
 		},
 		{
 			attestationSlot: 11,
-			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{880, 757},
+			wanted:          []uint64{872, 103},
 		},
 	}
 
 	for _, tt := range tests {
 		ClearAllCaches()
-		state.Slot = tt.stateSlot
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
+		attestationData.Slot = tt.attestationSlot
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
 		if err != nil {
@@ -632,7 +629,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -671,7 +668,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -710,7 +707,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -750,7 +747,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -790,7 +787,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}

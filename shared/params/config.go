@@ -75,7 +75,7 @@ type BeaconChainConfig struct {
 	// BLS domain values.
 	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
 	DomainRandao         []byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainAttestation    []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainBeaconAttester []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
 	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
 	DomainTransfer       []byte `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
@@ -116,7 +116,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      1024,
+	MaxValidatorsPerCommittee:      2048,
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
@@ -172,7 +172,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// BLS domain values.
 	DomainBeaconProposer: bytesutil.Bytes4(0),
 	DomainRandao:         bytesutil.Bytes4(1),
-	DomainAttestation:    bytesutil.Bytes4(2),
+	DomainBeaconAttester: bytesutil.Bytes4(2),
 	DomainDeposit:        bytesutil.Bytes4(3),
 	DomainVoluntaryExit:  bytesutil.Bytes4(4),
 	DomainTransfer:       bytesutil.Bytes4(5),
@@ -298,7 +298,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
 	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
-	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
+	minimalConfig.DomainBeaconAttester = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)

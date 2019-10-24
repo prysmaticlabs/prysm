@@ -509,12 +509,11 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
 //    data = attestation.data
-//    assert data.index < COMMITTEES_PER_SLOT
+//    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-//
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
-//    committee = get_crosslink_committee(state, data.slot, data.index)
+//    committee = get_beacon_committee(state, data.slot, data.index)
 //    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
@@ -532,7 +531,7 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //        state.previous_epoch_attestations.append(pending_attestation)
 //
 //    # Check signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state,
+//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
 	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
 	if err != nil {
@@ -761,7 +760,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkeys []*bls.PublicKey
 	if len(custodyBit0Indices) > 0 {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)

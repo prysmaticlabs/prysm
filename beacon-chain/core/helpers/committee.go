@@ -27,10 +27,10 @@ var committeeCache = cache.NewCommitteeCache()
 //    Return the number of committees at ``slot``.
 //    """
 //    epoch = compute_epoch_at_slot(slot)
-//    return min(
+//    return max(1, min(
 //        MAX_COMMITTEES_PER_SLOT,
 //        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
-//    )
+//    ))
 func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
 	epoch := SlotToEpoch(slot)
 	count, err := ActiveValidatorCount(state, epoch)
@@ -40,6 +40,9 @@ func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
 	var committeePerSlot = count / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 		return params.BeaconConfig().MaxCommitteesPerSlot, nil
+	}
+	if committeePerSlot == 0 {
+		return 1, nil
 	}
 	return committeePerSlot, nil
 }
@@ -79,7 +82,7 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 	epoch_offset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
@@ -272,7 +275,7 @@ func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attesta
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
