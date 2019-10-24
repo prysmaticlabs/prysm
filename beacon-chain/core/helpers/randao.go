@@ -34,10 +34,8 @@ func Seed(state *pb.BeaconState, epoch uint64, domain []byte) ([32]byte, error) 
 	}
 	randaoMix := RandaoMix(state, lookAheadEpoch)
 
-	indexRoot := ActiveIndexRoot(state, epoch)
-
-	th := append(randaoMix, indexRoot...)
-	th = append(th, bytesutil.Bytes32(epoch)...)
+	th := append(domain, bytesutil.Bytes8(epoch)...)
+	th = append(th, randaoMix...)
 
 	seed32 := hashutil.Hash(th)
 

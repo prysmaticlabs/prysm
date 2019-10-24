@@ -15,106 +15,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestEpochCommitteeCount_OK(t *testing.T) {
-	// this defines the # of validators required to have 1 committee
-	// per slot for epoch length.
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	tests := []struct {
-		validatorCount uint64
-		committeeCount uint64
-	}{
-		{0, params.BeaconConfig().SlotsPerEpoch},
-		{1000, params.BeaconConfig().SlotsPerEpoch},
-		{2 * validatorsPerEpoch, 2 * params.BeaconConfig().SlotsPerEpoch},
-		{5 * validatorsPerEpoch, 5 * params.BeaconConfig().SlotsPerEpoch},
-		{16 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
-		{32 * validatorsPerEpoch, 16 * params.BeaconConfig().SlotsPerEpoch},
-	}
-	for _, test := range tests {
-		ClearAllCaches()
-		vals := make([]*ethpb.Validator, test.validatorCount)
-		for i := 0; i < len(vals); i++ {
-			vals[i] = &ethpb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			}
-		}
-		s := &pb.BeaconState{
-			Validators: vals,
-		}
-		count, err := CommitteeCount(s, 1)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if test.committeeCount != count {
-			t.Errorf("wanted: %d, got: %d",
-				test.committeeCount, count)
-		}
-	}
-}
-
-func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
-	validatorCount := uint64(8)
-	productionConfig := params.BeaconConfig()
-	testConfig := &params.BeaconChainConfig{
-		ShardCount:          1,
-		SlotsPerEpoch:       4,
-		TargetCommitteeSize: 2,
-	}
-	params.OverrideBeaconConfig(testConfig)
-	vals := make([]*ethpb.Validator, validatorCount)
-	for i := 0; i < len(vals); i++ {
-		vals[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	s := &pb.BeaconState{
-		Validators: vals,
-	}
-	count, err := CommitteeCount(s, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if count != validatorCount/testConfig.TargetCommitteeSize {
-		t.Errorf("wanted: %d, got: %d",
-			validatorCount/testConfig.TargetCommitteeSize, count)
-	}
-	params.OverrideBeaconConfig(productionConfig)
-}
-
-func TestShardDelta_Ok(t *testing.T) {
-	minShardDelta := params.BeaconConfig().ShardCount -
-		params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
-	tests := []struct {
-		validatorCount uint64
-		shardCount     uint64
-	}{
-		{0, params.BeaconConfig().SlotsPerEpoch},    // Empty minimum shards
-		{1000, params.BeaconConfig().SlotsPerEpoch}, // 1000 Validators minimum shards,
-		{100000, 768 /*len(active_validators) // TARGET_COMMITTEE_SIZE*/},
-		{500000, minShardDelta}, // 5 Mil, above shard delta
-	}
-	for _, test := range tests {
-		ClearAllCaches()
-		vals := make([]*ethpb.Validator, test.validatorCount)
-		for i := 0; i < len(vals); i++ {
-			vals[i] = &ethpb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			}
-		}
-		s := &pb.BeaconState{
-			Validators: vals,
-		}
-		delta, err := ShardDelta(s, 1)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if test.shardCount != delta {
-			t.Errorf("wanted: %d, got: %d",
-				test.shardCount, delta)
-		}
-	}
-}
-
 func TestComputeCommittee_WithoutCache(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
@@ -139,7 +39,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,27 +48,27 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 		t.Errorf("could not compute committee: %v", err)
 	}
 
-	// Test shuffled indices are correct for shard 5 committee
-	shard := uint64(5)
-	committee5, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	// Test shuffled indices are correct for index 5 committee
+	index := uint64(5)
+	committee5, err := ComputeCommittee(indices, seed, index, committeeCount)
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start := sliceutil.SplitOffset(validatorCount, committeeCount, shard)
-	end := sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
+	start := sliceutil.SplitOffset(validatorCount, committeeCount, index)
+	end := sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee5) {
 		t.Error("committee has different shuffled indices")
 	}
 
-	// Test shuffled indices are correct for shard 9 committee
-	shard = uint64(9)
-	committee9, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	// Test shuffled indices are correct for index 9 committee
+	index = uint64(9)
+	committee9, err := ComputeCommittee(indices, seed, index, committeeCount)
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
-	start = sliceutil.SplitOffset(validatorCount, committeeCount, shard)
-	end = sliceutil.SplitOffset(validatorCount, committeeCount, shard+1)
+	start = sliceutil.SplitOffset(validatorCount, committeeCount, index)
+	end = sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
 
 	if !reflect.DeepEqual(committees[start:end], committee9) {
 		t.Error("committee has different shuffled indices")
@@ -198,19 +98,19 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Test shuffled indices are correct for shard 3 committee
-	shard := uint64(3)
-	committee3, err := ComputeCommittee(indices, seed, shard, committeeCount)
+	// Test shuffled indices are correct for index 3 committee
+	index := uint64(3)
+	committee3, err := ComputeCommittee(indices, seed, index, committeeCount)
 	if err != nil {
 		t.Errorf("could not compute committee: %v", err)
 	}
 
-	cachedIndices, err := shuffledIndicesCache.IndicesByIndexSeed(shard, seed[:])
+	cachedIndices, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,9 +170,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		ClearAllCaches()
 		state.Slot = tt.stateSlot
-		attestationData.Crosslink = &ethpb.Crosslink{
-			Shard: tt.attestationSlot,
-		}
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 
 		result, err := AttestingIndices(state, attestationData, tt.bitfield)
@@ -308,7 +205,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	attestationData := &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{}, Target: &ethpb.Checkpoint{}}
+	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
 	indices, err := AttestingIndices(state, attestationData, bitfield.NewBitlist(128))
 	if err != nil {
@@ -335,7 +232,7 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
-	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
+	// Initialize test with 128 validators, each slot and each index gets 2 validators.
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -353,35 +250,35 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		index      uint64
 		slot       uint64
 		committee  []uint64
-		shard      uint64
+		committeeIndex      uint64
 		isProposer bool
 	}{
 		{
 			index:      0,
 			slot:       146,
 			committee:  []uint64{0, 3},
-			shard:      82,
+			committeeIndex:      82,
 			isProposer: true,
 		},
 		{
 			index:      105,
 			slot:       160,
 			committee:  []uint64{105, 20},
-			shard:      32,
+			committeeIndex:      32,
 			isProposer: true,
 		},
 		{
 			index:      0,
 			slot:       146,
 			committee:  []uint64{0, 3},
-			shard:      18,
+			committeeIndex:      18,
 			isProposer: true,
 		},
 		{
 			index:      11,
 			slot:       135,
 			committee:  []uint64{119, 11},
-			shard:      7,
+			committeeIndex:      7,
 			isProposer: false,
 		},
 	}
@@ -389,13 +286,13 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearAllCaches()
-			committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			committee, committeeIndex, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 			}
-			if shard != tt.shard {
-				t.Errorf("wanted shard %d, got shard %d for validator index %d",
-					tt.shard, shard, tt.index)
+			if committeeIndex != tt.committeeIndex {
+				t.Errorf("wanted committeeIndex %d, got committeeIndex %d for validator index %d",
+					tt.committeeIndex, committeeIndex, tt.index)
 			}
 			if slot != tt.slot {
 				t.Errorf("wanted slot %d, got slot %d for validator index %d",
@@ -458,136 +355,6 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
-func TestShardDelta_OK(t *testing.T) {
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	min := params.BeaconConfig().ShardCount - params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch
-	tests := []struct {
-		validatorCount uint64
-		shardDelta     uint64
-	}{
-		{0, params.BeaconConfig().SlotsPerEpoch},
-		{1000, params.BeaconConfig().SlotsPerEpoch},
-		{2 * validatorsPerEpoch, 2 * params.BeaconConfig().SlotsPerEpoch},
-		{5 * validatorsPerEpoch, 5 * params.BeaconConfig().SlotsPerEpoch},
-		{16 * validatorsPerEpoch, min},
-		{32 * validatorsPerEpoch, min},
-	}
-	for _, test := range tests {
-		ClearAllCaches()
-		validators := make([]*ethpb.Validator, test.validatorCount)
-		for i := 0; i < len(validators); i++ {
-			validators[i] = &ethpb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			}
-		}
-		state := &pb.BeaconState{Validators: validators}
-		delta, err := ShardDelta(state, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if test.shardDelta != delta {
-			t.Errorf("wanted: %d, got: %d",
-				test.shardDelta, delta)
-		}
-	}
-}
-
-func TestEpochStartShard_EpochOutOfBound(t *testing.T) {
-	_, err := StartShard(&pb.BeaconState{}, 2)
-	want := "epoch 2 can't be greater than 1"
-	if err.Error() != want {
-		t.Fatalf("Did not generate correct error. Want: %s, got: %s",
-			err.Error(), want)
-	}
-}
-
-func TestEpochStartShard_AccurateShard(t *testing.T) {
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	tests := []struct {
-		validatorCount uint64
-		startShard     uint64
-	}{
-		{0, 676},
-		{1000, 676},
-		{2 * validatorsPerEpoch, 228},
-		{5 * validatorsPerEpoch, 932},
-		{16 * validatorsPerEpoch, 212},
-		{32 * validatorsPerEpoch, 212},
-	}
-	for _, test := range tests {
-		ClearAllCaches()
-		validators := make([]*ethpb.Validator, test.validatorCount)
-		for i := 0; i < len(validators); i++ {
-			validators[i] = &ethpb.Validator{
-				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			}
-		}
-		state := &pb.BeaconState{Validators: validators, StartShard: 100, Slot: 500}
-		startShard, err := StartShard(state, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if test.startShard != startShard {
-			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
-		}
-	}
-}
-
-func TestEpochStartShard_MixedActivationValidators(t *testing.T) {
-	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
-	tests := []struct {
-		validatorCount uint64
-		startShard     uint64
-	}{
-		{0 * validatorsPerEpoch, 960},
-		{1 * validatorsPerEpoch, 960},
-		{2 * validatorsPerEpoch, 960},
-		{3 * validatorsPerEpoch, 960},
-		{4 * validatorsPerEpoch, 896},
-	}
-	for _, test := range tests {
-		ClearAllCaches()
-		vs := make([]*ethpb.Validator, test.validatorCount)
-		// Build validator list with the following ratio:
-		// 10% activated in epoch 0
-		// 20% activated in epoch 1
-		// 40% activated in epoch 2
-		// 30% activated in epoch 3
-		// The validator set is broken up in buckets like this such that the
-		// shard delta between epochs will be different and we can test the
-		// inner logic of determining the start shard.
-		for i := uint64(1); i <= test.validatorCount; i++ {
-			// Determine activation bucket
-			bkt := i % 10
-			activationEpoch := uint64(0) // zeroth epoch 10%
-			if bkt > 2 && bkt <= 4 {     // first epoch 20%
-				activationEpoch = 1
-			} else if bkt > 4 && bkt <= 7 { // second epoch 40%
-				activationEpoch = 2
-			} else { // Remaining 30% in the third epoch.
-				activationEpoch = 3
-			}
-
-			vs[i-1] = &ethpb.Validator{
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				ActivationEpoch: activationEpoch,
-			}
-		}
-		s := &pb.BeaconState{
-			Validators: vs,
-			Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
-		}
-		startShard, err := StartShard(s, 2 /*epoch*/)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if test.startShard != startShard {
-			t.Errorf("wanted: %d, got: %d", test.startShard, startShard)
-		}
-
-	}
-}
-
 func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -619,9 +386,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x05},
 				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 5,
-					},
+					Index: 5,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -633,9 +398,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 10,
-					},
+					Index: 10,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -646,9 +409,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 20,
-					},
+					Index: 20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -659,9 +420,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 20,
-					},
+					Index: 20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -674,9 +433,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 5,
-					},
+					Index: 5,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -688,9 +445,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard: 20,
-					},
+					Index: 20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -718,33 +473,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			t.Errorf("%d Failed to verify bitfield: %v", i, err)
 			continue
 		}
-	}
-}
-
-func TestCompactCommitteesRoot_OK(t *testing.T) {
-	ClearAllCaches()
-	// Create 10 committees
-	committeeCount := uint64(10)
-	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*ethpb.Validator, validatorCount)
-	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-		activeRoots[i] = []byte{'A'}
-	}
-
-	state := &pb.BeaconState{
-		Slot:             196,
-		Validators:       validators,
-		ActiveIndexRoots: activeRoots,
-		RandaoMixes:      activeRoots,
-	}
-
-	_, err := CompactCommitteesRoot(state, 1)
-	if err != nil {
-		t.Fatalf("Could not get compact root %v", err)
 	}
 }
 
@@ -821,8 +549,8 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		t.Error("Did not save correct epoch lengths")
 	}
 	epoch := uint64(1)
-	shard := uint64(512)
-	indices, err = committeeCache.ShuffledIndices(epoch, shard)
+	idx := uint64(512)
+	indices, err = committeeCache.ShuffledIndices(epoch, idx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -904,20 +632,20 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	shard := uint64(3)
-	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	index := uint64(3)
+	_, err = ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 	if err != nil {
 		panic(err)
 	}
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		_, err := ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			panic(err)
 		}
@@ -943,20 +671,20 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	shard := uint64(3)
-	_, err = ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+	index := uint64(3)
+	_, err = ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 	if err != nil {
 		panic(err)
 	}
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		_, err := ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			panic(err)
 		}
@@ -982,22 +710,22 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	i := uint64(0)
-	shard := uint64(0)
+	index := uint64(0)
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		i++
-		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		_, err := ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			panic(err)
 		}
 		if i < params.BeaconConfig().TargetCommitteeSize {
-			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
 	}
@@ -1022,22 +750,22 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	i := uint64(0)
-	shard := uint64(0)
+	index := uint64(0)
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		i++
-		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		_, err := ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			panic(err)
 		}
 		if i < params.BeaconConfig().TargetCommitteeSize {
-			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
 	}
@@ -1062,22 +790,22 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainAttestation)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	i := uint64(0)
-	shard := uint64(0)
+	index := uint64(0)
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		i++
-		_, err := ComputeCommittee(indices, seed, shard, params.BeaconConfig().ShardCount)
+		_, err := ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			panic(err)
 		}
 		if i < params.BeaconConfig().TargetCommitteeSize {
-			shard = (shard + 1) % params.BeaconConfig().ShardCount
+			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
 	}
