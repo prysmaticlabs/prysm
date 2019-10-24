@@ -384,7 +384,7 @@ func (s *Store) rmStatesBySlots(ctx context.Context, startSlot uint64, endSlot u
 
 	// Do not remove genesis state and epoch boundary state.
 	if startSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		startSlot += 1
+		startSlot++
 	}
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
