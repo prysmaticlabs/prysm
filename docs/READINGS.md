@@ -15,7 +15,7 @@ This document serves as an outline of the required readings to catch up with and
 
 **Ethereum**
 
--   [What is Ethereum?](http://ethdocs.org/en/latest/introduction/what-is-ethereum.html)
+-   [What is Ethereum?](https://www.ethereum.org/beginners/)
 -   [How Does Ethereum Work Anyway?](https://medium.com/@preethikasireddy/how-does-ethereum-work-anyway-22d1df506369)
 -   [Ethereum Introduction](https://github.com/ethereum/wiki/wiki/Ethereum-introduction)
 -   [Ethereum Frequently Asked Questions](https://github.com/ethereum/wiki/wiki/FAQs)
