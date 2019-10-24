@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -26,7 +28,11 @@ type Exporter struct {
 }
 
 func Wrap(db iface.Database) (iface.Database, error) {
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost:9092"})
+	if  featureconfig.Get().KafkaBootstrapServers == "" {
+		return db, nil
+	}
+
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": featureconfig.Get().KafkaBootstrapServers})
 	if err != nil {
 		return nil, err
 	}
@@ -35,13 +41,11 @@ func Wrap(db iface.Database) (iface.Database, error) {
 }
 
 func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) error {
-	ctx, span := trace.StartSpan(ctx, "dbexporter.publish")
+	ctx, span := trace.StartSpan(ctx, "kafka.publish")
 	defer span.End()
 
-	// TODO: Marshal to JSON(?).
-
-	b, err := proto.Marshal(msg)
-	if err != nil {
+	buf := bytes.NewBuffer(nil)
+	if err := marshaler.Marshal(buf, msg); err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -56,7 +60,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		TopicPartition: kafka.TopicPartition{
 			Topic: &topic,
 		},
-		Value: b,
+		Value: buf.Bytes(),
 		Key:   key[:],
 	}, nil); err != nil {
 		traceutil.AnnotateError(span, err)

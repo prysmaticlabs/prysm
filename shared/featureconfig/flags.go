@@ -57,6 +57,10 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
+	kafkaBootstrapServersFlag = cli.StringFlag{
+		Name: "kafka",
+		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -75,6 +79,7 @@ var BeaconChainFlags = []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
+	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 }

@@ -13,6 +13,7 @@ go_library(
         "//beacon-chain/db/iface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_golang_protobuf//jsonpb:go_default_library_gen",

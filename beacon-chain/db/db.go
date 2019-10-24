@@ -1,9 +1,9 @@
 package db
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kafka"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 )
 
 // Database defines the necessary methods for Prysm's eth2 backend which may
@@ -17,6 +17,5 @@ func NewDB(dirPath string) (Database, error) {
 		return nil, err
 	}
 
-	// TODO: if exporter is enabled, wrap! Add flag.
 	return kafka.Wrap(db)
 }
