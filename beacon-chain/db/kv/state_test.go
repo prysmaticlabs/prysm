@@ -176,15 +176,9 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 	if err := db.SaveState(ctx, genesisState, genesisBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.DeleteState(ctx, genesisBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	s, err := db.State(ctx, genesisBlockRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(s, genesisState) {
-		t.Error("Did not receive wanted genesis state")
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, genesisBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
 	}
 }
 
@@ -202,14 +196,8 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.DeleteState(ctx, finalizedBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	s, err := db.State(ctx, finalizedBlockRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(s, finalizedState) {
-		t.Error("Did not receive wanted finalized state")
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, finalizedBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
 	}
 }
