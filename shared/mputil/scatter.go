@@ -62,7 +62,7 @@ func calculateChunkSize(items int) int {
 	// Start with a simple even split
 	chunkSize := items / runtime.GOMAXPROCS(0)
 
-	// Add 1 if we have leftovers (or if we have fewer items than processors)
+	// Add 1 if we have leftovers (or if we have fewer items than processors).
 	if chunkSize == 0 || items%chunkSize != 0 {
 		chunkSize++
 	}
