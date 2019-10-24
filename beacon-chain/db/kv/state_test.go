@@ -188,12 +188,12 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	ctx := context.Background()
 
 	finalizedBlockRoot := [32]byte{'A'}
-	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
-	if err := db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint); err != nil {
-		t.Fatal(err)
-	}
 	finalizedState := &pb.BeaconState{Slot: 100}
 	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
+	if err := db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint); err != nil {
 		t.Fatal(err)
 	}
 	wantedErr := "could not delete genesis or finalized state"
