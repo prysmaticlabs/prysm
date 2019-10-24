@@ -58,7 +58,7 @@ var (
 		Usage: "Process epoch with optimizations",
 	}
 	kafkaBootstrapServersFlag = cli.StringFlag{
-		Name: "kafka",
+		Name: "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
 )
