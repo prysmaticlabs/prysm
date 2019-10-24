@@ -79,6 +79,9 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
+		// The corresponding state must exist or there is a risk that the beacondb enters a state
+		// where the finalized beaconState is missing. This would be a fatal condition requiring
+		// a new sync from genesis.
 		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
 			traceutil.AnnotateError(span, errMissingStateForFinalizedCheckpoint)
 			return errMissingStateForFinalizedCheckpoint
