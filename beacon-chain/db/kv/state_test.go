@@ -5,7 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestState_CanSaveRetrieve(t *testing.T) {
@@ -111,5 +113,91 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 
 	if savedGenesisS != nil {
 		t.Error("unsaved genesis state should've been nil")
+	}
+}
+
+func TestStore_StatesBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	numBlocks := 100
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	evenBlockRoots := make([][32]byte, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: []byte("parent"),
+		}
+		r, err := ssz.SigningRoot(totalBlocks[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := db.SaveState(context.Background(), &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+			t.Fatal(err)
+		}
+		blockRoots = append(blockRoots, r)
+		if i%2 == 0 {
+			evenBlockRoots = append(evenBlockRoots, r)
+		}
+	}
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
+		t.Fatal(err)
+	}
+	// We delete all even indexed states.
+	if err := db.DeleteStates(ctx, evenBlockRoots); err != nil {
+		t.Fatal(err)
+	}
+	// When we retrieve the data, only the odd indexed state should remain.
+	for _, r := range blockRoots {
+		s, err := db.State(context.Background(), r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s == nil {
+			continue
+		}
+		if s.Slot%2 == 0 {
+			t.Errorf("State with slot %d should have been deleted", s.Slot)
+		}
+	}
+}
+
+func TestStore_DeleteGenesisState(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisBlockRoot := [32]byte{'A'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	genesisState := &pb.BeaconState{Slot: 100}
+	if err := db.SaveState(ctx, genesisState, genesisBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, genesisBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
+	}
+}
+
+func TestStore_DeleteFinalizedState(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	finalizedBlockRoot := [32]byte{'A'}
+	finalizedState := &pb.BeaconState{Slot: 100}
+	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
+	if err := db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint); err != nil {
+		t.Fatal(err)
+	}
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, finalizedBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
 	}
 }

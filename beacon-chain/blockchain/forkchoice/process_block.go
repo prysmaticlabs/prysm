@@ -11,11 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -99,10 +101,18 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
-		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
+
+		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
+		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		}
+
+		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 
 	// Update validator indices in database as needed.
@@ -175,6 +185,13 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
+		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
+		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		}
+
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
@@ -358,4 +375,31 @@ func (s *Store) clearSeenAtts() {
 	s.seenAttsLock.Lock()
 	s.seenAttsLock.Unlock()
 	s.seenAtts = make(map[[32]byte]bool)
+}
+
+// rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.
+func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, endSlot uint64) error {
+	if !featureconfig.Get().PruneFinalizedStates {
+		return nil
+	}
+
+	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
+	defer span.End()
+
+	// Do not remove genesis state or finalized state at epoch boundary.
+	if startSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		startSlot++
+	}
+
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	roots, err := s.db.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.DeleteStates(ctx, roots); err != nil {
+		return err
+	}
+
+	return nil
 }
