@@ -242,6 +242,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
 	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
