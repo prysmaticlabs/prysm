@@ -32,6 +32,7 @@ type Flag struct {
 	SkipBLSVerify            bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
 	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
+	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
 
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -102,6 +103,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(OptimizeProcessEpoch.Name) {
 		log.Warn("Processing epoch with optimizations")
 		cfg.OptimizeProcessEpoch = true
+	}
+	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
+		log.Warn("Enabled pruning old finalized states from database.")
+		cfg.PruneFinalizedStates = true
 	}
 	Init(cfg)
 }

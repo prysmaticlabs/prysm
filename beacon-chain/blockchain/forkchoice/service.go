@@ -222,22 +222,22 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 		// if a block has one child, then we don't have to lookup anything to
 		// know that this child will be the best child.
-		head = children[0]
+		head = children[0][:]
 		if len(children) > 1 {
 			highest, err := s.latestAttestingBalance(ctx, head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get latest balance")
 			}
 			for _, child := range children[1:] {
-				balance, err := s.latestAttestingBalance(ctx, child)
+				balance, err := s.latestAttestingBalance(ctx, child[:])
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
 				// When there's a tie, it's broken lexicographically to favor the higher one.
 				if balance > highest ||
-					balance == highest && bytes.Compare(child, head) > 0 {
+					balance == highest && bytes.Compare(child[:], head) > 0 {
 					highest = balance
-					head = child
+					head = child[:]
 				}
 			}
 		}

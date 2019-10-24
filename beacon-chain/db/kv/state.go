@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -104,8 +106,26 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
+
 	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(stateBucket)
+		bkt := tx.Bucket(blocksBucket)
+		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+
+		bkt = tx.Bucket(checkpointBucket)
+		enc := bkt.Get(finalizedCheckpointKey)
+		checkpoint := &ethpb.Checkpoint{}
+		if enc == nil {
+			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else {
+			proto.Unmarshal(enc, checkpoint)
+		}
+
+		// Safe guard against deleting genesis or finalized state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
+			return errors.New("could not delete genesis or finalized state")
+		}
+
+		bkt = tx.Bucket(stateBucket)
 		return bkt.Delete(blockRoot[:])
 	})
 }
