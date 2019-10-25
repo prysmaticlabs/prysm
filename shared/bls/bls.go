@@ -225,11 +225,11 @@ func NewAggregatePubkey() *PublicKey {
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
-	if featureconfig.Get().SkipBLSVerify {
-		return sigs[0]
-	}
 	if len(sigs) == 0 {
 		return nil
+	}
+	if featureconfig.Get().SkipBLSVerify {
+		return sigs[0]
 	}
 	marshalled := sigs[0].s.Serialize()
 	signature := &bls12.Sign{}
