@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	bls12 "github.com/kilic/bls12-381"
+	bls2 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,8 +42,8 @@ func TestMsgHashUncompressed(t *testing.T) {
 				bytesutil.ToBytes32(msgBytes),
 				bytesutil.ToBytes8(domain),
 			)
-			g2Point := bls12.NewG2(nil).MapToPoint(hash)
-			uncompressed := bls12.NewG2(nil).ToUncompressed(g2Point)
+			sig := bls2.HashAndMapToSignature(hash)
+			uncompressed := sig.Serialize()
 
 			var buf []byte
 			for _, outputStrings := range test.Output {
