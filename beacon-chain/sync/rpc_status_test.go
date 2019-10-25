@@ -169,6 +169,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		chain: &mock.ChainService{
 			State:               &pb.BeaconState{Slot: 5},
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
 		},
 		ctx: context.Background(),
 	}
@@ -254,6 +258,10 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 			State:               genesisState,
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
 		},
 		ctx: context.Background(),
 	}
@@ -322,6 +330,10 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			State:               genesisState,
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
 		},
 		ctx: context.Background(),
 	}
