@@ -88,10 +88,9 @@ func IncreaseFailureCount(pid peer.ID) {
 	defer lock.Unlock()
 	count, ok := failureCount[pid]
 	if !ok {
-		return
+		failureCount[pid] = 1
 	}
-	count++
-	failureCount[pid] = count
+	failureCount[pid] = count + 1
 }
 
 // FailureCount returns the failure count for the particular peer.
