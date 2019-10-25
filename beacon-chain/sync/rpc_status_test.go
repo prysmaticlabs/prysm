@@ -112,6 +112,10 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			State:               genesisState,
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
 		},
 	}
 
