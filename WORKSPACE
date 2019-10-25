@@ -174,9 +174,9 @@ http_archive(
 
 http_archive(
     name = "herumi_bls",
-    #sha256 = "01158a9e6058e73bd4e833a1594aff088fd7db53b45cd823fe6aa32b2abf356a",
-    strip_prefix = "bls-go-binary-ee321976c6074aab32677c36df4cd8a0d1e861fc",
-    url = "https://github.com/nisdas/bls-go-binary/archive/ee321976c6074aab32677c36df4cd8a0d1e861fc.zip",
+    sha256 = "b3b814d68c0351886868f3bd582152499b15ed402fb7b99c9b87d52b4872758a",
+    strip_prefix = "bls-go-binary-7599b0f6e5156498adb2fb83481955fe20a017af",
+    url = "https://github.com/nisdas/bls-go-binary/archive/7599b0f6e5156498adb2fb83481955fe20a017af.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1244,13 +1244,6 @@ go_repository(
     importpath = "github.com/mdlayher/prombolt",
     sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
     version = "v0.0.0-20161005185022-dfcf01d20ee9",
-)
-
-go_repository(
-    name = "com_github_kilic_bls12-381",
-    importpath = "github.com/kilic/bls12-381",
-    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
-    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
