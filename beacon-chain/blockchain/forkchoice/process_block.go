@@ -106,8 +106,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		finalizedSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch)
 		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, finalizedSlot, endSlot); err != nil {
 			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
 		}
@@ -186,8 +187,9 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 		startSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch + 1)
+		finalizedSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch)
 		endSlot := helpers.StartSlot(postState.FinalizedCheckpoint.Epoch+1) - 1 // Inclusive
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, finalizedSlot, endSlot); err != nil {
 			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
 		}
@@ -378,7 +380,7 @@ func (s *Store) clearSeenAtts() {
 }
 
 // rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.
-func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, endSlot uint64) error {
+func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, finalizedSlot uint64, endSlot uint64) error {
 	if !featureconfig.Get().PruneFinalizedStates {
 		return nil
 	}
@@ -386,16 +388,25 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	// Do not remove genesis state or finalized state at epoch boundary.
-	if startSlot%params.BeaconConfig().SlotsPerEpoch == 0 {
+	roots := make([][32]byte, 0, endSlot-startSlot)
+	var err error
+	// Do not remove genesis state
+	if startSlot == 0 {
 		startSlot++
 	}
 
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	roots, err := s.db.BlockRoots(ctx, filter)
+	// Do not remove finalized state that's in the middle of slot ranges.
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(finalizedSlot - 1)
+	r1, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {
 		return err
 	}
+	filter = filters.NewFilter().SetStartSlot(finalizedSlot + 1).SetEndSlot(endSlot)
+	r2, err := s.db.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+	roots = append(r1, r2...)
 
 	if err := s.db.DeleteStates(ctx, roots); err != nil {
 		return err
