@@ -89,6 +89,7 @@ func IncreaseFailureCount(pid peer.ID) {
 	count, ok := failureCount[pid]
 	if !ok {
 		failureCount[pid] = 1
+		return
 	}
 	failureCount[pid] = count + 1
 }
