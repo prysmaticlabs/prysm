@@ -43,9 +43,8 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 			}
 		}
 		return privKeys, pubKeys, nil
-	} else {
-		return deterministicallyGenerateKeys(startIndex, numKeys)
 	}
+	return deterministicallyGenerateKeys(startIndex, numKeys)
 }
 
 func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {

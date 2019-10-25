@@ -78,9 +78,8 @@ func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trie
 			}
 		}
 		return deposits, nil
-	} else {
-		return generateDepositsFromData(depositDataItems, 0, trie)
 	}
+	return generateDepositsFromData(depositDataItems, 0, trie)
 }
 
 // generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
@@ -124,9 +123,8 @@ func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([
 			}
 		}
 		return depositDataItems, depositDataRoots, nil
-	} else {
-		return depositDataFromKeys(privKeys, pubKeys)
 	}
+	return depositDataFromKeys(privKeys, pubKeys)
 }
 
 func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
