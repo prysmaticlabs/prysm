@@ -58,7 +58,7 @@ var (
 		Usage: "Process epoch with optimizations",
 	}
 	pruneFinalizedStatesFlag = cli.BoolFlag{
-		Name: "prune-finalized-states",
+		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
 )
