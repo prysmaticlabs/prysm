@@ -2,12 +2,16 @@ package kv
 
 import (
 	"context"
+	"errors"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
+
+var errMissingStateForFinalizedCheckpoint = errors.New("no state exists with checkpoint root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
@@ -75,6 +79,13 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
+		// The corresponding state must exist or there is a risk that the beacondb enters a state
+		// where the finalized beaconState is missing. This would be a fatal condition requiring
+		// a new sync from genesis.
+		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
+			traceutil.AnnotateError(span, errMissingStateForFinalizedCheckpoint)
+			return errMissingStateForFinalizedCheckpoint
+		}
 		return bucket.Put(finalizedCheckpointKey, enc)
 	})
 }
