@@ -44,7 +44,6 @@ func Set(pid peer.ID, status *pb.Status) {
 		status:      status,
 		lastUpdated: roughtime.Now(),
 	}
-	failureCount[pid] = 0
 }
 
 // Delete peer status from cache. Threadsafe.
