@@ -9,6 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -61,17 +62,25 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
-	deposits := make([]*ethpb.Deposit, len(depositDataItems))
-	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate deposits from data")
+	if c := featureconfig.Get(); c.Scatter {
+		deposits := make([]*ethpb.Deposit, len(depositDataItems))
+		results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+			return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to generate deposits from data")
+		}
+		for _, result := range results {
+			if depositExtent, ok := result.Extent.([]*ethpb.Deposit); ok {
+				copy(deposits[result.Offset:], depositExtent)
+			} else {
+				return nil, errors.New("extent not of expected type")
+			}
+		}
+		return deposits, nil
+	} else {
+		return generateDepositsFromData(depositDataItems, 0, trie)
 	}
-	for _, result := range results {
-		copy(deposits[result.Offset:], result.Extent.([]*ethpb.Deposit))
-	}
-	return deposits, nil
 }
 
 // generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
@@ -92,25 +101,32 @@ func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int
 
 // DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
 func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
-	type depositData struct {
-		items []*ethpb.Deposit_Data
-		roots [][]byte
+	if c := featureconfig.Get(); c.Scatter {
+		type depositData struct {
+			items []*ethpb.Deposit_Data
+			roots [][]byte
+		}
+		depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+		depositDataRoots := make([][]byte, len(privKeys))
+		results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+			items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
+			return &depositData{items: items, roots: roots}, err
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
+		}
+		for _, result := range results {
+			if depositDataExtent, ok := result.Extent.(*depositData); ok {
+				copy(depositDataItems[result.Offset:], depositDataExtent.items)
+				copy(depositDataRoots[result.Offset:], depositDataExtent.roots)
+			} else {
+				return nil, nil, errors.New("extent not of expected type")
+			}
+		}
+		return depositDataItems, depositDataRoots, nil
+	} else {
+		return depositDataFromKeys(privKeys, pubKeys)
 	}
-	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
-	depositDataRoots := make([][]byte, len(privKeys))
-	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
-		return &depositData{items: items, roots: roots}, err
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
-	}
-	for _, result := range results {
-		copy(depositDataItems[result.Offset:], result.Extent.(*depositData).items)
-		copy(depositDataRoots[result.Offset:], result.Extent.(*depositData).roots)
-	}
-
-	return depositDataItems, depositDataRoots, nil
 }
 
 func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
