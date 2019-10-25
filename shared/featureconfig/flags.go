@@ -57,8 +57,13 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
+	// Scatter scatters sequential processes to  multiple cores
+	Scatter = cli.BoolFlag{
+		Name:  "scatter",
+		Usage: "Scatter sequential processes to multiple cores",
+	}
 	pruneFinalizedStatesFlag = cli.BoolFlag{
-		Name: "prune-finalized-states",
+		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
 )
@@ -79,6 +84,7 @@ var BeaconChainFlags = []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
+	Scatter,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
