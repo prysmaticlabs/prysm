@@ -41,5 +41,7 @@ go_test(
     ],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "@herumi_bls//bls:go_default_library",
     ],
 )

@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	bls2 "github.com/herumi/bls-go-binary/bls"
+	bls2 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
