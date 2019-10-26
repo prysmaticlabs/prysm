@@ -317,7 +317,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	finalizedEpoch := uint64(1)
 	finalizedSlot := finalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	endSlot := helpers.StartSlot(finalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesOlderThanLastFinalized(ctx, 0, finalizedSlot, endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, 0, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -335,7 +335,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	newFinalizedEpoch := uint64(5)
 	newFinalizedSlot := newFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	endSlot = helpers.StartSlot(newFinalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesOlderThanLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1), newFinalizedSlot, endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1)-1, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -347,14 +347,5 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
-	}
-
-	// Verify finalized state did not get deleted
-	s, err := store.db.State(ctx, blockRoots[newFinalizedSlot])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s == nil {
-		t.Error("Finalized state got deleted")
 	}
 }
