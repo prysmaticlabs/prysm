@@ -31,17 +31,18 @@ type ForkChoicer interface {
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	db                  db.Database
-	justifiedCheckpt    *ethpb.Checkpoint
-	finalizedCheckpt    *ethpb.Checkpoint
-	checkpointState     *cache.CheckpointStateCache
-	checkpointStateLock sync.Mutex
-	attsQueue           map[[32]byte]*ethpb.Attestation
-	attsQueueLock       sync.Mutex
-	seenAtts            map[[32]byte]bool
-	seenAttsLock        sync.Mutex
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	db                   db.Database
+	justifiedCheckpt     *ethpb.Checkpoint
+	finalizedCheckpt     *ethpb.Checkpoint
+	prevFinalizedCheckpt *ethpb.Checkpoint
+	checkpointState      *cache.CheckpointStateCache
+	checkpointStateLock  sync.Mutex
+	attsQueue            map[[32]byte]*ethpb.Attestation
+	attsQueueLock        sync.Mutex
+	seenAtts             map[[32]byte]bool
+	seenAttsLock         sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -82,6 +83,7 @@ func (s *Store) GenesisStore(
 
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
 	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if err != nil {
