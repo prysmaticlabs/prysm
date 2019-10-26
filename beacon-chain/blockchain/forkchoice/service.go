@@ -36,7 +36,7 @@ type Store struct {
 	db                   db.Database
 	justifiedCheckpt     *ethpb.Checkpoint
 	finalizedCheckpt     *ethpb.Checkpoint
-	lastFinalizedCheckpt *ethpb.Checkpoint
+	prevFinalizedCheckpt *ethpb.Checkpoint
 	checkpointState      *cache.CheckpointStateCache
 	checkpointStateLock  sync.Mutex
 	attsQueue            map[[32]byte]*ethpb.Attestation
@@ -83,7 +83,7 @@ func (s *Store) GenesisStore(
 
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-	s.lastFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
 	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if err != nil {

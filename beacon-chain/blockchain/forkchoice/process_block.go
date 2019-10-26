@@ -105,14 +105,14 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.lastFinalizedCheckpt.Epoch) + 1
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
 			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
 		}
 
-		s.lastFinalizedCheckpt = s.finalizedCheckpt
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 
@@ -187,7 +187,7 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 
-		startSlot := helpers.StartSlot(s.lastFinalizedCheckpt.Epoch) + 1
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
 			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
@@ -198,7 +198,7 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		s.lastFinalizedCheckpt = s.finalizedCheckpt
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 
