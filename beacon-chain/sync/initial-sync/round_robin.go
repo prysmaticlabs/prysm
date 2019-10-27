@@ -286,7 +286,7 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 		}
 	}
 
-	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], []peer.ID{pids[0]}
+	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
 }
 
 // bestPeer returns the peer ID of the peer reporting the highest head slot.
