@@ -134,7 +134,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Slot:             params.BeaconConfig().SlotsPerEpoch,
 		Validators:       validators,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -244,39 +244,39 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 
 	tests := []struct {
-		index      uint64
-		slot       uint64
-		committee  []uint64
-		committeeIndex      uint64
-		isProposer bool
+		index          uint64
+		slot           uint64
+		committee      []uint64
+		committeeIndex uint64
+		isProposer     bool
 	}{
 		{
-			index:      0,
-			slot:       146,
-			committee:  []uint64{0, 3},
-			committeeIndex:      82,
-			isProposer: true,
+			index:          0,
+			slot:           146,
+			committee:      []uint64{0, 3},
+			committeeIndex: 82,
+			isProposer:     true,
 		},
 		{
-			index:      105,
-			slot:       160,
-			committee:  []uint64{105, 20},
-			committeeIndex:      32,
-			isProposer: true,
+			index:          105,
+			slot:           160,
+			committee:      []uint64{105, 20},
+			committeeIndex: 32,
+			isProposer:     true,
 		},
 		{
-			index:      0,
-			slot:       146,
-			committee:  []uint64{0, 3},
-			committeeIndex:      18,
-			isProposer: true,
+			index:          0,
+			slot:           146,
+			committee:      []uint64{0, 3},
+			committeeIndex: 18,
+			isProposer:     true,
 		},
 		{
-			index:      11,
-			slot:       135,
-			committee:  []uint64{119, 11},
-			committeeIndex:      7,
-			isProposer: false,
+			index:          11,
+			slot:           135,
+			committee:      []uint64{119, 11},
+			committeeIndex: 7,
+			isProposer:     false,
 		},
 	}
 
@@ -383,7 +383,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x05},
 				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
-					Index: 5,
+					Index:  5,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -395,7 +395,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index: 10,
+					Index:  10,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -406,7 +406,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index: 20,
+					Index:  20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -417,7 +417,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
-					Index: 20,
+					Index:  20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -430,7 +430,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
-					Index: 5,
+					Index:  5,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
@@ -442,7 +442,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
-					Index: 20,
+					Index:  20,
 					Target: &ethpb.Checkpoint{},
 				},
 			},
