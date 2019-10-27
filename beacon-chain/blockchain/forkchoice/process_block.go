@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -223,6 +224,9 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.getBlockPreState")
+	defer span.End()
+
 	// Verify incoming block has a valid pre state.
 	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
@@ -313,6 +317,9 @@ func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*p
 // verifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
 func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.verifyBlkDescendant")
+	defer span.End()
+
 	finalizedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	if err != nil || finalizedBlk == nil {
 		return errors.Wrap(err, "could not get finalized block")
@@ -323,7 +330,10 @@ func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uin
 		return errors.Wrap(err, "could not get finalized block root")
 	}
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
-		return fmt.Errorf("block from slot %d is not a descendent of the current finalized block", slot)
+		err := fmt.Errorf("block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
+			slot, finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot), bytesutil.Trunc(s.finalizedCheckpt.Root))
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 	return nil
 }
