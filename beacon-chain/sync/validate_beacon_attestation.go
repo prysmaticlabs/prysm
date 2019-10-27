@@ -11,7 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
+
+var errPointsToBlockNotInDatabase = errors.New("attestation points to a block which is not in the database")
 
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
@@ -21,6 +25,9 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	if r.initialSync.Syncing() {
 		return false, nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconAttestation")
+	defer span.End()
 
 	// TODO(1332): Add blocks.VerifyAttestation before processing further.
 	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
@@ -32,12 +39,18 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		return false, errors.Wrap(err, "could not hash attestation")
 	}
 
+	span.AddAttributes(
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", att.Data.BeaconBlockRoot)),
+		trace.StringAttribute("attRoot", fmt.Sprintf("%#x", attRoot)),
+	)
+
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
 		log.WithField(
 			"blockRoot",
 			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
-		).Debug("Ignored incoming attestation that points to a block which is not in the database")
+		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
+		traceutil.AnnotateError(span, err)
 		return false, nil
 	}
 
@@ -53,6 +66,7 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 
 	if err := p.Broadcast(ctx, msg); err != nil {
 		log.WithError(err).Error("Failed to broadcast message")
+		traceutil.AnnotateError(span, err)
 	}
 	return true, nil
 }
