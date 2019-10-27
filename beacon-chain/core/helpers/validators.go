@@ -176,11 +176,12 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
+
 	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot)...)
 	seedWithSlotHash := hashutil.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(state, e)
-	if ErrInvalidStateLatestActiveIndexRoots != nil {
+	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 

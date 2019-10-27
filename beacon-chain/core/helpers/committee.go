@@ -110,14 +110,14 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 //    end = (len(indices) * (index + 1)) // count
 //    return [indices[compute_shuffled_index(ValidatorIndex(i), len(indices), seed)] for i in range(start, end)
 func ComputeCommittee(
-	validatorIndices []uint64,
+	indices []uint64,
 	seed [32]byte,
 	index uint64,
-	totalCommittees uint64,
+	count uint64,
 ) ([]uint64, error) {
-	validatorCount := uint64(len(validatorIndices))
-	start := sliceutil.SplitOffset(validatorCount, totalCommittees, index)
-	end := sliceutil.SplitOffset(validatorCount, totalCommittees, index+1)
+	validatorCount := uint64(len(indices))
+	start := sliceutil.SplitOffset(validatorCount, count, index)
+	end := sliceutil.SplitOffset(validatorCount, count, index+1)
 
 	// Use cached shuffled indices list if we have seen the seed before.
 	cachedShuffledList, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
@@ -135,7 +135,7 @@ func ComputeCommittee(
 		if err != nil {
 			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
 		}
-		shuffledIndices[i-start] = validatorIndices[permutedIndex]
+		shuffledIndices[i-start] = indices[permutedIndex]
 	}
 	if err := shuffledIndicesCache.AddShuffledValidatorList(&cache.IndicesByIndexSeed{
 		Index:           index,
@@ -144,6 +144,7 @@ func ComputeCommittee(
 	}); err != nil {
 		return []uint64{}, errors.Wrap(err, "could not add shuffled indices list to cache")
 	}
+
 	return shuffledIndices, nil
 }
 
@@ -195,7 +196,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 //   def get_committee_assignment(state: BeaconState,
 //                             epoch: Epoch,
 //                             validator_index: ValidatorIndex
-//                             ) -> Optional[Tuple[Sequence[ValidatorIndex], uint64, Slot]]:
+//                             ) -> Optional[Tuple[Sequence[ValidatorIndex], CommitteeIndex, Slot]]:
 //    """
 //    Return the committee assignment in the ``epoch`` for ``validator_index``.
 //    ``assignment`` returned is a tuple of the following form:
@@ -207,48 +208,59 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 //    next_epoch = get_current_epoch(state) + 1
 //    assert epoch <= next_epoch
 //
-//    start_slot = compute_start_slot_of_epoch(epoch)
+//    start_slot = compute_start_slot_at_epoch(epoch)
 //    for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
-//        for index in range(COMMITTEES_PER_SLOT):
-//            committee = get_crosslink_committee(state, Slot(slot), index)
+//        for index in range(get_committee_count_at_slot(state, Slot(slot))):
+//            committee = get_beacon_committee(state, Slot(slot), CommitteeIndex(index))
 //            if validator_index in committee:
-//                return committee, index, Slot(slot)
+//                return committee, CommitteeIndex(index), Slot(slot)
 //    return None
 func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
-	validatorIndex uint64) ([]uint64, uint64, uint64, bool, error) {
+	validatorIndex uint64) ([]uint64, uint64, uint64, bool, uint64, error) {
 
 	if epoch > NextEpoch(state) {
-		return nil, 0, 0, false, fmt.Errorf(
+		return nil, 0, 0, false, 0, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
 	}
 
+	// Track which slot has which proposer
 	startSlot := StartSlot(epoch)
+	proposerIndexToSlot := make(map[uint64]uint64)
+	for slot := uint64(startSlot); slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		state.Slot = slot
+		i, err := BeaconProposerIndex(state)
+		if err != nil {
+			return nil, 0, 0, false, 0, fmt.Errorf(
+				"could not check proposer v: %v", err)
+		}
+		proposerIndexToSlot[i] = slot
+	}
+
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		for i := uint64(0); i < params.BeaconConfig().MaxCommitteesPerSlot; i++ {
+		countAtSlot, err := CommitteeCountAtSlot(state, slot)
+		if err != nil {
+			return nil, 0, 0, false, 0, fmt.Errorf(
+				"could not get committee count at slot: %v", err)
+		}
+		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
-				return nil, 0, 0, false, fmt.Errorf(
+				return nil, 0, 0, false, 0, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
 			}
-			for _, index := range committee {
-				if validatorIndex == index {
-					state.Slot = slot
-					proposerIndex, err := BeaconProposerIndex(state)
-					if err != nil {
-						return nil, 0, 0, false, fmt.Errorf(
-							"could not check proposer index: %v", err)
-					}
-					isProposer := proposerIndex == validatorIndex
-					return committee, index, slot, isProposer, nil
+			for i, v := range committee {
+				if validatorIndex == v {
+					proposerSlot, isProposer := proposerIndexToSlot[v]
+					return committee, uint64(i), slot, isProposer, proposerSlot, nil
 				}
 			}
 		}
 	}
 
-	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found in assignments")
+	return []uint64{}, 0, 0, false, 0, status.Error(codes.NotFound, "validator not found in assignments")
 }
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
@@ -307,10 +319,14 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		count, err := CommitteeCountAtSlot(state, state.Slot)
+		if err != nil {
+			return err
+		}
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
 			Epoch:          epoch,
 			Committee:      committees,
-			CommitteeCount: params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch,
+			CommitteeCount: count * params.BeaconConfig().SlotsPerEpoch,
 		}); err != nil {
 			return err
 		}

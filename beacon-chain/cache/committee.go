@@ -65,7 +65,7 @@ func NewCommitteeCache() *CommitteeCache {
 
 // ShuffledIndices fetches the shuffled indices by epoch and shard. Every list of indices
 // represent one committee. Returns true if the list exists with epoch and shard. Otherwise returns false, nil.
-func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, error) {
+func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -85,8 +85,7 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, 
 		return nil, ErrNotCommittee
 	}
 
-	start, end := startEndIndices(item, shard)
-
+	start, end := startEndIndices(item, index)
 	return item.Committee[start:end], nil
 }
 

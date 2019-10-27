@@ -249,41 +249,43 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		committee      []uint64
 		committeeIndex uint64
 		isProposer     bool
+		proposerSlot   uint64
 	}{
 		{
 			index:          0,
-			slot:           146,
-			committee:      []uint64{0, 3},
-			committeeIndex: 82,
-			isProposer:     true,
+			slot:           168,
+			committee:      []uint64{23, 0},
+			committeeIndex: 1,
+			isProposer:     false,
 		},
 		{
 			index:          105,
-			slot:           160,
-			committee:      []uint64{105, 20},
-			committeeIndex: 32,
-			isProposer:     true,
+			slot:           152,
+			committee:      []uint64{105, 31},
+			committeeIndex: 0,
+			isProposer:     false,
 		},
 		{
 			index:          0,
-			slot:           146,
-			committee:      []uint64{0, 3},
-			committeeIndex: 18,
-			isProposer:     true,
+			slot:           168,
+			committee:      []uint64{23, 0},
+			committeeIndex: 1,
+			isProposer:     false,
 		},
 		{
 			index:          11,
-			slot:           135,
-			committee:      []uint64{119, 11},
-			committeeIndex: 7,
-			isProposer:     false,
+			slot:           175,
+			committee:      []uint64{11, 114},
+			committeeIndex: 0,
+			isProposer:     true,
+			proposerSlot:   179,
 		},
 	}
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearAllCaches()
-			committee, committeeIndex, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			committee, committeeIndex, slot, isProposer, pSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 			}
@@ -299,6 +301,10 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
 					tt.isProposer, isProposer, tt.index)
 			}
+			if pSlot != tt.proposerSlot {
+				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
+					tt.proposerSlot, pSlot, tt.index)
+			}
 			if !reflect.DeepEqual(committee, tt.committee) {
 				t.Errorf("wanted committee %v, got committee %v for validator index %d",
 					tt.committee, committee, tt.index)
@@ -307,42 +313,22 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 }
 
-func TestCommitteeAssignment_EveryValidatorShouldPropose(t *testing.T) {
-	// Initialize 64 validators with 64 slots per epoch. Every validator
-	// in the epoch should be a proposer.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch)
+func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
+	validators := make([]*ethpb.Validator, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
+
 	state := &pb.BeaconState{
 		Validators:       validators,
 		Slot:             params.BeaconConfig().SlotsPerEpoch,
 		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-
-	ClearAllCaches()
-	for i := 0; i < len(validators); i++ {
-		_, _, _, isProposer, err := CommitteeAssignment(state, state.Slot/params.BeaconConfig().SlotsPerEpoch, uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !isProposer {
-			t.Errorf("validator %d should be a proposer", i)
-		}
-	}
-}
-
-func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:             params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
 	index := uint64(10000)
-	_, _, _, _, err := CommitteeAssignment(state, 1, index)
+	_, _, _, _, _, err := CommitteeAssignment(state, 1, index)
 	statusErr, ok := status.FromError(err)
 	if !ok {
 		t.Fatal(err)
@@ -546,7 +532,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		t.Error("Did not save correct epoch lengths")
 	}
 	epoch := uint64(1)
-	idx := uint64(512)
+	idx := uint64(1)
 	indices, err = committeeCache.ShuffledIndices(epoch, idx)
 	if err != nil {
 		t.Fatal(err)
