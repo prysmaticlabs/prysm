@@ -174,9 +174,9 @@ http_archive(
 
 http_archive(
     name = "herumi_bls",
-    sha256 = "b3b814d68c0351886868f3bd582152499b15ed402fb7b99c9b87d52b4872758a",
-    strip_prefix = "bls-go-binary-7599b0f6e5156498adb2fb83481955fe20a017af",
-    url = "https://github.com/nisdas/bls-go-binary/archive/7599b0f6e5156498adb2fb83481955fe20a017af.zip",
+    sha256 = "5e1c133ad8e7b0ed550dde889e2792f6a6052b58ae87422d6ec0a8fdc46fe5cb",
+    strip_prefix = "bls-go-binary-df019f83a282e3b8daf9a1df7e8333e147602e3e",
+    url = "https://github.com/nisdas/bls-go-binary/archive/df019f83a282e3b8daf9a1df7e8333e147602e3e.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
