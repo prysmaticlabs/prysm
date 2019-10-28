@@ -42,7 +42,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	var lastEmptyRequests int
 	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
-	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()) {
+	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1)-1 {
+		log.WithField("head status:", s.chain.HeadSlot()).Debugf("helpers.StartSlot(highestFinalizedEpoch()+1)-1: %v", helpers.StartSlot(highestFinalizedEpoch()+1)-1)
 		root, finalizedEpoch, peers := bestFinalized()
 		var blocks []*eth.BeaconBlock
 
@@ -67,24 +68,24 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				if ctx.Err() != nil {
 					return nil, ctx.Err()
 				}
-				stp := step * uint64(len(peers))
-				str := start + uint64(i)*step
-				cnt := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-str)/stp)
+				step := step * uint64(len(peers))
+				start := start + uint64(i)*step
+				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-str)/stp)
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
 				if i < remainder {
-					cnt++
+					count++
 				}
 				// asking for no blocks may cause the client to hang. This should never happen and
 				// the peer may return an error anyway, but we'll ask for at least one block.
-				if cnt == 0 {
+				if count == 0 {
 					break
 				}
 				req := &p2ppb.BeaconBlocksByRangeRequest{
 					HeadBlockRoot: root,
-					StartSlot:     str,
-					Count:         cnt,
-					Step:          stp,
+					StartSlot:     start,
+					Count:         count,
+					Step:          step,
 				}
 
 				// Fulfill requests asynchronously, in parallel, and wait for results from all.
@@ -107,7 +108,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
 							return
 						}
-						_, err = request(str, stp, cnt/uint64(len(ps)) /*count*/, ps, int(cnt)%len(ps) /*remainder*/)
+						_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
 						if err != nil {
 							errChan <- err
 							return
@@ -132,7 +133,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-
 		blocks, err := request(
 			s.chain.HeadSlot()+1, // start
 			1,                    // step
