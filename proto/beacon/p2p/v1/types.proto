@@ -30,8 +30,6 @@ message BeaconState {
   // Shuffling [5001-6000]
   uint64 start_shard = 5001;
   repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
@@ -93,11 +91,4 @@ message AttestationDataAndCustodyBit {
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
-}
-
-message CompactCommittee {
-  // The list of the validator public keys in the committee.
-  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\" ssz-max:\"4096\""];
-  // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
 }
