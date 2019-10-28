@@ -3,7 +3,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -42,7 +41,6 @@ func init() {
 type Service struct {
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
-	cancel          context.CancelFunc
 	port            string
 	withCert        string
 	withKey         string
@@ -165,7 +163,9 @@ func (s *Service) startSlasher() {
 // Stop the service.
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
-	s.cancel()
+	if s.slasherDb != nil {
+		s.slasherDb.Close()
+	}
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
