@@ -43,8 +43,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
-		log.WithField("head status:", s.chain.HeadSlot()).Debugf("helpers.StartSlot(highestFinalizedEpoch()+1)-1: %v", helpers.StartSlot(highestFinalizedEpoch()+1)-1)
-		root, finalizedEpoch, peers := bestFinalized()
+		log.WithField("head status:", s.chain.HeadSlot()).Debugf("helpers.StartSlot(highestFinalizedEpoch()+1): %v", helpers.StartSlot(highestFinalizedEpoch()+1))
+		root, _, peers := bestFinalized()
 		var blocks []*eth.BeaconBlock
 
 		// request a range of blocks to be requested from multiple peers.
@@ -62,20 +62,21 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			var wg sync.WaitGroup
 
 			// Handle block large block ranges of skipped slots.
-			start += count * uint64(lastEmptyRequests*len(peers))
+			start += count * uint64(lastEmptyRequests/len(peers))
 
 			for i, pid := range peers {
 				if ctx.Err() != nil {
 					return nil, ctx.Err()
 				}
-				step := step * uint64(len(peers))
 				start := start + uint64(i)*step
-				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
+				step := step * uint64(len(peers))
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
+				count := count
 				if i < remainder {
 					count++
 				}
+				//count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
 				// asking for no blocks may cause the client to hang. This should never happen and
 				// the peer may return an error anyway, we will break if count is 0 after reminder
 				// modification.
@@ -134,18 +135,18 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-		var count uint64
-		if helpers.StartSlot(highestFinalizedEpoch()+1)-s.chain.HeadSlot()+1 < blockBatchSize {
-			count = helpers.StartSlot(highestFinalizedEpoch()+1) - s.chain.HeadSlot() + 1
-		} else {
-			count = blockBatchSize
+		count := uint64(blockBatchSize)
+		remainder := 0
+		if s.chain.HeadSlot()+1+blockBatchSize*uint64(len(peers)) > helpers.StartSlot(highestFinalizedEpoch()+1) {
+			count = (helpers.StartSlot(highestFinalizedEpoch()+1) - s.chain.HeadSlot() + 1) / uint64(len(peers))
+			remainder = int((helpers.StartSlot(highestFinalizedEpoch()+1) - s.chain.HeadSlot() + 1) % uint64(len(peers)))
 		}
 		blocks, err := request(
 			s.chain.HeadSlot()+1, // start
 			1,                    // step
 			count,                // count
 			peers,                // peers
-			0,                    // remainder
+			remainder,            // remainder
 		)
 		if err != nil {
 			return err
@@ -177,6 +178,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		} else {
 			lastEmptyRequests = 0
 		}
+		// stop requesting blocks if start becoming bigger then last slot
+		lastSlot := helpers.StartSlot(highestFinalizedEpoch() + 1)
+		if s.chain.HeadSlot()+1+blockBatchSize*uint64(lastEmptyRequests/len(peers)) > lastSlot {
+			break
+		}
+
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
