@@ -24,6 +24,7 @@ func TestNodeClose_OK(t *testing.T) {
 	set.Bool("test-skip-pow", true, "skip pow dial")
 	set.String("datadir", tmp, "node data directory")
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
+	set.String("clear-db", "force", "clear db")
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "0x0000000000000000000000000000000000000000", "deposit contract address")
 
