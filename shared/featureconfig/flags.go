@@ -61,6 +61,10 @@ var (
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
+	enableFinalizedBlockRootIndexFlag = cli.BoolFlag{
+		Name:  "enable-finalized-block-root-index",
+		Usage: "Enable tracking finalized block roots in database index.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -82,4 +86,5 @@ var BeaconChainFlags = []cli.Flag{
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
+	enableFinalizedBlockRootIndexFlag,
 }

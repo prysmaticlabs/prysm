@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestState_CanSaveRetrieve(t *testing.T) {
@@ -187,7 +188,24 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	finalizedBlockRoot := [32]byte{'A'}
+	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	if err := db.SaveGenesisBlockRoot(ctx, genesis); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := &ethpb.BeaconBlock{
+		ParentRoot: genesis[:],
+		Slot:       100,
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+
+	finalizedBlockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	finalizedState := &pb.BeaconState{Slot: 100}
 	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
 		t.Fatal(err)
