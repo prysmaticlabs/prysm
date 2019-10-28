@@ -9,6 +9,7 @@ go_library(
         "blocks.go",
         "checkpoint.go",
         "deposit_contract.go",
+        "finalized_block_roots.go",
         "kv.go",
         "operations.go",
         "schema.go",
