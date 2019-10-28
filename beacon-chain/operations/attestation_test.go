@@ -45,7 +45,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 				StartEpoch: 0,
 			},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
@@ -410,7 +410,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(1, true)
+	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -437,14 +437,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
-	for i, indice := range attestingIndices {
-		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
-		if err != nil {
-			t.Error(err)
-		}
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
-		sigs[i] = sig
-	}
+
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
@@ -453,7 +446,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 			StartEpoch: 0,
 		},
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+
 
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
@@ -463,6 +456,16 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 	att.Data.Crosslink.ParentRoot = encoded[:]
 	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
+
+	for i, indice := range attestingIndices {
+		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		if err != nil {
+			t.Error(err)
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
 	r, _ := ssz.HashTreeRoot(att.Data)
 	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
@@ -474,7 +477,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err := beaconDB.SaveState(context.Background(), beaconState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	// Test we can retrieve attestations from slot1 - slot61.
+	// Test we can retrieve attestations from slot1 - slot64.
 	attestations, err := service.AttestationPool(context.Background(), 64)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
