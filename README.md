@@ -101,6 +101,7 @@ To start your beacon node, issue the following command:
 docker run -v $HOME/prysm-data:/data -p 4000:4000 \
   --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --no-genesis-delay \
   --datadir=/data
 ```
 
@@ -111,6 +112,7 @@ docker run -v $HOME/prysm-data:/data -p 4000:4000 -p 7000:7000 \
   --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
+  --no-genesis-delay \
   --grpc-gateway-port=7000
 ```
 
@@ -138,6 +140,7 @@ and re-create it again and even reset the chain database adding the parameter `-
 docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
   --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --no-genesis-delay \
   --datadir=/data \
   --clear-db
 ```
