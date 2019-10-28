@@ -129,7 +129,7 @@ docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --name beacon-node \
   --datadir=/data \
-  --clear-db
+  --clear-db=force
 ```
 
 **Docker on Windows:**
@@ -144,14 +144,14 @@ docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
 
 4) To run the beacon node, issue the following command:
 ```
-docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db=no
 ```
 
 ### Running via Bazel
 
 1) To start your Beacon Node with Bazel, issue the following command:
 ```
-bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
+bazel run //beacon-chain -- --clear-db=no --datadir=/tmp/prysm-data
 ```
 
 This will sync up the Beacon Node with the latest head block in the network.

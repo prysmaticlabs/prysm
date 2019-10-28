@@ -48,7 +48,7 @@ bazel run //beacon-chain -- \
 --no-genesis-delay \
 --bootstrap-node= \
 --deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
---clear-db \
+--clear-db=no \
 --interop-num-validators 64 \
 --interop-eth1data-votes
 ```
@@ -73,7 +73,7 @@ Assuming you generated a `genesis.ssz` file with 64 validators, open up two term
 --no-genesis-delay \
 --bootstrap-node= \
 --deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
---clear-db \
+--clear-db=no \
 --interop-genesis-state /path/to/genesis.ssz \
 --interop-eth1data-votes
 ```

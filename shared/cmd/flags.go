@@ -120,9 +120,10 @@ var (
 		Value: "ssz",
 	}
 	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
-	ClearDB = cli.BoolFlag{
+	ClearDB = cli.StringFlag{
 		Name:  "clear-db",
-		Usage: "Clears any previously stored data at the data directory",
+		Usage: "Clear any previously stored data at the data directory (options are 'no' which is default, 'prompt', 'force')",
+		Value: "no",
 	}
 	// LogFormat specifies the log output format.
 	LogFormat = cli.StringFlag{
