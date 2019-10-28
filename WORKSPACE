@@ -173,7 +173,7 @@ http_archive(
 )
 
 http_archive(
-    name = "herumi_bls",
+    name = "com_github_herumi_bls_eth_go_binary",
     sha256 = "63f4913e23d32d087b762501672626780adb6b6ef7def090c0b004f9148f80b9",
     strip_prefix = "bls-go-binary-7312760a60b016941f8a19c0409298b8a3b9a574",
     url = "https://github.com/nisdas/bls-go-binary/archive/7312760a60b016941f8a19c0409298b8a3b9a574.zip",
