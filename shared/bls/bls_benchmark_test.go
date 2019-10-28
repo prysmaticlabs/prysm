@@ -1,7 +1,6 @@
 package bls_test
 
 import (
-	"crypto/rand"
 	"testing"
 
 	bls2 "github.com/herumi/bls-eth-go-binary/bls"
@@ -34,7 +33,7 @@ func BenchmarkPairing(b *testing.B) {
 
 }
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk := bls.RandKey(rand.Reader)
+	sk := bls.RandKey()
 
 	msg := []byte("Some msg")
 	domain := uint64(42)
@@ -56,7 +55,7 @@ func BenchmarkSignature_VerifyAggregate(b *testing.B) {
 	var aggregated *bls.Signature
 	var pks []*bls.PublicKey
 	for i := 0; i < sigN; i++ {
-		sk := bls.RandKey(rand.Reader)
+		sk := bls.RandKey()
 		sig := sk.Sign(msg[:], domain)
 		if aggregated == nil {
 			aggregated = bls.AggregateSignatures([]*bls.Signature{sig})

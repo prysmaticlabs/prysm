@@ -56,7 +56,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
-	privKey := bls.RandKey(rand.Reader)
+	privKey := bls.RandKey()
 
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,

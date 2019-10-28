@@ -152,7 +152,7 @@ func NewKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 
 // NewKey generates a new random key.
 func NewKey(rand io.Reader) (*Key, error) {
-	secretKey := bls.RandKey(rand)
+	secretKey := bls.RandKey()
 	return NewKeyFromBLS(secretKey)
 }
 

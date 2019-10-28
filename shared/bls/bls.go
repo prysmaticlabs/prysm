@@ -5,7 +5,6 @@ package bls
 
 import (
 	"encoding/binary"
-	"io"
 	"math/big"
 	"time"
 
@@ -50,7 +49,7 @@ type SecretKey struct {
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey(r io.Reader) *SecretKey {
+func RandKey() *SecretKey {
 	secKey := &bls12.SecretKey{}
 	secKey.SetByCSPRNG()
 	return &SecretKey{secKey}

@@ -3,7 +3,6 @@ package blocks_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -111,7 +110,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -157,7 +156,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -207,7 +206,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -259,7 +258,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
@@ -551,7 +550,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		helpers.CurrentEpoch(beaconState),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
-	privKey := bls.RandKey(rand.Reader)
+	privKey := bls.RandKey()
 
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
@@ -1744,7 +1743,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 }
 
 func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
-	sk := bls.RandKey(rand.Reader)
+	sk := bls.RandKey()
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			PublicKey: sk.PublicKey().Marshal(),
@@ -2056,7 +2055,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
 
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
 	signingRoot, err := ssz.SigningRoot(exits[0])
 	if err != nil {
@@ -2242,7 +2241,7 @@ func TestProcessBeaconTransfers_OK(t *testing.T) {
 		Slot:           state.Slot,
 	}
 
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	pubKey := priv.PublicKey().Marshal()[:]
 	transfer.SenderWithdrawalPublicKey = pubKey
 	state.Validators[transfer.SenderIndex].PublicKey = pubKey

@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -887,8 +886,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
-	priv1 := bls.RandKey(rand.Reader)
-	priv2 := bls.RandKey(rand.Reader)
+	priv1 := bls.RandKey()
+	priv2 := bls.RandKey()
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 

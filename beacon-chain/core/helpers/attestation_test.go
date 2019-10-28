@@ -2,7 +2,6 @@ package helpers_test
 
 import (
 	"bytes"
-	"crypto/rand"
 	"sort"
 	"testing"
 
@@ -246,7 +245,7 @@ func TestAggregateAttestations(t *testing.T) {
 	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
 		atts := make([]*ethpb.Attestation, len(bl))
 		for i, b := range bl {
-			sk := bls.RandKey(rand.Reader)
+			sk := bls.RandKey()
 			sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,

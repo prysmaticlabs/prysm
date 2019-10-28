@@ -15,7 +15,7 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := bls.RandKey(rand.Reader)
+	blsKey := bls.RandKey()
 
 	key := &Key{
 		ID:        testID,

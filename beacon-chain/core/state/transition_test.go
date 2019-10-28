@@ -3,7 +3,6 @@ package state_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -955,7 +954,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	priv := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)

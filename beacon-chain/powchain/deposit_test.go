@@ -2,7 +2,6 @@ package powchain
 
 import (
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 
@@ -239,7 +238,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		},
 	}
 
-	sk := bls.RandKey(rand.Reader)
+	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
 	signedRoot, err := ssz.SigningRoot(deposit.Data)
 	if err != nil {
