@@ -5,5 +5,7 @@ import (
 )
 
 func TestAttestationMinimal(t *testing.T) {
+	t.Skip()
+
 	runAttestationTest(t, "minimal")
 }
