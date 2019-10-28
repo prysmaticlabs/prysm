@@ -1,18 +1,32 @@
 package mathutil
 
-import "math"
+import (
+	"math"
+)
 
 // IntegerSquareRoot defines a function that returns the
-// largest possible integer root of a number.
+// largest possible integer root of a number using a divide and conquer
+// binary search approach:
+//
+// inspiration: https://www.geeksforgeeks.org/square-root-of-an-integer
 func IntegerSquareRoot(n uint64) uint64 {
-	x := n
-	y := (x + 1) / 2
-
-	for y < x {
-		x = y
-		y = (x + n/x) / 2
+	x := uint64(0)
+	y := uint64(1 << 32)
+	for {
+		if y <= 1+x {
+			return x
+		}
+		sqt := x + ((y - x) >> 1)
+		sq := sqt * sqt
+		if sq == n {
+			return sqt
+		}
+		if sq > n {
+			y = sqt
+		} else {
+			x = sqt
+		}
 	}
-	return x
 }
 
 // CeilDiv8 divides the input number by 8

@@ -358,13 +358,13 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
 	headRoot, _ := ssz.SigningRoot(headBlock)
+	if err := db.SaveState(ctx, headState, headRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
 		Epoch: helpers.SlotToEpoch(finalizedSlot),
 		Root:  headRoot[:],
 	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
