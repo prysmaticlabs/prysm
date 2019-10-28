@@ -39,8 +39,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
 	}
-	shardCount := int(params.BeaconConfig().ShardCount)
-
 	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
@@ -112,12 +110,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.CurrentCrosslinks) != shardCount {
-		t.Error("Length of CurrentCrosslinks was not correctly initialized")
-	}
-	if len(newState.PreviousCrosslinks) != shardCount {
-		t.Error("Length of PreviousCrosslinks was not correctly initialized")
-	}
 	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}
