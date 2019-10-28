@@ -292,12 +292,3 @@ func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
 	copy(xBytes[64:], hashedxReBytes[:])
 	return xBytes
 }
-
-// Switch the endianness of a byte slice by reversing its order.
-func reverseByteOrder(input []byte) []byte {
-	b := input
-	for i := 0; i < len(b)/2; i++ {
-		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
-	}
-	return b
-}
