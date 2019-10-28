@@ -5,5 +5,6 @@ import (
 )
 
 func TestBlockProcessingMinimalYaml(t *testing.T) {
+	t.Skip()
 	runBlockProcessingTest(t, "minimal")
 }

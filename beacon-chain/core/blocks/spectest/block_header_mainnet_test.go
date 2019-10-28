@@ -5,5 +5,6 @@ import (
 )
 
 func TestBlockHeaderMainnet(t *testing.T) {
+	t.Skip()
 	runBlockHeaderTest(t, "mainnet")
 }
