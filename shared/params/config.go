@@ -70,7 +70,6 @@ type BeaconChainConfig struct {
 	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS"`       // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS"`           // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
-	MaxTransfers         uint64 `yaml:"MAX_TRANSFERS"`          // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
 	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
@@ -78,7 +77,6 @@ type BeaconChainConfig struct {
 	DomainAttestation    []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
 	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainTransfer       []byte `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -167,7 +165,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
-	MaxTransfers:         0,
 
 	// BLS domain values.
 	DomainBeaconProposer: bytesutil.Bytes4(0),
@@ -175,7 +172,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DomainAttestation:    bytesutil.Bytes4(2),
 	DomainDeposit:        bytesutil.Bytes4(3),
 	DomainVoluntaryExit:  bytesutil.Bytes4(4),
-	DomainTransfer:       bytesutil.Bytes4(5),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -293,7 +289,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
-	minimalConfig.MaxTransfers = 0
 
 	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
@@ -301,7 +296,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
-	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
