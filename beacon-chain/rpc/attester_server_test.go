@@ -54,10 +54,9 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	}
 
 	state := &pbp2p.BeaconState{
-		Slot:             params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {

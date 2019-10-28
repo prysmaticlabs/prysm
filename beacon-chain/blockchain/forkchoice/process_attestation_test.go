@@ -55,8 +55,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -132,14 +131,12 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
 		JustificationBits:          []byte{0},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
 		CurrentCrosslinks:          crosslinks,
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 	}
