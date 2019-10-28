@@ -5,5 +5,6 @@ import (
 )
 
 func TestCrosslinksProcessingMainnet(t *testing.T) {
+	t.Skip()
 	runCrosslinkProcessingTests(t, "mainnet")
 }

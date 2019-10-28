@@ -44,7 +44,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})

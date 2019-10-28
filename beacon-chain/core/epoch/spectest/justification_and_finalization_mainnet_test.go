@@ -5,5 +5,6 @@ import (
 )
 
 func TestJustificationAndFinalizationMainnet(t *testing.T) {
+	t.Skip()
 	runJustificationAndFinalizationTests(t, "mainnet")
 }

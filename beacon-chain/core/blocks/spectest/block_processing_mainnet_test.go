@@ -5,5 +5,6 @@ import (
 )
 
 func TestBlockProcessingMainnetYaml(t *testing.T) {
+	t.Skip()
 	runBlockProcessingTest(t, "mainnet")
 }

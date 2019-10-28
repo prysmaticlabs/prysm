@@ -5,5 +5,6 @@ import (
 )
 
 func TestFinalUpdatesMainnet(t *testing.T) {
+	t.Skip()
 	runFinalUpdatesTests(t, "mainnet")
 }

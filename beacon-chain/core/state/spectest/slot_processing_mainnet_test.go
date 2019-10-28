@@ -5,5 +5,6 @@ import (
 )
 
 func TestSlotProcessingMainnet(t *testing.T) {
+	t.Skip()
 	runSlotProcessingTests(t, "mainnet")
 }
