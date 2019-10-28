@@ -77,7 +77,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					count++
 				}
 				// asking for no blocks may cause the client to hang. This should never happen and
-				// the peer may return an error anyway, but we'll ask for at least one block.
+				// the peer may return an error anyway, we will break if count is 0 after reminder
+				// modification.
 				if count == 0 {
 					break
 				}
