@@ -98,9 +98,8 @@ To understand the role that both the beacon node and validator play in Prysm, se
 To start your beacon node, issue the following command:
 
 ```
-docker run -v $HOME/prysm-data:/data -p 4000:4000 \
+docker run -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --name beacon-node \
   --datadir=/data
 ```
 
@@ -125,9 +124,8 @@ docker rm beacon-node
 To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
 
 ```
-docker run -it -v $HOME/prysm-data:/data -p 4000:4000 \
+docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --name beacon-node \
   --datadir=/data \
   --clear-db
 ```
