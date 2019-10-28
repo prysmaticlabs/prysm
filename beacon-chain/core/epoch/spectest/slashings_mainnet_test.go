@@ -5,5 +5,6 @@ import (
 )
 
 func TestSlashingsMainnet(t *testing.T) {
+	t.Skip()
 	runSlashingsTests(t, "mainnet")
 }

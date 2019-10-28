@@ -5,5 +5,6 @@ import (
 )
 
 func TestVoluntaryExitMinimal(t *testing.T) {
+	t.Skip()
 	runVoluntaryExitTest(t, "minimal")
 }

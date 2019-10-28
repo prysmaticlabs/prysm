@@ -5,5 +5,6 @@ import (
 )
 
 func TestSZZStatic_Mainnet(t *testing.T) {
+	t.Skip()
 	runSSZStaticTests(t, "mainnet")
 }

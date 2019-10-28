@@ -5,5 +5,6 @@ import (
 )
 
 func TestCrosslinksProcessingMinimal(t *testing.T) {
+	t.Skip()
 	runCrosslinkProcessingTests(t, "minimal")
 }

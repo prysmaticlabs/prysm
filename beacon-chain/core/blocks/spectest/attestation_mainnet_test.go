@@ -5,5 +5,6 @@ import (
 )
 
 func TestAttestationMainnet(t *testing.T) {
+	t.Skip()
 	runAttestationTest(t, "mainnet")
 }

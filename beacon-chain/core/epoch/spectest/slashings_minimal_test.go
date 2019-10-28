@@ -5,5 +5,6 @@ import (
 )
 
 func TestSlashingsMinimal(t *testing.T) {
+	t.Skip()
 	runSlashingsTests(t, "minimal")
 }
