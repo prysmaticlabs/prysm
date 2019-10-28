@@ -43,8 +43,6 @@ func TestComputeValidatorParticipation(t *testing.T) {
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
