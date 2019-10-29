@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	// NoGenesisDelayFlag disables the standard genesis delay.
-	NoGenesisDelayFlag = cli.BoolFlag{
-		Name:  "no-genesis-delay",
-		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+	// GenesisDelayFlag disables the standard genesis delay.
+	GenesisDelayFlag = cli.BoolFlag{
+		Name:  "genesis-delay",
+		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
 	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
@@ -61,16 +61,33 @@ var (
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
+	enableFinalizedBlockRootIndexFlag = cli.BoolFlag{
+		Name:  "enable-finalized-block-root-index",
+		Usage: "Enable tracking finalized block roots in database index.",
+	}
 )
 
-// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	MinimalConfigFlag,
+// Deprecated flags list.
+var (
+	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
+		Name:   "no-genesis-delay",
+		Usage:  "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Hidden: true,
+	}
+)
+
+var deprecatedFlags = []cli.Flag{
+	deprecatedNoGenesisDelayFlag,
 }
 
+// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
+var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	MinimalConfigFlag,
+}...)
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = []cli.Flag{
-	NoGenesisDelayFlag,
+var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
@@ -82,4 +99,5 @@ var BeaconChainFlags = []cli.Flag{
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
-}
+	enableFinalizedBlockRootIndexFlag,
+}...)
