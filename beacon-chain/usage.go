@@ -59,6 +59,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
 			cmd.ForceClearDB,
+			cmd.ClearDB,
 		},
 	},
 	{
