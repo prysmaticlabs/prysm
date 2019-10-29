@@ -67,13 +67,26 @@ var (
 	}
 )
 
-// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	MinimalConfigFlag,
+// Deprecated flags list.
+var (
+	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
+		Name:   "no-genesis-delay",
+		Usage:  "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Hidden: true,
+	}
+)
+
+var deprecatedFlags = []cli.Flag{
+	deprecatedNoGenesisDelayFlag,
 }
 
+// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
+var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	MinimalConfigFlag,
+}...)
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = []cli.Flag{
+var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
@@ -87,4 +100,4 @@ var BeaconChainFlags = []cli.Flag{
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
 	enableFinalizedBlockRootIndexFlag,
-}
+}...)
