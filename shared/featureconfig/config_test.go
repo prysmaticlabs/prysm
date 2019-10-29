@@ -14,7 +14,7 @@ func TestInitFeatureConfig(t *testing.T) {
 	}
 	featureconfig.Init(cfg)
 	if c := featureconfig.Get(); !c.GenesisDelay {
-		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
 
