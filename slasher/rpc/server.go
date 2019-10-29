@@ -24,6 +24,7 @@ type Server struct {
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attestation) (*ethpb.AttesterSlashing, error) {
+	//TODO(3133): implement attestation validation after attestation store will be merged.
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
@@ -56,10 +57,12 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlash
 
 // SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
 func (ss *Server) SlashableProposals(req *types.Empty, server ethpb.Slasher_SlashableProposalsServer) error {
+	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
 	return status.Error(codes.Unimplemented, "not implemented")
 }
 
 // SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
 func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_SlashableAttestationsServer) error {
+	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
 	return status.Error(codes.Unimplemented, "not implemented")
 }
