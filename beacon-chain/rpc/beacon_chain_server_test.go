@@ -1251,7 +1251,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
-	t.Skip()
+	t.Skip("Disabled until v0.9.0 (#3865) completes")
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
