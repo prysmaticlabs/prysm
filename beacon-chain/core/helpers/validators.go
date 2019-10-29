@@ -135,7 +135,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //    """
 //    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
 func DelayedActivationExitEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
+	return epoch + 1 + params.BeaconConfig().MaxSeedLookhead
 }
 
 // ValidatorChurnLimit returns the number of validators that are allowed to
@@ -173,7 +173,7 @@ func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 //    shard = Shard((get_start_shard(state, epoch) + offset) % SHARD_COUNT)
 //    first_committee = get_crosslink_committee(state, epoch, shard)
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    seed = get_seed(state, epoch)
+//    seed = get_seed(state, epoch, DOMAIN_BEACON_PROPOSER)
 //    i = 0
 //    while True:
 //        candidate_index = first_committee[(epoch + i) % len(first_committee)]
@@ -212,7 +212,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 
 	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed, err := Seed(state, e)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}

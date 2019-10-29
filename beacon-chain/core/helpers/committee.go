@@ -90,7 +90,7 @@ func CrosslinkCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]ui
 		}
 	}
 
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
@@ -483,7 +483,7 @@ func CompactCommitteesRoot(state *pb.BeaconState, epoch uint64) ([32]byte, error
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
