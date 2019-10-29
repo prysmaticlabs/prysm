@@ -25,6 +25,6 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	context := cli.NewContext(app, set, nil)
 	featureconfig.ConfigureBeaconChain(context)
 	if c := featureconfig.Get(); !c.GenesisDelay {
-		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
