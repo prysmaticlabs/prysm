@@ -12,7 +12,7 @@ import (
 
 // Test that Prysm copied protobufs have the same wire type and tag number.
 func TestProtoCompatability(t *testing.T) {
-	t.Skip()
+	t.Skip("Disabled until v0.9.0 (#3865) completes")
 
 	tests := []struct {
 		a proto.Message
