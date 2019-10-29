@@ -68,10 +68,11 @@ var (
 )
 
 // Deprecated flags list.
+const deprecatedUsage = "DEPRECATED. DO NOT USE."
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
 		Name:   "no-genesis-delay",
-		Usage:  "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
