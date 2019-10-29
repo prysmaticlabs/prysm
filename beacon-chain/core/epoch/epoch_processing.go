@@ -490,6 +490,30 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 
+	// Set active index root.
+	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
+	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
+	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
+	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
+	activationDelay := params.BeaconConfig().MaxSeedLookhead
+	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get active indices")
+	}
+	idxRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, uint64(1099511627776))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not tree hash active indices")
+	}
+	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
+
+	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
+	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get compact committee root")
+	}
+	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
+
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.Slashings[nextEpoch%slashedExitLength] = 0

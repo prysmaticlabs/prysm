@@ -23,7 +23,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -776,7 +775,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -1215,7 +1214,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -1244,7 +1243,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1339,7 +1338,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1513,20 +1512,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x05},
-			wantedCustodyBit0Indices: []uint64{71},
-			wantedCustodyBit1Indices: []uint64{127},
+			wantedCustodyBit0Indices: []uint64{28},
+			wantedCustodyBit1Indices: []uint64{125},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x06},
-			wantedCustodyBit0Indices: []uint64{127},
-			wantedCustodyBit1Indices: []uint64{71},
+			wantedCustodyBit0Indices: []uint64{125},
+			wantedCustodyBit1Indices: []uint64{28},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{28, 125},
 		},
 	}
 
@@ -1557,6 +1556,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
+			fmt.Println(ia, wanted)
 			t.Log(diff)
 			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
@@ -1633,7 +1633,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CustodyBit: false,
 		}
 
-		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
 		root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 		if err != nil {
@@ -2093,204 +2093,5 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
-	}
-}
-
-func TestProcessBeaconTransfers_NotEnoughSenderIndexBalance(t *testing.T) {
-	registry := []*ethpb.Validator{
-		{
-			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
-	state := &pb.BeaconState{
-		Validators: registry,
-		Balances:   balances,
-	}
-	transfers := []*ethpb.Transfer{
-		{
-			Fee:    params.BeaconConfig().MaxEffectiveBalance,
-			Amount: params.BeaconConfig().MaxEffectiveBalance,
-		},
-	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-	want := fmt.Sprintf(
-		"expected sender balance %d >= %d",
-		balances[0],
-		transfers[0].Fee+transfers[0].Amount,
-	)
-	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBeaconTransfers_FailsVerification(t *testing.T) {
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 1
-	params.OverrideBeaconConfig(testConfig)
-	registry := []*ethpb.Validator{
-		{
-			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-		{
-			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance}
-	state := &pb.BeaconState{
-		Slot:       0,
-		Validators: registry,
-		Balances:   balances,
-	}
-	transfers := []*ethpb.Transfer{
-		{
-			Fee: params.BeaconConfig().MaxEffectiveBalance + 1,
-		},
-	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Transfers: transfers,
-		},
-	}
-	want := fmt.Sprintf(
-		"expected sender balance %d >= %d",
-		balances[0],
-		transfers[0].Fee,
-	)
-	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	block.Body.Transfers = []*ethpb.Transfer{
-		{
-			Fee:  params.BeaconConfig().MinDepositAmount,
-			Slot: state.Slot + 1,
-		},
-	}
-	want = fmt.Sprintf(
-		"expected beacon state slot %d == transfer slot %d",
-		state.Slot,
-		block.Body.Transfers[0].Slot,
-	)
-	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	state.Validators[0].WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
-	state.Validators[0].ActivationEligibilityEpoch = 0
-	state.Balances[0] = params.BeaconConfig().MinDepositAmount + params.BeaconConfig().MaxEffectiveBalance
-	block.Body.Transfers = []*ethpb.Transfer{
-		{
-			Fee:    params.BeaconConfig().MinDepositAmount,
-			Amount: params.BeaconConfig().MaxEffectiveBalance,
-			Slot:   state.Slot,
-		},
-	}
-	want = "over max transfer"
-	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	state.Validators[0].WithdrawableEpoch = 0
-	state.Validators[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
-	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
-	pubKey := []byte("B")
-	hashed := hashutil.Hash(pubKey)
-	buf = append(buf, hashed[:]...)
-	state.Validators[0].WithdrawalCredentials = buf
-	block.Body.Transfers = []*ethpb.Transfer{
-		{
-			Fee:                       params.BeaconConfig().MinDepositAmount,
-			Amount:                    params.BeaconConfig().MinDepositAmount,
-			Slot:                      state.Slot,
-			SenderWithdrawalPublicKey: []byte("A"),
-		},
-	}
-	want = "invalid public key"
-	if _, err := blocks.ProcessTransfers(state, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBeaconTransfers_OK(t *testing.T) {
-	helpers.ClearShuffledValidatorCache()
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 1
-	params.OverrideBeaconConfig(testConfig)
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/32)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch:   0,
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			Slashed:           false,
-			WithdrawableEpoch: 0,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-
-	state := &pb.BeaconState{
-		Validators: validators,
-		Slot:       0,
-		Balances:   validatorBalances,
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-	}
-
-	transfer := &ethpb.Transfer{
-		SenderIndex:    0,
-		RecipientIndex: 1,
-		Fee:            params.BeaconConfig().MinDepositAmount,
-		Amount:         params.BeaconConfig().MinDepositAmount,
-		Slot:           state.Slot,
-	}
-
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKey := priv.PublicKey().Marshal()[:]
-	transfer.SenderWithdrawalPublicKey = pubKey
-	state.Validators[transfer.SenderIndex].PublicKey = pubKey
-	signingRoot, err := ssz.SigningRoot(transfer)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	epoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork, epoch, params.BeaconConfig().DomainTransfer)
-	transferSig := priv.Sign(signingRoot[:], dt)
-	transfer.Signature = transferSig.Marshal()[:]
-
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Transfers: []*ethpb.Transfer{transfer},
-		},
-	}
-	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
-	hashed := hashutil.Hash(pubKey)
-	buf = append(buf, hashed[:][1:]...)
-	state.Validators[0].WithdrawalCredentials = buf
-	state.Validators[0].ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
-	newState, err := blocks.ProcessTransfers(state, block.Body)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	expectedRecipientIndex := params.BeaconConfig().MaxEffectiveBalance + block.Body.Transfers[0].Amount
-	if newState.Balances[1] != expectedRecipientIndex {
-		t.Errorf("Expected recipient balance %d, received %d", newState.Balances[1], expectedRecipientIndex)
-	}
-	expectedSenderIndex := params.BeaconConfig().MaxEffectiveBalance - block.Body.Transfers[0].Amount - block.Body.Transfers[0].Fee
-	if newState.Balances[0] != expectedSenderIndex {
-		t.Errorf("Expected sender balance %d, received %d", newState.Balances[0], expectedSenderIndex)
 	}
 }

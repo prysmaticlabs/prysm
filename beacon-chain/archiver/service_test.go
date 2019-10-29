@@ -136,7 +136,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := helpers.Seed(headState, currentEpoch)
+	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}

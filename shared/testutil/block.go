@@ -215,7 +215,7 @@ func generateAttesterSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
 		sig := privs[committee[i]].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
@@ -367,7 +367,7 @@ func generateAttestations(
 	}
 
 	bitsPerAtt := committeeSize / maxAttestations
-	domain := helpers.Domain(bState.Fork, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(bState.Fork, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainBeaconAttester)
 	for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 		aggregationBits := bitfield.NewBitlist(committeeSize)
 		sigs := []*bls.Signature{}

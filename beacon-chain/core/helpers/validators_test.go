@@ -171,23 +171,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 254,
+			index: 534,
 		},
 		{
 			slot:  5,
-			index: 391,
+			index: 861,
 		},
 		{
 			slot:  19,
-			index: 204,
+			index: 1411,
 		},
 		{
 			slot:  30,
-			index: 1051,
+			index: 1621,
 		},
 		{
 			slot:  43,
-			index: 1047,
+			index: 1355,
 		},
 	}
 
@@ -224,7 +224,7 @@ func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
 	got := DelayedActivationExitEpoch(epoch)
-	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay
+	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookhead
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
 	}

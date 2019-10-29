@@ -56,7 +56,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	}
 
 	// Indices that voted everything except for head, lost a bit money
-	wanted := uint64(31999995452)
+	wanted := uint64(31999797616)
 	if state.Balances[4] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[4])
@@ -118,7 +118,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
+	attestedIndices := []uint64{24, 100, 106, 196, 285, 534, 641, 654}
 	for _, i := range attestedIndices {
 		base, err := epoch.BaseReward(state, i)
 		if err != nil {
@@ -198,7 +198,7 @@ func TestCrosslinkDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 16, 336, 797, 1082, 1450, 1770, 1958}
+	attestedIndices := []uint64{24, 100, 106, 196, 285, 534, 641, 654}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		want := uint64(12649)

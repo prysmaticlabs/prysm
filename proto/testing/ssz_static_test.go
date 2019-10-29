@@ -128,8 +128,6 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
-	case "Transfer":
-		obj = &ethpb.Transfer{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":

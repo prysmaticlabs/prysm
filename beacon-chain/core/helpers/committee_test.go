@@ -138,7 +138,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,19 +248,19 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 			attestationSlot: 3,
 			stateSlot:       5,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{219, 476},
+			wanted:          []uint64{205, 150},
 		},
 		{
 			attestationSlot: 2,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{123},
+			wanted:          []uint64{845},
 		},
 		{
 			attestationSlot: 11,
 			stateSlot:       10,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{880, 757},
+			wanted:          []uint64{376, 664},
 		},
 	}
 
@@ -353,31 +353,31 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       146,
-			committee:  []uint64{0, 3},
-			shard:      82,
+			slot:       144,
+			committee:  []uint64{95, 0},
+			shard:      80,
 			isProposer: true,
 		},
 		{
 			index:      105,
-			slot:       160,
-			committee:  []uint64{105, 20},
-			shard:      32,
+			slot:       171,
+			committee:  []uint64{50, 105},
+			shard:      43,
 			isProposer: true,
 		},
 		{
 			index:      0,
-			slot:       146,
-			committee:  []uint64{0, 3},
-			shard:      18,
+			slot:       144,
+			committee:  []uint64{95, 0},
+			shard:      16,
 			isProposer: true,
 		},
 		{
 			index:      11,
-			slot:       135,
-			committee:  []uint64{119, 11},
-			shard:      7,
-			isProposer: false,
+			slot:       129,
+			committee:  []uint64{22, 11},
+			shard:      1,
+			isProposer: true,
 		},
 	}
 
@@ -866,7 +866,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -904,7 +904,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -942,7 +942,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -981,7 +981,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1020,7 +1020,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	seed, err := Seed(state, epoch)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		b.Fatal(err)
 	}

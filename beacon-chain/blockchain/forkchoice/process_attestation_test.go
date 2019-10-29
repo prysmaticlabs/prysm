@@ -207,7 +207,7 @@ func TestStore_AggregateAttestation(t *testing.T) {
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		Epoch:           0,
 	}
-	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig := privKeys[0].Sign([]byte{}, domain)
 
 	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,7 +73,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	if err != nil {
 		return errors.Wrap(err, "could not get committee count")
 	}
-	seed, err := helpers.Seed(headState, currentEpoch)
+	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
 	}

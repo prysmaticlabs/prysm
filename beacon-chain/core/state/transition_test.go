@@ -222,7 +222,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -521,7 +521,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -834,8 +834,6 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 1
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
@@ -959,17 +957,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainRandao)
 	epochSignature := priv.Sign(buf, domain)
 
-	// Set up transfer object for block
-	transfers := []*ethpb.Transfer{
-		{
-			Slot:                      s.Slot,
-			SenderIndex:               3,
-			RecipientIndex:            4,
-			Fee:                       params.BeaconConfig().MinDepositAmount,
-			Amount:                    params.BeaconConfig().MinDepositAmount,
-			SenderWithdrawalPublicKey: []byte("A"),
-		},
-	}
 	buf = []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
 	pubKey := []byte("A")
 	hashed := hashutil.Hash(pubKey)
@@ -1010,7 +997,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Attestations:      attestations,
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
-			Transfers:         transfers,
 		},
 	}
 
@@ -1076,7 +1062,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			Data:       att.Data,
 			CustodyBit: false,
 		}
-		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		for i, indice := range attestingIndices {
 			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
@@ -1210,24 +1196,6 @@ func TestProcessOperations_OverMaxAttestations(t *testing.T) {
 	}
 }
 
-func TestProcessOperations_OverMaxTransfers(t *testing.T) {
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Transfers: make([]*ethpb.Transfer, params.BeaconConfig().MaxTransfers+1),
-		},
-	}
-
-	want := fmt.Sprintf("number of transfers (%d) in block body exceeds allowed threshold of %d",
-		len(block.Body.Transfers), params.BeaconConfig().MaxTransfers)
-	if _, err := state.ProcessOperations(
-		context.Background(),
-		&pb.BeaconState{},
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
 	maxExits := params.BeaconConfig().MaxVoluntaryExits
 	block := &ethpb.BeaconBlock{
@@ -1260,40 +1228,6 @@ func TestProcessOperations_IncorrectDeposits(t *testing.T) {
 
 	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 		s.Eth1Data.DepositCount-s.Eth1DepositIndex, len(block.Body.Deposits))
-	if _, err := state.ProcessOperations(
-		context.Background(),
-		s,
-		block.Body,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessOperation_DuplicateTransfer(t *testing.T) {
-	testConfig := params.BeaconConfig()
-	testConfig.MaxTransfers = 2
-	transfers := []*ethpb.Transfer{
-		{
-			Amount: 1,
-		},
-		{
-			Amount: 1,
-		},
-	}
-	registry := []*ethpb.Validator{}
-	s := &pb.BeaconState{
-		Validators:       registry,
-		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
-		Eth1DepositIndex: 98,
-	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Transfers: transfers,
-			Deposits:  []*ethpb.Deposit{{}, {}},
-		},
-	}
-
-	want := "duplicate transfer"
 	if _, err := state.ProcessOperations(
 		context.Background(),
 		s,
