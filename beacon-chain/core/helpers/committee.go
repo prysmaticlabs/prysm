@@ -240,26 +240,39 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
-	validatorIndex uint64) ([]uint64, uint64, uint64, bool, error) {
+	validatorIndex uint64) ([]uint64, uint64, uint64, bool, uint64, error) {
 
 	if epoch > NextEpoch(state) {
-		return nil, 0, 0, false, fmt.Errorf(
+		return nil, 0, 0, false, 0, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
 	}
 
+	// Track which slot has which proposer
+	startSlot := StartSlot(epoch)
+	proposerIndexToSlot := make(map[uint64]uint64)
+	for slot := uint64(startSlot); slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		state.Slot = slot
+		i, err := BeaconProposerIndex(state)
+		if err != nil {
+			return nil, 0, 0, false, 0, fmt.Errorf(
+				"could not check proposer v: %v", err)
+		}
+		proposerIndexToSlot[i] = slot
+	}
+
 	committeeCount, err := CommitteeCount(state, epoch)
 	if err != nil {
-		return nil, 0, 0, false, errors.Wrap(err, "could not get committee count")
+		return nil, 0, 0, false, 0, errors.Wrap(err, "could not get committee count")
 	}
 	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 
 	epochStartShard, err := StartShard(state, epoch)
 	if err != nil {
-		return nil, 0, 0, false, fmt.Errorf(
+		return nil, 0, 0, false, 0, fmt.Errorf(
 			"could not get epoch start shard: %v", err)
 	}
-	startSlot := StartSlot(epoch)
+
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
 		slotStatShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
@@ -267,25 +280,19 @@ func CommitteeAssignment(
 			shard := (slotStatShard + i) % params.BeaconConfig().ShardCount
 			committee, err := CrosslinkCommittee(state, epoch, shard)
 			if err != nil {
-				return nil, 0, 0, false, fmt.Errorf(
+				return nil, 0, 0, false, 0, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					state.Slot = slot
-					proposerIndex, err := BeaconProposerIndex(state)
-					if err != nil {
-						return nil, 0, 0, false, fmt.Errorf(
-							"could not check proposer index: %v", err)
-					}
-					isProposer := proposerIndex == validatorIndex
-					return committee, shard, slot, isProposer, nil
+					proposerSlot, isProposer := proposerIndexToSlot[index]
+					return committee, shard, slot, isProposer, proposerSlot, nil
 				}
 			}
 		}
 	}
 
-	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found in assignments")
+	return []uint64{}, 0, 0, false, 0, status.Error(codes.NotFound, "validator not found in assignments")
 }
 
 // ShardDelta returns the minimum number of shards get processed in one epoch.

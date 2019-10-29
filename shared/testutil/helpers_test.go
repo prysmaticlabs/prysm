@@ -78,6 +78,8 @@ func TestSetupInitialDeposits(t *testing.T) {
 }
 
 func TestSignBlock(t *testing.T) {
+	helpers.ClearAllCaches()
+
 	deposits, _, privKeys := SetupInitialDeposits(t, 100)
 	validators := make([]*ethpb.Validator, len(deposits))
 	for i := 0; i < len(validators); i++ {

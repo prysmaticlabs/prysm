@@ -421,7 +421,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
+func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	registry := make([]*ethpb.Validator, 2)
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -445,7 +445,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 			ProposerSlashings: slashings,
 		},
 	}
-	want := "mismatched header epochs"
+	want := "mismatched header slots"
 	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
