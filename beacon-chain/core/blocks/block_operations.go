@@ -320,8 +320,8 @@ func ProcessRandaoNoVerify(
 //    Process ``ProposerSlashing`` operation.
 //    """
 //    proposer = state.validator_registry[proposer_slashing.proposer_index]
-//    # Verify that the epoch is the same
-//    assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
+//    # Verify slots match
+//    assert proposer_slashing.header_1.slot == proposer_slashing.header_2.slot
 //    # But the headers are different
 //    assert proposer_slashing.header_1 != proposer_slashing.header_2
 //    # Check proposer is slashable
@@ -356,12 +356,10 @@ func VerifyProposerSlashing(
 	beaconState *pb.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
-	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
-	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
 	proposer := beaconState.Validators[slashing.ProposerIndex]
 
-	if headerEpoch1 != headerEpoch2 {
-		return fmt.Errorf("mismatched header epochs, received %d == %d", headerEpoch1, headerEpoch2)
+	if slashing.Header_1.Slot != slashing.Header_2.Slot {
+		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Slot, slashing.Header_2.Slot)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
 		return errors.New("expected slashing headers to differ")
@@ -370,7 +368,7 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState.Fork, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, helpers.StartSlot(slashing.Header_1.Slot), params.BeaconConfig().DomainBeaconProposer)
 	headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 	for _, header := range headers {
 		if err := verifySigningRoot(header, proposer.PublicKey, header.Signature, domain); err != nil {
