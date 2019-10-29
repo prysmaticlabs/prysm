@@ -93,7 +93,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.RandaoMixes) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
-	if !bytes.Equal(newState.RandaoMixes[0], make([]byte, 32)) {
+	if !bytes.Equal(newState.RandaoMixes[0], eth1Data.BlockHash) {
 		t.Error("RandaoMixes was not correctly initialized")
 	}
 
