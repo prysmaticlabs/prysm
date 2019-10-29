@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -36,10 +37,30 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	root := bytesutil.ToBytes32([]byte{'B'})
+
+	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	if err := db.SaveGenesisBlockRoot(ctx, genesis); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := &ethpb.BeaconBlock{
+		ParentRoot: genesis[:],
+		Slot:       40,
+	}
+
+	root, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cp := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  root[:],
+	}
+
+	// a valid chain is required to save finalized checkpoint.
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
 	}
 
 	// a state is required to save checkpoint

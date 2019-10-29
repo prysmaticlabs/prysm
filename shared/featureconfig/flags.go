@@ -61,6 +61,10 @@ var (
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
+	enableFinalizedBlockRootIndexFlag = cli.BoolFlag{
+		Name:  "enable-finalized-block-root-index",
+		Usage: "Enable tracking finalized block roots in database index.",
+	}
 )
 
 // Deprecated flags list.
@@ -95,4 +99,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
+	enableFinalizedBlockRootIndexFlag,
 }...)
