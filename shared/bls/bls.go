@@ -285,7 +285,6 @@ func Domain(domainType []byte, forkVersion []byte) uint64 {
 //    """
 //    return Domain(domain_type + fork_version)
 func ComputeDomain(domainType []byte) uint64 {
-	// TODO(#3853): Hardcode the fork version to []byte{0,0,0,0}
 	return Domain(domainType, []byte{0, 0, 0, 0})
 }
 
