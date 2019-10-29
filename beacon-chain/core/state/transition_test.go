@@ -40,7 +40,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash:make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash:make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash:make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +315,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash:make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +434,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash:make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}

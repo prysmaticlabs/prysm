@@ -24,7 +24,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash:make([]byte,32)})
 	if err != nil {
 		t.Fatal(err)
 	}
