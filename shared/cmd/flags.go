@@ -119,11 +119,10 @@ var (
 		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
 		Value: "ssz",
 	}
-	// ClearDB tells the beacon node to remove any previously stored data at the data directory.
-	ClearDB = cli.StringFlag{
-		Name:  "clear-db",
-		Usage: "Clear any previously stored data at the data directory (options are 'no' which is default, 'prompt', 'force')",
-		Value: "no",
+	// ForceClearDB tells the beacon node to remove any previously stored data at the data directory.
+	ForceClearDB = cli.BoolFlag{
+		Name:  "force-clear-db",
+		Usage: "Clear any previously stored data at the data directory",
 	}
 	// LogFormat specifies the log output format.
 	LogFormat = cli.StringFlag{

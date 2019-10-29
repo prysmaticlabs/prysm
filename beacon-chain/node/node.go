@@ -200,22 +200,23 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
-  clearOption := ctx.GlobalString(cmd.ClearDB.Name)
-  force := false
-	d, err := db.NewDB(dbPath)
-	if err != nil {
-		return err
-	}
-	if clearOption != "no" {
-    if clearOption == "force" {
-      force = true
-    }
-		d, err = confirmDelete(d, dbPath, force)
+  forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+
+	if forceClearDB {
+		log.Info("Removing database")
+		d, err := db.NewDB(dbPath)
 		if err != nil {
+			return err
+		}
+		if err := d.ClearDB(); err != nil {
 			return err
 		}
 	}
 
+	d, err := db.NewDB(dbPath)
+	if err != nil {
+		return err
+	}
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
