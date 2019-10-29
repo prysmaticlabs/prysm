@@ -208,7 +208,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte) (uint64, error) {
 	length := uint64(len(indices))
 	if length == 0 {
-		return 0, errors.New("Empty indices list")
+		return 0, errors.New("empty indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
 
