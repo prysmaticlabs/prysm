@@ -26,6 +26,7 @@ import (
 //	    genesis_time=eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
 //	    eth1_data=Eth1Data(block_hash=eth1_block_hash, deposit_count=len(deposits)),
 //	    latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
+//      randao_mixes=[eth1_block_hash] * EPOCHS_PER_HISTORICAL_VECTOR,  # Seed RANDAO with Eth1 entropy
 //	  )
 //
 //	  # Process deposits
@@ -54,7 +55,7 @@ import (
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
+		randaoMixes[i] = eth1Data.BlockHash
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
