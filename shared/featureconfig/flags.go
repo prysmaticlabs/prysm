@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	// NoGenesisDelayFlag disables the standard genesis delay.
-	NoGenesisDelayFlag = cli.BoolFlag{
-		Name:  "no-genesis-delay",
-		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+	// GenesisDelayFlag disables the standard genesis delay.
+	GenesisDelayFlag = cli.BoolFlag{
+		Name:  "genesis-delay",
+		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
 	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
@@ -74,7 +74,7 @@ var ValidatorFlags = []cli.Flag{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
-	NoGenesisDelayFlag,
+	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
