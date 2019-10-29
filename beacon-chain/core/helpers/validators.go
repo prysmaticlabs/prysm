@@ -173,7 +173,7 @@ func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 //    shard = Shard((get_start_shard(state, epoch) + offset) % SHARD_COUNT)
 //    first_committee = get_crosslink_committee(state, epoch, shard)
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    seed = get_seed(state, epoch)
+//    seed = get_seed(state, epoch, DOMAIN_BEACON_PROPOSER)
 //    i = 0
 //    while True:
 //        candidate_index = first_committee[(epoch + i) % len(first_committee)]
