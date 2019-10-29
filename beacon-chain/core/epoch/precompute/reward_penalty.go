@@ -70,8 +70,7 @@ func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64,
 		r += br * bp.PrevEpochAttesters / bp.CurrentEpoch
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAtteserReward := br - proposerReward
-		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-		r += maxAtteserReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - v.InclusionDistance) / slotsPerEpoch
+		r += maxAtteserReward / v.InclusionDistance
 	} else {
 		p += br
 	}
