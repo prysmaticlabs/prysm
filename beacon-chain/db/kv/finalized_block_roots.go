@@ -82,11 +82,12 @@ func updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *eth
 	}
 }
 
+// IsFinalizedBlock returns true if the block root is present in the finalized block root index.
 func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	if !featureconfig.Get().EnableFinalizedBlockRootIndex {
 		return true
 	}
-	
+
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
