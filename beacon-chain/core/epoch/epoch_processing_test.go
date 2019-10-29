@@ -912,12 +912,6 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 		t.Errorf("start shard incorrectly updated, got %d", 64)
 	}
 
-	// Verify latest active index root is correctly updated in the right position.
-	pos := (ne + params.BeaconConfig().MaxSeedLookhead) % params.BeaconConfig().EpochsPerHistoricalVector
-	if bytes.Equal(newS.ActiveIndexRoots[pos], params.BeaconConfig().ZeroHash[:]) {
-		t.Error("latest active index roots still zero hashes")
-	}
-
 	// Verify slashed balances correctly updated.
 	if newS.Slashings[ce] != newS.Slashings[ne] {
 		t.Errorf("wanted slashed balance %d, got %d",
