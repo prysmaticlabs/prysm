@@ -59,7 +59,7 @@ chown -R goapp:goapp /app
 cat >/etc/supervisor/conf.d/goapp.conf << EOF
 [program:goapp]
 directory=/app
-command=/app/beacon-chain --p2p-host-ip=${EXTERNAL_IP} --clear-db=no
+command=/app/beacon-chain --p2p-host-ip=${EXTERNAL_IP} --clear-db
 autostart=true
 autorestart=true
 user=goapp
