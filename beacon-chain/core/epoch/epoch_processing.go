@@ -718,11 +718,7 @@ func BaseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //        proposer_reward = Gwei(get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT)
 //        rewards[attestation.proposer_index] += proposer_reward
 //        max_attester_reward = get_base_reward(state, index) - proposer_reward
-//        rewards[index] += Gwei(
-//            max_attester_reward
-//            * (SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - attestation.inclusion_delay)
-//            // SLOTS_PER_EPOCH
-//        )
+//        rewards[index] += Gwei(max_attester_reward // attestation.inclusion_delay)
 //
 //    # Inactivity penalty
 //    finality_delay = previous_epoch - state.finalized_checkpoint.epoch
@@ -821,8 +817,6 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSource {
-		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-
 		baseReward, err := BaseReward(state, i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get proposer reward")
@@ -830,7 +824,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		rewards[i] += attesterReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
+		rewards[i] += attesterReward / a.InclusionDelay
 	}
 
 	// Apply penalties for quadratic leaks.
