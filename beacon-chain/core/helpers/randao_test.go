@@ -87,86 +87,8 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	}
 }
 
-func TestActiveIndexRoot_OK(t *testing.T) {
-
-	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(activeIndexRoots); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
-		activeIndexRoots[i] = intInBytes
-	}
-	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
-	tests := []struct {
-		epoch uint64
-	}{
-		{
-			epoch: 34,
-		},
-		{
-			epoch: 3444,
-		},
-		{
-			epoch: 999999,
-		},
-	}
-	for _, test := range tests {
-		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
-		for i := 0; i <= int(params.BeaconConfig().MaxSeedLookhead); i++ {
-			indexRoot := ActiveIndexRoot(state, test.epoch+uint64(i))
-
-			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot) {
-				t.Errorf("Incorrect index root. Wanted: %#x, got: %#x",
-					activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot)
-			}
-		}
-
-	}
-}
-
-func TestActiveIndexRoot_CopyOK(t *testing.T) {
-	ClearAllCaches()
-	conf := params.BeaconConfig()
-	conf.EpochsPerHistoricalVector = 100
-	params.OverrideBeaconConfig(conf)
-	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(activeIndexRoots); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
-		activeIndexRoots[i] = intInBytes
-	}
-	state := &pb.BeaconState{ActiveIndexRoots: activeIndexRoots}
-	tests := []struct {
-		epoch uint64
-	}{
-		{
-			epoch: 34,
-		},
-	}
-	for _, test := range tests {
-		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
-		indexRoot := ActiveIndexRoot(state, test.epoch)
-		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
-		binary.LittleEndian.PutUint64(indexRoot, uniqueNumber)
-
-		for _, root := range activeIndexRoots {
-			rootNum := bytesutil.FromBytes8(root)
-			if rootNum == uniqueNumber {
-				t.Fatalf("two distinct slices which have different representations in memory still contain"+
-					"the same value: %d", rootNum)
-			}
-		}
-	}
-}
-
 func TestGenerateSeed_OK(t *testing.T) {
 	ClearAllCaches()
-
-	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(activeIndexRoots); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
-		activeIndexRoots[i] = intInBytes
-	}
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
@@ -175,9 +97,8 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		ActiveIndexRoots: activeIndexRoots,
-		RandaoMixes:      randaoMixes,
-		Slot:             slot}
+		RandaoMixes: randaoMixes,
+		Slot:        slot}
 
 	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
