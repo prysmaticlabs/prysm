@@ -350,27 +350,28 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		committee  []uint64
 		shard      uint64
 		isProposer bool
+		proposerSlot uint64
 	}{
 		{
 			index:      0,
 			slot:       144,
 			committee:  []uint64{95, 0},
-			shard:      80,
-			isProposer: true,
+			shard:      16,
+			isProposer: false,
 		},
 		{
 			index:      105,
 			slot:       171,
 			committee:  []uint64{50, 105},
 			shard:      43,
-			isProposer: true,
+			isProposer: false,
 		},
 		{
 			index:      0,
 			slot:       144,
 			committee:  []uint64{95, 0},
 			shard:      16,
-			isProposer: true,
+			isProposer: false,
 		},
 		{
 			index:      11,
@@ -378,13 +379,14 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			committee:  []uint64{22, 11},
 			shard:      1,
 			isProposer: true,
+			proposerSlot: 179,
 		},
 	}
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearAllCaches()
-			committee, shard, slot, isProposer, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			committee, shard, slot, isProposer, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 			}
@@ -404,14 +406,19 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted committee %v, got committee %v for validator index %d",
 					tt.committee, committee, tt.index)
 			}
+			if proposerSlot != tt.proposerSlot {
+				t.Errorf("wanted proposer slot slot %d, got slot %d for validator index %d",
+					tt.slot, slot, tt.index)
+			}
 		})
 	}
 }
 
-func TestCommitteeAssignment_EveryValidatorShouldPropose(t *testing.T) {
-	// Initialize 64 validators with 64 slots per epoch. Every validator
-	// in the epoch should be a proposer.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch)
+func TestCommitteeAssignment_EverySlotHasProposer(t *testing.T) {
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	validators := make([]*ethpb.Validator, 64)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -424,24 +431,36 @@ func TestCommitteeAssignment_EveryValidatorShouldPropose(t *testing.T) {
 	}
 
 	ClearAllCaches()
+	proposerCount := uint64(0)
 	for i := 0; i < len(validators); i++ {
-		_, _, _, isProposer, err := CommitteeAssignment(state, state.Slot/params.BeaconConfig().SlotsPerEpoch, uint64(i))
+		_, _, _, isProposer, _, err := CommitteeAssignment(state, state.Slot/params.BeaconConfig().SlotsPerEpoch, uint64(i))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !isProposer {
-			t.Errorf("validator %d should be a proposer", i)
+		if isProposer {
+			proposerCount++
 		}
+	}
+	if proposerCount != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Did not get enough proposers, wanted: %d, got: %d", params.BeaconConfig().SlotsPerEpoch, proposerCount)
 	}
 }
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:        params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
 	}
-	index := uint64(10000)
-	_, _, _, _, err := CommitteeAssignment(state, 1, index)
+	state := &pb.BeaconState{
+		Validators:       validators,
+		Slot:             params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+	index := uint64(params.BeaconConfig().SlotsPerEpoch + 1)
+	_, _, _, _, _, err := CommitteeAssignment(state, 1, index)
 	statusErr, ok := status.FromError(err)
 	if !ok {
 		t.Fatal(err)
