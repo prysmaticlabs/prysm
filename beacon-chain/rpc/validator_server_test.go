@@ -68,7 +68,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 8)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -272,7 +272,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}

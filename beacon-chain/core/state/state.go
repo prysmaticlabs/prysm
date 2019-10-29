@@ -53,6 +53,10 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = eth1Data.BlockHash
@@ -86,10 +90,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
 
 	eth1Data.DepositCount = uint64(len(deposits))
 

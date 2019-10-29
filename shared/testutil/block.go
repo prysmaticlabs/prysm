@@ -100,7 +100,11 @@ func GenerateFullBlock(
 	if err != nil {
 		t.Fatal(err)
 	}
-	block.StateRoot = s[:]
+	root, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.StateRoot = root[:]
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
