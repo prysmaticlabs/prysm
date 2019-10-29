@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flag is a struct to represent what features the client will perform on runtime.
 type Flag struct {
-	GenesisDelay                bool // GenesisDelay when processing a chain start genesis event.
+	GenesisDelay                  bool // GenesisDelay when processing a chain start genesis event.
 	MinimalConfig                 bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions      bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify              bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.

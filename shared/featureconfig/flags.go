@@ -70,8 +70,8 @@ var (
 // Deprecated flags list.
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
-		Name:  "no-genesis-delay",
-		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Name:   "no-genesis-delay",
+		Usage:  "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
 		Hidden: true,
 	}
 )
