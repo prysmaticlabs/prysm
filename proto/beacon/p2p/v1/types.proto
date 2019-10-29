@@ -27,11 +27,10 @@ message BeaconState {
   repeated ethereum.eth.v1alpha1.Validator validators = 4001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
   repeated uint64 balances = 4002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
-  // Shuffling [5001-6000]
-  uint64 start_shard = 5001;
-  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
+  // Randomness [5001-6000]
+  repeated bytes randao_mixes = 5001 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
+  repeated bytes active_index_roots = 5002 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
+  repeated bytes compact_committees_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
@@ -40,16 +39,12 @@ message BeaconState {
   repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
   repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
 
-  // Crosslinks [8001-9000]
-  repeated ethereum.eth.v1alpha1.Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"previous_crosslinks.size\""];
-  repeated ethereum.eth.v1alpha1.Crosslink current_crosslinks = 8002 [(gogoproto.moretags) = "ssz-size:\"current_crosslinks.size\""];
-
-  // Finality [9001-10000]
+  // Finality [8001-9000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
-  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
-  ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 9002;
-  ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 9003;
-  ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 9004;
+  bytes justification_bits = 8001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+  ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
+  ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
+  ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
 }
 
 message Fork {

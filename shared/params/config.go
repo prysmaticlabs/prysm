@@ -18,12 +18,12 @@ type BeaconChainConfig struct {
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
-	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
-	MaxCommitteePerSlot uint64 // MaxCommitteePerSlot defines the max amount of committee in a single slot.
-	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
+	TargetCommitteeSize       uint64 `yaml:"TARGET_COMMITTEE_SIZE"`                   // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxValidatorsPerCommittee uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`            // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MaxCommitteesPerSlot      uint64                                                  // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
+	MinPerEpochChurnLimit     uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`               // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient        uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`                    // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	ShuffleRoundCount         uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                     // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
 
@@ -115,7 +115,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
 	TargetCommitteeSize:            128,
 	MaxValidatorsPerCommittee:      2048,
-	MaxCommitteePerSlot: 64,
+	MaxCommitteesPerSlot:           64,
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
