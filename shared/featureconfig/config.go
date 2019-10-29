@@ -59,6 +59,7 @@ func Init(c *Flag) {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 	cfg := &Flag{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
@@ -114,10 +115,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 	cfg := &Flag{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
 	Init(cfg)
+}
+
+func complainOnDeprecatedFlags(ctx *cli.Context) {
+	for _, f := range deprecatedFlags {
+		if ctx.IsSet(f.GetName()) {
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag.", f.GetName())
+		}
+	}
 }

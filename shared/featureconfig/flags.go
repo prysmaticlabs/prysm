@@ -10,6 +10,11 @@ var (
 		Name:  "genesis-delay",
 		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
 	}
+	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
+		Name:  "no-genesis-delay",
+		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Hidden: true,
+	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
@@ -63,13 +68,17 @@ var (
 	}
 )
 
-// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	MinimalConfigFlag,
+var deprecatedFlags = []cli.Flag{
+	deprecatedNoGenesisDelayFlag,
 }
 
+// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
+var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	MinimalConfigFlag,
+}...)
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = []cli.Flag{
+var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
@@ -82,4 +91,4 @@ var BeaconChainFlags = []cli.Flag{
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	pruneFinalizedStatesFlag,
-}
+}...)
