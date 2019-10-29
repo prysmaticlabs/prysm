@@ -10,11 +10,6 @@ var (
 		Name:  "genesis-delay",
 		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
 	}
-	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
-		Name:  "no-genesis-delay",
-		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
-		Hidden: true,
-	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
@@ -65,6 +60,15 @@ var (
 	pruneFinalizedStatesFlag = cli.BoolFlag{
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
+	}
+)
+
+// Deprecated flags list.
+var (
+	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
+		Name:  "no-genesis-delay",
+		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Hidden: true,
 	}
 )
 
