@@ -781,7 +781,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -1220,7 +1220,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -1249,7 +1249,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1344,7 +1344,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1519,20 +1519,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x05},
-			wantedCustodyBit0Indices: []uint64{71},
-			wantedCustodyBit1Indices: []uint64{127},
+			wantedCustodyBit0Indices: []uint64{28},
+			wantedCustodyBit1Indices: []uint64{125},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x06},
-			wantedCustodyBit0Indices: []uint64{127},
-			wantedCustodyBit1Indices: []uint64{71},
+			wantedCustodyBit0Indices: []uint64{125},
+			wantedCustodyBit1Indices: []uint64{28},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{71, 127},
+			wantedCustodyBit1Indices: []uint64{28, 125},
 		},
 	}
 
@@ -1563,6 +1563,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
+			fmt.Println(ia, wanted)
 			t.Log(diff)
 			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
@@ -1640,7 +1641,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CustodyBit: false,
 		}
 
-		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
 		root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
 		if err != nil {

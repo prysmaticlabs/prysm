@@ -111,7 +111,7 @@ func TestActiveIndexRoot_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		state.Slot = (test.epoch) * params.BeaconConfig().SlotsPerEpoch
-		for i := 0; i <= int(params.BeaconConfig().ActivationExitDelay); i++ {
+		for i := 0; i <= int(params.BeaconConfig().MaxSeedLookhead); i++ {
 			indexRoot := ActiveIndexRoot(state, test.epoch+uint64(i))
 
 			if !bytes.Equal(activeIndexRoots[(test.epoch+uint64(i))%params.BeaconConfig().EpochsPerHistoricalVector], indexRoot) {
@@ -179,13 +179,13 @@ func TestGenerateSeed_OK(t *testing.T) {
 		RandaoMixes:      randaoMixes,
 		Slot:             slot}
 
-	got, err := Seed(state, 10)
+	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wanted := [32]byte{141, 205, 112, 76, 60, 173, 127, 10, 1, 214, 151, 41, 69, 40, 108, 88, 247,
-		210, 88, 5, 150, 112, 64, 93, 208, 110, 194, 137, 234, 180, 40, 245}
+	wanted := [32]byte{102, 82, 23, 40, 226, 79, 171, 11, 203, 23, 175, 7, 88, 202, 80,
+		103, 68, 126, 195, 143, 190, 249, 210, 85, 138, 196, 158, 208, 11, 18, 136, 23}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

@@ -495,7 +495,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
 	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
 	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
-	activationDelay := params.BeaconConfig().ActivationExitDelay
+	activationDelay := params.BeaconConfig().MaxSeedLookhead
 	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
 	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
 	if err != nil {

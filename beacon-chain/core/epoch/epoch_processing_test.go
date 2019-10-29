@@ -919,7 +919,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify latest active index root is correctly updated in the right position.
-	pos := (ne + params.BeaconConfig().ActivationExitDelay) % params.BeaconConfig().EpochsPerHistoricalVector
+	pos := (ne + params.BeaconConfig().MaxSeedLookhead) % params.BeaconConfig().EpochsPerHistoricalVector
 	if bytes.Equal(newS.ActiveIndexRoots[pos], params.BeaconConfig().ZeroHash[:]) {
 		t.Error("latest active index roots still zero hashes")
 	}
@@ -977,8 +977,8 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead},
 		},
 		Balances: []uint64{
 			params.BeaconConfig().MaxEffectiveBalance,
@@ -991,9 +991,9 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookhead, validator.ExitEpoch)
 		}
 	}
 }
@@ -1032,7 +1032,7 @@ func TestCrosslinkDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 16, 336, 797, 1082, 1450, 1770, 1958}
+	attestedIndices := []uint64{24, 100, 106, 196, 285, 534, 641, 654}
 	for _, i := range attestedIndices {
 		// Since all these validators attested, they should get the same rewards.
 		want := uint64(12649)
@@ -1210,7 +1210,7 @@ func TestAttestationDelta_SomeAttested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
+	attestedIndices := []uint64{24, 100, 106, 196, 285, 288, 389}
 	for _, i := range attestedIndices {
 		base, err := BaseReward(state, i)
 		if err != nil {
@@ -1293,7 +1293,7 @@ func TestAttestationDelta_SomeAttestedFinalityDelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{5, 754, 797, 1637, 1770, 1862, 1192}
+	attestedIndices := []uint64{24, 100, 106, 196, 285, 288, 389}
 	for _, i := range attestedIndices {
 		base, err := BaseReward(state, i)
 		if err != nil {
@@ -1373,10 +1373,10 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
-			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead,
+				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookhead + 1},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead,
+				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookhead + 1},
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
@@ -1385,9 +1385,9 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		t.Error(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookhead, validator.ExitEpoch)
 		}
 	}
 }
@@ -1412,9 +1412,9 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 		t.Error(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay+1 {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead+1 {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().ActivationExitDelay+1, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookhead+1, validator.ExitEpoch)
 		}
 	}
 }
@@ -1502,7 +1502,7 @@ func TestProcessRewardsAndPenalties_SomeAttested(t *testing.T) {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[0])
 	}
-	wanted = uint64(31999995452)
+	wanted = uint64(31999797616)
 	if state.Balances[4] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
 			wanted, state.Balances[1])
