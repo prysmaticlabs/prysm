@@ -33,53 +33,61 @@ func updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *eth
 
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
-	for {
-		if bytes.Equal(root, genesisRoot) {
-			return nil
-		}
+	var walk = func() error {
+		for {
+			if bytes.Equal(root, genesisRoot) {
+				return nil
+			}
 
-		enc := blocks.Get(root)
-		if enc == nil {
-			traceutil.AnnotateError(span, errMissingParentBlockInDatabase)
-			return errMissingParentBlockInDatabase
-		}
-		block := &ethpb.BeaconBlock{}
-		if err := proto.Unmarshal(enc, block); err != nil {
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-
-		container := &dbpb.FinalizedBlockRootContainer{
-			ParentRoot: block.ParentRoot,
-			ChildRoot:  previousRoot,
-		}
-
-		enc, err := proto.Marshal(container)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-		if err := bkt.Put(root, enc); err != nil {
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
-			parent := &dbpb.FinalizedBlockRootContainer{}
-			if err := proto.Unmarshal(parentBytes, parent); err != nil {
+			enc := blocks.Get(root)
+			if enc == nil {
+				traceutil.AnnotateError(span, errMissingParentBlockInDatabase)
+				return errMissingParentBlockInDatabase
+			}
+			block := &ethpb.BeaconBlock{}
+			if err := proto.Unmarshal(enc, block); err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
 			}
-			parent.ChildRoot = root
-			enc, err := proto.Marshal(parent)
+
+			container := &dbpb.FinalizedBlockRootContainer{
+				ParentRoot: block.ParentRoot,
+				ChildRoot:  previousRoot,
+			}
+
+			enc, err := proto.Marshal(container)
 			if err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
 			}
-			return bkt.Put(block.ParentRoot, enc)
+			if err := bkt.Put(root, enc); err != nil {
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
+				parent := &dbpb.FinalizedBlockRootContainer{}
+				if err := proto.Unmarshal(parentBytes, parent); err != nil {
+					traceutil.AnnotateError(span, err)
+					return err
+				}
+				parent.ChildRoot = root
+				enc, err := proto.Marshal(parent)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return err
+				}
+				return bkt.Put(block.ParentRoot, enc)
+			}
+			previousRoot = root
+			root = block.ParentRoot
 		}
-		previousRoot = root
-		root = block.ParentRoot
 	}
+	err := walk()
+	// All updates must have been successful or the whole transaction rolled back.
+	if err != nil {
+		tx.Rollback()
+	}
+	return err
 }
 
 // IsFinalizedBlock returns true if the block root is present in the finalized block root index.
