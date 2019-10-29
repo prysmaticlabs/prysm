@@ -132,7 +132,7 @@ func ConfigureValidator(ctx *cli.Context) {
 func complainOnDeprecatedFlags(ctx *cli.Context) {
 	for _, f := range deprecatedFlags {
 		if ctx.IsSet(f.GetName()) {
-			log.Errorf("%s is deprecated and has no effect. Do not use this flag.", f.GetName())
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.GetName())
 		}
 	}
 }
