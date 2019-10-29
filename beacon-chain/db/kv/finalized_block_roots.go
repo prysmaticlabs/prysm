@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -17,10 +16,6 @@ import (
 var errMissingParentBlockInDatabase = errors.New("missing block in database")
 
 func updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
-	if !featureconfig.Get().EnableFinalizedBlockRootIndex {
-		return nil
-	}
-
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateFinalizedBlockRoots")
 	defer span.End()
 
@@ -92,10 +87,6 @@ func updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *eth
 
 // IsFinalizedBlock returns true if the block root is present in the finalized block root index.
 func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	if !featureconfig.Get().EnableFinalizedBlockRootIndex {
-		return true
-	}
-
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 

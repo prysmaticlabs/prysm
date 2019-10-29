@@ -33,7 +33,6 @@ type Flag struct {
 	EnableBackupWebhook           bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
 	OptimizeProcessEpoch          bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
 	PruneFinalizedStates          bool // PruneFinalizedStates from the database.
-	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
 
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -109,10 +108,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
 		log.Warn("Enabled pruning old finalized states from database.")
 		cfg.PruneFinalizedStates = true
-	}
-	if ctx.GlobalBool(enableFinalizedBlockRootIndexFlag.Name) {
-		log.Warn("Enabled finalized block root index")
-		cfg.EnableFinalizedBlockRootIndex = true
 	}
 	Init(cfg)
 }
