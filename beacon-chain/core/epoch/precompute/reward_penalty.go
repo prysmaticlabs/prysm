@@ -153,7 +153,7 @@ func crosslinkDeltaPreCompute(state *pb.BeaconState, bp *Balance, vp []*Validato
 		attestingBalance := helpers.TotalBalance(state, attestingIndices)
 
 		for _, index := range committee {
-			base := vp[i].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
+			base := vp[index].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
 			if _, ok := attested[index]; ok {
 				rewards[index] += base * attestingBalance / committeeBalance
 			} else {
