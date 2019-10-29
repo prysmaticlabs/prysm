@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	runtimeDebug "runtime/debug"
 
 	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
@@ -121,6 +122,13 @@ func main() {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}
+
+	defer func() {
+		if x := recover(); x != nil {
+			log.Printf("run time panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			panic(x)
+		}
+	}()
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
