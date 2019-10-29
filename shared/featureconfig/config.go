@@ -25,14 +25,15 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flag is a struct to represent what features the client will perform on runtime.
 type Flag struct {
-	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
-	MinimalConfig            bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify            bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
-	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
-	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
+	GenesisDelay                  bool // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig                 bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions      bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify              bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify                 bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook           bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
+	OptimizeProcessEpoch          bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
+	PruneFinalizedStates          bool // PruneFinalizedStates from the database.
+	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
 
 	// Cache toggles.
 	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -59,14 +60,15 @@ func Init(c *Flag) {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 	cfg := &Flag{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
+	if ctx.GlobalBool(GenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
-		cfg.NoGenesisDelay = true
+		cfg.GenesisDelay = true
 	}
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -108,16 +110,29 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled pruning old finalized states from database.")
 		cfg.PruneFinalizedStates = true
 	}
+	if ctx.GlobalBool(enableFinalizedBlockRootIndexFlag.Name) {
+		log.Warn("Enabled finalized block root index")
+		cfg.EnableFinalizedBlockRootIndex = true
+	}
 	Init(cfg)
 }
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 	cfg := &Flag{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
 	Init(cfg)
+}
+
+func complainOnDeprecatedFlags(ctx *cli.Context) {
+	for _, f := range deprecatedFlags {
+		if ctx.IsSet(f.GetName()) {
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.GetName())
+		}
+	}
 }
