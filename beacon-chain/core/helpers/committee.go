@@ -79,7 +79,7 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get committee count at slot")
 	}
-	epoch_offset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+	epochOffset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
@@ -92,7 +92,7 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
-	return ComputeCommittee(indices, seed, epoch_offset, count)
+	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
