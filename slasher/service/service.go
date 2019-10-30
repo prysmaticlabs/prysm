@@ -106,7 +106,11 @@ func (s *Service) Start() {
 	}()
 
 	// Wait for stop channel to be closed.
-	<-stop
+	select {
+	case <-stop:
+		return
+	default:
+	}
 
 }
 func (s *Service) startSlasher() {
