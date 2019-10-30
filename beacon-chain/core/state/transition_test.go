@@ -1021,8 +1021,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 }
 
 func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
-	t.Skip("Disabled until v0.9.0 (#3865) completes")
-
 	logrus.SetLevel(logrus.PanicLevel)
 	helpers.ClearAllCaches()
 
