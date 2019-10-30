@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -52,6 +53,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
+		// shuffle peers to prevent a bad peer from
+		// stalling sync with invalid blocks
+		rand.Shuffle(len(peers), func(i, j int) {
+			peers[i], peers[j] = peers[j], peers[i]
+		})
 
 		// request a range of blocks to be requested from multiple peers.
 		// Example:
