@@ -17,8 +17,6 @@ import (
 )
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
-	t.Skip("Disabled until v0.9.0 (#3865) completes")
-
 	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -26,11 +24,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte,32)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Eth1Data.BlockHash = nil
 	beaconState.Eth1DepositIndex = 100
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
@@ -183,8 +180,6 @@ func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
 }
 
 func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
-	t.Skip("Disabled until v0.9.0 (#3865) completes")
-
 	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -192,7 +187,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
