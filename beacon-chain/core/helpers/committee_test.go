@@ -147,17 +147,17 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		{
 			attestationSlot: 3,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{290, 402},
+			wanted:          []uint64{355, 416},
 		},
 		{
 			attestationSlot: 2,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{853},
+			wanted:          []uint64{447},
 		},
 		{
 			attestationSlot: 11,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{872, 103},
+			wanted:          []uint64{67, 508},
 		},
 	}
 
@@ -248,32 +248,25 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:          0,
-			slot:           168,
-			committee:      []uint64{23, 0},
+			slot:           92,
+			committee:      []uint64{46, 0},
 			committeeIndex: 1,
 			isProposer:     false,
 		},
 		{
-			index:          105,
-			slot:           152,
-			committee:      []uint64{105, 31},
+			index:          1,
+			slot:           70,
+			committee:      []uint64{1, 58},
 			committeeIndex: 0,
-			isProposer:     false,
-		},
-		{
-			index:          0,
-			slot:           168,
-			committee:      []uint64{23, 0},
-			committeeIndex: 1,
-			isProposer:     false,
+			isProposer:     true,
+			proposerSlot:   91,
 		},
 		{
 			index:          11,
-			slot:           175,
-			committee:      []uint64{11, 114},
-			committeeIndex: 0,
-			isProposer:     true,
-			proposerSlot:   179,
+			slot:           64,
+			committee:      []uint64{30, 11},
+			committeeIndex: 1,
+			isProposer:     false,
 		},
 	}
 
