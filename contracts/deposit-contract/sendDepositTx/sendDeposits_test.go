@@ -61,7 +61,8 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys ma
 		}
 
 		testAcc.Backend.Commit()
-
+		
+		//lgos do not show up in console 
 		log.WithFields(logrus.Fields{
 			"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
 		}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddrStr, validatorKey.PublicKey.Marshal())
@@ -125,7 +126,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 			t.Fatalf("Unable to unpack logs %v", err)
 		}
 
-		if binary.LittleEndian.Uint64(index) != 0 {
+		if binary.LittleEndian.Uint64(index) != uint64(i + 1) {
 			t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 		}
 
