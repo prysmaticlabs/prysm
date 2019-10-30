@@ -55,7 +55,6 @@ var appFlags = []cli.Flag{
 	cmd.BootstrapNode,
 	cmd.MonitoringPortFlag,
 	cmd.LogFileName,
-	cmd.EnableUPnPFlag,
 	cmd.LogFormat,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
