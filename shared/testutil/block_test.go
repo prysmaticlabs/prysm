@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -94,7 +95,9 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	helpers.ClearAllCaches()
+
+	deposits, _, privs := SetupInitialDeposits(t, 64)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -146,7 +149,9 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	helpers.ClearAllCaches()
+
+	deposits, _, privs := SetupInitialDeposits(t, 256)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {

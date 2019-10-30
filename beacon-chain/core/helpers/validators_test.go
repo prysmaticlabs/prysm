@@ -159,10 +159,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
@@ -237,10 +236,9 @@ func TestChurnLimit_OK(t *testing.T) {
 		}
 
 		beaconState := &pb.BeaconState{
-			Slot:             1,
-			Validators:       validators,
-			RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-			ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+			Slot:        1,
+			Validators:  validators,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
 		resultChurn, err := ValidatorChurnLimit(beaconState)
 		if err != nil {

@@ -1198,9 +1198,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1282,9 +1281,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1391,9 +1389,8 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1469,9 +1466,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1653,8 +1649,6 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},

@@ -128,10 +128,9 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             200,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        200,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -187,10 +186,9 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             200,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        200,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -234,9 +232,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	attestationData := &ethpb.AttestationData{}
@@ -304,9 +301,8 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	attestationData := &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{}, Target: &ethpb.Checkpoint{}}
 
@@ -343,18 +339,17 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
-		index      uint64
-		slot       uint64
-		committee  []uint64
-		shard      uint64
-		isProposer bool
+		index        uint64
+		slot         uint64
+		committee    []uint64
+		shard        uint64
+		isProposer   bool
 		proposerSlot uint64
 	}{
 		{
@@ -379,11 +374,11 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			isProposer: false,
 		},
 		{
-			index:      11,
-			slot:       129,
-			committee:  []uint64{22, 11},
-			shard:      1,
-			isProposer: true,
+			index:        11,
+			slot:         129,
+			committee:    []uint64{22, 11},
+			shard:        1,
+			isProposer:   true,
 			proposerSlot: 179,
 		},
 	}
@@ -430,10 +425,9 @@ func TestCommitteeAssignment_EverySlotHasProposer(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	ClearAllCaches()
@@ -460,10 +454,9 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	index := uint64(params.BeaconConfig().SlotsPerEpoch + 1)
 	_, _, _, _, _, err := CommitteeAssignment(state, 1, index)
@@ -621,9 +614,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		ActiveIndexRoots: activeRoots,
-		RandaoMixes:      activeRoots,
+		Validators:  validators,
+		RandaoMixes: activeRoots,
 	}
 
 	tests := []struct {
@@ -739,33 +731,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 }
 
-func TestCompactCommitteesRoot_OK(t *testing.T) {
-	ClearAllCaches()
-	// Create 10 committees
-	committeeCount := uint64(10)
-	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*ethpb.Validator, validatorCount)
-	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-		activeRoots[i] = []byte{'A'}
-	}
-
-	state := &pb.BeaconState{
-		Slot:             196,
-		Validators:       validators,
-		ActiveIndexRoots: activeRoots,
-		RandaoMixes:      activeRoots,
-	}
-
-	_, err := CompactCommitteesRoot(state, 1)
-	if err != nil {
-		t.Fatalf("Could not get compact root %v", err)
-	}
-}
-
 func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 	ClearAllCaches()
 
@@ -779,9 +744,8 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	// Test for current epoch
 	shuffledIndices, err := ShuffledIndices(state, 0)
@@ -823,9 +787,8 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := UpdateCommitteeCache(state); err != nil {
@@ -912,9 +875,8 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -951,9 +913,8 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -990,9 +951,8 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -1030,9 +990,8 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
@@ -1070,9 +1029,8 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := CurrentEpoch(state)
