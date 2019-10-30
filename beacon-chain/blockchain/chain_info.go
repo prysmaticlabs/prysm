@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"context"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +16,7 @@ type ChainInfoFetcher interface {
 	HeadFetcher
 	CanonicalRootFetcher
 	FinalizationFetcher
+	BlockFetcher
 }
 
 // GenesisTimeFetcher retrieves the Eth2 genesis timestamp.
@@ -29,6 +31,10 @@ type HeadFetcher interface {
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
 	HeadState() *pb.BeaconState
+}
+
+type BlockFetcher interface {
+	BlockExists(ctx context.Context, root [32]byte) bool
 }
 
 // CanonicalRootFetcher defines a common interface for methods in blockchain service which
@@ -93,6 +99,15 @@ func (s *Service) HeadState() *pb.BeaconState {
 	defer s.headLock.RUnlock()
 
 	return proto.Clone(s.headState).(*pb.BeaconState)
+}
+
+func (s *Service) BlockExists(ctx context.Context, root [32]byte) bool {
+	blk, err := s.beaconDB.Block(ctx, root)
+	if err != nil || blk == nil {
+		return false
+	}
+
+	return true
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

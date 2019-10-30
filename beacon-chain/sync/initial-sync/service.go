@@ -21,6 +21,7 @@ type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
 	blockchain.ChainFeeds
+	blockchain.BlockFetcher
 }
 
 const (

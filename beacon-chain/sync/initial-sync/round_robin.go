@@ -1,7 +1,6 @@
 package initialsync
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -14,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -169,53 +167,15 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Slot < blocks[j].Slot
 		})
 
-		var sortedBlocks func([]*eth.BeaconBlock) ([]*eth.BeaconBlock, error)
-
-		sortedBlocks = func(blks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
-			headRoot := bytesutil.ToBytes32(s.chain.HeadRoot())
-			newBlks := make([]*eth.BeaconBlock, 0, len(blks))
-
-			for _, b := range blks {
-				if !bytes.Equal(b.ParentRoot, headRoot[:]) {
-					continue
-				}
-				headRoot, err = ssz.SigningRoot(b)
-				if err != nil {
-					return nil, err
-				}
-				newBlks = append(newBlks, b)
-			}
-			return blks, nil
-		}
-
-		blocks, _ = sortedBlocks(blocks)
-
-		for i, blk := range blocks {
+		for _, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
-			if !bytes.Equal(s.chain.HeadRoot(), blk.ParentRoot) {
-				log.Errorf("wanted parent root of %#x but got %#x", s.chain.HeadRoot(), blk.ParentRoot)
+			if !s.chain.BlockExists(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
+				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.ParentRoot)
+				continue
 			}
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
-					newBlocks, err2 := request(
-						s.chain.HeadSlot()+1,        // start
-						1,                           // step
-						blk.Slot-s.chain.HeadSlot(), // count
-						peers,                       // peers
-						0,                           // remainder
-					)
-					if err2 != nil {
-						return err2
-					}
-					newBlocks, err3 := sortedBlocks(newBlocks)
-					if err3 != nil {
-						return err3
-					}
-					failedResponse.Inc()
-					lastBlocks := append(newBlocks, blocks[i+1:]...)
-					blocks = append(blocks[:i], lastBlocks...)
-					continue
-					//return err
+					return err
 				}
 			} else {
 				if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
