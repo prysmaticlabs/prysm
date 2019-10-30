@@ -73,6 +73,7 @@ var (
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
+
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
 		Name:   "no-genesis-delay",

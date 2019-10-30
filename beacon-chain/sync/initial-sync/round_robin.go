@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -168,6 +169,27 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Slot < blocks[j].Slot
 		})
 
+		var sortedBlocks func([]*eth.BeaconBlock) ([]*eth.BeaconBlock, error)
+
+		sortedBlocks = func(blks []*eth.BeaconBlock) ([]*eth.BeaconBlock, error) {
+			headRoot := bytesutil.ToBytes32(s.chain.HeadRoot())
+			newBlks := make([]*eth.BeaconBlock, 0, len(blks))
+
+			for _, b := range blks {
+				if !bytes.Equal(b.ParentRoot, headRoot[:]) {
+					continue
+				}
+				headRoot, err = ssz.SigningRoot(b)
+				if err != nil {
+					return nil, err
+				}
+				newBlks = append(newBlks, b)
+			}
+			return blks, nil
+		}
+
+		blocks, _ = sortedBlocks(blocks)
+
 		for i, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
 			if !bytes.Equal(s.chain.HeadRoot(), blk.ParentRoot) {
@@ -184,6 +206,10 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					)
 					if err2 != nil {
 						return err2
+					}
+					newBlocks, err3 := sortedBlocks(newBlocks)
+					if err3 != nil {
+						return err3
 					}
 					failedResponse.Inc()
 					lastBlocks := append(newBlocks, blocks[i+1:]...)
