@@ -85,7 +85,7 @@ func (s *Service) Start() {
 		"version": version.GetVersion(),
 	}).Info("Starting hash slinging slasher node")
 	s.startSlasher()
-	//stop := s.stop
+	stop := s.stop
 	s.lock.Unlock()
 
 	go func() {
@@ -106,7 +106,11 @@ func (s *Service) Start() {
 	}()
 
 	// Wait for stop channel to be closed.
-	//<-stop
+	select {
+	case <-stop:
+		return
+	default:
+	}
 
 }
 func (s *Service) startSlasher() {

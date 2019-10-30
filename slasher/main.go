@@ -8,7 +8,6 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -47,13 +46,30 @@ var appFlags = []cli.Flag{
 	cmd.VerbosityFlag,
 	cmd.LogFormat,
 	cmd.DataDirFlag,
+	cmd.VerbosityFlag,
+	cmd.DataDirFlag,
+	cmd.EnableTracingFlag,
+	cmd.TracingProcessNameFlag,
+	cmd.TracingEndpointFlag,
+	cmd.TraceSampleFractionFlag,
+	cmd.BootstrapNode,
+	cmd.MonitoringPortFlag,
+	cmd.LogFileName,
+	cmd.EnableUPnPFlag,
+	cmd.LogFormat,
+	debug.PProfFlag,
+	debug.PProfAddrFlag,
+	debug.PProfPortFlag,
+	debug.MemProfileRateFlag,
+	debug.CPUProfileFlag,
+	debug.TraceFlag,
 	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
 }
 
 func init() {
-	appFlags = append(appFlags, featureconfig.SlasherFlags...)
+
 }
 
 func main() {
