@@ -698,5 +698,6 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			}
 		}
 	}
+
 	return rewards, penalties, nil
 }
