@@ -71,6 +71,8 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "slasher",
 		Flags: []cli.Flag{
 			flags.CertFlag,
+			flags.KeyFlag,
+			flags.RPCPort,
 		},
 	},
 }
