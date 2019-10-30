@@ -228,17 +228,6 @@ func CommitteeAssignment(
 		proposerIndexToSlot[i] = slot
 	}
 
-	committeeCount, err := CommitteeCount(state, epoch)
-	if err != nil {
-		return nil, 0, 0, false, 0, errors.Wrap(err, "could not get committee count")
-	}
-
-	epochStartShard, err := StartShard(state, epoch)
-	if err != nil {
-		return nil, 0, 0, false, 0, fmt.Errorf(
-			"could not get epoch start shard: %v", err)
-	}
-
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
@@ -251,49 +240,16 @@ func CommitteeAssignment(
 				return nil, 0, 0, false, 0, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
 			}
-			for _, index := range committee {
-				if validatorIndex == index {
-					proposerSlot, isProposer := proposerIndexToSlot[index]
-					return committee, shard, slot, isProposer, proposerSlot, nil
+			for i, v := range committee {
+				if validatorIndex == v {
+					proposerSlot, isProposer := proposerIndexToSlot[v]
+					return committee, uint64(i), slot, isProposer, proposerSlot, nil
 				}
 			}
 		}
 	}
 
 	return []uint64{}, 0, 0, false, 0, status.Error(codes.NotFound, "validator not found in assignments")
-}
-
-// ShardDelta returns the minimum number of shards get processed in one epoch.
-//
-// Note: if you already have the committee count,
-// use shardDeltaFromCommitteeCount as CommitteeCount (specifically
-// ActiveValidatorCount) iterates over the entire validator set.
-//
-// Spec pseudocode definition:
-//  def get_shard_delta(state: BeaconState, epoch: Epoch) -> uint64:
-//    """
-//    Return the number of shards to increment ``state.start_shard`` at ``epoch``.
-//    """
-//    return min(get_committee_count(state, epoch), SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH)
-func ShardDelta(beaconState *pb.BeaconState, epoch uint64) (uint64, error) {
-	committeeCount, err := CommitteeCount(beaconState, epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get committee count")
-	}
-	return shardDeltaFromCommitteeCount(committeeCount), nil
-}
-
-// shardDeltaFromCommitteeCount returns the number of shards that get processed
-// in one epoch. This method is the inner logic of ShardDelta.
-// Returns the minimum of the committeeCount and maximum shard delta which is
-// defined as SHARD_COUNT - SHARD_COUNT // SLOTS_PER_EPOCH.
-func shardDeltaFromCommitteeCount(committeeCount uint64) uint64 {
-	shardCount := params.BeaconConfig().ShardCount
-	maxShardDelta := shardCount - shardCount/params.BeaconConfig().SlotsPerEpoch
-	if committeeCount < maxShardDelta {
-		return committeeCount
-	}
-	return maxShardDelta
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
@@ -376,24 +332,4 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		}
 	}
 	return nil
-}
-
-// compressValidator compacts all the validator data such as validator index, slashing info and balance
-// into a single uint64 field.
-//
-// Spec reference:
-//   # `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
-//   compact_validator = uint64((index << 16) + (validator.slashed << 15) + compact_balance)
-func compressValidator(validator *ethpb.Validator, idx uint64) uint64 {
-	compactBalance := validator.EffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
-	// index (top 6 bytes) + slashed (16th bit) + compact_balance (bottom 15 bits)
-	compactIndex := idx << 16
-	var slashedBit uint64
-	if validator.Slashed {
-		slashedBit = 1 << 15
-	}
-	// Clear all bits except last 15.
-	compactBalance &= 0x7FFF // 0b01111111 0b11111111
-	compactValidator := compactIndex | slashedBit | compactBalance
-	return compactValidator
 }

@@ -558,15 +558,6 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	defer span.End()
 
 	data := att.Data
-
-	if data.Crosslink.Shard > params.BeaconConfig().ShardCount {
-		return nil, fmt.Errorf(
-			"expected crosslink shard %d to be less than SHARD_COUNT %d",
-			data.Crosslink.Shard,
-			params.BeaconConfig().ShardCount,
-		)
-	}
-
 	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
 		return nil, fmt.Errorf(
 			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -576,16 +567,13 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 		)
 	}
 
-	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation slot")
-	}
-	minInclusionCheck := attestationSlot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
-	epochInclusionCheck := beaconState.Slot <= attestationSlot+params.BeaconConfig().SlotsPerEpoch
+	s := att.Data.Slot
+	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
+	epochInclusionCheck := beaconState.Slot <= s+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
 		return nil, fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
-			attestationSlot,
+			s,
 			params.BeaconConfig().MinAttestationInclusionDelay,
 			beaconState.Slot,
 		)
@@ -594,7 +582,7 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 		return nil, fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
 			beaconState.Slot,
-			attestationSlot,
+			s,
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
@@ -610,34 +598,22 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	pendingAtt := &pb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
-		InclusionDelay:  beaconState.Slot - attestationSlot,
+		InclusionDelay:  beaconState.Slot - s,
 		ProposerIndex:   proposerIndex,
 	}
 
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
-	var parentCrosslink *ethpb.Crosslink
 	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
-		crosslinkShard := data.Crosslink.Shard
-		if int(crosslinkShard) >= len(beaconState.CurrentCrosslinks) {
-			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
-		}
-
-		parentCrosslink = beaconState.CurrentCrosslinks[crosslinkShard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
-		crosslinkShard := data.Crosslink.Shard
-		if int(crosslinkShard) >= len(beaconState.PreviousCrosslinks) {
-			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
-		}
-		parentCrosslink = beaconState.PreviousCrosslinks[crosslinkShard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
@@ -649,34 +625,7 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	if data.Target.Epoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
-	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if data.Target.Epoch < endEpoch {
-		endEpoch = data.Target.Epoch
-	}
-	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
-		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
-			parentCrosslink.EndEpoch, data.Crosslink.StartEpoch)
-	}
-	if data.Crosslink.EndEpoch != endEpoch {
-		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
-			endEpoch, data.Crosslink.EndEpoch)
-	}
-	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash parent crosslink")
-	}
-	if !bytes.Equal(data.Crosslink.ParentRoot, crosslinkParentRoot[:]) {
-		return nil, fmt.Errorf(
-			"mismatched parent crosslink root, expected %#x, received %#x",
-			crosslinkParentRoot,
-			data.Crosslink.ParentRoot,
-		)
-	}
 
-	// To be removed in Phase 1
-	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
-		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
-	}
 	return beaconState, nil
 }
 

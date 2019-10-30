@@ -7,7 +7,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -66,7 +65,7 @@ func NewCommitteeCache() *CommitteeCache {
 
 // ShuffledIndices fetches the shuffled indices by epoch and shard. Every list of indices
 // represent one committee. Returns true if the list exists with epoch and shard. Otherwise returns false, nil.
-func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, error) {
+func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -86,8 +85,7 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, 
 		return nil, ErrNotCommittee
 	}
 
-	start, end := startEndIndices(item, shard)
-
+	start, end := startEndIndices(item, index)
 	return item.Committee[start:end], nil
 }
 
@@ -208,12 +206,10 @@ func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
 	return item.Committee, nil
 }
 
-func startEndIndices(c *Committee, wantedShard uint64) (uint64, uint64) {
-	shardCount := params.BeaconConfig().ShardCount
-	currentShard := (wantedShard + shardCount - c.StartShard) % shardCount
+func startEndIndices(c *Committee, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.Committee))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard+1)
+	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 
 	return start, end
 }

@@ -68,14 +68,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		activeIndexRoots[i] = zeroHash
 	}
 
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
-	}
-
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
@@ -123,9 +115,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		// Recent state.
-		CurrentCrosslinks:         crosslinks,
-		PreviousCrosslinks:        crosslinks,
 		HistoricalRoots:           [][]byte{},
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
