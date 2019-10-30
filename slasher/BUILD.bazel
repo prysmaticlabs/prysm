@@ -11,7 +11,6 @@ go_library(
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
         "//slasher/flags:go_default_library",
