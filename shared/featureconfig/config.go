@@ -36,11 +36,15 @@ type Flag struct {
 	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableAttestationCache     bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache    bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache             bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache       bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableShuffledIndexCache   bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableCommitteeCache       bool // EnableCommitteeCache to cache committee computation.
+	EnableCheckpointStateCache bool // EnableCheckpointStateCache.
+	EnableActiveIndicesCache   bool // EnableActiveIndicesCache.
+	EnableActiveCountCache     bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flag
@@ -118,6 +122,22 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
+	}
+	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
+		log.Warn("Enabled committee cache.")
+		cfg.EnableCommitteeCache = true
+	}
+	if ctx.GlobalBool(enableCheckpointStateCacheFlag.Name) {
+		log.Warn("Enabled checkpoint state cache.")
+		cfg.EnableCheckpointStateCache = true
+	}
+	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
+		log.Warn("Enabled active indices cache.")
+		cfg.EnableActiveIndicesCache = true
+	}
+	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
+		log.Warn("Enabled active count cache.")
+		cfg.EnableActiveCountCache = true
 	}
 	Init(cfg)
 }
