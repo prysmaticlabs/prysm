@@ -64,7 +64,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
-
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
@@ -197,6 +196,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 	return state, nil
 }
+
 
 // IsValidGenesisState gets called whenever there's a deposit event,
 // it checks whether there's enough effective balance to trigger and

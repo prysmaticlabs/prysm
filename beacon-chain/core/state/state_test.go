@@ -58,7 +58,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
-
+	t.Log(newState.ActiveIndexRoots)
 	// Misc fields checks.
 	if newState.Slot != 0 {
 		t.Error("Slot was not correctly initialized")
