@@ -12,8 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -27,11 +25,6 @@ import (
 const blockBatchSize = 64
 const maxPeersToSync = 15
 const counterSeconds = 20
-
-var failedResponse = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "round_robin_response_failures",
-	Help: "The failed responses received",
-})
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
