@@ -353,7 +353,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
@@ -409,7 +409,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
-	attestations, err := service.AttestationPool(context.Background(), 64)
+	attestations, err := service.AttestationPool(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}

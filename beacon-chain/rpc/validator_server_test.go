@@ -177,10 +177,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
-		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
-	}
 	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
@@ -195,10 +191,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
-	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
-		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
 	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
@@ -1248,13 +1240,6 @@ func BenchmarkAssignment(b *testing.B) {
 	req := &pb.AssignmentRequest{
 		PublicKeys: pubKeys,
 		EpochStart: 0,
-	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
-		if _, err := helpers.CrosslinkCommittee(state, 0, i); err != nil {
-			b.Fatal(err)
-		}
 	}
 
 	b.ResetTimer()
