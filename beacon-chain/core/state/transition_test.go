@@ -904,7 +904,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, validatorCount)
-	s, _ := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	s, _ := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	s.Slot = params.BeaconConfig().SlotsPerEpoch
 
 	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
