@@ -119,7 +119,7 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 }
 
 func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -182,7 +182,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 }
 
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 	ClearAllCaches()
@@ -333,7 +333,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 }
 
 func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 

@@ -15,7 +15,7 @@ import (
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 

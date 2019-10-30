@@ -30,7 +30,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Active(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -45,7 +45,7 @@ func TestIsSlashableValidator_Active(t *testing.T) {
 }
 
 func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -60,7 +60,7 @@ func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Inactive(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -76,7 +76,7 @@ func TestIsSlashableValidator_Inactive(t *testing.T) {
 }
 
 func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -91,7 +91,7 @@ func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 	slashedValidator := &ethpb.Validator{
@@ -107,7 +107,7 @@ func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Slashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -124,7 +124,7 @@ func TestIsSlashableValidator_Slashed(t *testing.T) {
 }
 
 func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
@@ -144,7 +144,7 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	ClearAllCaches()
 
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 

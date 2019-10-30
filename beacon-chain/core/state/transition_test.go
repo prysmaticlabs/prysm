@@ -1102,7 +1102,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 }
 
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
