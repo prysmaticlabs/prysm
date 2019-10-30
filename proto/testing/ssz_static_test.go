@@ -110,8 +110,6 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.BeaconState{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
-	case "Crosslink":
-		obj = &ethpb.Crosslink{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
 	case "DepositData":

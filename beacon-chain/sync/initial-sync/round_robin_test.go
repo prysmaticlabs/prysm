@@ -87,7 +87,7 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with failures",
-			currentSlot:        5, // 10 epochs
+			currentSlot:        160, // 10 epochs
 			expectedBlockSlots: makeSequence(1, 160),
 			peers: []*peerData{
 				{
@@ -115,7 +115,7 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with many skipped slots",
-			currentSlot:        20, // 10 epochs
+			currentSlot:        640, // 10 epochs
 			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
 			peers: []*peerData{
 				{
