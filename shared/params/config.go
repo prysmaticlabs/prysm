@@ -18,12 +18,12 @@ type BeaconChainConfig struct {
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
-	TargetCommitteeSize       uint64 `yaml:"TARGET_COMMITTEE_SIZE"`                   // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxValidatorsPerCommittee uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`            // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
-	MaxCommitteesPerSlot      uint64                                                  // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
-	MinPerEpochChurnLimit     uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`               // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
-	ChurnLimitQuotient        uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`                    // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
-	ShuffleRoundCount         uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                     // ShuffleRoundCount is used for retrieving the permuted index.
+	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MaxCommitteesPerSlot           uint64 // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
+	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
+	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
+	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
 
@@ -39,17 +39,17 @@ type BeaconChainConfig struct {
 
 	// Time parameters constants.
 	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
-	SecondsPerSlot           uint64 `yaml:"SECONDS_PER_SLOT"`                            // SecondsPerSlot is how many seconds are in a single slot.
-	SlotsPerEpoch            uint64 `yaml:"SLOTS_PER_EPOCH"`                             // SlotsPerEpoch is the number of slots in an epoch.
-	MinSeedLookahead         uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                          // SeedLookahead is the duration of randao look ahead seed.
-	MaxSeedLookhead          uint64 `yaml:"ACTIVATION_EXIT_DELAY"`                       // MaxSeedLookhead is the duration a validator has to wait for entry and exit in epoch.
-	SlotsPerEth1VotingPeriod uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`                // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
-	SlotsPerHistoricalRoot   uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`                   // SlotsPerHistoricalRoot defines how often the historical root is saved.
+	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
+	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
+	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
+	MaxSeedLookhead                  uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // MaxSeedLookhead is the duration a validator has to wait for entry and exit in epoch.
+	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
-	Eth1FollowDistance               uint64                                              // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
