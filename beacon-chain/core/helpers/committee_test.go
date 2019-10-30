@@ -273,7 +273,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearAllCaches()
-			committee, committeeIndex, slot, isProposer, pSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			committee, committeeIndex, slot, isProposer, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 			}
@@ -289,13 +289,17 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
 					tt.isProposer, isProposer, tt.index)
 			}
-			if pSlot != tt.proposerSlot {
+			if proposerSlot != tt.proposerSlot {
 				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
-					tt.proposerSlot, pSlot, tt.index)
+					tt.proposerSlot, proposerSlot, tt.index)
 			}
 			if !reflect.DeepEqual(committee, tt.committee) {
 				t.Errorf("wanted committee %v, got committee %v for validator index %d",
 					tt.committee, committee, tt.index)
+			}
+			if proposerSlot != tt.proposerSlot {
+				t.Errorf("wanted proposer slot slot %d, got slot %d for validator index %d",
+					tt.slot, slot, tt.index)
 			}
 		})
 	}
@@ -308,12 +312,12 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-
 	state := &pb.BeaconState{
 		Validators:  validators,
 		Slot:        params.BeaconConfig().SlotsPerEpoch,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
+
 	index := uint64(10000)
 	_, _, _, _, _, err := CommitteeAssignment(state, 1, index)
 	statusErr, ok := status.FromError(err)

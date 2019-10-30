@@ -123,14 +123,13 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
-		JustificationBits:          []byte{0},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		RandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
+		JustificationBits:   []byte{0},
+		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)

@@ -416,7 +416,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
+func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	registry := make([]*ethpb.Validator, 2)
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
