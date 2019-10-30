@@ -37,24 +37,6 @@ func Seed(state *pb.BeaconState, epoch uint64, domain []byte) ([32]byte, error) 
 	return seed32, nil
 }
 
-// ActiveIndexRoot returns the index root of a given epoch.
-//
-// Spec pseudocode definition:
-//   def get_active_index_root(state: BeaconState,
-//                          epoch: Epoch) -> Bytes32:
-//    """
-//    Return the index root at a recent ``epoch``.
-//    ``epoch`` expected to be between
-//    (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY, current_epoch + ACTIVATION_EXIT_DELAY].
-//    """
-//    return state.latest_active_index_roots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH]
-func ActiveIndexRoot(state *pb.BeaconState, epoch uint64) []byte {
-	newRootLength := len(state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
-	newRoot := make([]byte, newRootLength)
-	copy(newRoot, state.ActiveIndexRoots[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
-	return newRoot
-}
-
 // RandaoMix returns the randao mix (xor'ed seed)
 // of a given slot. It is used to shuffle validators.
 //

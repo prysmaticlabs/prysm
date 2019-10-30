@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -63,8 +62,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
 	}
-
-	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 
 	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(crosslinks); i++ {
@@ -128,8 +125,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		// Recent state.
 		CurrentCrosslinks:         crosslinks,
 		PreviousCrosslinks:        crosslinks,
-		ActiveIndexRoots:          activeIndexRoots,
-		CompactCommitteesRoots:    compactRoots,
 		HistoricalRoots:           [][]byte{},
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
@@ -197,23 +192,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		}
 	}
 
-	// Populate latest_active_index_roots
-	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active validator indices")
-	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root active indices")
-	}
-	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get compact committee root")
-	}
-	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
-		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
-		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
-	}
 	return state, nil
 }
 
