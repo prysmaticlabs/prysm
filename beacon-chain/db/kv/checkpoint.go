@@ -86,6 +86,10 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 			traceutil.AnnotateError(span, errMissingStateForFinalizedCheckpoint)
 			return errMissingStateForFinalizedCheckpoint
 		}
-		return bucket.Put(finalizedCheckpointKey, enc)
+
+		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
+			return err
+		}
+		return updateFinalizedBlockRoots(ctx, tx, checkpoint)
 	})
 }
