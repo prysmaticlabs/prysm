@@ -29,6 +29,10 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	enableShuffledIndexCache = cli.BoolFlag{
+		Name:  "enable-shuffled-index-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
 	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
 	InitSyncNoVerifyFlag = cli.BoolFlag{
 		Name:  "init-sync-no-verify",
@@ -99,6 +103,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	OptimizeProcessEpoch,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
+	enableShuffledIndexCache,
 	pruneFinalizedStatesFlag,
 	enableFinalizedBlockRootIndexFlag,
 }...)
