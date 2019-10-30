@@ -34,7 +34,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Slot: i,
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),
@@ -189,7 +189,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Slot: i,
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),
@@ -220,19 +220,19 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 3,
+						Slot:            3,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 4,
+						Slot:            4,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 5,
+						Slot:            5,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
@@ -251,31 +251,31 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 50,
+						Slot:            50,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 51,
+						Slot:            51,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 52,
+						Slot:            52,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 53,
+						Slot:            53,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 54,
+						Slot:            54,
 					}, AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits: bitfield.NewBitlist(1)},
 				},
@@ -293,7 +293,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 99,
+						Slot:            99,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
@@ -316,7 +316,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Slot: 1,
+						Slot:            1,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1),
@@ -347,7 +347,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Slot: i,
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
@@ -397,8 +397,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Slot: i,
-
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),

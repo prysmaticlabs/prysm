@@ -429,7 +429,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:uint64(i),
+				Slot:   uint64(i),
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
@@ -476,7 +476,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:uint64(i),
+				Slot:   uint64(i),
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},

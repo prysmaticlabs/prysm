@@ -18,9 +18,9 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &ethpb.Attestation{
-			Data:   &ethpb.AttestationData{Slot: uint64(i),
-			Source: &ethpb.Checkpoint{},
-			Target: &ethpb.Checkpoint{}},
+			Data: &ethpb.AttestationData{Slot: uint64(i),
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{}},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {

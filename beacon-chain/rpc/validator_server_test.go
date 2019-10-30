@@ -508,7 +508,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	expected := &pb.ValidatorStatusResponse{
 		Status:               pb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:      5,
-		DepositInclusionSlot: 3413,
+		DepositInclusionSlot: 2218,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -967,7 +967,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					Status: &pb.ValidatorStatusResponse{
 						Status:                 pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   3413,
+						DepositInclusionSlot:   2218,
 					},
 				},
 				{PublicKey: pubKey2,

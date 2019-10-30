@@ -69,8 +69,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	req := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source: &ethpb.Checkpoint{},
-			Target: &ethpb.Checkpoint{},
+			Source:          &ethpb.Checkpoint{},
+			Target:          &ethpb.Checkpoint{},
 		},
 	}
 	if _, err := attesterServer.SubmitAttestation(context.Background(), req); err != nil {
@@ -216,7 +216,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 			Root:  justifiedBlockRoot[:],
 		},
 		Target: &ethpb.Checkpoint{
-			Epoch: 156,
+			Epoch: 312,
 		},
 	}
 

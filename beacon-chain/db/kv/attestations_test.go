@@ -19,7 +19,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{Slot:10},
+		Data:            &ethpb.AttestationData{Slot: 10},
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 		CustodyBits:     bitfield.NewBitlist(8),
 	}
@@ -69,7 +69,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 		totalAtts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("head"),
-					Slot:      uint64(i),
+				Slot:            uint64(i),
 			},
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 			CustodyBits:     bitfield.NewBitlist(8),
@@ -118,7 +118,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{Slot:uint64(i)},
+			Data:            &ethpb.AttestationData{Slot: uint64(i)},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
@@ -143,7 +143,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			att := &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot:uint64(startEpoch)},
+				Data:            &ethpb.AttestationData{Slot: uint64(startEpoch)},
 				AggregationBits: bitfield.Bitlist{0b11},
 			}
 			ctx := context.Background()
@@ -266,7 +266,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 }
 
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
-	commonData := &ethpb.AttestationData{Slot:10}
+	commonData := &ethpb.AttestationData{Slot: 10}
 
 	tests := []struct {
 		name   string
