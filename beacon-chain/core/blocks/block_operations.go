@@ -655,6 +655,7 @@ func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *e
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
 	}
+
 	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
 	if err != nil {
 		return nil, err

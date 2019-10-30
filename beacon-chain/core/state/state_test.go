@@ -35,11 +35,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
 
-	if params.BeaconConfig().ShardCount != 1024 {
-		t.Error("ShardCount should be 1024 for these tests to pass")
-	}
-	shardCount := int(params.BeaconConfig().ShardCount)
-
 	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
@@ -53,7 +48,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisTime := uint64(99999)
 	deposits, _, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	newState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
+	newState, err := state.GenesisBeaconState(
+		deposits,
+		genesisTime,
+		eth1Data,
+	)
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
@@ -107,12 +106,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.CurrentCrosslinks) != shardCount {
-		t.Error("Length of CurrentCrosslinks was not correctly initialized")
-	}
-	if len(newState.PreviousCrosslinks) != shardCount {
-		t.Error("Length of PreviousCrosslinks was not correctly initialized")
-	}
 	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}
@@ -144,11 +137,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
-	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
