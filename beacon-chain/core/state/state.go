@@ -25,6 +25,7 @@ import (
 //	    genesis_time=eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
 //	    eth1_data=Eth1Data(block_hash=eth1_block_hash, deposit_count=len(deposits)),
 //	    latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
+//        randao_mixes=[eth1_block_hash] * EPOCHS_PER_HISTORICAL_VECTOR,  # Seed RANDAO with Eth1 entropy
 //	  )
 //
 //	  # Process deposits
@@ -51,9 +52,15 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
+		h := make([]byte, 32)
+		copy(h, eth1Data.BlockHash)
+		randaoMixes[i] = h
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
@@ -82,10 +89,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
 
 	eth1Data.DepositCount = uint64(len(deposits))
 
