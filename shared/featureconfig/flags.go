@@ -29,6 +29,10 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	enableShuffledIndexCache = cli.BoolFlag{
+		Name:  "enable-shuffled-index-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
 	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
 	InitSyncNoVerifyFlag = cli.BoolFlag{
 		Name:  "init-sync-no-verify",
@@ -68,10 +72,11 @@ var (
 )
 
 // Deprecated flags list.
+const deprecatedUsage = "DEPRECATED. DO NOT USE."
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
 		Name:   "no-genesis-delay",
-		Usage:  "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -98,6 +103,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	OptimizeProcessEpoch,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
+	enableShuffledIndexCache,
 	pruneFinalizedStatesFlag,
 	enableFinalizedBlockRootIndexFlag,
 }...)
