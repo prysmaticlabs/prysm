@@ -82,3 +82,22 @@ func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 			"of public keys.")
 	}
 }
+
+func TestComputeDomain_OK(t *testing.T) {
+	tests := []struct {
+		epoch      uint64
+		domainType uint64
+		domain     uint64
+	}{
+		{epoch: 1, domainType: 4, domain: 4},
+		{epoch: 2, domainType: 4, domain: 4},
+		{epoch: 2, domainType: 5, domain: 5},
+		{epoch: 3, domainType: 4, domain: 4},
+		{epoch: 3, domainType: 5, domain: 5},
+	}
+	for _, tt := range tests {
+		if bls.ComputeDomain(bytesutil.Bytes4(tt.domainType)) != tt.domain {
+			t.Errorf("wanted domain version: %d, got: %d", tt.domain, bls.ComputeDomain(bytesutil.Bytes4(tt.domainType)))
+		}
+	}
+}

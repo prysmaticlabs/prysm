@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestState_CanSaveRetrieve(t *testing.T) {
@@ -160,5 +161,61 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		if s.Slot%2 == 0 {
 			t.Errorf("State with slot %d should have been deleted", s.Slot)
 		}
+	}
+}
+
+func TestStore_DeleteGenesisState(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisBlockRoot := [32]byte{'A'}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	genesisState := &pb.BeaconState{Slot: 100}
+	if err := db.SaveState(ctx, genesisState, genesisBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, genesisBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
+	}
+}
+
+func TestStore_DeleteFinalizedState(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	if err := db.SaveGenesisBlockRoot(ctx, genesis); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := &ethpb.BeaconBlock{
+		ParentRoot: genesis[:],
+		Slot:       100,
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+
+	finalizedBlockRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	finalizedState := &pb.BeaconState{Slot: 100}
+	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
+	if err := db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint); err != nil {
+		t.Fatal(err)
+	}
+	wantedErr := "could not delete genesis or finalized state"
+	if err := db.DeleteState(ctx, finalizedBlockRoot); err.Error() != wantedErr {
+		t.Error("Did not receive wanted error")
 	}
 }

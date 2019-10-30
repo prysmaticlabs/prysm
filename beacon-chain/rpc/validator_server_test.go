@@ -933,7 +933,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
 
 	deposit := &ethpb.Deposit{

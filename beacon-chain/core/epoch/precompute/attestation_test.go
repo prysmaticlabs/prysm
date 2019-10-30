@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestUpdateValidator(t *testing.T) {
+func TestUpdateValidator_Works(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
@@ -28,6 +28,21 @@ func TestUpdateValidator(t *testing.T) {
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
 		ProposerIndex: 2, InclusionDistance: 1, InclusionSlot: 101}
 	wantedVp := []*precompute.Validator{{}, wanted, {}, wanted, {}, wanted}
+	if !reflect.DeepEqual(vp, wantedVp) {
+		t.Error("Incorrect attesting validator calculations")
+	}
+}
+
+func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	vp := []*precompute.Validator{{InclusionSlot: e}}
+	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
+	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
+
+	// Verify inclusion info doesnt get updated.
+	vp = precompute.UpdateValidator(vp, record, []uint64{0}, a, 100)
+	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
+	wantedVp := []*precompute.Validator{wanted}
 	if !reflect.DeepEqual(vp, wantedVp) {
 		t.Error("Incorrect attesting validator calculations")
 	}
