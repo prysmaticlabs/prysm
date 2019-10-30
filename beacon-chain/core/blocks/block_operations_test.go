@@ -1562,7 +1562,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
-			fmt.Println(ia, wanted)
 			t.Log(diff)
 			t.Error("convert attestation to indexed attestation didn't result as wanted")
 		}
