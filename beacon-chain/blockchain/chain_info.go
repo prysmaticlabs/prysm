@@ -33,6 +33,8 @@ type HeadFetcher interface {
 	HeadState() *pb.BeaconState
 }
 
+// BlockFetcher defines a common interface from which
+// information about processed blocks can be ascertained.
 type BlockFetcher interface {
 	BlockExists(ctx context.Context, root [32]byte) bool
 }
@@ -101,13 +103,10 @@ func (s *Service) HeadState() *pb.BeaconState {
 	return proto.Clone(s.headState).(*pb.BeaconState)
 }
 
+// BlockExists checks if a block with the provided root exists
+// in the db.
 func (s *Service) BlockExists(ctx context.Context, root [32]byte) bool {
-	blk, err := s.beaconDB.Block(ctx, root)
-	if err != nil || blk == nil {
-		return false
-	}
-
-	return true
+	return s.beaconDB.HasBlock(ctx, root)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

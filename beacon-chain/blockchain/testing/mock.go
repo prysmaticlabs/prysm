@@ -68,6 +68,7 @@ func (ms *ChainService) HeadState() *pb.BeaconState {
 	return ms.State
 }
 
+// BlockExists checks if the block exists in the db.
 func (ms *ChainService) BlockExists(ctx context.Context, root [32]byte) bool {
 	return true
 }
