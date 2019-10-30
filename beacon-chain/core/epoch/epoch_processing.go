@@ -490,30 +490,6 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 
-	// Set active index root.
-	//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
-	//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
-	//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
-	//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
-	activationDelay := params.BeaconConfig().MaxSeedLookhead
-	idxRootPosition := (nextEpoch + activationDelay) % params.BeaconConfig().EpochsPerHistoricalVector
-	activeIndices, err := helpers.ActiveValidatorIndices(state, nextEpoch+activationDelay)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active indices")
-	}
-	idxRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, uint64(1099511627776))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash active indices")
-	}
-	state.ActiveIndexRoots[idxRootPosition] = idxRoot[:]
-
-	commRootPosition := nextEpoch % params.BeaconConfig().EpochsPerHistoricalVector
-	comRoot, err := helpers.CompactCommitteesRoot(state, nextEpoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get compact committee root")
-	}
-	state.CompactCommitteesRoots[commRootPosition] = comRoot[:]
-
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	state.Slashings[nextEpoch%slashedExitLength] = 0
@@ -742,11 +718,7 @@ func BaseReward(state *pb.BeaconState, index uint64) (uint64, error) {
 //        proposer_reward = Gwei(get_base_reward(state, index) // PROPOSER_REWARD_QUOTIENT)
 //        rewards[attestation.proposer_index] += proposer_reward
 //        max_attester_reward = get_base_reward(state, index) - proposer_reward
-//        rewards[index] += Gwei(
-//            max_attester_reward
-//            * (SLOTS_PER_EPOCH + MIN_ATTESTATION_INCLUSION_DELAY - attestation.inclusion_delay)
-//            // SLOTS_PER_EPOCH
-//        )
+//        rewards[index] += Gwei(max_attester_reward // attestation.inclusion_delay)
 //
 //    # Inactivity penalty
 //    finality_delay = previous_epoch - state.finalized_checkpoint.epoch
@@ -845,8 +817,6 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSource {
-		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-
 		baseReward, err := BaseReward(state, i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get proposer reward")
@@ -854,7 +824,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 		proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
 		rewards[a.ProposerIndex] += proposerReward
 		attesterReward := baseReward - proposerReward
-		rewards[i] += attesterReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - a.InclusionDelay) / slotsPerEpoch
+		rewards[i] += attesterReward / a.InclusionDelay
 	}
 
 	// Apply penalties for quadratic leaks.

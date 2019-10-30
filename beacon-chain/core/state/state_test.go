@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -124,31 +123,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeValidators, params.BeaconConfig().ValidatorRegistryLimit)
-	if err != nil {
-		t.Errorf("could not hash tree root: %v", err)
-	}
-	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
-		t.Errorf(
-			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.ActiveIndexRoots[0],
-		)
-	}
-	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
-		t.Errorf(
-			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.ActiveIndexRoots[0],
-		)
-	}
-
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
 	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
 		t.Error("StateRoots was not correctly initialized")
-	}
-	if bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) || bytes.Equal(newState.ActiveIndexRoots[0], []byte{}) {
-		t.Error("ActiveIndexRoots was not correctly initialized")
 	}
 	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
 		t.Error("BlockRoots was not correctly initialized")

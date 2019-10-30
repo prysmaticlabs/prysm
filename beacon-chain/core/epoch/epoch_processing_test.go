@@ -48,9 +48,8 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -99,9 +98,8 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		}
 	}
 	state := &pb.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -146,11 +144,11 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	state := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Validators:       validators,
-		Balances:         balances,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+
+		Validators: validators,
+		Balances:   balances,
 	}
 
 	balance, err := AttestingBalance(state, atts)
@@ -198,7 +196,6 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 		PreviousEpochAttestations: prevAtts,
 		BlockRoots:                blockRoots,
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	mAtts, err := MatchAttestations(state, 0)
@@ -427,7 +424,6 @@ func TestWinningCrosslink_CanGetWinningRoot(t *testing.T) {
 		BlockRoots:                blockRoots,
 		CurrentCrosslinks:         crosslinks,
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	winner, indices, err := WinningCrosslink(state, 1, ge)
@@ -474,7 +470,6 @@ func TestProcessCrosslinks_NoUpdate(t *testing.T) {
 		Balances:          balances,
 		BlockRoots:        blockRoots,
 		RandaoMixes:       make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks: crosslinks,
 	}
 	newState, err := ProcessCrosslinks(state)
@@ -540,7 +535,6 @@ func TestProcessCrosslinks_SuccessfulUpdate(t *testing.T) {
 		BlockRoots:                blockRoots,
 		CurrentCrosslinks:         crosslinks,
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	newState, err := ProcessCrosslinks(state)
 	if err != nil {
@@ -916,12 +910,6 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	// Verify start shard is correctly updated.
 	if newS.StartShard != 64 {
 		t.Errorf("start shard incorrectly updated, got %d", 64)
-	}
-
-	// Verify latest active index root is correctly updated in the right position.
-	pos := (ne + params.BeaconConfig().MaxSeedLookhead) % params.BeaconConfig().EpochsPerHistoricalVector
-	if bytes.Equal(newS.ActiveIndexRoots[pos], params.BeaconConfig().ZeroHash[:]) {
-		t.Error("latest active index roots still zero hashes")
 	}
 
 	// Verify slashed balances correctly updated.
@@ -1541,8 +1529,6 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Validators:                  validators,
 		CurrentCrosslinks:           make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount),
 		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:            make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:      make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
 		FinalizedCheckpoint:         &ethpb.Checkpoint{},

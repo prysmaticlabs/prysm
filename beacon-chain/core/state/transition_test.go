@@ -679,7 +679,6 @@ func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
 		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
 		BlockRoots:               make([][]byte, 128),
 		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations: atts})
 	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
 		t.Fatal("Did not receive wanted error")
@@ -703,8 +702,6 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
@@ -738,8 +735,6 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
@@ -758,9 +753,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 
 func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
 	newState := &pb.BeaconState{
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:      make([][]byte, params.BeaconConfig().SlotsPerEpoch),
+
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	state.ProcessEpoch(context.Background(), newState)
@@ -816,7 +811,6 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 		BlockRoots:                make([][]byte, 254),
 		Slashings:                 []uint64{0, 1e9, 0},
 		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentCrosslinks:         crosslinks,
 		PreviousEpochAttestations: atts,
 	}
@@ -878,7 +872,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		Validators:        validators,
 		Balances:          validatorBalances,
 		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Root: []byte("hello-world"),
 		},

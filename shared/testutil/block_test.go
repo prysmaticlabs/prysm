@@ -11,7 +11,6 @@ import (
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
 	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
@@ -34,7 +33,6 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	deposits, _, privs := SetupInitialDeposits(t, 1024)
@@ -58,7 +56,6 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 }
 
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
@@ -98,8 +95,8 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 257)
+
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -125,8 +122,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 256)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -152,8 +148,8 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 256)
+
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -179,14 +175,13 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 256)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, _, privs = SetupInitialDeposits(t, 129)
+	deposits, _, privs = SetupInitialDeposits(t, 257)
 	eth1Data = GenerateEth1Data(t, deposits)
 	beaconState.Eth1Data = eth1Data
 	conf := &BlockGenConfig{
@@ -214,8 +209,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
-	t.Skip("Disabled until bug 3891 is fixed")
-	deposits, _, privs := SetupInitialDeposits(t, 128)
+	deposits, _, privs := SetupInitialDeposits(t, 256)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {

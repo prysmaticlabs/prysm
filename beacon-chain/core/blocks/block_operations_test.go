@@ -100,8 +100,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
@@ -153,8 +152,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -202,8 +200,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	parentRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
@@ -257,8 +254,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
@@ -420,7 +416,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		)
 	}
 }
-func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
+func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	registry := make([]*ethpb.Validator, 2)
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -444,7 +440,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderEpochs(t *testing.T) {
 			ProposerSlashings: slashings,
 		},
 	}
-	want := "mismatched header epochs"
+	want := "mismatched header slots"
 	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -552,9 +548,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	domain := helpers.Domain(
@@ -1504,10 +1499,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:             5,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slot:        5,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
 		aggregationBitfield      bitfield.Bitlist
@@ -1591,8 +1585,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
 		attestation *ethpb.IndexedAttestation

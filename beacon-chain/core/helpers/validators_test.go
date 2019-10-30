@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -160,10 +159,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
@@ -172,23 +170,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 534,
+			index: 505,
 		},
 		{
 			slot:  5,
-			index: 861,
+			index: 798,
 		},
 		{
 			slot:  19,
-			index: 1411,
+			index: 1956,
 		},
 		{
 			slot:  30,
-			index: 1621,
+			index: 991,
 		},
 		{
 			slot:  43,
-			index: 1355,
+			index: 1752,
 		},
 	}
 
@@ -206,20 +204,6 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 				result,
 			)
 		}
-	}
-}
-
-func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	ClearAllCaches()
-	beaconState := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	_, err := BeaconProposerIndex(beaconState)
-	expected := fmt.Sprintf("empty first committee at slot %d", 0)
-	if err.Error() != expected {
-		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}
 }
 
@@ -252,10 +236,9 @@ func TestChurnLimit_OK(t *testing.T) {
 		}
 
 		beaconState := &pb.BeaconState{
-			Slot:             1,
-			Validators:       validators,
-			RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-			ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+			Slot:        1,
+			Validators:  validators,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
 		resultChurn, err := ValidatorChurnLimit(beaconState)
 		if err != nil {
