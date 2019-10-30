@@ -87,35 +87,35 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with failures",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			currentSlot:        5, // 10 epochs
+			expectedBlockSlots: makeSequence(1, 160),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 2,
+					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
-					failureSlots:   makeSequence(1, 64), // first epoch
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 2,
+					headSlot:       160,
+					failureSlots:   makeSequence(1, 32), // first epoch
 				},
 				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 2,
+					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
-					headSlot:       320,
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 2,
+					headSlot:       160,
 				},
 			},
 		},
 		{
 			name:               "Multiple peers with many skipped slots",
-			currentSlot:        640, // 10 epochs
+			currentSlot:        20, // 10 epochs
 			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
 			peers: []*peerData{
 				{
@@ -139,7 +139,7 @@ func TestRoundRobinSync(t *testing.T) {
 		// TODO(3147): Handle multiple failures.
 		//{
 		//	name:               "Multiple peers with multiple failures",
-		//	currentSlot:        320, // 5 epochs
+		//	currentSlot:        320, // 10 epochs
 		//	expectedBlockSlots: makeSequence(1, 320),
 		//	peers: []*peerData{
 		//		{
@@ -169,7 +169,7 @@ func TestRoundRobinSync(t *testing.T) {
 		//},
 		{
 			name:               "Multiple peers with different finalized epoch",
-			currentSlot:        320, // 5 epochs
+			currentSlot:        320, // 10 epochs
 			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
