@@ -24,6 +24,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
     deps = ["@com_github_urfave_cli//:go_default_library"],
