@@ -2,7 +2,7 @@ package traceutil
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ func RecoveryHandlerFunc(ctx context.Context, p interface{}) error {
 	if span != nil {
 		span.AddAttributes(trace.StringAttribute("stack", string(debug.Stack())))
 	}
-	err := errors.New(p.(string))
+	err := fmt.Errorf("%v", p)
 	logrus.WithError(err).WithField("stack", string(debug.Stack())).Error("gRPC panicked!")
 	return err
 }
