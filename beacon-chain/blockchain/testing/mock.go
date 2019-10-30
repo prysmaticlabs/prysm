@@ -68,6 +68,10 @@ func (ms *ChainService) HeadState() *pb.BeaconState {
 	return ms.State
 }
 
+func (ms *ChainService) BlockExists(ctx context.Context, root [32]byte) bool {
+	return true
+}
+
 // CurrentFork mocks HeadState method in chain service.
 func (ms *ChainService) CurrentFork() *pb.Fork {
 	return ms.Fork
