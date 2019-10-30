@@ -117,13 +117,6 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
-	}
 	s := &pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
@@ -136,7 +129,6 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
 		JustificationBits:          []byte{0},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-		CurrentCrosslinks:          crosslinks,
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 	}

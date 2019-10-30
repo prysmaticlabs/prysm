@@ -81,6 +81,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	if err != nil {
 		return errors.Wrap(err, "could not get beacon proposer index")
 	}
+
 	info := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
 		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,

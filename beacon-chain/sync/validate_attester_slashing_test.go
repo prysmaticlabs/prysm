@@ -30,9 +30,6 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
@@ -54,9 +51,6 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
