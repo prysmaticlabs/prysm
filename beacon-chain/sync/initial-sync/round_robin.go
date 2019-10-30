@@ -41,14 +41,16 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	defer cancel()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 
 	var lastEmptyRequests int
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
+
 		// shuffle peers to prevent a bad peer from
 		// stalling sync with invalid blocks
-		rand.Shuffle(len(peers), func(i, j int) {
+		randGenerator.Shuffle(len(peers), func(i, j int) {
 			peers[i], peers[j] = peers[j], peers[i]
 		})
 
