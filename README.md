@@ -121,13 +121,13 @@ To delete a corrupted container, issue the command:
 docker rm beacon-node
 ```
 
-To recreate a deleted container and refresh the chain database, issue the start command with an additional `--force-clear-db` parameter:
+To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
 
 ```
 docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
-  --force-clear-db
+  --clear-db
 ```
 
 **Docker on Windows:**
