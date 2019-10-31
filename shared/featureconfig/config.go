@@ -43,7 +43,6 @@ type Flag struct {
 	EnableShuffledIndexCache   bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableCommitteeCache       bool // EnableCommitteeCache to cache committee computation.
-	EnableCheckpointStateCache bool // EnableCheckpointStateCache.
 	EnableActiveIndicesCache   bool // EnableActiveIndicesCache.
 	EnableActiveCountCache     bool // EnableActiveCountCache.
 }
@@ -131,10 +130,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
 		log.Warn("Enabled committee cache.")
 		cfg.EnableCommitteeCache = true
-	}
-	if ctx.GlobalBool(enableCheckpointStateCacheFlag.Name) {
-		log.Warn("Enabled checkpoint state cache.")
-		cfg.EnableCheckpointStateCache = true
 	}
 	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
 		log.Warn("Enabled active indices cache.")

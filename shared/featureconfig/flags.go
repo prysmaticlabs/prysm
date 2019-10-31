@@ -37,10 +37,6 @@ var (
 		Name:  "enable-committee-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	enableCheckpointStateCacheFlag = cli.BoolFlag{
-		Name:  "enable-checkpoint-state-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	enableActiveIndicesCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-indices-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
@@ -127,7 +123,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
 	enableCommitteeCacheFlag,
-	enableCheckpointStateCacheFlag,
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
 	pruneFinalizedStatesFlag,

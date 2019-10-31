@@ -8,7 +8,6 @@ func init() {
 		EnableEth1DataVoteCache:       true,
 		EnableShuffledIndexCache:      true,
 		EnableCommitteeCache:          true,
-		EnableCheckpointStateCache:    true,
 		EnableActiveCountCache:        true,
 		EnableFinalizedBlockRootIndex: true,
 		EnableActiveIndicesCache:      true,

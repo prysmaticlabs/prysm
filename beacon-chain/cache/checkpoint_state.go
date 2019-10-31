@@ -9,10 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"k8s.io/client-go/tools/cache"
 )
+
+// TODO: Move to proper place.
 
 var (
 	// ErrNotCheckpointState will be returned when a cache object is not a pointer to
@@ -69,10 +70,6 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
 func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	if !featureconfig.Get().EnableCheckpointStateCache {
-		return nil, nil
-	}
-
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	h, err := hashutil.HashProto(cp)
@@ -103,10 +100,6 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.Beac
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
 // recently added CheckpointState object if the cache size has ready the max cache size limit.
 func (c *CheckpointStateCache) AddCheckpointState(cp *CheckpointState) error {
-	if !featureconfig.Get().EnableCheckpointStateCache {
-		return nil
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.cache.AddIfNotPresent(cp); err != nil {
