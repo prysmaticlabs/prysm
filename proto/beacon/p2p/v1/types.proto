@@ -87,3 +87,12 @@ message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
 }
+
+message AggregateAndProof {
+  // index is the aggregator's index
+  uint64 index = 1;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  // aggregate is the constructed aggregated attestation
+  ethereum.eth.v1alpha1.Attestation aggregate = 3;
+}
