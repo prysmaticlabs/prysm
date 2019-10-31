@@ -36,10 +36,11 @@ type Flag struct {
 	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
 
 	// Cache toggles.
-	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache    bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 }
 
 var featureConfig *Flag
@@ -113,6 +114,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableFinalizedBlockRootIndexFlag.Name) {
 		log.Warn("Enabled finalized block root index")
 		cfg.EnableFinalizedBlockRootIndex = true
+	}
+	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
+		log.Warn("Enabled shuffled index cache.")
+		cfg.EnableShuffledIndexCache = true
 	}
 	Init(cfg)
 }

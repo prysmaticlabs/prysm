@@ -5,10 +5,9 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
@@ -24,8 +23,8 @@ GLOBAL OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{end}}{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
-   {{range .Flags}}{{.}}
-   {{end}}
+  {{range .Flags}}{{.}}
+  {{end}}
 {{end}}{{end}}{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
@@ -44,22 +43,16 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
-			cmd.NoDiscovery,
-			cmd.BootstrapNode,
-			cmd.RelayNode,
-			cmd.P2PUDPPort,
-			cmd.P2PTCPPort,
-			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
+			cmd.DataDirFlag,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
+			cmd.BootstrapNode,
 			cmd.MonitoringPortFlag,
-			cmd.DisableMonitoringFlag,
-			cmd.MaxGoroutines,
-			cmd.ForceClearDB,
-			cmd.ClearDB,
+			cmd.LogFormat,
+			cmd.LogFileName,
 		},
 	},
 	{
@@ -74,58 +67,11 @@ var appHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "beacon-chain",
+		Name: "slasher",
 		Flags: []cli.Flag{
-			flags.NoCustomConfigFlag,
-			flags.InteropMockEth1DataVotesFlag,
-			flags.InteropGenesisStateFlag,
-			flags.DepositContractFlag,
-			flags.Web3ProviderFlag,
-			flags.RPCPort,
 			flags.CertFlag,
 			flags.KeyFlag,
-			flags.GRPCGatewayPort,
-			flags.HTTPWeb3ProviderFlag,
-		},
-	},
-	{
-		Name: "p2p",
-		Flags: []cli.Flag{
-			cmd.P2PHost,
-			cmd.P2PMaxPeers,
-			cmd.P2PPrivKey,
-			cmd.P2PWhitelist,
-			cmd.StaticPeers,
-			cmd.EnableUPnPFlag,
-			cmd.P2PEncoding,
-		},
-	},
-	{
-		Name: "log",
-		Flags: []cli.Flag{
-			cmd.LogFormat,
-			cmd.LogFileName,
-		},
-	},
-	{
-		Name:  "features",
-		Flags: featureconfig.BeaconChainFlags,
-	},
-	{
-		Name: "interop",
-		Flags: []cli.Flag{
-			flags.InteropGenesisStateFlag,
-			flags.InteropGenesisTimeFlag,
-			flags.InteropNumValidatorsFlag,
-		},
-	},
-	{
-		Name: "archive",
-		Flags: []cli.Flag{
-			flags.ArchiveEnableFlag,
-			flags.ArchiveValidatorSetChangesFlag,
-			flags.ArchiveBlocksFlag,
-			flags.ArchiveAttestationsFlag,
+			flags.RPCPort,
 		},
 	},
 }

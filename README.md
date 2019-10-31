@@ -156,14 +156,14 @@ docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
 
 4) To run the beacon node, issue the command:
 ```
-docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data
 ```
 
 ### Running via Bazel
 
 1) To start your Beacon Node with Bazel, issue the command:
 ```
-bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
+bazel run //beacon-chain -- --datadir=/tmp/prysm-data
 ```
 This will sync up the Beacon Node with the latest head block in the network. Note that the beacon node must be **completely synced** before attempting to initialise a validator client, otherwise the validator will not be able to complete the deposit and funds will be lost.
 
