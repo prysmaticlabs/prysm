@@ -21,6 +21,8 @@ func TestSkipSlotCache_OK(t *testing.T) {
 		t.Fatalf("Could not generate genesis state: %v", err)
 	}
 
+	originalState := proto.Clone(bState).(*pb.BeaconState)
+
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.MaxAttestations = 1
 	blkCfg.MaxDeposits = 0
@@ -28,32 +30,21 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	blkCfg.MaxProposerSlashings = 0
 	blkCfg.MaxAttesterSlashings = 0
 
-	for i := 0; i < 5; i++ {
-		blk := testutil.GenerateFullBlock(t, bState, privs, blkCfg)
-		bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
-		if err != nil {
-			t.Fatalf("Could not run state transition: %v", err)
-		}
-	}
-	originalState := proto.Clone(bState).(*pb.BeaconState)
-	testState := proto.Clone(bState).(*pb.BeaconState)
-
-	originalState, err = state.ProcessSlots(context.Background(), originalState, 20)
-	if err != nil {
-		t.Fatalf("Could not process slots: %v", err)
-	}
 	cfg := featureconfig.Get()
 	cfg.EnableSkipSlotsCache = true
 	featureconfig.Init(cfg)
 
-	_, err = state.ProcessSlots(context.Background(), testState, 20)
+	// First transition will be with an empty cache, so the cache becomes populated
+	// with the state
+	blk := testutil.GenerateFullBlock(t, bState, privs, blkCfg, originalState.Slot+10)
+	originalState, err = state.ExecuteStateTransition(context.Background(), originalState, blk)
 	if err != nil {
-		t.Fatalf("Could not process slots: %v", err)
+		t.Fatalf("Could not run state transition: %v", err)
 	}
 
-	bState, err = state.ProcessSlots(context.Background(), bState, 20)
+	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
 	if err != nil {
-		t.Fatalf("Could not process slots: %v", err)
+		t.Fatalf("Could not process state transition: %v", err)
 	}
 
 	if !ssz.DeepEqual(originalState, bState) {
