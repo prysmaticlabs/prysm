@@ -161,7 +161,7 @@ func ProcessBlockHeader(
 ) (*pb.BeaconState, error) {
 	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process block header")
+		return nil, err
 	}
 
 	idx, err := helpers.BeaconProposerIndex(beaconState)
