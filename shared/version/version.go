@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"os/exec"
+	"time"
 )
 
 // The value of these vars are set through linker options.
@@ -22,11 +23,8 @@ func GetVersion() string {
 		gitCommit = strings.TrimRight(string(commit), "\r\n")
 	}
 	if buildDate == "{DATE}" {
-		now, err := exec.Command("date","-R","-u").Output()
-		if err != nil {
-			log.Fatal(err)
-		}
-		buildDate = strings.TrimRight(string(now), "\r\n")
+		now := time.Now().Format(time.RFC3339)
+		buildDate = now
 	}
 	return fmt.Sprintf("Git commit: %s. Built at: %s", gitCommit, buildDate)
 }
