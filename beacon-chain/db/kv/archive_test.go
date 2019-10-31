@@ -67,13 +67,6 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 							Epoch: 5,
 							Root:  someRoot[:],
 						},
-						Crosslink: &ethpb.Crosslink{
-							Shard:      3,
-							ParentRoot: someRoot[:],
-							StartEpoch: 3,
-							EndEpoch:   4,
-							DataRoot:   someRoot[:],
-						},
 					},
 				},
 				Attestation_2: &ethpb.IndexedAttestation{
@@ -86,13 +79,6 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 						Target: &ethpb.Checkpoint{
 							Epoch: 5,
 							Root:  someRoot[:],
-						},
-						Crosslink: &ethpb.Crosslink{
-							Shard:      3,
-							ParentRoot: someRoot[:],
-							StartEpoch: 3,
-							EndEpoch:   4,
-							DataRoot:   someRoot[:],
 						},
 					},
 				},

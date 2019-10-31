@@ -98,7 +98,6 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -154,7 +153,6 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
@@ -228,7 +226,6 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg := &ethpb.BeaconBlock{
-		Slot:       1,
 		ParentRoot: testutil.Random32Bytes(t),
 		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}

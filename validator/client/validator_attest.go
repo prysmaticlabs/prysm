@@ -79,7 +79,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainAttestation})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconAttester})
 	if err != nil {
 		log.WithError(err).Error("Failed to get domain data from beacon node")
 		return
@@ -116,7 +116,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
-		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
+		trace.Int64Attribute("committeeIndex", int64(data.Index)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),

@@ -13,10 +13,10 @@ func TestSlotToEpoch_OK(t *testing.T) {
 		epoch uint64
 	}{
 		{slot: 0, epoch: 0},
-		{slot: 50, epoch: 0},
-		{slot: 64, epoch: 1},
-		{slot: 128, epoch: 2},
-		{slot: 200, epoch: 3},
+		{slot: 50, epoch: 1},
+		{slot: 64, epoch: 2},
+		{slot: 128, epoch: 4},
+		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
 		if tt.epoch != SlotToEpoch(tt.slot) {
@@ -31,10 +31,10 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		epoch uint64
 	}{
 		{slot: 0, epoch: 0},
-		{slot: 50, epoch: 0},
-		{slot: 64, epoch: 1},
-		{slot: 128, epoch: 2},
-		{slot: 200, epoch: 3},
+		{slot: 50, epoch: 1},
+		{slot: 64, epoch: 2},
+		{slot: 128, epoch: 4},
+		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
@@ -67,7 +67,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		epoch uint64
 	}{
 		{slot: 0, epoch: 0/params.BeaconConfig().SlotsPerEpoch + 1},
-		{slot: 50, epoch: 0/params.BeaconConfig().SlotsPerEpoch + 1},
+		{slot: 50, epoch: 0/params.BeaconConfig().SlotsPerEpoch + 2},
 		{slot: 64, epoch: 64/params.BeaconConfig().SlotsPerEpoch + 1},
 		{slot: 128, epoch: 128/params.BeaconConfig().SlotsPerEpoch + 1},
 		{slot: 200, epoch: 200/params.BeaconConfig().SlotsPerEpoch + 1},

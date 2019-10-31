@@ -19,7 +19,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -62,7 +61,7 @@ func ExecuteStateTransition(
 	if block != nil {
 		state, err = ProcessBlock(ctx, state, block)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not process block")
+			return nil, errors.Wrapf(err, "could not process block in slot %d", block.Slot)
 		}
 	}
 
@@ -404,19 +403,6 @@ func ProcessOperations(
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	// Verify that there are no duplicate transfers
-	transferSet := make(map[[32]byte]bool)
-	for _, transfer := range body.Transfers {
-		h, err := hashutil.HashProto(transfer)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash transfer")
-		}
-		if transferSet[h] {
-			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
-		}
-		transferSet[h] = true
-	}
-
 	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
@@ -436,10 +422,6 @@ func ProcessOperations(
 	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
-	}
-	state, err = b.ProcessTransfers(state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block transfers")
 	}
 
 	return state, nil
@@ -481,19 +463,6 @@ func processOperationsNoVerify(
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	// Verify that there are no duplicate transfers
-	transferSet := make(map[[32]byte]bool)
-	for _, transfer := range body.Transfers {
-		h, err := hashutil.HashProto(transfer)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash transfer")
-		}
-		if transferSet[h] {
-			return nil, fmt.Errorf("duplicate transfer: %v", transfer)
-		}
-		transferSet[h] = true
-	}
-
 	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
@@ -513,10 +482,6 @@ func processOperationsNoVerify(
 	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
-	}
-	state, err = b.ProcessTransfers(state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block transfers")
 	}
 
 	return state, nil
@@ -552,14 +517,6 @@ func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) 
 			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 			len(body.VoluntaryExits),
 			params.BeaconConfig().MaxVoluntaryExits,
-		)
-	}
-
-	if uint64(len(body.Transfers)) > params.BeaconConfig().MaxTransfers {
-		return fmt.Errorf(
-			"number of transfers (%d) in block body exceeds allowed threshold of %d",
-			len(body.Transfers),
-			params.BeaconConfig().MaxTransfers,
 		)
 	}
 
@@ -629,11 +586,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, errors.Wrap(err, "could not process justification")
 	}
 
-	state, err = e.ProcessCrosslinks(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process crosslink")
-	}
-
 	state, err = e.ProcessRewardsAndPenalties(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
@@ -672,11 +624,6 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process justification")
-	}
-
-	state, err = e.ProcessCrosslinks(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process crosslink")
 	}
 
 	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)

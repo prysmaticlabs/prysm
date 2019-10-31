@@ -34,9 +34,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Crosslink: &ethpb.Crosslink{
-					Shard: i,
-				},
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),
@@ -89,9 +87,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Root:  targetRoot,
 					Epoch: targetEpoch,
 				},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 3,
-				},
+				Slot: 3,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		},
@@ -106,9 +102,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Root:  targetRoot,
 					Epoch: targetEpoch,
 				},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 4,
-				},
+				Slot: 4,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		},
@@ -123,9 +117,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					Root:  unknownRoot,
 					Epoch: targetEpoch,
 				},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 5,
-				},
+				Slot: 5,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		},
@@ -197,9 +189,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Crosslink: &ethpb.Crosslink{
-					Shard: i,
-				},
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),
@@ -230,19 +220,19 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 3},
+						Slot:            3,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 4},
+						Slot:            4,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 5},
+						Slot:            5,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
@@ -261,31 +251,31 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 50},
+						Slot:            50,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 51},
+						Slot:            51,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 52},
+						Slot:            52,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 53},
+						Slot:            53,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 54},
+						Slot:            54,
 					}, AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits: bitfield.NewBitlist(1)},
 				},
@@ -303,7 +293,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 99},
+						Slot:            99,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
@@ -321,13 +311,12 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 				Attestations: []*ethpb.Attestation{
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 0},
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
-						Crosslink:       &ethpb.Crosslink{Shard: 1},
+						Slot:            1,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1),
@@ -358,9 +347,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Crosslink: &ethpb.Crosslink{
-					Shard: i,
-				},
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
@@ -410,9 +397,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 		attExample := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("root"),
-				Crosslink: &ethpb.Crosslink{
-					Shard: i,
-				},
+				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 			CustodyBits:     bitfield.NewBitlist(1),
@@ -1198,9 +1183,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1232,7 +1216,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1251,6 +1235,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
+	t.Skip("Disabled until v0.9.0 (#3865) completes")
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1281,9 +1266,8 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1304,15 +1288,11 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	// We then store archived data into the DB.
 	currentEpoch := helpers.CurrentEpoch(s)
-	committeeCount, err := helpers.CommitteeCount(s, currentEpoch)
+	committeeCount, err := helpers.CommitteeCountAtSlot(s, helpers.StartSlot(currentEpoch))
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := helpers.Seed(s, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	startShard, err := helpers.StartShard(s, currentEpoch)
+	seed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1323,8 +1303,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
-		StartShard:     startShard,
-		CommitteeCount: committeeCount,
+		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
 		ProposerIndex:  proposerIndex,
 	}); err != nil {
 		t.Fatal(err)
@@ -1345,7 +1324,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1390,9 +1369,8 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1423,7 +1401,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[1:4] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1468,9 +1446,8 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	s := &pbp2p.BeaconState{
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1501,7 +1478,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[3:5] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1533,7 +1510,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	for _, index := range activeIndices[6:7] {
-		committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1636,14 +1613,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
-	var crosslinks []*ethpb.Crosslink
-	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		crosslinks = append(crosslinks, &ethpb.Crosslink{
-			StartEpoch: 0,
-			DataRoot:   []byte{'A'},
-		})
-	}
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
 
 	s := &pbp2p.BeaconState{
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -1652,9 +1622,6 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},

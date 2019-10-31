@@ -15,10 +15,17 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func init() {
+	fc := featureconfig.Get()
+	fc.PruneFinalizedStates = true
+	featureconfig.Init(fc)
+}
 
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
@@ -126,7 +133,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	params.UseMinimalConfig()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,10 +144,6 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: []byte{255},
 		CustodyBits:     []byte{255},
@@ -180,7 +183,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	params.UseMinimalConfig()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,10 +197,6 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-				Crosslink: &ethpb.Crosslink{
-					Shard:      uint64(i),
-					StartEpoch: 0,
-				},
 			},
 			AggregationBits: []byte{255},
 			CustodyBits:     []byte{255},
@@ -276,7 +275,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	}
 }
 
-func TestRemoveStateBySlots(t *testing.T) {
+func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -308,8 +307,9 @@ func TestRemoveStateBySlots(t *testing.T) {
 
 	// New finalized epoch: 1
 	finalizedEpoch := uint64(1)
+	finalizedSlot := finalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	endSlot := helpers.StartSlot(finalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesBySlots(ctx, 0, endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, 0, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -318,15 +318,16 @@ func TestRemoveStateBySlots(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Also verifies genesis state didnt get deleted
-		if s != nil && s.Slot != 0 && s.Slot < endSlot {
+		if s != nil && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
 	}
 
 	// New finalized epoch: 5
 	newFinalizedEpoch := uint64(5)
+	newFinalizedSlot := newFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	endSlot = helpers.StartSlot(newFinalizedEpoch+1) - 1 // Inclusive
-	if err := store.rmStatesBySlots(ctx, helpers.StartSlot(finalizedEpoch+1), endSlot); err != nil {
+	if err := store.rmStatesOlderThanLastFinalized(ctx, helpers.StartSlot(finalizedEpoch+1)-1, endSlot); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range blockRoots {
@@ -335,7 +336,7 @@ func TestRemoveStateBySlots(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Also verifies genesis state didnt get deleted
-		if s != nil && s.Slot != 0 && s.Slot < endSlot {
+		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
 	}

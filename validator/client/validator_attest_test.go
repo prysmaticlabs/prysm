@@ -82,7 +82,6 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		BeaconBlockRoot: []byte{},
 		Target:          &ethpb.Checkpoint{},
 		Source:          &ethpb.Checkpoint{},
-		Crosslink:       &ethpb.Crosslink{},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -123,7 +122,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -149,7 +147,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			BeaconBlockRoot: []byte("A"),
 			Target:          &ethpb.Checkpoint{Root: []byte("B")},
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-			Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		},
 		AggregationBits: aggregationBitfield,
 		CustodyBits:     custodyBitfield,
@@ -229,7 +226,6 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink:       &ethpb.Crosslink{DataRoot: []byte{'D'}},
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -277,9 +273,8 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Root: []byte("B")},
-		Source:    &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink: &ethpb.Crosslink{DataRoot: []byte{'D'}},
+		Target: &ethpb.Checkpoint{Root: []byte("B")},
+		Source: &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
