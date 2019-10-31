@@ -54,7 +54,7 @@ message Fork {
 message PendingAttestation {
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
-  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   ethereum.eth.v1alpha1.AttestationData data = 2;
   // The difference of when attestation gets created and get included on chain.
   uint64 inclusion_delay = 3;
@@ -86,4 +86,13 @@ message AttestationDataAndCustodyBit {
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
+}
+
+message AggregateAndProof {
+  // index is the aggregator's index
+  uint64 index = 1;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  // aggregate is the constructed aggregated attestation
+  ethereum.eth.v1alpha1.Attestation aggregate = 3;
 }
