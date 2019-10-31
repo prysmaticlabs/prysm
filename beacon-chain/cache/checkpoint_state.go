@@ -13,8 +13,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// TODO: Move to proper place.
-
 var (
 	// ErrNotCheckpointState will be returned when a cache object is not a pointer to
 	// a CheckpointState struct.
