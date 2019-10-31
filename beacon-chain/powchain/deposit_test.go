@@ -202,7 +202,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	testutil.ResetCache()
 
 	deposits, _, keys := testutil.SetupInitialDeposits(t, 1)
-	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
+	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposits[0].Data.Signature = sig.Marshal()[:]
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
 
@@ -250,7 +250,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := sk.Sign(signedRoot[:], bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion))
+	sig := sk.Sign(signedRoot[:], bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposit.Data.Signature = sig.Marshal()
 
 	_, root := testutil.GenerateDepositProof(t, []*ethpb.Deposit{deposit})
