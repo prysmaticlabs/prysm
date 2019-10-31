@@ -1,24 +1,37 @@
-// Package slasher defines the service used to retrieve slashings proofs.
-package slasher
+// Package service defines the service used to retrieve slashings proofs and
+// feed attestations and block headers into the slasher db.
+package service
 
 import (
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"path"
+	"sync"
+	"syscall"
+
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
+	"github.com/urfave/cli"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/reflection"
 )
 
 var log logrus.FieldLogger
+
+const slasherDBName = "slasherdata"
 
 func init() {
 	log = logrus.WithField("prefix", "slasherRPC")
@@ -34,6 +47,9 @@ type Service struct {
 	listener        net.Listener
 	credentialError error
 	failStatus      error
+	ctx             *cli.Context
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
 }
 
 // Config options for the slasher server.
@@ -46,16 +62,59 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
-func NewRPCService(cfg *Config) *Service {
-	return &Service{
+func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
+	s := &Service{
 		slasherDb: cfg.SlasherDb,
 		port:      cfg.Port,
+		withCert:  cfg.CertFlag,
+		withKey:   cfg.KeyFlag,
+		ctx:       ctx,
+		stop:      make(chan struct{}),
 	}
+	if err := s.startDB(s.ctx); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	log.Info("Starting service on port: %v", s.port)
+	s.lock.Lock()
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting hash slinging slasher node")
+	s.startSlasher()
+	stop := s.stop
+	s.lock.Unlock()
+
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		<-sigc
+		log.Info("Got interrupt, shutting down...")
+		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
+		go s.Close()
+		for i := 10; i > 0; i-- {
+			<-sigc
+			if i > 1 {
+				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+			}
+		}
+		panic("Panic closing the hash slinging slasher node")
+	}()
+
+	// Wait for stop channel to be closed.
+	select {
+	case <-stop:
+		return
+	default:
+	}
+
+}
+func (s *Service) startSlasher() {
+	log.Info("Starting service on port: ", s.port)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
@@ -108,11 +167,27 @@ func (s *Service) Start() {
 // Stop the service.
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
+	if s.slasherDb != nil {
+		s.slasherDb.Close()
+	}
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	return nil
+}
+
+// Close handles graceful shutdown of the system.
+func (s *Service) Close() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	log.Info("Stopping hash slinging slasher")
+	s.Stop()
+	if err := s.slasherDb.Close(); err != nil {
+		log.Errorf("Failed to close slasher database: %v", err)
+	}
+	close(s.stop)
 }
 
 // Status returns nil, credentialError or fail status.
@@ -123,5 +198,27 @@ func (s *Service) Status() error {
 	if s.failStatus != nil {
 		return s.failStatus
 	}
+	return nil
+}
+
+func (s *Service) startDB(ctx *cli.Context) error {
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	d, err := db.NewDB(dbPath)
+	if err != nil {
+		return err
+	}
+	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
+		if err := d.ClearDB(); err != nil {
+			return err
+		}
+		d, err = db.NewDB(dbPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.WithField("path", dbPath).Info("Checking db")
+	s.slasherDb = d
 	return nil
 }

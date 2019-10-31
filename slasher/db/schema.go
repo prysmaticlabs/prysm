@@ -19,6 +19,7 @@ func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []b
 	return append(append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorID)...), sig...)
 }
 
-func encodeEpochSig(epoch uint64, sig []byte) []byte {
-	return append(bytesutil.Bytes8(epoch), sig...)
+func encodeEpochSig(sourceEpoch uint64, targetEpoch uint64, sig []byte) []byte {
+	st := append(bytesutil.Bytes8(sourceEpoch), bytesutil.Bytes8(targetEpoch)...)
+	return append(st, sig...)
 }
