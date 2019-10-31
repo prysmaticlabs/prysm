@@ -4,7 +4,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // skipSlotCache exists for the unlikely scenario that is a large gap between the head state and
@@ -12,11 +11,6 @@ import (
 // difficult or impossible to compute the appropriate beacon state for assignments within a
 // reasonable amount of time.
 var skipSlotCache, _ = lru.New(8)
-
-type skipSlotCacheValue struct {
-	highestSlot uint64
-	state       *pb.BeaconState
-}
 
 var (
 	skipSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
