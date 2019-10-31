@@ -50,7 +50,7 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 			"blockRoot",
 			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
-		traceutil.AnnotateError(span, err)
+		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
 		return false, nil
 	}
 
