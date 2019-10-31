@@ -1096,36 +1096,6 @@ func TestAttestationDelta_CantGetAttestation(t *testing.T) {
 	}
 }
 
-func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-
-	state := buildState(e+2, 1)
-	atts := make([]*pb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: uint64(i),
-				},
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
-			},
-			InclusionDelay:  uint64(i + 100),
-			AggregationBits: bitfield.Bitlist{0xFF, 0x01},
-		}
-	}
-	state.PreviousEpochAttestations = atts
-
-	_, _, err := attestationDelta(state)
-	wanted := "could not get attestation indices"
-	if err == nil {
-		t.Fatal("Wanted error, did not get an error")
-	}
-	if !strings.Contains(err.Error(), wanted) {
-		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
-	}
-}
-
 func TestAttestationDelta_NoOneAttested(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount / 32
