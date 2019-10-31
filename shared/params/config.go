@@ -238,8 +238,9 @@ func DemoBeaconConfig() *BeaconChainConfig {
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
 	// Misc
+	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
-	minimalConfig.MaxValidatorsPerCommittee = 4096
+	minimalConfig.MaxValidatorsPerCommittee = 2048
 	minimalConfig.MinPerEpochChurnLimit = 4
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.ShuffleRoundCount = 10
@@ -291,8 +292,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
-	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
-	minimalConfig.DomainBeaconAttester = bytesutil.Bytes4(2)
+	minimalConfig.DomainBeaconAttester = bytesutil.Bytes4(1)
+	minimalConfig.DomainRandao = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 
