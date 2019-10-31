@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
@@ -75,6 +76,11 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 }
 
 func TestComputeCommittee_WithCache(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.EnableShuffledIndexCache = true
+	featureconfig.Init(fc)
+	defer featureconfig.Init(nil)
+
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
