@@ -1118,6 +1118,9 @@ func TestAttestationDelta_CantGetAttestationIndices(t *testing.T) {
 
 	_, _, err := attestationDelta(state)
 	wanted := "could not get attestation indices"
+	if err == nil {
+		t.Fatal("Wanted error, did not get an error")
+	}
 	if !strings.Contains(err.Error(), wanted) {
 		t.Fatalf("Got: %v, want: %v", err.Error(), wanted)
 	}

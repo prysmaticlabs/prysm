@@ -13,6 +13,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -110,7 +111,11 @@ func TestStore_OnAttestation(t *testing.T) {
 	}
 }
 
-func TestStore_SaveCheckpointState(t *testing.T) {
+func TestStore_SaveCheckpointState_CacheEnabled(t *testing.T) {
+	c := featureconfig.Get()
+	c.EnableCheckpointStateCache = true
+	featureconfig.Init(c)
+	defer featureconfig.Init(nil)
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
