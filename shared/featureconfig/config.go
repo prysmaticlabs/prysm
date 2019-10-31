@@ -120,7 +120,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
 	}
-	if ctx.GlobalBool(EnableSkipSlotsCache.Name) {
+	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
