@@ -30,10 +30,6 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Active(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	activeValidator := &ethpb.Validator{
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
@@ -45,10 +41,6 @@ func TestIsSlashableValidator_Active(t *testing.T) {
 }
 
 func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	beforeWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 5,
 	}
@@ -60,10 +52,6 @@ func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Inactive(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	inactiveValidator := &ethpb.Validator{
 		ActivationEpoch:   5,
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -76,10 +64,6 @@ func TestIsSlashableValidator_Inactive(t *testing.T) {
 }
 
 func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	afterWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 3,
 	}
@@ -91,9 +75,6 @@ func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 	slashedValidator := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -107,10 +88,6 @@ func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Slashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -124,10 +101,6 @@ func TestIsSlashableValidator_Slashed(t *testing.T) {
 }
 
 func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ActivationEpoch:   4,
@@ -143,11 +116,6 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	ClearAllCaches()
-
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)

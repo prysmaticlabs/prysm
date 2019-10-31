@@ -15,10 +15,6 @@ import (
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	genesisEpochNumber := uint64(0)
 
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {

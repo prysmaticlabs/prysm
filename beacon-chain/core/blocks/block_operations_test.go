@@ -35,10 +35,6 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -80,10 +76,6 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 }
 
 func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -132,10 +124,6 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 }
 
 func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -180,10 +168,6 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 }
 
 func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -233,10 +217,6 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 func TestProcessBlockHeader_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -1290,9 +1270,6 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 func TestConvertToIndexed_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -1364,9 +1341,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
+
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, _, keys := testutil.SetupInitialDeposits(t, numOfValidators)

@@ -119,10 +119,6 @@ func TestComputeCommittee_WithCache(t *testing.T) {
 }
 
 func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	committeeSize := uint64(16)
 	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -182,9 +178,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 }
 
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 	ClearAllCaches()
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -330,10 +323,6 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 }
 
 func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 32 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(validators); i++ {

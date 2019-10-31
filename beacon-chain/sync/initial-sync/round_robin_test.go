@@ -87,29 +87,29 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with failures",
-			currentSlot:        160, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 160),
+			currentSlot:        320, // 10 epochs
+			expectedBlockSlots: makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 160),
-					finalizedEpoch: 2,
-					headSlot:       160,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 160),
-					finalizedEpoch: 2,
-					headSlot:       160,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
 					failureSlots:   makeSequence(1, 32), // first epoch
 				},
 				{
-					blocks:         makeSequence(1, 160),
-					finalizedEpoch: 2,
-					headSlot:       160,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 160),
-					finalizedEpoch: 2,
-					headSlot:       160,
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
 				},
 			},
 		},
