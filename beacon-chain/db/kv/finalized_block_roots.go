@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -35,8 +36,9 @@ func updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *eth
 
 		enc := blocks.Get(root)
 		if enc == nil {
-			traceutil.AnnotateError(span, errMissingParentBlockInDatabase)
-			return errMissingParentBlockInDatabase
+			err := fmt.Errorf("missing block in database: block root=%#x", root)
+			traceutil.AnnotateError(span, err)
+			return err
 		}
 		block := &ethpb.BeaconBlock{}
 		if err := proto.Unmarshal(enc, block); err != nil {
