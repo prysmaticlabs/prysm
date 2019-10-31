@@ -26,6 +26,18 @@ type BlockGenConfig struct {
 	MaxVoluntaryExits    uint64
 }
 
+// DefaultBlockGenConfig returns the block config that utilizes the
+// current params in the beacon config.
+func DefaultBlockGenConfig() *BlockGenConfig {
+	return &BlockGenConfig{
+		MaxProposerSlashings: params.BeaconConfig().MaxProposerSlashings,
+		MaxAttesterSlashings: params.BeaconConfig().MaxAttesterSlashings,
+		MaxAttestations:      params.BeaconConfig().MaxAttestations,
+		MaxDeposits:          params.BeaconConfig().MaxDeposits,
+		MaxVoluntaryExits:    params.BeaconConfig().MaxVoluntaryExits,
+	}
+}
+
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
