@@ -61,7 +61,7 @@ func ExecuteStateTransition(
 	if block != nil {
 		state, err = ProcessBlock(ctx, state, block)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not process block")
+			return nil, errors.Wrapf(err, "could not process block in slot %d", block.Slot)
 		}
 	}
 
