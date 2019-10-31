@@ -129,8 +129,7 @@ filegroup(
 )
     """,
     sha256 = "386335fc3b055fad37088bd821929ff684bc00bb1a74e044e4b377ebd6e88fce",
-    # File names are normally too long, see: https://github.com/ethereum/eth2.0-spec-tests/issues/15
-    url = "https://prysmaticlabs.com/uploads/v0.8.3_general_spectests.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/general.tar.gz",
 )
 
 http_archive(
@@ -146,7 +145,7 @@ filegroup(
 )
     """,
     sha256 = "7ab89a364796e3f8a9af84750c241e9c9e2170a34c1a4e160fdfa2cee5b03fb7",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.3/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/minimal.tar.gz",
 )
 
 http_archive(
@@ -162,7 +161,7 @@ filegroup(
 )
     """,
     sha256 = "6274e3b77f393faf7b17cef10e93244c16316d3b7ae9c6b844501b12f432a7c3",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.8.3/mainnet.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/mainnet.tar.gz",
 )
 
 http_archive(

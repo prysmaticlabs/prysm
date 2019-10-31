@@ -10,12 +10,12 @@ message Attestation {
     // A bitfield representation of validator indices that have voted exactly
     // the same vote and have been aggregated into this attestation.
     // Spec type: Bitlist[N]
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     AttestationData data = 2;
 
     // Not used in phase 0.
-    bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     // 96 byte BLS aggregate signature.
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
