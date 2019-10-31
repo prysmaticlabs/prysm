@@ -177,10 +177,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
-		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
-	}
 	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
@@ -195,10 +191,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
-	if res.ValidatorAssignment[0].Shard >= params.BeaconConfig().ShardCount {
-		t.Errorf("Assigned shard %d can't be higher than %d",
-			res.ValidatorAssignment[0].Shard, params.BeaconConfig().ShardCount)
 	}
 	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
@@ -516,7 +508,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	expected := &pb.ValidatorStatusResponse{
 		Status:               pb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:      5,
-		DepositInclusionSlot: 3413,
+		DepositInclusionSlot: 2218,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -975,7 +967,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					Status: &pb.ValidatorStatusResponse{
 						Status:                 pb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   3413,
+						DepositInclusionSlot:   2218,
 					},
 				},
 				{PublicKey: pubKey2,
@@ -1248,13 +1240,6 @@ func BenchmarkAssignment(b *testing.B) {
 	req := &pb.AssignmentRequest{
 		PublicKeys: pubKeys,
 		EpochStart: 0,
-	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < validatorCount/params.BeaconConfig().TargetCommitteeSize; i++ {
-		if _, err := helpers.CrosslinkCommittee(state, 0, i); err != nil {
-			b.Fatal(err)
-		}
 	}
 
 	b.ResetTimer()

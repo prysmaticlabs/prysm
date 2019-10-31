@@ -185,12 +185,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
 	defer span.End()
 
-	slot, err := helpers.AttestationDataSlot(targetState, a.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
-
-	nextSlot := slot + 1
+	nextSlot := a.Data.Slot + 1
 	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
@@ -225,11 +220,7 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 
 // verifyAttSlotTime validates input attestation is not from the future.
 func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState, d *ethpb.AttestationData) error {
-	aSlot, err := helpers.AttestationDataSlot(baseState, d)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
-	return helpers.VerifySlotTime(baseState.GenesisTime, aSlot+1)
+	return helpers.VerifySlotTime(baseState.GenesisTime, d.Slot+1)
 }
 
 // verifyAttestation validates input attestation is valid.

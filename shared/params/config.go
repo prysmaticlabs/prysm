@@ -18,9 +18,9 @@ type BeaconChainConfig struct {
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
-	ShardCount                     uint64 `yaml:"SHARD_COUNT"`                        // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MaxCommitteesPerSlot           uint64 // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
 	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
@@ -108,14 +108,14 @@ type DepositContractConfig struct {
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
-	BaseRewardsPerEpoch:      5,
+	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
 	SecondsPerDay:            86400,
 
 	// Misc constant.
-	ShardCount:                     1024,
 	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      4096,
+	MaxValidatorsPerCommittee:      2048,
+	MaxCommitteesPerSlot:           64,
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
@@ -134,8 +134,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   6,
-	SlotsPerEpoch:                    64,
+	SecondsPerSlot:                   12,
+	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
 	MaxSeedLookhead:                  4,
 	SlotsPerEth1VotingPeriod:         1024,
@@ -238,7 +238,6 @@ func DemoBeaconConfig() *BeaconChainConfig {
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
 	// Misc
-	minimalConfig.ShardCount = 8
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 4096
 	minimalConfig.MinPerEpochChurnLimit = 4

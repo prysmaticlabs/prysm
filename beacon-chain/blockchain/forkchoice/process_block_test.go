@@ -144,10 +144,6 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: []byte{255},
 		CustodyBits:     []byte{255},
@@ -201,10 +197,6 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-				Crosslink: &ethpb.Crosslink{
-					Shard:      uint64(i),
-					StartEpoch: 0,
-				},
 			},
 			AggregationBits: []byte{255},
 			CustodyBits:     []byte{255},

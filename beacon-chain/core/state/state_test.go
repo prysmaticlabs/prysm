@@ -15,10 +15,6 @@ import (
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	genesisEpochNumber := uint64(0)
 
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
@@ -34,11 +30,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("EpochsPerHistoricalVector should be 8192 for these tests to pass")
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
-
-	if params.BeaconConfig().ShardCount != 1024 {
-		t.Error("ShardCount should be 1024 for these tests to pass")
-	}
-	shardCount := int(params.BeaconConfig().ShardCount)
 
 	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
@@ -107,12 +98,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.CurrentCrosslinks) != shardCount {
-		t.Error("Length of CurrentCrosslinks was not correctly initialized")
-	}
-	if len(newState.PreviousCrosslinks) != shardCount {
-		t.Error("Length of PreviousCrosslinks was not correctly initialized")
-	}
 	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}

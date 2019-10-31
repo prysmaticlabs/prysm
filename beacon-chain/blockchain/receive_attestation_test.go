@@ -35,8 +35,7 @@ func TestReceiveAttestation_ProcessCorrectly(t *testing.T) {
 	}
 
 	a := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Root: root[:]},
-		Crosslink: &ethpb.Crosslink{},
+		Target: &ethpb.Checkpoint{Root: root[:]},
 	}}
 	if err := chainService.ReceiveAttestation(ctx, a); err != nil {
 		t.Fatal(err)
@@ -70,8 +69,7 @@ func TestReceiveAttestation_SameHead(t *testing.T) {
 	}
 
 	a := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Root: root[:]},
-		Crosslink: &ethpb.Crosslink{},
+		Target: &ethpb.Checkpoint{Root: root[:]},
 	}}
 	if err := chainService.ReceiveAttestation(ctx, a); err != nil {
 		t.Fatal(err)
@@ -104,8 +102,7 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 	}
 
 	a := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Root: root[:]},
-		Crosslink: &ethpb.Crosslink{},
+		Target: &ethpb.Checkpoint{Root: root[:]},
 	}}
 	if err := chainService.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 		t.Fatal(err)

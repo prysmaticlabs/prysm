@@ -66,14 +66,9 @@ func TestSameHead(t *testing.T) {
 	}
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 0}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.BeaconBlockRoot = r
 	same, err := precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
@@ -100,14 +95,9 @@ func TestSameTarget(t *testing.T) {
 	}
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 0}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.Target.Root = r
 	same, err := precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
@@ -134,14 +124,9 @@ func TestAttestedPrevEpoch(t *testing.T) {
 	}
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 960}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
 	votedEpoch, votedTarget, votedHead, err := precompute.AttestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -167,14 +152,9 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 	}
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 1},
-		Crosslink: &ethpb.Crosslink{}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 1}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[params.BeaconConfig().SlotsPerEpoch] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
 	votedEpoch, votedTarget, err := precompute.AttestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -205,11 +185,11 @@ func TestProcessAttestations(t *testing.T) {
 
 	bf := []byte{0xff}
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 960}}, AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 961}}, AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
 	beaconState.BlockRoots[0] = []byte{'A'}
 	att1.Data.Target.Root = []byte{'A'}
 	att1.Data.BeaconBlockRoot = []byte{'A'}

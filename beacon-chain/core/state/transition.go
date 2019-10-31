@@ -586,11 +586,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, errors.Wrap(err, "could not process justification")
 	}
 
-	state, err = e.ProcessCrosslinks(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process crosslink")
-	}
-
 	state, err = e.ProcessRewardsAndPenalties(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
@@ -629,11 +624,6 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process justification")
-	}
-
-	state, err = e.ProcessCrosslinks(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process crosslink")
 	}
 
 	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)

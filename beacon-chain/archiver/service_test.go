@@ -128,11 +128,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
 	currentEpoch := helpers.CurrentEpoch(headState)
-	startShard, err := helpers.StartShard(headState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committeeCount, err := helpers.CommitteeCount(headState, currentEpoch)
+	committeeCount, err := helpers.CommitteeCountAtSlot(headState, helpers.StartSlot(currentEpoch))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,8 +142,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	}
 	wanted := &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
-		StartShard:     startShard,
-		CommitteeCount: committeeCount,
+		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
 		ProposerIndex:  propIdx,
 	}
 
@@ -251,14 +246,7 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Crosslink: &ethpb.Crosslink{Shard: 0}, Target: &ethpb.Checkpoint{}}}}
-	var crosslinks []*ethpb.Crosslink
-	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		crosslinks = append(crosslinks, &ethpb.Crosslink{
-			StartEpoch: 0,
-			DataRoot:   []byte{'A'},
-		})
-	}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
 
 	// We initialize a head state that has attestations from participated
 	// validators in a simulated fashion.
@@ -269,7 +257,6 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentCrosslinks:          crosslinks,
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},

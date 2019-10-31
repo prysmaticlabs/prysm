@@ -11,6 +11,7 @@ import (
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
+	t.Skip("Disabled until bug 3891 is fixed")
 	deposits, _, privs := SetupInitialDeposits(t, 128)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
@@ -33,6 +34,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
+	t.Skip("Disabled until bug 3891 is fixed")
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	deposits, _, privs := SetupInitialDeposits(t, 1024)
@@ -56,6 +58,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 }
 
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
+	t.Skip("Disabled until bug 3891 is fixed")
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())

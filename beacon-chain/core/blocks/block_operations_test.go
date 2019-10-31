@@ -35,10 +35,6 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -80,10 +76,6 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 }
 
 func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -132,10 +124,6 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 }
 
 func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -180,10 +168,6 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 }
 
 func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -233,10 +217,6 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 func TestProcessBlockHeader_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Fatalf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -637,18 +617,12 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 0},
 					Target: &ethpb.Checkpoint{Epoch: 0},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 4,
-					},
 				},
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 1},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 3,
-					},
 				},
 			},
 		},
@@ -679,9 +653,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 0},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 4,
-					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
@@ -690,9 +661,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 0},
 					Target: &ethpb.Checkpoint{Epoch: 0},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 4,
-					},
 				},
 				CustodyBit_0Indices: []uint64{0, 1, 2},
 				CustodyBit_1Indices: []uint64{0, 1, 2},
@@ -723,9 +691,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 0},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 4,
-					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
@@ -733,9 +698,6 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 0},
 					Target: &ethpb.Checkpoint{Epoch: 0},
-					Crosslink: &ethpb.Crosslink{
-						Shard: 4,
-					},
 				},
 				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
@@ -761,9 +723,6 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
@@ -785,9 +744,6 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
@@ -845,9 +801,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Epoch: 0},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 0,
-				},
+				Slot:   5,
 			},
 		},
 	}
@@ -862,14 +816,9 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestationSlot, err := helpers.AttestationDataSlot(beaconState, attestations[0].Data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	want := fmt.Sprintf(
 		"attestation slot %d + inclusion delay %d > state slot %d",
-		attestationSlot,
+		attestations[0].Data.Slot,
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot,
 	)
@@ -885,13 +834,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
-		},
-	}
+			Target: &ethpb.Checkpoint{Epoch: 0}}}
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -905,11 +848,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	}
 	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.PreviousCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard: 0,
-		},
-	}
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
@@ -927,17 +865,13 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	aggBits := bitfield.NewBitlist(1)
-	custodyBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(3)
+	custodyBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Epoch: 0},
 				Source: &ethpb.Checkpoint{Epoch: 1},
-				Crosslink: &ethpb.Crosslink{
-					Shard:      0,
-					StartEpoch: 0,
-				},
 			},
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
@@ -954,11 +888,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard: 0,
-		},
-	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
@@ -993,17 +922,15 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
+	custodyBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 1},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 0,
-				},
+				Slot:   1,
 			},
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
@@ -1017,11 +944,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.PreviousCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard: 0,
-		},
-	}
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
 
@@ -1049,67 +971,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	}
 }
 
-func TestProcessAttestations_CrosslinkMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
-
-	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
-	attestations := []*ethpb.Attestation{
-		{
-			Data: &ethpb.AttestationData{
-				Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-				Target: &ethpb.Checkpoint{Epoch: 0},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 0,
-				},
-			},
-			AggregationBits: aggBits,
-			CustodyBits:     custodyBits,
-		},
-	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	want := "mismatched parent crosslink root"
-	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	block.Body.Attestations[0].Data.Crosslink.StartEpoch = 0
-	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
-	block.Body.Attestations[0].Data.Crosslink.DataRoot = encoded[:]
-
-	want = fmt.Sprintf("expected data root %#x == ZERO_HASH", encoded)
-	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
@@ -1118,17 +979,12 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(2)
-	custodyBits := bitfield.NewBitlist(2)
+	aggBits := bitfield.NewBitlist(4)
+	custodyBits := bitfield.NewBitlist(4)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
-		},
+			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
@@ -1140,26 +996,14 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
+
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.Body.Attestations[0].Data.Crosslink.ParentRoot = encoded[:]
-	block.Body.Attestations[0].Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-
-	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 1, got: 2"
+	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
 	if !strings.Contains(err.Error(), expected) {
-		t.Errorf("Expected error checking aggregation and custody bit length, received: %v", err)
+		t.Errorf("Did not receive wanted error")
 	}
 }
 
@@ -1171,36 +1015,20 @@ func TestProcessAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
+	custodyBits := bitfield.NewBitlist(3)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att.Data.Crosslink.ParentRoot = encoded[:]
-	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
 	if err != nil {
@@ -1247,10 +1075,6 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-		Crosslink: &ethpb.Crosslink{
-			Shard:      0,
-			StartEpoch: 0,
-		},
 	}
 	aggBits1 := bitfield.NewBitlist(4)
 	aggBits1.SetBitAt(0, true)
@@ -1263,15 +1087,8 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits1,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard: 0, StartEpoch: 0}}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1.Data.Crosslink.ParentRoot = encoded[:]
-	att1.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
 	if err != nil {
@@ -1302,9 +1119,6 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		AggregationBits: aggBits2,
 		CustodyBits:     custodyBits2,
 	}
-
-	att2.Data.Crosslink.ParentRoot = encoded[:]
-	att2.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
 	if err != nil {
@@ -1342,30 +1156,19 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-		Crosslink: &ethpb.Crosslink{
-			Shard:      0,
-			StartEpoch: 0,
-		},
 	}
-	aggBits1 := bitfield.NewBitlist(4)
+	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
-	custodyBits1 := bitfield.NewBitlist(4)
+	custodyBits1 := bitfield.NewBitlist(9)
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
 		CustodyBits:     custodyBits1,
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{{Shard: 0, StartEpoch: 0}}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1.Data.Crosslink.ParentRoot = encoded[:]
-	att1.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
 	if err != nil {
@@ -1386,18 +1189,15 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	aggBits2 := bitfield.NewBitlist(4)
+	aggBits2 := bitfield.NewBitlist(9)
 	aggBits2.SetBitAt(2, true)
 	aggBits2.SetBitAt(3, true)
-	custodyBits2 := bitfield.NewBitlist(4)
+	custodyBits2 := bitfield.NewBitlist(9)
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
 		CustodyBits:     custodyBits2,
 	}
-
-	att2.Data.Crosslink.ParentRoot = encoded[:]
-	att2.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
 	if err != nil {
@@ -1444,17 +1244,13 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(1)
+	custodyBits := bitfield.NewBitlist(3)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
@@ -1464,21 +1260,8 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	att.Signature = zeroSig[:]
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att.Data.Crosslink.ParentRoot = encoded[:]
-	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -1487,9 +1270,6 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 func TestConvertToIndexed_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -1512,20 +1292,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x05},
-			wantedCustodyBit0Indices: []uint64{28},
-			wantedCustodyBit1Indices: []uint64{125},
+			wantedCustodyBit0Indices: []uint64{4},
+			wantedCustodyBit1Indices: []uint64{30},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x06},
-			wantedCustodyBit0Indices: []uint64{125},
-			wantedCustodyBit1Indices: []uint64{28},
+			wantedCustodyBit0Indices: []uint64{30},
+			wantedCustodyBit1Indices: []uint64{4},
 		},
 		{
 			aggregationBitfield:      bitfield.Bitlist{0x07},
 			custodyBitfield:          bitfield.Bitlist{0x07},
 			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{28, 125},
+			wantedCustodyBit1Indices: []uint64{4, 30},
 		},
 	}
 
@@ -1534,9 +1314,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 3,
-			},
 		},
 	}
 	for _, tt := range tests {
@@ -1564,10 +1341,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-	numOfValidators := 2 * params.BeaconConfig().SlotsPerEpoch
+
+	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, _, keys := testutil.SetupInitialDeposits(t, numOfValidators)
 	for i := 0; i < len(validators); i++ {
