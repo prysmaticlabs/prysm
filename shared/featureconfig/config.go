@@ -41,6 +41,7 @@ type Flag struct {
 	EnableNewCache             bool // EnableNewCache enables the node to use the new caching scheme.
 	EnableBLSPubkeyCache       bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache   bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableCommitteeCache       bool // EnableCommitteeCache to cache committee computation.
 	EnableCheckpointStateCache bool // EnableCheckpointStateCache.
 	EnableActiveIndicesCache   bool // EnableActiveIndicesCache.
@@ -122,6 +123,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
+	}
+	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+		log.Warn("Enabled skip slots cache.")
+		cfg.EnableSkipSlotsCache = true
 	}
 	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
 		log.Warn("Enabled committee cache.")

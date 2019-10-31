@@ -85,6 +85,11 @@ var (
 		Name:  "enable-finalized-block-root-index",
 		Usage: "Enable tracking finalized block roots in database index.",
 	}
+	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
+	enableSkipSlotsCache = cli.BoolFlag{
+		Name:  "enable-skip-slots-cache",
+		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
+	}
 )
 
 // Deprecated flags list.
@@ -127,4 +132,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveCountCacheFlag,
 	pruneFinalizedStatesFlag,
 	enableFinalizedBlockRootIndexFlag,
+	enableSkipSlotsCache,
 }...)
