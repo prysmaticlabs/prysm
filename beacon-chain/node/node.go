@@ -22,13 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-  "github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -200,8 +200,8 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
-  clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
-  forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
 
 	d, err := db.NewDB(dbPath)
 	if err != nil {
