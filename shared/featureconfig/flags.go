@@ -65,11 +65,16 @@ var (
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
-
+	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
+	enableSkipSlotsCache = cli.BoolFlag{
+		Name:  "enable-skip-slots-cache",
+		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
+	}
 )
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
+
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
 		Name:   "no-genesis-delay",
@@ -108,4 +113,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
 	pruneFinalizedStatesFlag,
+	enableSkipSlotsCache,
 }...)

@@ -16,7 +16,6 @@ var (
 	datadir = flag.String("datadir", "", "Path to data directory.")
 
 	state = flag.Uint("state", 0, "Extract state at this slot.")
-
 )
 
 func init() {
