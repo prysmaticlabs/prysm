@@ -78,7 +78,6 @@ func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestation
 		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
 			tgtAtts = append(tgtAtts, srcAtt)
 		}
-		fmt.Println(state.Slot)
 		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for slot %d", srcAtt.Data.Slot)
