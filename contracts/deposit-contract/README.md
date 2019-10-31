@@ -62,16 +62,16 @@ Run with `-v` option for detailed log output
 
 ```
 go test ./... -v
-=== RUN   TestSetupAndContractRegistration
---- PASS: TestSetupAndContractRegistration (0.01s)
-=== RUN   TestRegisterWithLessThan32Eth
---- PASS: TestRegisterWithLessThan32Eth (0.00s)
-=== RUN   TestRegisterWithMoreThan32Eth
---- PASS: TestRegisterWithMoreThan32Eth (0.00s)
-=== RUN   TestRegisterTwice
---- PASS: TestRegisterTwice (0.01s)
-=== RUN   TestRegister
---- PASS: TestRegister (0.01s)
+=== RUN   TestSetupRegistrationContract_OK
+--- PASS: TestSetupRegistrationContract_OK (0.07s)
+=== RUN   TestRegister_Below1ETH
+--- PASS: TestRegister_Below1ETH (0.02s)
+=== RUN   TestRegister_Above32Eth
+--- PASS: TestRegister_Above32Eth (0.02s)
+=== RUN   TestValidatorRegister_OK
+--- PASS: TestValidatorRegister_OK (0.08s)
+=== RUN   TestDrain
+--- PASS: TestDrain (0.04s)
 PASS
-ok      beacon-chain/contracts/deposit-contract/  0.151s
+ok      contracts/deposit-contract        0.633s
 ```
