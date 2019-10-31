@@ -73,7 +73,7 @@ func run(ctx context.Context, v Validator) {
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
-			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
+			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
 				span.End()
