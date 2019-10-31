@@ -4,9 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/urfave/cli"
 	"io/ioutil"
 	"testing"
+
+	"github.com/urfave/cli"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"

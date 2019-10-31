@@ -69,10 +69,15 @@ var (
 		Name:  "enable-finalized-block-root-index",
 		Usage: "Enable tracking finalized block roots in database index.",
 	}
+	EnableSkipSlotsCache = cli.BoolFlag{
+		Name:  "enable-skip-slots-cache",
+		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
+	}
 )
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
+
 var (
 	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
 		Name:   "no-genesis-delay",
@@ -106,4 +111,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableShuffledIndexCache,
 	pruneFinalizedStatesFlag,
 	enableFinalizedBlockRootIndexFlag,
+	EnableSkipSlotsCache,
 }...)
