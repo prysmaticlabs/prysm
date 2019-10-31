@@ -69,6 +69,7 @@ var (
 		Name:  "enable-finalized-block-root-index",
 		Usage: "Enable tracking finalized block roots in database index.",
 	}
+	// EnableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	EnableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
