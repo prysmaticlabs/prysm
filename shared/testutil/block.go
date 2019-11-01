@@ -297,8 +297,14 @@ func generateAttestations(
 
 	committeeSize := uint64(len(committee))
 	custodyBits := bitfield.NewBitlist(committeeSize)
+	attestingSlot := uint64(0)
+	if bState.Slot > 0 {
+		attestingSlot = bState.Slot - 1
+	}
+
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Slot:            attestingSlot,
 			BeaconBlockRoot: headRoot,
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{
