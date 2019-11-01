@@ -346,6 +346,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		web3Service.ProcessLog(context.Background(), log)
 	}
 
+	err = web3Service.ProcessETH1Block(context.Background(), big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cachedDeposits := web3Service.ChainStartDeposits()
 	if len(cachedDeposits) != depositsReqForChainStart {
 		t.Errorf(
