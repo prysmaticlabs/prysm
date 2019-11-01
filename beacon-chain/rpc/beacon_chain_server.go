@@ -247,7 +247,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
+	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
 	headState := bs.headFetcher.HeadState()
@@ -277,6 +277,14 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	} else {
 		balances = headState.Balances
+	}
+
+	for i := 0; i < len(headState.Balances); i++ {
+		res = append(res, &ethpb.ValidatorBalances_Balance{
+			PublicKey: headState.Validators[i].PublicKey,
+			Index:     uint64(i),
+			Balance:   balances[i],
+		})
 	}
 
 	for _, pubKey := range req.PublicKeys {
