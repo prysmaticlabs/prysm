@@ -479,6 +479,42 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	}
 }
 
+func TestBeaconChainServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	headState := &pbp2p.BeaconState{
+		Balances: []uint64{3, 4, 5},
+	}
+
+	bs := &BeaconChainServer{
+		headFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	req := &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(headState.Balances))
+	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestBeaconChainServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
+	bs := &BeaconChainServer{}
+	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf(
+		"requested page size %d can not be greater than max size %d",
+		exceedsMax,
+		params.BeaconConfig().MaxPageSize,
+	)
+	req := &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
 func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -539,7 +575,7 @@ func TestBeaconChainServer_ListValidatorBalances(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
+func TestBeaconChainServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	setupValidators(t, db, 1)
@@ -561,7 +597,7 @@ func TestBeaconChainServer_ListValidatorBalancesOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalancesFromArchive(t *testing.T) {
+func TestBeaconChainServer_ListValidatorBalances_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -609,7 +645,7 @@ func TestBeaconChainServer_ListValidatorBalancesFromArchive(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalancesFromArchive_NewValidatorNotFound(t *testing.T) {
+func TestBeaconChainServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()

@@ -326,7 +326,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	}
 
-	balancesCount := len(res)
+	balancesCount := len(balances)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
 	if err != nil {
 		return nil, err
