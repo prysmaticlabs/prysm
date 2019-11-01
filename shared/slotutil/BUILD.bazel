@@ -2,10 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["slotticker.go"],
+    srcs = [
+        "slotticker.go",
+        "slottime.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/slotutil",
     visibility = ["//visibility:public"],
-    deps = ["//shared/roughtime:go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
+    ],
 )
 
 go_test(

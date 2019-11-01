@@ -31,7 +31,7 @@ type Database interface {
 	Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlock, error)
 	HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.BeaconBlock, error)
-	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error)
+	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
@@ -39,6 +39,7 @@ type Database interface {
 	SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
@@ -54,6 +55,8 @@ type Database interface {
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	GenesisState(ctx context.Context) (*pb.BeaconState, error)
 	SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error
+	DeleteState(ctx context.Context, blockRoot [32]byte) error
+	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error)

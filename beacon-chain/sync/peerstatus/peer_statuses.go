@@ -12,22 +12,38 @@ import (
 )
 
 var lock sync.RWMutex
-var peerStatuses = make(map[peer.ID]*pb.Status)
-var lastUpdated = make(map[peer.ID]time.Time)
+var peerStatuses = make(map[peer.ID]*peerStatus)
+var failureCount = make(map[peer.ID]int)
+var maxFailureThreshold = 3
+
+type peerStatus struct {
+	status      *pb.Status
+	lastUpdated time.Time
+}
 
 // Get most recent status from peer in cache. Threadsafe.
 func Get(pid peer.ID) *pb.Status {
 	lock.RLock()
 	defer lock.RUnlock()
-	return peerStatuses[pid]
+	if pStatus, ok := peerStatuses[pid]; ok {
+		return pStatus.status
+	}
+	return nil
 }
 
 // Set most recent status from peer in cache. Threadsafe.
 func Set(pid peer.ID, status *pb.Status) {
 	lock.Lock()
 	defer lock.Unlock()
-	peerStatuses[pid] = status
-	lastUpdated[pid] = roughtime.Now()
+	if pStatus, ok := peerStatuses[pid]; ok {
+		pStatus.status = status
+		peerStatuses[pid] = pStatus
+		return
+	}
+	peerStatuses[pid] = &peerStatus{
+		status:      status,
+		lastUpdated: roughtime.Now(),
+	}
 }
 
 // Delete peer status from cache. Threadsafe.
@@ -35,7 +51,6 @@ func Delete(pid peer.ID) {
 	lock.Lock()
 	defer lock.Unlock()
 	delete(peerStatuses, pid)
-	delete(lastUpdated, pid)
 }
 
 // Count of peer statuses in cache. Threadsafe.
@@ -60,10 +75,49 @@ func Keys() []peer.ID {
 func LastUpdated(pid peer.ID) time.Time {
 	lock.RLock()
 	defer lock.RUnlock()
-	return lastUpdated[pid]
+	if pStatus, ok := peerStatuses[pid]; ok {
+		return pStatus.lastUpdated
+	}
+	return time.Unix(0, 0)
+}
+
+// IncreaseFailureCount increases the failure count for the particular peer.
+func IncreaseFailureCount(pid peer.ID) {
+	lock.Lock()
+	defer lock.Unlock()
+	count, ok := failureCount[pid]
+	if !ok {
+		failureCount[pid] = 1
+		return
+	}
+	failureCount[pid] = count + 1
+}
+
+// FailureCount returns the failure count for the particular peer.
+func FailureCount(pid peer.ID) int {
+	lock.RLock()
+	defer lock.RUnlock()
+	count, ok := failureCount[pid]
+	if !ok {
+		return 0
+	}
+	return count
+}
+
+// IsBadPeer checks whether the given peer has
+// exceeded the number of bad handshakes threshold.
+func IsBadPeer(pid peer.ID) bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	count, ok := failureCount[pid]
+	if !ok {
+		return false
+	}
+	return count > maxFailureThreshold
 }
 
 // Clear the cache. This method should only be used for tests.
 func Clear() {
-	peerStatuses = make(map[peer.ID]*pb.Status)
+	peerStatuses = make(map[peer.ID]*peerStatus)
+	failureCount = make(map[peer.ID]int)
 }
