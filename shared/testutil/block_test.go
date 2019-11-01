@@ -24,7 +24,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +74,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {
-		block := GenerateFullBlock(t, beaconState, privs, conf)
+		block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 		if err != nil {
 			t.Fatal(err)
@@ -107,7 +107,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -161,7 +161,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -188,7 +188,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 		MaxDeposits:          1,
 		MaxVoluntaryExits:    0,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +221,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    1,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
