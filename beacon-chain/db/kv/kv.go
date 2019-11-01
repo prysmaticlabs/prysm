@@ -79,6 +79,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
+			finalizedBlockRootsIndexBucket,
 		)
 	}); err != nil {
 		return nil, err
