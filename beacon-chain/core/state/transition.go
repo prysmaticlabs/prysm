@@ -259,14 +259,16 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		cached, ok := skipSlotCache.Get(root)
 		// if cache key does not exist, we write it to the cache.
 		writeToCache = !ok
-		if ok && cached.(*pb.BeaconState).Slot <= slot {
+		if ok {
 			// do not write to cache if state with higher slot exists.
-			writeToCache = writeToCache || cached.(*pb.BeaconState).Slot <= slot
-			state = proto.Clone(cached.(*pb.BeaconState)).(*pb.BeaconState)
-			highestSlot = state.Slot
-			skipSlotCacheHit.Inc()
-		} else {
-			skipSlotCacheMiss.Inc()
+			writeToCache = cached.(*pb.BeaconState).Slot <= slot
+			if cached.(*pb.BeaconState).Slot <= slot {
+				state = proto.Clone(cached.(*pb.BeaconState)).(*pb.BeaconState)
+				highestSlot = state.Slot
+				skipSlotCacheHit.Inc()
+			} else {
+				skipSlotCacheMiss.Inc()
+			}
 		}
 	}
 
