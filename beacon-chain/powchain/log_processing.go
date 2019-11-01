@@ -33,6 +33,7 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return s.eth2GenesisTime, s.chainStartBlockNumber
 }
 
+// ProcessETH1Block processes the logs from the provided eth1Block.
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
