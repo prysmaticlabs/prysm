@@ -547,29 +547,46 @@ func TestBeaconChainServer_ListValidatorBalances_NoPagination(t *testing.T) {
 				TotalSize:     1,
 			},
 		},
-		//{req: &ethpb.GetValidatorBalancesRequest{Indices: []uint64{1, 2, 3}},
-		//	res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
-		//		{Index: 1, PublicKey: []byte{1}, Balance: 1},
-		//		{Index: 2, PublicKey: []byte{2}, Balance: 2},
-		//		{Index: 3, PublicKey: []byte{3}, Balance: 3}},
-		//	}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{10}, {11}, {12}}},
-		//	res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
-		//		{Index: 10, PublicKey: []byte{10}, Balance: 10},
-		//		{Index: 11, PublicKey: []byte{11}, Balance: 11},
-		//		{Index: 12, PublicKey: []byte{12}, Balance: 12}},
-		//	}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
-		//	res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
-		//		{Index: 2, PublicKey: []byte{2}, Balance: 2},
-		//		{Index: 3, PublicKey: []byte{3}, Balance: 3},
-		//		{Index: 4, PublicKey: []byte{4}, Balance: 4}},
-		//	}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
-		//	res: &ethpb.ValidatorBalances{Balances: []*ethpb.ValidatorBalances_Balance{
-		//		{Index: 3, PublicKey: []byte{3}, Balance: 3},
-		//		{Index: 4, PublicKey: []byte{4}, Balance: 4}},
-		//	}},
+		{req: &ethpb.GetValidatorBalancesRequest{Indices: []uint64{1, 2, 3}},
+			res: &ethpb.ValidatorBalances{
+				Balances: []*ethpb.ValidatorBalances_Balance{
+					{Index: 1, PublicKey: []byte{1}, Balance: 1},
+					{Index: 2, PublicKey: []byte{2}, Balance: 2},
+					{Index: 3, PublicKey: []byte{3}, Balance: 3},
+				},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     3,
+			},
+		},
+		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{10}, {11}, {12}}},
+			res: &ethpb.ValidatorBalances{
+				Balances: []*ethpb.ValidatorBalances_Balance{
+					{Index: 10, PublicKey: []byte{10}, Balance: 10},
+					{Index: 11, PublicKey: []byte{11}, Balance: 11},
+					{Index: 12, PublicKey: []byte{12}, Balance: 12},
+				},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     3,
+			}},
+		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
+			res: &ethpb.ValidatorBalances{
+				Balances: []*ethpb.ValidatorBalances_Balance{
+					{Index: 2, PublicKey: []byte{2}, Balance: 2},
+					{Index: 3, PublicKey: []byte{3}, Balance: 3},
+					{Index: 4, PublicKey: []byte{4}, Balance: 4},
+				},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     3,
+			}},
+		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
+			res: &ethpb.ValidatorBalances{
+				Balances: []*ethpb.ValidatorBalances_Balance{
+					{Index: 3, PublicKey: []byte{3}, Balance: 3},
+					{Index: 4, PublicKey: []byte{4}, Balance: 4},
+				},
+				NextPageToken: strconv.Itoa(1),
+				TotalSize:     2,
+			}},
 	}
 	for _, test := range tests {
 		res, err := bs.ListValidatorBalances(context.Background(), test.req)
@@ -625,7 +642,10 @@ func TestBeaconChainServer_ListValidatorBalances_Pagination(t *testing.T) {
 		{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: []byte{99}, Index: 99, Balance: uint64(99)}},
+					{PublicKey: []byte{99}, Index: 99, Balance: uint64(99)},
+					{PublicKey: []byte{100}, Index: 100, Balance: uint64(100)},
+					{PublicKey: []byte{101}, Index: 101, Balance: uint64(101)},
+				},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
 		{req: &ethpb.GetValidatorBalancesRequest{PageSize: 2},
