@@ -149,8 +149,8 @@ message BeaconBlockHeader {
 }
 
 message IndexedAttestation {
-    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"4096\""];
-    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
+    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
+    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"2048\""];
 
     AttestationData data = 3;
 
