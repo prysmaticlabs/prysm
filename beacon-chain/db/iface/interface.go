@@ -39,6 +39,7 @@ type Database interface {
 	SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
 	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*ethereum_beacon_p2p_v1.ValidatorLatestVote, error)
 	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool

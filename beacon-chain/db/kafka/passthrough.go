@@ -240,3 +240,7 @@ func (e Exporter) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	return e.db.DeleteStates(ctx, blockRoots)
 }
+
+func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.IsFinalizedBlock(ctx, blockRoot)
+}
