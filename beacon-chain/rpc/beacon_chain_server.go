@@ -279,14 +279,6 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		balances = headState.Balances
 	}
 
-	for i := 0; i < len(headState.Balances); i++ {
-		res = append(res, &ethpb.ValidatorBalances_Balance{
-			PublicKey: headState.Validators[i].PublicKey,
-			Index:     uint64(i),
-			Balance:   balances[i],
-		})
-	}
-
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key
 		if len(pubKey) == 0 {
@@ -334,7 +326,17 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	}
 
-	balancesCount := len(balances)
+	if len(res) == 0 {
+		for i := 0; i < len(headState.Balances); i++ {
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: headState.Validators[i].PublicKey,
+				Index:     uint64(i),
+				Balance:   balances[i],
+			})
+		}
+	}
+
+	balancesCount := len(res)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
 	if err != nil {
 		return nil, err
