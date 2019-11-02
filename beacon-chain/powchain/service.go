@@ -190,18 +190,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
-	for {
-		err := s.connectToPowChain()
-		if err == nil {
-			break
-		}
-		log.Errorf("Could not connect to powchain: %v", err)
-		time.Sleep(backOffPeriod)
-	}
-	log.WithFields(logrus.Fields{
-		"endpoint": s.eth1Endpoint,
-	}).Info("Connected to eth1 proof-of-work chain")
-	go s.run(s.ctx.Done())
+	go func() {
+		s.waitForConnection()
+		s.run(s.ctx.Done())
+	}()
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -321,6 +313,7 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, error) 
 
 	rpcClient, err := gethRPC.Dial(s.eth1Endpoint)
 	if err != nil {
+		httpClient.Close()
 		return nil, nil, err
 	}
 	powClient := ethclient.NewClient(rpcClient)
@@ -337,6 +330,35 @@ func (s *Service) initializeConnection(powClient *ethclient.Client,
 	s.httpLogger = httpClient
 	s.blockFetcher = httpClient
 	s.depositContractCaller = contractCaller
+}
+
+func (s *Service) waitForConnection() {
+	err := s.connectToPowChain()
+	if err == nil {
+		log.WithFields(logrus.Fields{
+			"endpoint": s.eth1Endpoint,
+		}).Info("Connected to eth1 proof-of-work chain")
+		return
+	}
+	log.Errorf("Could not connect to powchain: %v", err)
+	ticker := time.NewTicker(backOffPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			err := s.connectToPowChain()
+			if err == nil {
+				log.WithFields(logrus.Fields{
+					"endpoint": s.eth1Endpoint,
+				}).Info("Connected to eth1 proof-of-work chain")
+				ticker.Stop()
+				break
+			}
+			log.Errorf("Could not connect to powchain: %v", err)
+		case <-s.ctx.Done():
+			ticker.Stop()
+			log.Debug("Received cancelled context, existing powchain service")
+		}
+	}
 }
 
 // initDataFromContract calls the deposit contract and finds the deposit count

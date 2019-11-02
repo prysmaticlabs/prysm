@@ -155,11 +155,12 @@ func TestStart_OK(t *testing.T) {
 	testAcc.Backend.Commit()
 
 	web3Service.Start()
-
-	msg := hook.LastEntry().Message
-	want := "Could not connect to ETH1.0 chain RPC client"
-	if strings.Contains(want, msg) {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	if len(hook.Entries) > 0 {
+		msg := hook.LastEntry().Message
+		want := "Could not connect to ETH1.0 chain RPC client"
+		if strings.Contains(want, msg) {
+			t.Errorf("incorrect log, expected %s, got %s", want, msg)
+		}
 	}
 	hook.Reset()
 	web3Service.cancel()
