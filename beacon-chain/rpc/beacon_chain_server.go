@@ -326,7 +326,8 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 		}
 	}
 
-	if len(res) == 0 {
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+		// return everything.
 		for i := 0; i < len(headState.Balances); i++ {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: headState.Validators[i].PublicKey,
