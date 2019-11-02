@@ -199,13 +199,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
-	client := &mockClient{}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
-		Reader:          client,
-		Client:          client,
-		Logger:          client,
 	})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
