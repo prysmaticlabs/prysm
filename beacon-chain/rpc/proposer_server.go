@@ -150,6 +150,8 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 }
 
 func (ps *ProposerServer) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
+	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
+		"ETH1 Data votes are now mocked.")
 	// If a mock eth1 data votes is specified, we use the following for the
 	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
 	//
