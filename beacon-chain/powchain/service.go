@@ -301,7 +301,6 @@ func (s *Service) connectToPowChain() error {
 	}
 
 	s.initializeConnection(powClient, httpClient, depositContractCaller)
-
 	return nil
 }
 
