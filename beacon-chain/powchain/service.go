@@ -47,6 +47,7 @@ var (
 	})
 )
 
+// time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
@@ -340,7 +341,7 @@ func (s *Service) waitForConnection() {
 		}).Info("Connected to eth1 proof-of-work chain")
 		return
 	}
-	log.Errorf("Could not connect to powchain: %v", err)
+	log.WithError(err).Error("Could not connect to powchain endpoint")
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
@@ -353,7 +354,7 @@ func (s *Service) waitForConnection() {
 				ticker.Stop()
 				break
 			}
-			log.Errorf("Could not connect to powchain: %v", err)
+			log.WithError(err).Error("Could not connect to powchain endpoint")
 		case <-s.ctx.Done():
 			ticker.Stop()
 			log.Debug("Received cancelled context, existing powchain service")
