@@ -65,17 +65,13 @@ var (
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
 	}
-	enableFinalizedBlockRootIndexFlag = cli.BoolFlag{
-		Name:  "enable-finalized-block-root-index",
-		Usage: "Enable tracking finalized block roots in database index.",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
 	kafkaBootstrapServersFlag = cli.StringFlag{
-		Name: "kafka-url",
+		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
 )
@@ -89,10 +85,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
+		Name:   "enable-finalized-block-root-index",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedNoGenesisDelayFlag,
+	deprecatedEnableFinalizedBlockRootIndexFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -116,6 +118,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
 	pruneFinalizedStatesFlag,
-	enableFinalizedBlockRootIndexFlag,
 	enableSkipSlotsCache,
 }...)

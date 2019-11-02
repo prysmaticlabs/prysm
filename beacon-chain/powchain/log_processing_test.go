@@ -33,18 +33,18 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
-		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	testAcc.Backend.Commit()
@@ -95,17 +95,18 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	testAcc.Backend.Commit()
@@ -154,15 +155,16 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	testAcc.Backend.Commit()
@@ -222,18 +224,18 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
-		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	bConfig := params.MinimalSpecConfig()
@@ -291,18 +293,18 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
-		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
@@ -376,19 +378,20 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      testAcc.Backend,
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        &kv.Store{},
 		DepositCache:    depositcache.NewDepositCache(),
-		BlockFetcher:    &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	web3Service.httpLogger = testAcc.Backend
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)

@@ -25,15 +25,14 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flag is a struct to represent what features the client will perform on runtime.
 type Flag struct {
-	GenesisDelay                  bool // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig                 bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions      bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify              bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify                 bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook           bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
-	OptimizeProcessEpoch          bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
-	PruneFinalizedStates          bool // PruneFinalizedStates from the database.
-	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
+	GenesisDelay             bool   // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig            bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify            bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook      bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
+	OptimizeProcessEpoch     bool   // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
+	PruneFinalizedStates     bool   // PruneFinalizedStates from the database.
 	KafkaBootstrapServers    string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
 	// Cache toggles.
@@ -112,10 +111,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
 		log.Warn("Enabled pruning old finalized states from database.")
 		cfg.PruneFinalizedStates = true
-	}
-	if ctx.GlobalBool(enableFinalizedBlockRootIndexFlag.Name) {
-		log.Warn("Enabled finalized block root index")
-		cfg.EnableFinalizedBlockRootIndex = true
 	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
