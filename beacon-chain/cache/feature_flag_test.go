@@ -9,7 +9,6 @@ func init() {
 		EnableShuffledIndexCache:      true,
 		EnableCommitteeCache:          true,
 		EnableActiveCountCache:        true,
-		EnableFinalizedBlockRootIndex: true,
 		EnableActiveIndicesCache:      true,
 	})
 }
