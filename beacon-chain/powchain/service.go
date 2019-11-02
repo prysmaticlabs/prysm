@@ -301,7 +301,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 // initDataFromContract calls the deposit contract and finds the deposit count
 // and deposit root.
 func (s *Service) initDataFromContract() error {
-	root, err := s.depositContractCaller.GetHashTreeRoot(&bind.CallOpts{})
+	root, err := s.depositContractCaller.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve deposit root")
 	}
