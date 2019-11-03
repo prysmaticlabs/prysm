@@ -6,12 +6,17 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
 func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
+	defer span.End()
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -23,6 +28,14 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * m.Count)
 
+	span.AddAttributes(
+		trace.Int64Attribute("start", int64(startSlot)),
+		trace.Int64Attribute("end", int64(endSlot)),
+		trace.Int64Attribute("step", int64(m.Step)),
+		trace.Int64Attribute("count", int64(m.Count)),
+		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
+	)
+
 	// TODO(3147): Update this with reasonable constraints.
 	if endSlot-startSlot > 1000 || m.Step == 0 {
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "invalid range or step")
@@ -33,13 +46,12 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 				log.WithError(err).Errorf("Failed to write to stream")
 			}
 		}
-		return errors.New("invalid range or step")
+		err = errors.New("invalid range or step")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
-	// TODO(3147): Only return blocks on the chain of the head root.
-	blks, err := r.db.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks")
+	var errResponse = func() {
 		resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
@@ -48,11 +60,32 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 				log.WithError(err).Errorf("Failed to write to stream")
 			}
 		}
-		return err
 	}
 
-	for _, blk := range blks {
-		if blk != nil && (blk.Slot-startSlot)%m.Step == 0 {
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	blks, err := r.db.Blocks(ctx, filter)
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve blocks")
+		errResponse()
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	roots, err := r.db.BlockRoots(ctx, filter)
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve block roots")
+		errResponse()
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve finalized checkpoint")
+		errResponse()
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	for i, blk := range blks {
+		if blk != nil && (blk.Slot-startSlot)%m.Step == 0 && (blk.Slot > helpers.StartSlot(checkpoint.Epoch+1) || r.db.IsFinalizedBlock(ctx, roots[i])) {
 			if err := r.chunkWriter(stream, blk); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
 				return err
