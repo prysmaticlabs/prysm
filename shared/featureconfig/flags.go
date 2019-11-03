@@ -82,7 +82,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
-		Name:  "enable-finalized-block-root-index",
+		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}

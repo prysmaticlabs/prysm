@@ -295,6 +295,17 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
+		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
+		if err == nil {
+			statusResp := &pb.ValidatorStatusResponse{
+				Status: vStatus,
+			}
+			if vStatus == pb.ValidatorStatus_ACTIVE {
+				statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
+			}
+			return statusResp
+
+		}
 		return &pb.ValidatorStatusResponse{
 			Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -312,16 +323,10 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, h
 		return statusResp
 	}
 	statusResp.DepositInclusionSlot = depositBlockSlot
-
-	idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
 	if err != nil {
 		return statusResp
 	}
-	if !ok || headState == nil {
-		return statusResp
-	}
-
-	vStatus := vs.assignmentStatus(uint64(idx), headState)
 	statusResp.Status = vStatus
 
 	if vStatus == pb.ValidatorStatus_ACTIVE {
@@ -346,6 +351,21 @@ func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, h
 		DepositInclusionSlot:      depositBlockSlot,
 		ActivationEpoch:           headState.Validators[idx].ActivationEpoch,
 	}
+}
+
+func (vs *ValidatorServer) retrieveStatusFromState(ctx context.Context, pubKey []byte,
+	headState *pbp2p.BeaconState) (pb.ValidatorStatus, uint64, error) {
+	if headState == nil {
+		return pb.ValidatorStatus(0), 0, errors.New("head state does not exist")
+	}
+	idx, ok, err := vs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	if err != nil {
+		return pb.ValidatorStatus(0), 0, err
+	}
+	if !ok {
+		return pb.ValidatorStatus(0), 0, errors.New("pubkey does not exist")
+	}
+	return vs.assignmentStatus(uint64(idx), headState), uint64(idx), nil
 }
 
 func (vs *ValidatorServer) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
