@@ -4,7 +4,10 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 proto_library(
     name = "db_proto",
-    srcs = ["attestation_container.proto"],
+    srcs = [
+        "attestation_container.proto",
+        "finalized_block_root_container.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v1alpha1:v1alpha1_proto",
