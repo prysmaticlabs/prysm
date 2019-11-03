@@ -45,7 +45,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	defer cancel()
 
 	resp := &pb.Status{
-		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:        r.chain.HeadRoot(),
@@ -62,6 +62,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	}
 
 	if code != 0 {
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
@@ -117,7 +118,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	}
 
 	resp := &pb.Status{
-		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:        r.chain.HeadRoot(),
