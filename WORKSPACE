@@ -1099,7 +1099,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "86fe9e5ca27c0e04bca469c796517bb911b93425",
+    commit = "dbb55b15e92f897ee230360c8d9695e2f224b117",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1202,7 +1202,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "b4ca5785e074dd8fed39f18a61aae0318b57b4b0",
+    commit = "cb09854edc557d3f5752def5316a595e2f07ba27",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 

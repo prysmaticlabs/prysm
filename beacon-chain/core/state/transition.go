@@ -13,10 +13,12 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -243,9 +245,42 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+	highestSlot := state.Slot
+	var root [32]byte
+	var writeToCache bool
+	var err error
+
+	if featureconfig.Get().EnableSkipSlotsCache {
+		// Restart from cached value, if one exists.
+		root, err = ssz.HashTreeRoot(state)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
+		}
+		cached, ok := skipSlotCache.Get(root)
+		// if cache key does not exist, we write it to the cache.
+		writeToCache = !ok
+		if ok {
+			// do not write to cache if state with higher slot exists.
+			writeToCache = cached.(*pb.BeaconState).Slot <= slot
+			if cached.(*pb.BeaconState).Slot <= slot {
+				state = proto.Clone(cached.(*pb.BeaconState)).(*pb.BeaconState)
+				highestSlot = state.Slot
+				skipSlotCacheHit.Inc()
+			} else {
+				skipSlotCacheMiss.Inc()
+			}
+		}
+	}
+
 	for state.Slot < slot {
 		if ctx.Err() != nil {
 			traceutil.AnnotateError(span, ctx.Err())
+			if featureconfig.Get().EnableSkipSlotsCache {
+				// Cache last best value.
+				if highestSlot < state.Slot && writeToCache {
+					skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+				}
+			}
 			return nil, ctx.Err()
 		}
 		state, err := ProcessSlot(ctx, state)
@@ -254,14 +289,30 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpoch(ctx, state)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return nil, errors.Wrap(err, "could not process epoch")
+			if featureconfig.Get().OptimizeProcessEpoch {
+				state, err = ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			} else {
+				state, err = ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
 			}
 		}
 		state.Slot++
 	}
+
+	if featureconfig.Get().EnableSkipSlotsCache {
+		// Clone result state so that caches are not mutated.
+		if highestSlot < state.Slot && writeToCache {
+			skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+		}
+	}
+
 	return state, nil
 }
 
@@ -638,6 +689,48 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slashings")
 	}
+
+	state, err = e.ProcessFinalUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process final updates")
+	}
+	return state, nil
+}
+
+// ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
+// It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
+func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+
+	vp, bp := precompute.New(ctx, state)
+	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process justification")
+	}
+
+	state, err = e.ProcessCrosslinks(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process crosslink")
+	}
+
+	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
+	}
+
+	state, err = e.ProcessRegistryUpdates(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process registry updates")
+	}
+
+	state = precompute.ProcessSlashingsPrecompute(state, bp)
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {

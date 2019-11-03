@@ -242,9 +242,15 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
-	res := make([]*ethpb.ValidatorBalances_Balance, 0, len(req.PublicKeys)+len(req.Indices))
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+			req.PageSize, params.BeaconConfig().MaxPageSize)
+	}
+
+	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
+	headState := bs.headFetcher.HeadState()
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -253,11 +259,11 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	case *ethpb.GetValidatorBalancesRequest_Genesis:
 		requestingGenesis = q.Genesis
 	default:
+		epoch = helpers.CurrentEpoch(headState)
 	}
 
 	var balances []uint64
 	var err error
-	headState := bs.headFetcher.HeadState()
 	validators := headState.Validators
 	if requestingGenesis {
 		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
@@ -319,7 +325,29 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			})
 		}
 	}
-	return &ethpb.ValidatorBalances{Balances: res}, nil
+
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+		// return everything.
+		for i := 0; i < len(headState.Balances); i++ {
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: headState.Validators[i].PublicKey,
+				Index:     uint64(i),
+				Balance:   balances[i],
+			})
+		}
+	}
+
+	balancesCount := len(res)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.ValidatorBalances{
+		Epoch:         epoch,
+		Balances:      res[start:end],
+		TotalSize:     int32(balancesCount),
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 // GetValidators retrieves the current list of active validators with an optional historical epoch flag to

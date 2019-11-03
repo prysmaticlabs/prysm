@@ -30,10 +30,12 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )
 
@@ -61,9 +63,11 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )

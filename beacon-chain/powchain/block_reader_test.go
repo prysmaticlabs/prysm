@@ -15,6 +15,14 @@ import (
 
 var endpoint = "ws://127.0.0.1"
 
+func setDefaultMocks(service *Service) *Service {
+	service.reader = &goodReader{}
+	service.blockFetcher = &goodFetcher{}
+	service.logger = &goodLogger{}
+	service.httpLogger = &goodLogger{}
+	return service
+}
+
 func TestLatestMainchainInfo_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -23,17 +31,17 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BlockFetcher:    &goodFetcher{},
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		HTTPLogger:      &goodLogger{},
-		ContractBackend: testAcc.Backend,
 		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
 	}
 	testAcc.Backend.Commit()
 
@@ -83,12 +91,12 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
+		ETH1Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 	ctx := context.Background()
 
 	block := gethTypes.NewBlock(
@@ -122,12 +130,12 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
+		ETH1Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
@@ -161,12 +169,12 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
+		ETH1Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	_, _, err = web3Service.BlockExists(context.Background(), common.BytesToHash([]byte{0}))
 	if err == nil {
@@ -176,12 +184,13 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
+		ETH1Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	// nil blockFetcher would panic if cached value not used
+	web3Service.blockFetcher = nil
 
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
@@ -211,13 +220,14 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 
 func TestBlockNumberByTimestamp(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-		Client:       nil,
+		ETH1Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.client = nil
+
 	ctx := context.Background()
 	bn, err := web3Service.BlockNumberByTimestamp(ctx, 150000 /* time */)
 	if err != nil {

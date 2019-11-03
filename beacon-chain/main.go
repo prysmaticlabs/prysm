@@ -59,6 +59,7 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
 	cmd.ClearDB,
+	cmd.ForceClearDB,
 	cmd.LogFormat,
 	cmd.MaxGoroutines,
 	debug.PProfFlag,

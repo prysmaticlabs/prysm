@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -22,6 +22,7 @@ import (
 )
 
 const blockBatchSize = 64
+const maxPeersToSync = 15
 const counterSeconds = 20
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
@@ -41,12 +42,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 
 	var lastEmptyRequests int
-	errChan := make(chan error)
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
-
-		var blocks []*eth.BeaconBlock
 
 		// request a range of blocks to be requested from multiple peers.
 		// Example:
@@ -60,27 +58,21 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
-			var wg sync.WaitGroup
+			var p2pRequestCount int32
+			errChan := make(chan error)
+			blocksChan := make(chan []*eth.BeaconBlock)
 
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
 
+			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
 			for i, pid := range peers {
 				if ctx.Err() != nil {
 					return nil, ctx.Err()
 				}
-
-				originalStart := start
-				originalCount := count
 				start := start + uint64(i)*step
 				step := step * uint64(len(peers))
-				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-originalStart)/step)
-				// If there is only 1 peer left, rather than further minimising the count in the situation
-				// of a large step value. we remove the variable entirely. This also handles the case if
-				// there is only 1 peer overall(step = 1).
-				if len(peers) == 1 {
-					count = mathutil.Min(originalCount, helpers.StartSlot(finalizedEpoch+1)-originalStart)
-				}
+				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
 				// If the count was divided by an odd number of peers, there will be some blocks
 				// missing from the first requests so we accommodate that scenario.
 				if i < remainder {
@@ -98,10 +90,14 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					Step:          step,
 				}
 
-				// Fulfill requests asynchronously, in parallel, and wait for results from all.
-				wg.Add(1)
 				go func(i int, pid peer.ID) {
-					defer wg.Done()
+					defer func() {
+						zeroIfIAmTheLast := atomic.AddInt32(&p2pRequestCount, -1)
+						if zeroIfIAmTheLast == 0 {
+							close(blocksChan)
+						}
+					}()
+
 					resp, err := s.requestBlocks(ctx, req, pid)
 					log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 					if err != nil {
@@ -118,28 +114,30 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
 							return
 						}
-						_, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
+						resp, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
 						if err != nil {
 							errChan <- err
 							return
 						}
 					}
-					blocks = append(blocks, resp...)
+					blocksChan <- resp
 				}(i, pid)
 			}
 
-			// Wait for done signal or any error.
-			done := make(chan interface{})
-			go func() {
-				wg.Wait()
-				done <- true
-			}()
+			var unionRespBlocks []*eth.BeaconBlock
 			for {
 				select {
 				case err := <-errChan:
 					return nil, err
-				case <-done:
-					return blocks, nil
+				case resp, ok := <-blocksChan:
+					if ok {
+						//  if this synchronization becomes a bottleneck:
+						//    think about immediately allocating space for all peers in unionRespBlocks,
+						//    and write without synchronization
+						unionRespBlocks = append(unionRespBlocks, resp...)
+					} else {
+						return unionRespBlocks, nil
+					}
 				}
 			}
 		}
@@ -288,6 +286,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 		s := peerstatus.Get(k)
 		if s.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, k)
+			if len(pids) >= maxPeersToSync {
+				break
+			}
 		}
 	}
 

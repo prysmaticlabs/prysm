@@ -26,6 +26,18 @@ type BlockGenConfig struct {
 	MaxVoluntaryExits    uint64
 }
 
+// DefaultBlockGenConfig returns the block config that utilizes the
+// current params in the beacon config.
+func DefaultBlockGenConfig() *BlockGenConfig {
+	return &BlockGenConfig{
+		MaxProposerSlashings: params.BeaconConfig().MaxProposerSlashings,
+		MaxAttesterSlashings: params.BeaconConfig().MaxAttesterSlashings,
+		MaxAttestations:      params.BeaconConfig().MaxAttestations,
+		MaxDeposits:          params.BeaconConfig().MaxDeposits,
+		MaxVoluntaryExits:    params.BeaconConfig().MaxVoluntaryExits,
+	}
+}
+
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
@@ -33,9 +45,13 @@ func GenerateFullBlock(
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
 	conf *BlockGenConfig,
+	slot uint64,
 ) *ethpb.BeaconBlock {
 
 	currentSlot := bState.Slot
+	if currentSlot > slot {
+		t.Fatalf("Current slot in state is larger than given slot. %d > %d", currentSlot, slot)
+	}
 
 	pSlashings := []*ethpb.ProposerSlashing{}
 	if conf.MaxProposerSlashings > 0 {
@@ -75,15 +91,15 @@ func GenerateFullBlock(
 
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
-	bState.Slot++
+	bState.Slot = slot
 	reveal, err := CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	bState.Slot--
+	bState.Slot = currentSlot
 
 	block := &ethpb.BeaconBlock{
-		Slot:       currentSlot + 1,
+		Slot:       slot,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,
@@ -111,12 +127,12 @@ func GenerateFullBlock(
 	}
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
-	bState.Slot++
+	bState.Slot = slot
 	proposerIdx, err := helpers.BeaconProposerIndex(bState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	bState.Slot--
+	bState.Slot = currentSlot
 	domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 

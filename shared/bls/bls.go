@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	bls12 "github.com/kilic/bls12-381"
 )
@@ -275,6 +276,19 @@ func Domain(domainType []byte, forkVersion []byte) uint64 {
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
 	return bytesutil.FromBytes8(b)
+}
+
+// ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
+// array as the fork version.
+//
+// def compute_domain(domain_type: DomainType, fork_version: Version=Version()) -> Domain:
+//    """
+//    Return the domain for the ``domain_type`` and ``fork_version``.
+//    """
+//    return Domain(domain_type + fork_version)
+func ComputeDomain(domainType []byte) uint64 {
+	// TODO(#3853): Hardcode the fork version to []byte{0,0,0,0}
+	return Domain(domainType, params.BeaconConfig().GenesisForkVersion)
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element
