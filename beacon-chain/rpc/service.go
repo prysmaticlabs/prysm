@@ -193,6 +193,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
+		eth1InfoFetcher:    s.powChainService,
 		depositFetcher:     s.depositFetcher,
 		stateFeedListener:  s.stateFeedListener,
 		chainStartChan:     make(chan time.Time),

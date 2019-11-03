@@ -36,6 +36,7 @@ type ValidatorServer struct {
 	blockFetcher       powchain.POWBlockFetcher
 	depositFetcher     depositcache.DepositFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
+	eth1InfoFetcher    powchain.ChainInfoFetcher
 	stateFeedListener  blockchain.ChainFeeds
 	chainStartChan     chan time.Time
 }
@@ -293,19 +294,25 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 }
 
 func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
+	if !vs.eth1InfoFetcher.ETH1Connection() {
+		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
+		if err != nil {
+			return &pb.ValidatorStatusResponse{
+				Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
+				ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+		statusResp := &pb.ValidatorStatusResponse{
+			Status: vStatus,
+		}
+		if vStatus == pb.ValidatorStatus_ACTIVE {
+			statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
+		}
+		return statusResp
+	}
+
 	_, eth1BlockNumBigInt := vs.depositFetcher.DepositByPubkey(ctx, pubKey)
 	if eth1BlockNumBigInt == nil {
-		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
-		if err == nil {
-			statusResp := &pb.ValidatorStatusResponse{
-				Status: vStatus,
-			}
-			if vStatus == pb.ValidatorStatus_ACTIVE {
-				statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
-			}
-			return statusResp
-
-		}
 		return &pb.ValidatorStatusResponse{
 			Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,

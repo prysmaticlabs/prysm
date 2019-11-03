@@ -360,12 +360,13 @@ func (s *Service) waitForConnection() {
 					"endpoint": s.eth1Endpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
 				ticker.Stop()
-				break
+				return
 			}
 			log.WithError(err).Error("Could not connect to powchain endpoint")
 		case <-s.ctx.Done():
 			ticker.Stop()
-			log.Debug("Received cancelled context, existing powchain service")
+			log.Debug("Received cancelled context,closing existing powchain service")
+			return
 		}
 	}
 }
@@ -428,6 +429,7 @@ func (s *Service) handleDelayTicker() {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (s *Service) run(done <-chan struct{}) {
+	log.Infof("running routine")
 	s.isRunning = true
 	s.runError = nil
 	if err := s.initDataFromContract(); err != nil {
