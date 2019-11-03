@@ -80,3 +80,8 @@ func (f *FaultyMockPOWChain) ChainStartDepositHashes() ([][]byte, error) {
 func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
+
+// ETH1Connection --
+func (f *FaultyMockPOWChain) ETH1Connection() bool {
+	return true
+}

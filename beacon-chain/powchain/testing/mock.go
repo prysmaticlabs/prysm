@@ -99,3 +99,8 @@ func (m *POWChain) ChainStartDepositHashes() ([][]byte, error) {
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
 }
+
+// ETH1Connection --
+func (m *POWChain) ETH1Connection() bool {
+	return true
+}
