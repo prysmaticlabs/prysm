@@ -3,8 +3,8 @@ package version
 import (
 	"fmt"
 	"log"
-	"strings"
 	"os/exec"
+	"strings"
 	"time"
 )
 

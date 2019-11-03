@@ -33,6 +33,45 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return s.eth2GenesisTime, s.chainStartBlockNumber
 }
 
+// ProcessETH1Block processes the logs from the provided eth1Block.
+func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			s.depositContractAddress,
+		},
+		FromBlock: blkNum,
+		ToBlock:   blkNum,
+	}
+	logs, err := s.httpLogger.FilterLogs(ctx, query)
+	if err != nil {
+		return err
+	}
+	for _, log := range logs {
+		if err := s.ProcessLog(ctx, log); err != nil {
+			return errors.Wrap(err, "could not process log")
+		}
+	}
+	if !s.chainStarted {
+		blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
+		if err != nil {
+			return errors.Wrap(err, "could not get eth1 block")
+		}
+		if blk == nil {
+			return errors.Wrap(err, "got empty block from powchain service")
+		}
+		if blk.Hash() == [32]byte{} {
+			return errors.New("got empty blockhash from powchain service")
+		}
+		timeStamp := blk.Time()
+		triggered := state.IsValidGenesisState(s.activeValidatorCount, timeStamp)
+		if triggered {
+			s.setGenesisTime(timeStamp)
+			s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
+		}
+	}
+	return nil
+}
+
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the ETH1.0 chain.
 func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) error {
@@ -42,24 +81,6 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
-		}
-		if !s.chainStarted {
-			if depositLog.BlockHash == [32]byte{} {
-				return errors.New("got empty blockhash from powchain service")
-			}
-			blk, err := s.blockFetcher.BlockByHash(ctx, depositLog.BlockHash)
-			if err != nil {
-				return errors.Wrap(err, "could not get eth1 block")
-			}
-			if blk == nil {
-				return errors.Wrap(err, "got empty block from powchain service")
-			}
-			timeStamp := blk.Time()
-			triggered := state.IsValidGenesisState(s.activeValidatorCount, timeStamp)
-			if triggered {
-				s.setGenesisTime(timeStamp)
-				s.ProcessChainStart(uint64(s.eth2GenesisTime), depositLog.BlockHash, blk.Number())
-			}
 		}
 		return nil
 	}
@@ -229,17 +250,23 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			s.depositContractAddress,
 		},
 	}
-
 	logs, err := s.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		return err
 	}
 
-	for _, log := range logs {
-		if err := s.ProcessLog(ctx, log); err != nil {
-			return errors.Wrap(err, "could not process log")
+	if len(logs) > 0 {
+		start := logs[0].BlockNumber
+		end := s.blockHeight.Uint64()
+		// Process logs from each block one by one
+		for i := start; i <= end; i++ {
+			err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+			if err != nil {
+				return err
+			}
 		}
 	}
+
 	s.lastRequestedBlock.Set(s.blockHeight)
 
 	currentState, err := s.beaconDB.HeadState(ctx)
@@ -260,24 +287,10 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
 	requestedBlock := big.NewInt(0).Sub(s.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			s.depositContractAddress,
-		},
-		FromBlock: s.lastRequestedBlock.Add(s.lastRequestedBlock, big.NewInt(1)),
-		ToBlock:   requestedBlock,
-	}
-	logs, err := s.httpLogger.FilterLogs(ctx, query)
-	if err != nil {
-		return err
-	}
-
-	// Only process log slices which are larger than zero.
-	if len(logs) > 0 {
-		for _, log := range logs {
-			if err := s.ProcessLog(ctx, log); err != nil {
-				return errors.Wrap(err, "could not process log")
-			}
+	for i := s.lastRequestedBlock.Uint64() + 1; i <= requestedBlock.Uint64(); i++ {
+		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		if err != nil {
+			return err
 		}
 	}
 
@@ -290,24 +303,11 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			s.depositContractAddress,
-		},
-		FromBlock: big.NewInt(0).Add(s.lastRequestedBlock, big.NewInt(1)),
-		ToBlock:   beforeCurrentBlk,
-	}
-	logs, err := s.httpLogger.FilterLogs(ctx, query)
-	if err != nil {
-		return err
-	}
 
-	// Only process log slices which are larger than zero.
-	if len(logs) > 0 {
-		for _, log := range logs {
-			if err := s.ProcessLog(ctx, log); err != nil {
-				return errors.Wrap(err, "could not process log")
-			}
+	for i := s.lastRequestedBlock.Uint64() + 1; i <= beforeCurrentBlk.Uint64(); i++ {
+		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		if err != nil {
+			return err
 		}
 	}
 
