@@ -1,9 +1,7 @@
 package trieutil
 
 import (
-	"math/big"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -91,7 +89,7 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	depRoot, err := testAccount.Contract.GetHashTreeRoot(&bind.CallOpts{})
+	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,140 +206,6 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
 			b.Error("Merkle proof did not verify")
-		}
-	}
-}
-
-func TestDepositTrieRoot_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	localTrie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	depRoot, err := testAcc.Contract.GetHashTreeRoot(&bind.CallOpts{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if depRoot != localTrie.HashTreeRoot() {
-		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
-	}
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-
-	data := &ethpb.Deposit_Data{
-		PublicKey:             pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
-	}
-
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
-	testAcc.TxOpts.GasLimit = 1000000
-
-	for i := 0; i < 100; i++ {
-		copy(data.PublicKey, []byte(strconv.Itoa(i)))
-		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
-		copy(data.Signature, []byte(strconv.Itoa(i)))
-
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
-
-		testAcc.Backend.Commit()
-		item, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
-
-		depRoot, err = testAcc.Contract.GetHashTreeRoot(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if depRoot != localTrie.HashTreeRoot() {
-			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
-		}
-	}
-}
-
-func TestDepositTrieRoot_Fail(t *testing.T) {
-	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	localTrie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	depRoot, err := testAcc.Contract.GetHashTreeRoot(&bind.CallOpts{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if depRoot != localTrie.HashTreeRoot() {
-		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
-	}
-
-	var pubkey [48]byte
-	var withdrawalCreds [32]byte
-	var sig [96]byte
-
-	data := &ethpb.Deposit_Data{
-		PublicKey:             pubkey[:],
-		Signature:             sig[:],
-		WithdrawalCredentials: withdrawalCreds[:],
-		Amount:                big.NewInt(0).Div(contracts.Amount32Eth(), big.NewInt(1e9)).Uint64(), // In Gwei
-	}
-
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
-	testAcc.TxOpts.GasLimit = 1000000
-
-	for i := 0; i < 100; i++ {
-		copy(data.PublicKey, []byte(strconv.Itoa(i)))
-		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i)))
-		copy(data.Signature, []byte(strconv.Itoa(i)))
-
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
-
-		copy(data.PublicKey, []byte(strconv.Itoa(i+10)))
-		copy(data.WithdrawalCredentials, []byte(strconv.Itoa(i+10)))
-		copy(data.Signature, []byte(strconv.Itoa(i+10)))
-
-		testAcc.Backend.Commit()
-		item, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
-
-		depRoot, err = testAcc.Contract.GetHashTreeRoot(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if depRoot == localTrie.HashTreeRoot() {
-			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
 		}
 	}
 }
