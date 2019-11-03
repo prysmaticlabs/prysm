@@ -8,16 +8,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
-
-func init() {
-	fc := featureconfig.Get()
-	fc.EnableFinalizedBlockRootIndex = true
-	featureconfig.Init(fc)
-}
 
 func TestStore_IsFinalizedBlock(t *testing.T) {
 	db := setupDB(t)
