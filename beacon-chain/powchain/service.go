@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -44,6 +46,9 @@ var (
 		Help: "The number of times a missed deposit log is detected",
 	})
 )
+
+// time to wait before trying to reconnect with the eth1 node.
+var backOffPeriod = 6 * time.Second
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
@@ -106,7 +111,8 @@ type Service struct {
 	cancel                  context.CancelFunc
 	client                  Client
 	headerChan              chan *gethTypes.Header
-	endpoint                string
+	eth1Endpoint            string
+	httpEndpoint            string
 	depositContractAddress  common.Address
 	chainStartFeed          *event.Feed
 	reader                  Reader
@@ -138,14 +144,9 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	Endpoint        string
+	ETH1Endpoint    string
+	HTTPEndPoint    string
 	DepositContract common.Address
-	Client          Client
-	Reader          Reader
-	Logger          bind.ContractFilterer
-	HTTPLogger      bind.ContractFilterer
-	BlockFetcher    RPCBlockFetcher
-	ContractBackend bind.ContractBackend
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
 }
@@ -153,16 +154,11 @@ type Web3ServiceConfig struct {
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
-	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
+	if !strings.HasPrefix(config.ETH1Endpoint, "ws") && !strings.HasPrefix(config.ETH1Endpoint, "ipc") {
 		return nil, fmt.Errorf(
 			"powchain service requires either an IPC or WebSocket endpoint, provided %s",
-			config.Endpoint,
+			config.ETH1Endpoint,
 		)
-	}
-
-	depositContractCaller, err := contracts.NewDepositContractCaller(config.DepositContract, config.ContractBackend)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create deposit contract caller")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -175,19 +171,14 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		ctx:                     ctx,
 		cancel:                  cancel,
 		headerChan:              make(chan *gethTypes.Header),
-		endpoint:                config.Endpoint,
+		eth1Endpoint:            config.ETH1Endpoint,
+		httpEndpoint:            config.HTTPEndPoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
 		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
-		client:                  config.Client,
 		depositTrie:             depositTrie,
-		reader:                  config.Reader,
-		logger:                  config.Logger,
-		httpLogger:              config.HTTPLogger,
-		blockFetcher:            config.BlockFetcher,
-		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
@@ -200,10 +191,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
-	log.WithFields(logrus.Fields{
-		"endpoint": s.endpoint,
-	}).Info("Connected to eth1 proof-of-work chain")
-	go s.run(s.ctx.Done())
+	go func() {
+		s.waitForConnection()
+		s.run(s.ctx.Done())
+	}()
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -296,6 +287,78 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+func (s *Service) connectToPowChain() error {
+	powClient, httpClient, err := s.dialETH1Nodes()
+	if err != nil {
+		return errors.Wrap(err, "could not dial eth1 nodes")
+	}
+
+	depositContractCaller, err := contracts.NewDepositContractCaller(s.depositContractAddress, httpClient)
+	if err != nil {
+		return errors.Wrap(err, "could not create deposit contract caller")
+	}
+
+	s.initializeConnection(powClient, httpClient, depositContractCaller)
+	return nil
+}
+
+func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, error) {
+	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
+	if err != nil {
+		return nil, nil, err
+	}
+	httpClient := ethclient.NewClient(httpRPCClient)
+
+	rpcClient, err := gethRPC.Dial(s.eth1Endpoint)
+	if err != nil {
+		httpClient.Close()
+		return nil, nil, err
+	}
+	powClient := ethclient.NewClient(rpcClient)
+
+	return powClient, httpClient, nil
+}
+
+func (s *Service) initializeConnection(powClient *ethclient.Client,
+	httpClient *ethclient.Client, contractCaller *contracts.DepositContractCaller) {
+
+	s.reader = powClient
+	s.logger = powClient
+	s.client = httpClient
+	s.httpLogger = httpClient
+	s.blockFetcher = httpClient
+	s.depositContractCaller = contractCaller
+}
+
+func (s *Service) waitForConnection() {
+	err := s.connectToPowChain()
+	if err == nil {
+		log.WithFields(logrus.Fields{
+			"endpoint": s.eth1Endpoint,
+		}).Info("Connected to eth1 proof-of-work chain")
+		return
+	}
+	log.WithError(err).Error("Could not connect to powchain endpoint")
+	ticker := time.NewTicker(backOffPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			err := s.connectToPowChain()
+			if err == nil {
+				log.WithFields(logrus.Fields{
+					"endpoint": s.eth1Endpoint,
+				}).Info("Connected to eth1 proof-of-work chain")
+				ticker.Stop()
+				break
+			}
+			log.WithError(err).Error("Could not connect to powchain endpoint")
+		case <-s.ctx.Done():
+			ticker.Stop()
+			log.Debug("Received cancelled context, existing powchain service")
+		}
+	}
 }
 
 // initDataFromContract calls the deposit contract and finds the deposit count

@@ -15,8 +15,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -200,17 +198,19 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+
 	d, err := db.NewDB(dbPath)
 	if err != nil {
 		return err
 	}
-	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		d, err = confirmDelete(d, dbPath)
+	if clearDB || forceClearDB {
+		d, err = confirmDelete(d, dbPath, forceClearDB)
 		if err != nil {
 			return err
 		}
 	}
-
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
@@ -309,28 +309,11 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	httpClient := ethclient.NewClient(httpRPCClient)
-
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	powClient := ethclient.NewClient(rpcClient)
-
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		ETH1Endpoint:    cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		HTTPEndPoint:    cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
-		Client:          httpClient,
-		Reader:          powClient,
-		Logger:          powClient,
-		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
-		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}
