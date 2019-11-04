@@ -1344,15 +1344,16 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, aSlot, isProposer, pSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			CrosslinkCommittees: committee,
 			Shard:               shard,
-			Slot:                slot,
+			Slot:                aSlot,
 			Proposer:            isProposer,
+			ProposerSlot:        pSlot,
 			PublicKey:           s.Validators[index].PublicKey,
 		})
 	}
@@ -1529,15 +1530,16 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[1:4] {
-		committee, shard, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, shard, aSlot, isProposer, pSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			CrosslinkCommittees: committee,
 			Shard:               shard,
-			Slot:                slot,
+			Slot:                aSlot,
 			Proposer:            isProposer,
+			ProposerSlot:        pSlot,
 			PublicKey:           s.Validators[index].PublicKey,
 		})
 	}

@@ -42,7 +42,7 @@ message AttestationRequest {
   bytes public_key = 1;
   bytes poc_bit = 2;
   uint64 slot = 3;
-  uint64 shard = 4;
+  uint64 committeeIndex = 4;
 }
 
 message AttestResponse {
@@ -112,7 +112,7 @@ message AssignmentResponse {
   repeated ValidatorAssignment validator_assignment = 1;
   message ValidatorAssignment {
     repeated uint64 committee = 1;
-    uint64 shard = 2;
+    uint64 committeeIndex = 2;
     uint64 attesterSlot = 3;
     bool is_proposer = 4;
     uint64 proposerSlot = 5;

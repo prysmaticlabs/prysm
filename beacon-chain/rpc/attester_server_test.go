@@ -120,7 +120,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 0,
+		CommitteeIndex: 0,
 		Slot:  3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
@@ -129,6 +129,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
+		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: 2,
@@ -201,7 +202,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 0,
+		CommitteeIndex: 0,
 		Slot:  10000,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
@@ -210,6 +211,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
+		Slot: beaconState.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
@@ -240,7 +242,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 1,
+		CommitteeIndex: 1,
 		Slot:  2,
 	}
 

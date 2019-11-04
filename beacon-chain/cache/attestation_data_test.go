@@ -15,7 +15,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 	c := cache.NewAttestationCache()
 
 	req := &pb.AttestationRequest{
-		Shard: 0,
+		CommitteeIndex: 0,
 		Slot:  1,
 	}
 

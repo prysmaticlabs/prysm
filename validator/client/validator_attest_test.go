@@ -42,7 +42,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			CommitteeIndex:     5,
 		},
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -66,7 +66,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			CommitteeIndex:     5,
 			Committee: make([]uint64, 111),
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -106,7 +106,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			CommitteeIndex:     5,
 			Committee: committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -214,7 +214,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			CommitteeIndex:     5,
 			Committee: committee,
 		}}}
 
@@ -259,7 +259,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			CommitteeIndex:     5,
 			Committee: committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(

@@ -413,8 +413,11 @@ message ValidatorAssignments {
         // assignment time.
         bool proposer = 4;
 
+        // If the validator is assigned to propose, this would be the propose slot.
+        uint64 proposerSlot = 5;
+
         // 48 byte BLS public key 
-        bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];
+        bytes public_key = 6 [(gogoproto.moretags) = "ssz-size:\"48\""];
     }
 
     // The epoch for which this set of validator assignments is valid.

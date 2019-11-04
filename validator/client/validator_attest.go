@@ -55,7 +55,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	req := &pb.AttestationRequest{
 		Slot:  slot,
-		Shard: assignment.Shard,
+		CommitteeIndex: assignment.CommitteeIndex,
 	}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)
 	if err != nil {
