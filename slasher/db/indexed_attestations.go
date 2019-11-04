@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	"reflect"
 	"sort"
 
@@ -64,6 +65,25 @@ func (db *Store) IndexedAttestation(sourceEpoch uint64, targetEpoch uint64, vali
 	})
 
 	return iAtt, err
+}
+
+// DoubleVote looks up in db for slashable data possibly multiple slashable actions were preformed by the same validator.
+func (db *Store) DoubleVotes(sourceEpoch uint64, targetEpoch uint64, validatorID uint64, dataroot []byte) ([]*ethpb.IndexedAttestation, error) {
+	idxAttestations, err := db.IndexedAttestation(sourceEpoch, targetEpoch, validatorID)
+	if err != nil {
+		return nil, err
+	}
+	var iAtt []*ethpb.IndexedAttestation
+	for _, idxAtt := range idxAttestations {
+		root, err := ssz.HashTreeRoot(idxAtt.Data)
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(root[:], dataroot) {
+			iAtt = append(iAtt, idxAtt)
+		}
+	}
+	return iAtt, nil
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.

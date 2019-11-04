@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/prysmaticlabs/go-ssz"
 
 	"github.com/pkg/errors"
 
@@ -24,7 +25,11 @@ type Server struct {
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attestation) (*ethpb.AttesterSlashing, error) {
-	//TODO(3133): implement attestation validation after attestation store will be merged.
+	//TODO(#3133): add signature validation
+	sEpoch := req.Data.Source.Epoch
+	tEpoch := req.Data.Target.Epoch
+	root, err := ssz.HashTreeRoot(req.Data)
+	ss.SlasherDb.DoubleVotes(sEpoch, tEpoch)
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
