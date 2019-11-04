@@ -84,6 +84,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
 		StateFeedListener:   &mock.ChainService{},
+		POWChainService:     &mockPOW.POWChain{},
 	})
 
 	rpcService.Start()
