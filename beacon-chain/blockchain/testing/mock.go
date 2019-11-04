@@ -1,9 +1,12 @@
 package testing
 
 import (
+	"bytes"
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -17,6 +20,7 @@ type ChainService struct {
 	FinalizedCheckPoint *ethpb.Checkpoint
 	StateFeed           *event.Feed
 	BlocksReceived      []*ethpb.BeaconBlock
+	BlockRoots          map[[32]byte]bool
 	Genesis             time.Time
 	Fork                *pb.Fork
 }
@@ -41,8 +45,21 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 	if ms.State == nil {
 		ms.State = &pb.BeaconState{}
 	}
+	if ms.BlockRoots == nil {
+		ms.BlockRoots = make(map[[32]byte]bool)
+	}
+	if !bytes.Equal(ms.Root, block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.ParentRoot)
+	}
 	ms.State.Slot = block.Slot
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		return err
+	}
+	ms.Root = signingRoot[:]
+	ms.BlockRoots[signingRoot] = true
+	ms.Block = block
 	return nil
 }
 
@@ -70,7 +87,10 @@ func (ms *ChainService) HeadState() *pb.BeaconState {
 
 // BlockExists checks if the block exists in the db.
 func (ms *ChainService) BlockExists(ctx context.Context, root [32]byte) bool {
-	return true
+	if ms.BlockRoots == nil {
+		ms.BlockRoots = make(map[[32]byte]bool)
+	}
+	return ms.BlockRoots[root]
 }
 
 // CurrentFork mocks HeadState method in chain service.

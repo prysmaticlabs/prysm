@@ -8,6 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -15,17 +16,22 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
+var rootCache map[uint64][32]byte
+var parentSlotCache map[uint64]uint64
+
 type peerData struct {
 	blocks         []uint64 // slots that peer has blocks
 	finalizedEpoch uint64
 	headSlot       uint64
 	failureSlots   []uint64 // slots at which the peer will return an error
+	forkedPeer     bool
 }
 
 func init() {
@@ -194,18 +200,51 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:               "Multiple peers with missing parent blocks",
+			currentSlot:        320, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 320),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+				{
+					blocks:         append(makeSequence(1, 6), makeSequence(161, 165)...),
+					finalizedEpoch: 4,
+					headSlot:       320,
+					forkedPeer:     true,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 4,
+					headSlot:       320,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			initializeRootCache(tt.expectedBlockSlots, t)
 			peerstatus.Clear()
 
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers)
+			zeroBytes := [32]byte{}
 
 			mc := &mock.ChainService{
-				State: &p2ppb.BeaconState{},
+				State:      &p2ppb.BeaconState{},
+				Root:       zeroBytes[:],
+				BlockRoots: make(map[[32]byte]bool),
 			} // no-op mock
+			mc.BlockRoots[zeroBytes] = true
 			s := &InitialSync{
 				chain:        mc,
 				p2p:          p,
@@ -273,7 +312,19 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 				if (slot-req.StartSlot)%req.Step != 0 {
 					continue
 				}
-				ret = append(ret, &eth.BeaconBlock{Slot: slot})
+				parentRoot := rootCache[parentSlotCache[slot]]
+				blk := &eth.BeaconBlock{
+					Slot:       slot,
+					ParentRoot: parentRoot[:],
+				}
+				// If forked peer, give a different parent root.
+				if datum.forkedPeer {
+					newRoot := hashutil.Hash(parentRoot[:])
+					blk.ParentRoot = newRoot[:]
+				}
+				ret = append(ret, blk)
+				currRoot, _ := ssz.SigningRoot(blk)
+				logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 
 			if uint64(len(ret)) > req.Count {
@@ -323,6 +374,28 @@ func makeSequence(start, end uint64) []uint64 {
 		seq = append(seq, i)
 	}
 	return seq
+}
+
+func initializeRootCache(reqSlots []uint64, t *testing.T) {
+	rootCache = make(map[uint64][32]byte)
+	parentSlotCache = make(map[uint64]uint64)
+	parentRoot := [32]byte{}
+	parentSlot := uint64(0)
+	rootCache[0] = parentRoot
+	var err error
+	for _, slot := range reqSlots {
+		currentBlock := &eth.BeaconBlock{
+			Slot:       slot,
+			ParentRoot: parentRoot[:],
+		}
+		parentRoot, err = ssz.SigningRoot(currentBlock)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rootCache[slot] = parentRoot
+		parentSlotCache[slot] = parentSlot
+		parentSlot = slot
+	}
 }
 
 // sanity test on helper function
