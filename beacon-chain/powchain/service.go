@@ -429,7 +429,7 @@ func (s *Service) handleDelayTicker() {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (s *Service) run(done <-chan struct{}) {
-	log.Infof("running routine")
+	log.Info("running routine")
 	s.isRunning = true
 	s.runError = nil
 	if err := s.initDataFromContract(); err != nil {
