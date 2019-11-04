@@ -133,7 +133,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	if ps.mockEth1Votes || !ps.eth1InfoFetcher.ETH1Connection() {
+	if ps.mockEth1Votes || !ps.eth1InfoFetcher.IsConnectedToETH1() {
 		return ps.mockETH1DataVote(slot)
 	}
 
@@ -203,7 +203,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
 func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
-	if ps.mockEth1Votes || !ps.eth1InfoFetcher.ETH1Connection() {
+	if ps.mockEth1Votes || !ps.eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches

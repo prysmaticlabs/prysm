@@ -294,7 +294,7 @@ func (vs *ValidatorServer) DomainData(ctx context.Context, request *pb.DomainReq
 }
 
 func (vs *ValidatorServer) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
-	if !vs.eth1InfoFetcher.ETH1Connection() {
+	if !vs.eth1InfoFetcher.IsConnectedToETH1() {
 		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
 		if err != nil {
 			return &pb.ValidatorStatusResponse{

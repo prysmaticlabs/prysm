@@ -100,7 +100,7 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
 }
 
-// ETH1Connection --
-func (m *POWChain) ETH1Connection() bool {
+// IsConnectedToETH1 --
+func (m *POWChain) IsConnectedToETH1() bool {
 	return true
 }

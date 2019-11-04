@@ -66,7 +66,7 @@ type ChainStartFetcher interface {
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
-	ETH1Connection() bool
+	IsConnectedToETH1() bool
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -247,8 +247,8 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// ETH1Connection checks if the beacon node is connected to a ETH1 Node.
-func (s *Service) ETH1Connection() bool {
+// IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
+func (s *Service) IsConnectedToETH1() bool {
 	return s.connectedETH1
 }
 
