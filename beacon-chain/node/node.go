@@ -15,20 +15,18 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-  "github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -200,8 +198,8 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
-  clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
-  forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
 
 	d, err := db.NewDB(dbPath)
 	if err != nil {
@@ -311,28 +309,11 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	httpClient := ethclient.NewClient(httpRPCClient)
-
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	powClient := ethclient.NewClient(rpcClient)
-
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		ETH1Endpoint:    cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		HTTPEndPoint:    cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
-		Client:          httpClient,
-		Reader:          powClient,
-		Logger:          powClient,
-		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
-		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -61,6 +62,9 @@ func NewActiveIndicesCache() *ActiveIndicesCache {
 // ActiveIndicesInEpoch fetches ActiveIndicesByEpoch by epoch. Returns true with a
 // reference to the ActiveIndicesInEpoch info, if exists. Otherwise returns false, nil.
 func (c *ActiveIndicesCache) ActiveIndicesInEpoch(epoch uint64) ([]uint64, error) {
+	if !featureconfig.Get().EnableActiveIndicesCache {
+		return nil, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.activeIndicesCache.GetByKey(strconv.Itoa(int(epoch)))
