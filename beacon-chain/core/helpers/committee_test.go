@@ -799,6 +799,11 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 }
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
+	c := featureconfig.Get()
+	c.EnableShuffledIndexCache = true
+	featureconfig.Init(c)
+	defer featureconfig.Init(nil)
+
 	ClearAllCaches()
 
 	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -833,7 +838,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(indices) != int(params.BeaconConfig().TargetCommitteeSize) {
-		t.Error("Did not save correct indices lengths")
+		t.Errorf("Did not save correct indices lengths, got %d wanted %d", len(indices), params.BeaconConfig().TargetCommitteeSize)
 	}
 }
 
