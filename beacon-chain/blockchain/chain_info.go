@@ -110,5 +110,11 @@ func (s *Service) GenesisTime() time.Time {
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
 func (s *Service) CurrentFork() *pb.Fork {
+	if s.headState == nil {
+		return &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		}
+	}
 	return proto.Clone(s.headState.Fork).(*pb.Fork)
 }

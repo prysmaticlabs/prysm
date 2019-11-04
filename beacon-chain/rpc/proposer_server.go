@@ -133,28 +133,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 //  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	if ps.mockEth1Votes {
-		// If a mock eth1 data votes is specified, we use the following for the
-		// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
-		//
-		// slot_in_voting_period = current_slot % SLOTS_PER_ETH1_VOTING_PERIOD
-		// Eth1Data(
-		//   DepositRoot = hash(current_epoch + slot_in_voting_period),
-		//   DepositCount = state.eth1_deposit_index,
-		//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
-		// )
-		slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-		headState := ps.headFetcher.HeadState()
-		enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
-		if err != nil {
-			return nil, err
-		}
-		depRoot := hashutil.Hash(enc)
-		blockHash := hashutil.Hash(depRoot[:])
-		return &ethpb.Eth1Data{
-			DepositRoot:  depRoot[:],
-			DepositCount: headState.Eth1DepositIndex,
-			BlockHash:    blockHash[:],
-		}, nil
+		return ps.mockETH1DataVote(slot)
 	}
 
 	eth1VotingPeriodStartTime, _ := ps.eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -163,10 +142,37 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 	// Look up most recent block up to timestamp
 	blockNumber, err := ps.eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
-		return nil, err
+		return ps.mockETH1DataVote(slot)
 	}
 
 	return ps.defaultEth1DataResponse(ctx, blockNumber)
+}
+
+func (ps *ProposerServer) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
+	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
+		"ETH1 Data votes are now mocked.")
+	// If a mock eth1 data votes is specified, we use the following for the
+	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
+	//
+	// slot_in_voting_period = current_slot % SLOTS_PER_ETH1_VOTING_PERIOD
+	// Eth1Data(
+	//   DepositRoot = hash(current_epoch + slot_in_voting_period),
+	//   DepositCount = state.eth1_deposit_index,
+	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
+	// )
+	slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	headState := ps.headFetcher.HeadState()
+	enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
+	if err != nil {
+		return nil, err
+	}
+	depRoot := hashutil.Hash(enc)
+	blockHash := hashutil.Hash(depRoot[:])
+	return &ethpb.Eth1Data{
+		DepositRoot:  depRoot[:],
+		DepositCount: headState.Eth1DepositIndex,
+		BlockHash:    blockHash[:],
+	}, nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
