@@ -25,22 +25,26 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flag is a struct to represent what features the client will perform on runtime.
 type Flag struct {
-	GenesisDelay                  bool // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig                 bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions      bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify              bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify                 bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook           bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
-	OptimizeProcessEpoch          bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
-	PruneFinalizedStates          bool // PruneFinalizedStates from the database.
-	EnableFinalizedBlockRootIndex bool // EnableFinalizedBlockRootIndex in the database. This operation may be expensive at runtime.
+	GenesisDelay             bool // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig            bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify            bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records.
+	Scatter                  bool // Scatter sequential processing by scattering it to multiple cores.
+	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableAttestationCache     bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache    bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache             bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache       bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableShuffledIndexCache   bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableCommitteeCache       bool // EnableCommitteeCache to cache committee computation.
+	EnableActiveIndicesCache   bool // EnableActiveIndicesCache.
+	EnableActiveCountCache     bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flag
@@ -107,17 +111,33 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Processing epoch with optimizations")
 		cfg.OptimizeProcessEpoch = true
 	}
+	if ctx.GlobalBool(Scatter.Name) {
+		log.Warn("Scattering sequential proceses to multiple cores")
+		cfg.Scatter = true
+	}
 	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
 		log.Warn("Enabled pruning old finalized states from database.")
 		cfg.PruneFinalizedStates = true
 	}
-	if ctx.GlobalBool(enableFinalizedBlockRootIndexFlag.Name) {
-		log.Warn("Enabled finalized block root index")
-		cfg.EnableFinalizedBlockRootIndex = true
-	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
+	}
+	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+		log.Warn("Enabled skip slots cache.")
+		cfg.EnableSkipSlotsCache = true
+	}
+	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
+		log.Warn("Enabled committee cache.")
+		cfg.EnableCommitteeCache = true
+	}
+	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
+		log.Warn("Enabled active indices cache.")
+		cfg.EnableActiveIndicesCache = true
+	}
+	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
+		log.Warn("Enabled active count cache.")
+		cfg.EnableActiveCountCache = true
 	}
 	Init(cfg)
 }
