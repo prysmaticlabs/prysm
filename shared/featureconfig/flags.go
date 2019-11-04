@@ -78,10 +78,6 @@ var (
 		Name:  "scatter",
 		Usage: "Scatter sequential processes to multiple cores",
 	}
-	pruneFinalizedStatesFlag = cli.BoolFlag{
-		Name:  "prune-finalized-states",
-		Usage: "Delete old states from the database after reaching new finalized checkpoint",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
@@ -99,7 +95,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
-		Name:  "enable-finalized-block-root-index",
+		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -133,6 +129,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableCommitteeCacheFlag,
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
-	pruneFinalizedStatesFlag,
 	enableSkipSlotsCache,
 }...)

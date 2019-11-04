@@ -23,7 +23,6 @@ import (
 
 func init() {
 	fc := featureconfig.Get()
-	fc.PruneFinalizedStates = true
 	featureconfig.Init(fc)
 }
 
