@@ -428,6 +428,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -503,6 +504,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -582,6 +584,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -651,6 +654,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -719,6 +723,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:          db,
 		chainStartFetcher: p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		blockFetcher:      p,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
@@ -789,6 +794,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:          db,
 		chainStartFetcher: p,
+		eth1InfoFetcher:   p,
 		blockFetcher:      p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
@@ -811,7 +817,8 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	pubKey := []byte{'A'}
 	depositCache := depositcache.NewDepositCache()
 	vs := &ValidatorServer{
-		depositFetcher: depositCache,
+		depositFetcher:  depositCache,
+		eth1InfoFetcher: &mockPOW.POWChain{},
 		headFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{
 				Slot: 0,
