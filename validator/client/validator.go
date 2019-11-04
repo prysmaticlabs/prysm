@@ -208,9 +208,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 			}
 			if assignment.Status == pb.ValidatorStatus_ACTIVE {
 				if assignment.IsProposer {
-					lFields["proposerSlot"] = assignment.Slot
+					lFields["proposerSlot"] = assignment.ProposerSlot
 				}
-				lFields["attesterSlot"] = assignment.Slot
+				lFields["attesterSlot"] = assignment.AttesterSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
 		}
@@ -229,7 +229,7 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 		if assignment == nil {
 			role = pb.ValidatorRole_UNKNOWN
 		}
-		if assignment.Slot == slot {
+		if assignment.AttesterSlot == slot {
 			// Note: A proposer also attests to the slot.
 			if assignment.IsProposer {
 				role = pb.ValidatorRole_PROPOSER

@@ -113,10 +113,11 @@ message AssignmentResponse {
   message ValidatorAssignment {
     repeated uint64 committee = 1;
     uint64 shard = 2;
-    uint64 slot = 3;
+    uint64 attesterSlot = 3;
     bool is_proposer = 4;
-    bytes public_key = 5;
-    ValidatorStatus status = 6;
+    uint64 proposerSlot = 5;
+    bytes public_key = 6;
+    ValidatorStatus status = 7;
   }
 }
 
