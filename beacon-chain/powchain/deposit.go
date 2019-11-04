@@ -42,7 +42,6 @@ func (s *Service) processDeposit(
 			return fmt.Errorf("deposit signature did not verify")
 		}
 		s.depositedPubkeys[pubKey] = amount
-
 		if amount >= params.BeaconConfig().MaxEffectiveBalance {
 			s.activeValidatorCount++
 		}
