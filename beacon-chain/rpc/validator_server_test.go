@@ -861,6 +861,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		ctx:                ctx,
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		depositFetcher:     depositcache.NewDepositCache(),
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
@@ -965,6 +966,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
@@ -1078,6 +1080,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
