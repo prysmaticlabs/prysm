@@ -391,9 +391,9 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Committee: []uint64{},
-					AttesterSlot:      10,
-					Shard:     20,
+					Committee:    []uint64{},
+					AttesterSlot: 10,
+					Shard:        20,
 				},
 			},
 		},
@@ -449,11 +449,12 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	resp := &pb.AssignmentResponse{
 		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
-				AttesterSlot:       params.BeaconConfig().SlotsPerEpoch,
-				Shard:      100,
-				Committee:  []uint64{0, 1, 2, 3},
-				IsProposer: true,
-				PublicKey:  []byte("testPubKey_1"),
+				AttesterSlot: params.BeaconConfig().SlotsPerEpoch,
+				Shard:        100,
+				Committee:    []uint64{0, 1, 2, 3},
+				IsProposer:   true,
+				PublicKey:    []byte("testPubKey_1"),
+				ProposerSlot: params.BeaconConfig().SlotsPerEpoch + 1,
 			},
 		},
 	}
@@ -470,11 +471,14 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
+	if v.assignments.ValidatorAssignment[0].ProposerSlot != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch+1, v.assignments.ValidatorAssignment[0].ProposerSlot)
+	}
 	if v.assignments.ValidatorAssignment[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.ValidatorAssignment[0].AttesterSlot)
 	}
 	if v.assignments.ValidatorAssignment[0].Shard != resp.ValidatorAssignment[0].Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].Shard, v.assignments.ValidatorAssignment[0].AttesterSlot)
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].Shard, v.assignments.ValidatorAssignment[0].Shard)
 	}
 	if !v.assignments.ValidatorAssignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
@@ -487,20 +491,20 @@ func TestRolesAt_OK(t *testing.T) {
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Shard:      1,
-					AttesterSlot:       1,
-					IsProposer: true,
-					PublicKey:  []byte{0x01},
+					Shard:        1,
+					AttesterSlot: 1,
+					IsProposer:   true,
+					PublicKey:    []byte{0x01},
 				},
 				{
-					Shard:     2,
-					AttesterSlot:      1,
-					PublicKey: []byte{0x02},
+					Shard:        2,
+					AttesterSlot: 1,
+					PublicKey:    []byte{0x02},
 				},
 				{
-					Shard:     1,
-					AttesterSlot:      2,
-					PublicKey: []byte{0x03},
+					Shard:        1,
+					AttesterSlot: 2,
+					PublicKey:    []byte{0x03},
 				},
 			},
 		},

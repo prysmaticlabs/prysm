@@ -3,14 +3,14 @@ package client
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	bitfield "github.com/prysmaticlabs/go-bitfield"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -163,8 +163,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	sig := validator.keys[validatorPubKey].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
-
-	if !proto.Equal(generatedAttestation, expectedAttestation) {
+	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
 	testutil.AssertLogsContain(t, hook, "Submitted new attestation")

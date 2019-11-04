@@ -637,8 +637,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			}
 			isProposer = archivedInfo.ProposerIndex == index
 		} else {
-			// TODO(3865): Update ValidatorAssignments_CommitteeAssignment to take in proposer slot
-			committee, shard, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			committee, shard, aSlot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
@@ -647,7 +646,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			CrosslinkCommittees: committee,
 			Shard:               shard,
-			Slot:                slot,
+			Slot:                aSlot,
 			Proposer:            isProposer,
 			PublicKey:           headState.Validators[index].PublicKey,
 		})
