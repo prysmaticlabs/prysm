@@ -52,11 +52,11 @@ service BeaconNodeValidator {
         };
     }
 
-    // Retrieves the latest valid attestation data to be attested on the beacon chain.
+    // Retrieves the latest valid attestation to a block on the beacon chain.
     //
-    // The server returns the latest valid attestation data which represents the correct vote
-    // for the head of the beacon chain,
-    rpc GetAttestationData(AttestationDataRequest) returns (AttestationData) {
+    // The server returns the latest valid attestation which represents the correct vote
+    // for the head of the beacon chain.
+    rpc GetAttestationData(AttestationDataRequest) returns (Attestation) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/attestation"
         };
