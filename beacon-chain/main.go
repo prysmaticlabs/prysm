@@ -125,7 +125,7 @@ func main() {
 
 	defer func() {
 		if x := recover(); x != nil {
-			log.Errorf("run time panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
 			panic(x)
 		}
 	}()
