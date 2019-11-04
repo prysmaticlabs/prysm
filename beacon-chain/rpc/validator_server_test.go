@@ -355,6 +355,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		headFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{},
 		},
+		eth1InfoFetcher: p,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
