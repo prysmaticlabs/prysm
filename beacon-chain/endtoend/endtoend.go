@@ -48,12 +48,6 @@ type beaconNodeInfo struct {
 }
 
 func main() {
-	binaryPath, found := bazel.FindBinary("//beacon-chain", "beacon-chain")
-	if !found {
-		panic("binary not found")
-	}
-	fmt.Println(binaryPath)
-
 	// Clear out the e2e folder so theres no conflicting data.
 	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
 		panic(err)
@@ -167,12 +161,14 @@ func StartEth1() (common.Address, string) {
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
 func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
+	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
+	if !found {
+		panic("beacon chain binary not found")
+	}
+
 	nodeInfo := make([]*beaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		args := []string{
-			"run",
-			"//beacon-chain",
-			"--",
 			"--no-discovery",
 			"--no-genesis-delay",
 			"--http-web3provider=http://127.0.0.1:8545",
@@ -190,7 +186,7 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 			}
 		}
 
-		cmd := exec.Command("bazel", args...)
+		cmd := exec.Command(binaryPath, args...)
 		file, err := os.Create(fmt.Sprintf("/tmp/e2e/beacon-%d.log", i))
 		if err != nil {
 			panic(err)
@@ -229,6 +225,11 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 
 // InitializeValidators sends the deposits to the eth1 chain and starts the validator clients.
 func InitializeValidators(contractAddress common.Address, keystorePath string, beaconNodeNum uint64, validatorNum uint64) {
+	binaryPath, found := bazel.FindBinary("validator", "validator")
+	if !found {
+		panic("validator binary not found")
+	}
+
 	if validatorNum%beaconNodeNum != 0 {
 		panic("Validator count is not easily divisible by beacon node count.")
 	}
@@ -236,15 +237,12 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		for i := n * validatorsPerNode; i < (n+1)*validatorsPerNode; i++ {
 			args := []string{
-				"run",
-				"//validator",
-				"--",
 				"accounts",
 				"create",
 				"--password=e2etest",
 				fmt.Sprintf("--keystore-path=/tmp/e2e/valkeys%d/", n),
 			}
-			if err := exec.Command("bazel", args...).Start(); err != nil {
+			if err := exec.Command(binaryPath, args...).Start(); err != nil {
 				panic(err)
 			}
 			time.Sleep(4 * time.Second)

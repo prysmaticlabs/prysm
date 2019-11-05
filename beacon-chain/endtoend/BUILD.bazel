@@ -6,7 +6,10 @@ go_library(
         "endtoend.go",
         "evaluators.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/endtoend",
+    data = [
+        "//beacon-chain:beacon-chain",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/endtoend",
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
