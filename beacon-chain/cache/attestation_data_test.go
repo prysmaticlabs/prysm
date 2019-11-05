@@ -16,7 +16,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 
 	req := &pb.AttestationRequest{
 		CommitteeIndex: 0,
-		Slot:  1,
+		Slot:           1,
 	}
 
 	response, err := c.Get(ctx, req)

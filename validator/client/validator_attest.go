@@ -28,6 +28,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+	log = log.WithField("slot", slot)
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -54,7 +55,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	v.waitToSlotMidpoint(ctx, slot)
 
 	req := &pb.AttestationRequest{
-		Slot:  slot,
+		Slot:           slot,
 		CommitteeIndex: assignment.CommitteeIndex,
 	}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)

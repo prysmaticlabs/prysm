@@ -235,7 +235,7 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 		}
 		if assignment.IsProposer && assignment.ProposerSlot == slot {
 			role = pb.ValidatorRole_PROPOSER
-		} else if  assignment.AttesterSlot == slot {
+		} else if assignment.AttesterSlot == slot {
 			role = pb.ValidatorRole_ATTESTER
 		} else {
 			role = pb.ValidatorRole_UNKNOWN
