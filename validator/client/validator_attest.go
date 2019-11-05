@@ -29,8 +29,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
-	// We fetch the validator index as it is necessary to generate the aggregation
-	// bitfield of the attestation itself.
+	// Fetch the validator index to generate the aggregation bitfield
 	var assignment *pb.AssignmentResponse_ValidatorAssignment
 	if v.assignments == nil {
 		log.Errorf("No assignments for validators")
@@ -54,8 +53,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	v.waitToSlotMidpoint(ctx, slot)
 
 	req := &pb.AttestationRequest{
-		Slot:  slot,
-		Shard: assignment.Shard,
+		Slot:           slot,
+		CommitteeIndex: assignment.CommitteeIndex,
 	}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)
 	if err != nil {
@@ -63,6 +62,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 			slot, err)
 		return
 	}
+	log = log.WithField("slot", data.Slot)
+	log = log.WithField("committeeIndex", data.Index)
 
 	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 
@@ -78,6 +79,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
+	log = log.WithField("bitfield", fmt.Sprintf("%#x", aggregationBitfield))
 
 	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconAttester})
 	if err != nil {
