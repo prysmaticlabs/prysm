@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	// NoGenesisDelayFlag disables the standard genesis delay.
-	NoGenesisDelayFlag = cli.BoolFlag{
-		Name:  "no-genesis-delay",
-		Usage: "Process genesis event 30s after the ETH1 block time, rather than wait to midnight of the next day.",
+	// GenesisDelayFlag disables the standard genesis delay.
+	GenesisDelayFlag = cli.BoolFlag{
+		Name:  "genesis-delay",
+		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
 	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
@@ -27,6 +27,22 @@ var (
 	// EnableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCacheFlag = cli.BoolFlag{
 		Name:  "enable-eth1-data-vote-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
+	enableShuffledIndexCache = cli.BoolFlag{
+		Name:  "enable-shuffled-index-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
+	enableCommitteeCacheFlag = cli.BoolFlag{
+		Name:  "enable-committee-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
+	enableActiveIndicesCacheFlag = cli.BoolFlag{
+		Name:  "enable-active-indices-cache",
+		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
+	enableActiveCountCacheFlag = cli.BoolFlag{
+		Name:  "enable-active-count-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
 	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
@@ -57,16 +73,51 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
+	// Scatter scatters sequential processes to  multiple cores
+	Scatter = cli.BoolFlag{
+		Name:  "scatter",
+		Usage: "Scatter sequential processes to multiple cores",
+	}
+	pruneFinalizedStatesFlag = cli.BoolFlag{
+		Name:  "prune-finalized-states",
+		Usage: "Delete old states from the database after reaching new finalized checkpoint",
+	}
+	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
+	enableSkipSlotsCache = cli.BoolFlag{
+		Name:  "enable-skip-slots-cache",
+		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
+	}
 )
 
-// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = []cli.Flag{
-	MinimalConfigFlag,
+// Deprecated flags list.
+const deprecatedUsage = "DEPRECATED. DO NOT USE."
+
+var (
+	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
+		Name:   "no-genesis-delay",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
+		Name:   "enable-finalized-block-root-index",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+)
+
+var deprecatedFlags = []cli.Flag{
+	deprecatedNoGenesisDelayFlag,
+	deprecatedEnableFinalizedBlockRootIndexFlag,
 }
 
+// ValidatorFlags contains a list of all the feature flags that apply to the validator client.
+var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	MinimalConfigFlag,
+}...)
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = []cli.Flag{
-	NoGenesisDelayFlag,
+var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
@@ -75,6 +126,13 @@ var BeaconChainFlags = []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
+	Scatter,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
-}
+	enableShuffledIndexCache,
+	enableCommitteeCacheFlag,
+	enableActiveIndicesCacheFlag,
+	enableActiveCountCacheFlag,
+	pruneFinalizedStatesFlag,
+	enableSkipSlotsCache,
+}...)

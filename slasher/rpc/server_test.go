@@ -2,16 +2,15 @@ package rpc
 
 import (
 	"context"
-	"github.com/gogo/protobuf/proto"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -57,7 +56,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 
 	slasherServer := &Server{
@@ -95,7 +93,6 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 
 func TestServer_DoubleBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -126,7 +123,6 @@ func TestServer_DoubleBlock(t *testing.T) {
 
 func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{

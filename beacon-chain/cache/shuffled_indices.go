@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -62,6 +63,9 @@ func NewShuffledIndicesCache() *ShuffledIndicesCache {
 // IndicesByIndexSeed fetches IndicesByIndexSeed by epoch and seed. Returns true with a
 // reference to the ShuffledIndicesInEpoch info, if exists. Otherwise returns false, nil.
 func (c *ShuffledIndicesCache) IndicesByIndexSeed(index uint64, seed []byte) ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache {
+		return nil, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	key := string(seed) + strconv.Itoa(int(index))
@@ -88,6 +92,9 @@ func (c *ShuffledIndicesCache) IndicesByIndexSeed(index uint64, seed []byte) ([]
 // AddShuffledValidatorList adds IndicesByIndexSeed object to the cache. This method also trims the least
 // recently added IndicesByIndexSeed object if the cache size has ready the max cache size limit.
 func (c *ShuffledIndicesCache) AddShuffledValidatorList(shuffledIndices *IndicesByIndexSeed) error {
+	if !featureconfig.Get().EnableShuffledIndexCache {
+		return nil
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.shuffledIndicesCache.AddIfNotPresent(shuffledIndices); err != nil {

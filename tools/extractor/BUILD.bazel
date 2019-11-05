@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/extractor",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/core/state/interop:go_default_library",
+        "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/filters:go_default_library",
+        "//shared/featureconfig:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "extractor",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

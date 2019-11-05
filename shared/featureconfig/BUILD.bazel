@@ -17,7 +17,10 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["config_test.go"],
+    srcs = [
+        "config_test.go",
+        "flags_test.go",
+    ],
     embed = [":go_default_library"],
     deps = ["@com_github_urfave_cli//:go_default_library"],
 )

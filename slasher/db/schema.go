@@ -6,8 +6,10 @@ import (
 
 var (
 	// Slasher
-	historicAttestationsBucket = []byte("historic-attestations-bucket")
-	historicBlockHeadersBucket = []byte("historic-block-headers-bucket")
+	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
+	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
+	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
+	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
 )
 
 func encodeEpochValidatorID(epoch uint64, validatorID uint64) []byte {
@@ -16,4 +18,9 @@ func encodeEpochValidatorID(epoch uint64, validatorID uint64) []byte {
 
 func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []byte {
 	return append(append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorID)...), sig...)
+}
+
+func encodeEpochSig(sourceEpoch uint64, targetEpoch uint64, sig []byte) []byte {
+	st := append(bytesutil.Bytes8(sourceEpoch), bytesutil.Bytes8(targetEpoch)...)
+	return append(st, sig...)
 }

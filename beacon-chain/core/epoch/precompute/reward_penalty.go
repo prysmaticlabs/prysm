@@ -108,12 +108,12 @@ func proposerDeltaPrecompute(state *pb.BeaconState, bp *Balance, vp []*Validator
 
 	totalBalance := bp.CurrentEpoch
 
-	for i, v := range vp {
+	for _, v := range vp {
 		if v.IsPrevEpochAttester {
 			vBalance := v.CurrentEpochEffectiveBalance
 			baseReward := vBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 			proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
-			rewards[i] += proposerReward
+			rewards[v.ProposerIndex] += proposerReward
 		}
 	}
 	return rewards, nil
@@ -153,7 +153,7 @@ func crosslinkDeltaPreCompute(state *pb.BeaconState, bp *Balance, vp []*Validato
 		attestingBalance := helpers.TotalBalance(state, attestingIndices)
 
 		for _, index := range committee {
-			base := vp[i].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
+			base := vp[index].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
 			if _, ok := attested[index]; ok {
 				rewards[index] += base * attestingBalance / committeeBalance
 			} else {

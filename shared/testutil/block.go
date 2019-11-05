@@ -27,6 +27,18 @@ type BlockGenConfig struct {
 	Signatures           bool
 }
 
+// DefaultBlockGenConfig returns the block config that utilizes the
+// current params in the beacon config.
+func DefaultBlockGenConfig() *BlockGenConfig {
+	return &BlockGenConfig{
+		MaxProposerSlashings: params.BeaconConfig().MaxProposerSlashings,
+		MaxAttesterSlashings: params.BeaconConfig().MaxAttesterSlashings,
+		MaxAttestations:      params.BeaconConfig().MaxAttestations,
+		MaxDeposits:          params.BeaconConfig().MaxDeposits,
+		MaxVoluntaryExits:    params.BeaconConfig().MaxVoluntaryExits,
+	}
+}
+
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
@@ -34,9 +46,13 @@ func GenerateFullBlock(
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
 	conf *BlockGenConfig,
+	slot uint64,
 ) *ethpb.BeaconBlock {
 
 	currentSlot := bState.Slot
+	if currentSlot > slot {
+		t.Fatalf("Current slot in state is larger than given slot. %d > %d", currentSlot, slot)
+	}
 
 	pSlashings := []*ethpb.ProposerSlashing{}
 	if conf.MaxProposerSlashings > 0 {
@@ -87,7 +103,7 @@ func GenerateFullBlock(
 	}
 
 	block := &ethpb.BeaconBlock{
-		Slot:       currentSlot + 1,
+		Slot:       slot,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,
