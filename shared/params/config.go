@@ -47,7 +47,6 @@ type BeaconChainConfig struct {
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
-	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
@@ -142,7 +141,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	PersistentCommitteePeriod:        2048,
-	MaxEpochsPerCrosslink:            64,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
 
@@ -266,7 +264,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
-	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 
 	// State vector lengths

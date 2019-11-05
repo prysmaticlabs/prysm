@@ -25,7 +25,7 @@ import (
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots
-// and shards in which particular validators need to perform their responsibilities,
+// and committees in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
 	ctx                context.Context

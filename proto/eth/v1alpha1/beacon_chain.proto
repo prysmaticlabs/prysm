@@ -20,7 +20,7 @@ service BeaconChain {
     // TODO(preston): Batch requests?
 
     // Retrieve attestations by block root, slot, or epoch. 
-    // Attestations are sorted by crosslink shard by default.
+    // Attestations are sorted by slot by default.
     // 
     // The server may return an empty list when no attestations match the given 
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter 

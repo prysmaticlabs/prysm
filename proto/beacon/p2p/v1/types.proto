@@ -79,7 +79,7 @@ message ValidatorLatestVote {
 
 message AttestationDataAndCustodyBit {
   ethereum.eth.v1alpha1.AttestationData data = 1;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of beacon data
   bool custody_bit = 2;
 }
 

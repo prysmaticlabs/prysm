@@ -42,7 +42,7 @@ type BeaconChainServer struct {
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
-// by shard as the canonical sorting attribute.
+// by slot as the canonical sorting attribute.
 type sortableAttestations []*ethpb.Attestation
 
 func (s sortableAttestations) Len() int      { return len(s) }
@@ -52,7 +52,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
-// Attestations are sorted by crosslink shard by default.
+// Attestations are sorted by data slot by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter

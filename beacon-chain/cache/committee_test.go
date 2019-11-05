@@ -36,12 +36,12 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 		Epoch:          1,
 		Committee:      []uint64{1, 2, 3, 4, 5, 6},
 		CommitteeCount: 3,
-		StartShard:     1,
+		CommitteeIndex: 1,
 	}
 
 	epoch := uint64(1)
-	startShard := uint64(1)
-	indices, err := cache.ShuffledIndices(epoch, startShard)
+	committeeIndex := uint64(1)
+	indices, err := cache.ShuffledIndices(epoch, committeeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,12 +52,12 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	if err := cache.AddCommitteeShuffledList(item); err != nil {
 		t.Fatal(err)
 	}
-	wantedShard := uint64(2)
-	indices, err = cache.ShuffledIndices(epoch, wantedShard)
+	wantedIndex := uint64(2)
+	indices, err = cache.ShuffledIndices(epoch, wantedIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
-	start, end := startEndIndices(item, wantedShard)
+	start, end := startEndIndices(item, wantedIndex)
 	if !reflect.DeepEqual(indices, item.Committee[start:end]) {
 		t.Errorf(
 			"Expected fetched active indices to be %v, got %v",
@@ -174,34 +174,34 @@ func TestCommitteeCache_CommitteesCount(t *testing.T) {
 	}
 }
 
-func TestCommitteeCache_ShardCount(t *testing.T) {
+func TestCommitteeCache_IndexCount(t *testing.T) {
 	cache := NewCommitteeCache()
 
-	startShard := uint64(7)
+	committeeIndex := uint64(7)
 	epoch := uint64(3)
-	item := &Committee{Epoch: epoch, StartShard: startShard}
+	item := &Committee{Epoch: epoch, CommitteeIndex: committeeIndex}
 
-	_, exists, err := cache.StartShard(1)
+	_, exists, err := cache.CommitteeIndex(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if exists {
-		t.Error("Expected start shard not to exist in empty cache")
+		t.Error("Expected start index not to exist in empty cache")
 	}
 
 	if err := cache.AddCommitteeShuffledList(item); err != nil {
 		t.Fatal(err)
 	}
 
-	shard, exists, err := cache.StartShard(epoch)
+	index, exists, err := cache.CommitteeIndex(epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !exists {
-		t.Error("Expected start shard to be in cache")
+		t.Error("Expected start index to be in cache")
 	}
-	if shard != startShard {
-		t.Errorf("wanted: %d, got: %d", startShard, shard)
+	if index != committeeIndex {
+		t.Errorf("wanted: %d, got: %d", committeeIndex, index)
 	}
 }
 

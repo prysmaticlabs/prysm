@@ -128,7 +128,7 @@ func ComputeCommittee(
 		return cachedShuffledList, nil
 	}
 
-	// Save the shuffled indices in cache, this is only needed once per epoch or once per new shard index.
+	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, end-start)
 	for i := start; i < end; i++ {
 		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
@@ -268,11 +268,11 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := BeaconCommittee(bState, att.Data.Slot, att.Data.Index)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve crosslink committees")
+		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
 
 	if committee == nil {
-		return errors.New("no committee exist for shard in the attestation")
+		return errors.New("no committee exist for this attestation")
 	}
 
 	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
@@ -311,7 +311,7 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
-// list with start shard and epoch number. It caches the shuffled indices for current epoch and next epoch.
+// list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *pb.BeaconState) error {
 	currentEpoch := CurrentEpoch(state)
 	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
