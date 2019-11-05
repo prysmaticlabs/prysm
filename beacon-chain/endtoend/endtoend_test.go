@@ -123,6 +123,7 @@ func StartEth1(t *testing.T) (common.Address, string) {
 	cmd.Stdout = file
 	cmd.Stderr = file
 	if err := cmd.Start(); err != nil {
+		t.Log(binaryPath)
 		t.Fatal(err)
 	}
 	time.Sleep(12 * time.Second)
