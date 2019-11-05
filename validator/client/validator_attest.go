@@ -107,14 +107,11 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
-	log = log.WithField("committee", assignment.Committee)
-	log = log.WithField("vIndex", validatorIndexRes.Index)
-	log = log.WithField("IndexInCommittee", indexInCommittee)
+
 	log = log.WithField("committeeIndex", attestation.Data.Index)
 	log = log.WithField("aggregationBitfield", fmt.Sprintf("%08b", attestation.AggregationBits))
 	log = log.WithField("slot", attestation.Data.Slot)
 	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot))
-	log = log.WithField("signature", fmt.Sprintf("%#x", attestation.Signature))
 	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
 
 	span.AddAttributes(

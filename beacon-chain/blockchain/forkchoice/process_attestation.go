@@ -98,11 +98,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
 		log := log.WithFields(logrus.Fields{
-			"Slot": a.Data.Slot,
-			"BeaconBlockRoot": fmt.Sprintf("%#x", a.Data.BeaconBlockRoot),
+			"Slot":               a.Data.Slot,
+			"BeaconBlockRoot":    fmt.Sprintf("%#x", a.Data.BeaconBlockRoot),
 			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
-			"Signature": fmt.Sprintf("%#x", bytesutil.Trunc(a.Signature)),
+			"Signature":          fmt.Sprintf("%#x", bytesutil.Trunc(a.Signature)),
 		})
 		log.Debug("Updating latest votes")
 
@@ -208,7 +208,6 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	if err != nil {
 		return err
 	}
-	fmt.Println(root, att)
 	if a, ok := s.attsQueue[root]; ok {
 		a, err := helpers.AggregateAttestation(a, att)
 		if err != nil {

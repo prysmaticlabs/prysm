@@ -391,9 +391,9 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Committee:    []uint64{},
-					AttesterSlot: 10,
-					CommitteeIndex:        20,
+					Committee:      []uint64{},
+					AttesterSlot:   10,
+					CommitteeIndex: 20,
 				},
 			},
 		},
@@ -449,11 +449,11 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	resp := &pb.AssignmentResponse{
 		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
-				AttesterSlot: params.BeaconConfig().SlotsPerEpoch,
-				CommitteeIndex:        100,
-				Committee:    []uint64{0, 1, 2, 3},
-				PublicKey:    []byte("testPubKey_1"),
-				ProposerSlot: params.BeaconConfig().SlotsPerEpoch + 1,
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlot:   params.BeaconConfig().SlotsPerEpoch + 1,
 			},
 		},
 	}
@@ -490,25 +490,25 @@ func TestRolesAt_OK(t *testing.T) {
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 
-					CommitteeIndex:        1,
-					AttesterSlot: 1,
-					PublicKey:    []byte{0x01},
+					CommitteeIndex: 1,
+					AttesterSlot:   1,
+					PublicKey:      []byte{0x01},
 				},
 				{
-					CommitteeIndex:        2,
-					ProposerSlot: 1,
-					PublicKey:    []byte{0x02},
+					CommitteeIndex: 2,
+					ProposerSlot:   1,
+					PublicKey:      []byte{0x02},
 				},
 				{
-					CommitteeIndex:        1,
-					AttesterSlot: 2,
-					PublicKey:    []byte{0x03},
+					CommitteeIndex: 1,
+					AttesterSlot:   2,
+					PublicKey:      []byte{0x03},
 				},
 				{
-					CommitteeIndex:        2,
-					AttesterSlot: 1,
-					ProposerSlot: 1,
-					PublicKey:    []byte{0x04},
+					CommitteeIndex: 2,
+					AttesterSlot:   1,
+					ProposerSlot:   1,
+					PublicKey:      []byte{0x04},
 				},
 			},
 		},
