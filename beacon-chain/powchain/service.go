@@ -421,10 +421,10 @@ func (s *Service) handleDelayTicker() {
 func (s *Service) run(done <-chan struct{}) {
 	s.isRunning = true
 	s.runError = nil
-	if err := s.initDataFromContract(); err != nil {
-		log.Errorf("Unable to retrieve data from deposit contract %v", err)
-		return
-	}
+	//if err := s.initDataFromContract(); err != nil {
+	//	log.Errorf("Unable to retrieve data from deposit contract %v", err)
+	//	return
+	//}
 
 	headSub, err := s.reader.SubscribeNewHead(s.ctx, s.headerChan)
 	if err != nil {

@@ -109,6 +109,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	}
 
 	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
+	log = log.WithField("signature", fmt.Sprintf("%#x", attestation.Signature))
 	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
 
 	span.AddAttributes(

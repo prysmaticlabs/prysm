@@ -98,8 +98,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
 	for root, a := range s.attsQueue {
 		log := log.WithFields(logrus.Fields{
+			"Slot": a.Data.Slot,
+			"BeaconBlockRoot": fmt.Sprintf("%08b", a.Data.BeaconBlockRoot),
 			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 			"Root":               fmt.Sprintf("%#x", root),
+			"Signature": fmt.Sprintf("%#x", a.Signature),
 		})
 		log.Debug("Updating latest votes")
 
