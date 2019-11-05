@@ -452,7 +452,6 @@ func TestUpdateAssignments_OK(t *testing.T) {
 				AttesterSlot: params.BeaconConfig().SlotsPerEpoch,
 				Shard:        100,
 				Committee:    []uint64{0, 1, 2, 3},
-				IsProposer:   true,
 				PublicKey:    []byte("testPubKey_1"),
 				ProposerSlot: params.BeaconConfig().SlotsPerEpoch + 1,
 			},
@@ -470,7 +469,6 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
-
 	if v.assignments.ValidatorAssignment[0].ProposerSlot != params.BeaconConfig().SlotsPerEpoch+1 {
 		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch+1, v.assignments.ValidatorAssignment[0].ProposerSlot)
 	}
@@ -479,9 +477,6 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	}
 	if v.assignments.ValidatorAssignment[0].Shard != resp.ValidatorAssignment[0].Shard {
 		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].Shard, v.assignments.ValidatorAssignment[0].Shard)
-	}
-	if !v.assignments.ValidatorAssignment[0].IsProposer {
-		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
 }
 
@@ -493,12 +488,11 @@ func TestRolesAt_OK(t *testing.T) {
 				{
 					Shard:        1,
 					AttesterSlot: 1,
-					IsProposer:   true,
 					PublicKey:    []byte{0x01},
 				},
 				{
 					Shard:        2,
-					AttesterSlot: 1,
+					ProposerSlot: 1,
 					PublicKey:    []byte{0x02},
 				},
 				{
@@ -506,18 +500,26 @@ func TestRolesAt_OK(t *testing.T) {
 					AttesterSlot: 2,
 					PublicKey:    []byte{0x03},
 				},
+				{
+					Shard:        2,
+					AttesterSlot: 1,
+					ProposerSlot: 1,
+					PublicKey:    []byte{0x04},
+				},
 			},
 		},
 	}
 	roleMap := v.RolesAt(1)
-	if roleMap[[48]byte{0x01}] != pb.ValidatorRole_PROPOSER {
+	if roleMap[[48]byte{0x01}] != pb.ValidatorRole_ATTESTER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
 	}
-	if roleMap[[48]byte{0x02}] != pb.ValidatorRole_ATTESTER {
+	if roleMap[[48]byte{0x02}] != pb.ValidatorRole_PROPOSER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
 	}
 	if roleMap[[48]byte{0x03}] != pb.ValidatorRole_UNKNOWN {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
-
+	if roleMap[[48]byte{0x04}] != pb.ValidatorRole_BOTH {
+		t.Errorf("Unexpected validator role. want: BOTH")
+	}
 }
