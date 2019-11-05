@@ -177,9 +177,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
@@ -192,9 +192,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.ValidatorAssignment[0].Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.ValidatorAssignment[0].Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 

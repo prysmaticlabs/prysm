@@ -207,10 +207,10 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 				"status": assignment.Status,
 			}
 			if assignment.Status == pb.ValidatorStatus_ACTIVE {
-				if assignment.IsProposer {
-					lFields["proposerSlot"] = assignment.Slot
+				if assignment.ProposerSlot > 0 {
+					lFields["proposerSlot"] = assignment.ProposerSlot
 				}
-				lFields["attesterSlot"] = assignment.Slot
+				lFields["attesterSlot"] = assignment.AttesterSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
 		}
@@ -226,17 +226,16 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 	rolesAt := make(map[[48]byte]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
-		if assignment == nil {
+		switch {
+		case assignment == nil:
 			role = pb.ValidatorRole_UNKNOWN
-		}
-		if assignment.Slot == slot {
-			// Note: A proposer also attests to the slot.
-			if assignment.IsProposer {
-				role = pb.ValidatorRole_PROPOSER
-			} else {
-				role = pb.ValidatorRole_ATTESTER
-			}
-		} else {
+		case assignment.ProposerSlot == slot && assignment.AttesterSlot == slot:
+			role = pb.ValidatorRole_BOTH
+		case assignment.AttesterSlot == slot:
+			role = pb.ValidatorRole_ATTESTER
+		case assignment.ProposerSlot == slot:
+			role = pb.ValidatorRole_PROPOSER
+		default:
 			role = pb.ValidatorRole_UNKNOWN
 		}
 		var pubKey [48]byte
