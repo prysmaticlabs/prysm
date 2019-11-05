@@ -63,6 +63,9 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	if fromSelf {
 		return false, nil
 	}
+	if r.chain.FinalizedCheckpt().Epoch > att.Data.Target.Epoch {
+
+	}
 
 	if err := p.Broadcast(ctx, msg); err != nil {
 		log.WithError(err).Error("Failed to broadcast message")
