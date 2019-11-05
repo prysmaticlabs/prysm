@@ -20,7 +20,6 @@ type ChainService struct {
 	FinalizedCheckPoint *ethpb.Checkpoint
 	StateFeed           *event.Feed
 	BlocksReceived      []*ethpb.BeaconBlock
-	BlockRoots          map[[32]byte]bool
 	Genesis             time.Time
 	Fork                *pb.Fork
 }
@@ -45,9 +44,6 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 	if ms.State == nil {
 		ms.State = &pb.BeaconState{}
 	}
-	if ms.BlockRoots == nil {
-		ms.BlockRoots = make(map[[32]byte]bool)
-	}
 	if !bytes.Equal(ms.Root, block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.ParentRoot)
 	}
@@ -58,7 +54,6 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 		return err
 	}
 	ms.Root = signingRoot[:]
-	ms.BlockRoots[signingRoot] = true
 	ms.Block = block
 	return nil
 }
@@ -83,14 +78,6 @@ func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
 // HeadState mocks HeadState method in chain service.
 func (ms *ChainService) HeadState() *pb.BeaconState {
 	return ms.State
-}
-
-// BlockExists checks if the block exists in the db.
-func (ms *ChainService) BlockExists(ctx context.Context, root [32]byte) bool {
-	if ms.BlockRoots == nil {
-		ms.BlockRoots = make(map[[32]byte]bool)
-	}
-	return ms.BlockRoots[root]
 }
 
 // CurrentFork mocks HeadState method in chain service.

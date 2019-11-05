@@ -170,7 +170,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
-			if !s.chain.BlockExists(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
+			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
 				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.ParentRoot)
 				continue
 			}
