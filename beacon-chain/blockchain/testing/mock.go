@@ -7,9 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
 
 // ChainService defines the mock interface for testing
@@ -22,6 +24,7 @@ type ChainService struct {
 	BlocksReceived      []*ethpb.BeaconBlock
 	Genesis             time.Time
 	Fork                *pb.Fork
+	DB                  db.Database
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -52,6 +55,12 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return err
+	}
+	if ms.DB != nil {
+		if err := ms.DB.SaveBlock(ctx, block); err != nil {
+			return err
+		}
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Slot)
 	}
 	ms.Root = signingRoot[:]
 	ms.Block = block

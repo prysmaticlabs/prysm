@@ -1,6 +1,7 @@
 package initialsync
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -9,6 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/go-ssz"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -236,22 +239,30 @@ func TestRoundRobinSync(t *testing.T) {
 			peerstatus.Clear()
 
 			p := p2pt.NewTestP2P(t)
+			beaconDB := dbtest.SetupDB(t)
+
 			connectPeers(t, p, tt.peers)
-			zeroBytes := [32]byte{}
+			genesisRoot := rootCache[0]
+
+			err := beaconDB.SaveBlock(context.Background(), &eth.BeaconBlock{
+				Slot: 0,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			mc := &mock.ChainService{
-				State:      &p2ppb.BeaconState{},
-				Root:       zeroBytes[:],
-				BlockRoots: make(map[[32]byte]bool),
+				State: &p2ppb.BeaconState{},
+				Root:  genesisRoot[:],
+				DB:    beaconDB,
 			} // no-op mock
-			mc.BlockRoots[zeroBytes] = true
 			s := &InitialSync{
 				chain:        mc,
 				p2p:          p,
+				db:           beaconDB,
 				synced:       false,
 				chainStarted: true,
 			}
-
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)
 			}
@@ -268,6 +279,7 @@ func TestRoundRobinSync(t *testing.T) {
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
+			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
 }
@@ -379,10 +391,16 @@ func makeSequence(start, end uint64) []uint64 {
 func initializeRootCache(reqSlots []uint64, t *testing.T) {
 	rootCache = make(map[uint64][32]byte)
 	parentSlotCache = make(map[uint64]uint64)
-	parentRoot := [32]byte{}
 	parentSlot := uint64(0)
-	rootCache[0] = parentRoot
-	var err error
+	genesisBlock := &eth.BeaconBlock{
+		Slot: 0,
+	}
+	genesisRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootCache[0] = genesisRoot
+	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
 		currentBlock := &eth.BeaconBlock{
 			Slot:       slot,
