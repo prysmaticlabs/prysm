@@ -54,10 +54,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	v.waitToSlotMidpoint(ctx, slot)
 
-	req := &pb.AttestationRequest{
-		Slot:           slot,
-		CommitteeIndex: assignment.CommitteeIndex,
-	}
+	req := &pb.AttestationRequest{Slot:           slot}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)
 	if err != nil {
 		log.Errorf("Could not request attestation to sign at slot %d: %v",

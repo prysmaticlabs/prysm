@@ -89,10 +89,12 @@ func run(ctx context.Context, v Validator) {
 						"role":   role,
 					})
 					switch role {
+					case pb.ValidatorRole_BOTH:
+						go v.AttestToBlockHead(slotCtx, slot, id)
+						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
-						go v.AttestToBlockHead(slotCtx, slot, id)
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:
 						log.Debug("No active role, doing nothing")

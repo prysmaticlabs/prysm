@@ -93,6 +93,7 @@ message ChainStartResponse {
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
+     BOTH = 3;
 }
 
 message ValidatorIndexRequest {
@@ -112,12 +113,11 @@ message AssignmentResponse {
   repeated ValidatorAssignment validator_assignment = 1;
   message ValidatorAssignment {
     repeated uint64 committee = 1;
-    uint64 committeeIndex = 2;
-    uint64 attesterSlot = 3;
-    bool is_proposer = 4;
-    uint64 proposerSlot = 5;
-    bytes public_key = 6;
-    ValidatorStatus status = 7;
+    uint64 committee_index = 2;
+    uint64 attester_slot = 3;
+    uint64 proposer_slot = 4;
+    bytes public_key = 5;
+    ValidatorStatus status = 6;
   }
 }
 
