@@ -1013,9 +1013,12 @@ go_repository(
 )
 
 go_repository(
+    # TODO: Update to master commit after https://github.com/grpc-ecosystem/grpc-gateway/pull/1077 merges.
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "e652ba06e9067ef41c199af59b9c6c67724850d4",
+    commit = "70fc48afe5b7473aa1e6796e5013ae63dce74043",
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
+    remote = "https://github.com/prestonvanloon/grpc-gateway",
+    vcs = "git",
 )
 
 go_repository(
