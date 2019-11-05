@@ -94,12 +94,12 @@ func GenerateFullBlock(
 	if conf.Signatures {
 		// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 		// function deterministic on beacon state slot.
-		bState.Slot++
+		bState.Slot = slot
 		reveal, err = CreateRandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
 		if err != nil {
 			t.Fatal(err)
 		}
-		bState.Slot--
+		bState.Slot = currentSlot
 	}
 
 	block := &ethpb.BeaconBlock{
@@ -133,12 +133,12 @@ func GenerateFullBlock(
 		}
 		// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 		// function deterministic on beacon state slot.
-		bState.Slot++
+		bState.Slot = slot
 		proposerIdx, err := helpers.BeaconProposerIndex(bState)
 		if err != nil {
 			t.Fatal(err)
 		}
-		bState.Slot--
+		bState.Slot = currentSlot
 		domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 		block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	}
