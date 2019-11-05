@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	// "github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -46,6 +47,10 @@ type beaconNodeInfo struct {
 }
 
 func main() {
+	// Clear out the e2e folder so theres no conflicting data.
+	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
+		panic(err)
+	}
 	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1()
 	StartBeaconNodes(contractAddr, 1)
@@ -73,9 +78,6 @@ func main() {
 
 // StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
 func StartEth1() (common.Address, string) {
-	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
-		panic(err)
-	}
 	args := []string{
 		"--datadir=/tmp/e2e/eth1data",
 		"--dev.period=4",
@@ -144,6 +146,7 @@ func StartEth1() (common.Address, string) {
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
 func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
+	// bazel.FindBinary()
 	nodeInfo := make([]*beaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		args := []string{
