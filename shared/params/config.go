@@ -233,7 +233,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
 
 	return demoConfig
 }
