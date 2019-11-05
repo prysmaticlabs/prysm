@@ -240,7 +240,7 @@ func CommitteeAssignment(
 				return nil, 0, 0, false, 0, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
 			}
-			for i, v := range committee {
+			for _, v := range committee {
 				if validatorIndex == v {
 					proposerSlot, isProposer := proposerIndexToSlot[v]
 					return committee, uint64(i), slot, isProposer, proposerSlot, nil
