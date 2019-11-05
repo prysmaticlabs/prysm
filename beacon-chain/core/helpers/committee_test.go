@@ -243,7 +243,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			index:          0,
 			slot:           92,
 			committee:      []uint64{46, 0},
-			committeeIndex: 1,
+			committeeIndex: 0,
 			isProposer:     false,
 		},
 		{
@@ -258,7 +258,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			index:          11,
 			slot:           64,
 			committee:      []uint64{30, 11},
-			committeeIndex: 1,
+			committeeIndex: 0,
 			isProposer:     false,
 		},
 	}
