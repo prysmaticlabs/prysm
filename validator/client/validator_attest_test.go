@@ -41,8 +41,8 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
 		},
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -65,9 +65,9 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: make([]uint64, 111),
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      make([]uint64, 111),
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -105,9 +105,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -213,9 +213,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 
 	m.attesterClient.EXPECT().RequestAttestation(
@@ -258,9 +258,9 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx

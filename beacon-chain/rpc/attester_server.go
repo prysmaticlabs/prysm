@@ -60,7 +60,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	defer span.End()
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(req.Slot)),
-		trace.Int64Attribute("shard", int64(req.Shard)),
+		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 	res, err := as.attestationCache.Get(ctx, req)
 	if err != nil {

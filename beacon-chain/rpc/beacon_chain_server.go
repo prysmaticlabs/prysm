@@ -42,7 +42,7 @@ type BeaconChainServer struct {
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
-// by shard as the canonical sorting attribute.
+// by committeeIndex as the canonical sorting attribute.
 type sortableAttestations []*ethpb.Attestation
 
 func (s sortableAttestations) Len() int      { return len(s) }
@@ -52,7 +52,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
-// Attestations are sorted by crosslink shard by default.
+// Attestations are sorted by crosslink committeeIndex by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
@@ -584,7 +584,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				index, len(headState.Validators))
 		}
 		var committee []uint64
-		var shard uint64
+		var committeeIndex uint64
 		var slot uint64
 		var isProposer bool
 		if shouldFetchFromArchive {
@@ -603,25 +603,24 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			committee, shard, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			committee, committeeIndex, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
 			isProposer = archivedInfo.ProposerIndex == index
 		} else {
-			// TODO(3865): Update ValidatorAssignments_CommitteeAssignment to take in proposer slot
-			committee, shard, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			committee, committeeIndex, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
 		}
 
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			CrosslinkCommittees: committee,
-			Shard:               shard,
-			Slot:                slot,
-			Proposer:            isProposer,
-			PublicKey:           headState.Validators[index].PublicKey,
+			BeaconCommittees: committee,
+			CommitteeIndex:   committeeIndex,
+			Slot:             slot,
+			Proposer:         isProposer,
+			PublicKey:        headState.Validators[index].PublicKey,
 		})
 	}
 

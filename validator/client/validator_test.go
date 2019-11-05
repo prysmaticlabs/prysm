@@ -391,9 +391,9 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Committee:    []uint64{},
-					AttesterSlot: 10,
-					Shard:        20,
+					Committee:      []uint64{},
+					AttesterSlot:   10,
+					CommitteeIndex: 20,
 				},
 			},
 		},
@@ -419,7 +419,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Shard: 1,
+					CommitteeIndex: 1,
 				},
 			},
 		},
@@ -449,11 +449,11 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	resp := &pb.AssignmentResponse{
 		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
-				AttesterSlot: params.BeaconConfig().SlotsPerEpoch,
-				Shard:        100,
-				Committee:    []uint64{0, 1, 2, 3},
-				PublicKey:    []byte("testPubKey_1"),
-				ProposerSlot: params.BeaconConfig().SlotsPerEpoch + 1,
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlot:   params.BeaconConfig().SlotsPerEpoch + 1,
 			},
 		},
 	}
@@ -475,8 +475,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	if v.assignments.ValidatorAssignment[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.ValidatorAssignment[0].AttesterSlot)
 	}
-	if v.assignments.ValidatorAssignment[0].Shard != resp.ValidatorAssignment[0].Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].Shard, v.assignments.ValidatorAssignment[0].Shard)
+	if v.assignments.ValidatorAssignment[0].CommitteeIndex != resp.ValidatorAssignment[0].CommitteeIndex {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].CommitteeIndex, v.assignments.ValidatorAssignment[0].CommitteeIndex)
 	}
 }
 
@@ -486,25 +486,25 @@ func TestRolesAt_OK(t *testing.T) {
 		assignments: &pb.AssignmentResponse{
 			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
-					Shard:        1,
-					AttesterSlot: 1,
-					PublicKey:    []byte{0x01},
+					CommitteeIndex: 1,
+					AttesterSlot:   1,
+					PublicKey:      []byte{0x01},
 				},
 				{
-					Shard:        2,
-					ProposerSlot: 1,
-					PublicKey:    []byte{0x02},
+					CommitteeIndex: 2,
+					ProposerSlot:   1,
+					PublicKey:      []byte{0x02},
 				},
 				{
-					Shard:        1,
-					AttesterSlot: 2,
-					PublicKey:    []byte{0x03},
+					CommitteeIndex: 1,
+					AttesterSlot:   2,
+					PublicKey:      []byte{0x03},
 				},
 				{
-					Shard:        2,
-					AttesterSlot: 1,
-					ProposerSlot: 1,
-					PublicKey:    []byte{0x04},
+					CommitteeIndex: 2,
+					AttesterSlot:   1,
+					ProposerSlot:   1,
+					PublicKey:      []byte{0x04},
 				},
 			},
 		},
