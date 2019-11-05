@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type policy func(chainHead *eth.ChainHead, options ...uint64) error
@@ -20,9 +19,9 @@ type Evaluator struct {
 	Evaluation evaluation
 }
 
-// EveryNEpochs run the evaluator every N epochs.
-func EveryNEpochs(chainHead *eth.ChainHead, epochs uint64) bool {
-	return helpers.SlotToEpoch(chainHead.BlockSlot)%epochs != 0
+// AfterNEpochs run the evaluator after N epochs.
+func AfterNEpochs(chainHead *eth.ChainHead, epochs uint64) bool {
+	return chainHead.BlockSlot/params.BeaconConfig().SlotsPerEpoch >= epochs
 }
 
 // AfterChainStart ensures the chain has started before performing the evaluator.
@@ -44,7 +43,7 @@ func ValidatorsActivate(client eth.BeaconChainClient, expectedCount uint64) erro
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
-	for i, val := range validators.Validators {
+	for _, val := range validators.Validators {
 		if val.ActivationEpoch != 0 {
 			return fmt.Errorf("genesis validator epoch should be 0, received %d", val.ActivationEpoch)
 		}
@@ -57,28 +56,21 @@ func ValidatorsActivate(client eth.BeaconChainClient, expectedCount uint64) erro
 
 // ValidatorsParticipating ensures the validators have an acceptable participation rate.
 func ValidatorsParticipating(client eth.BeaconChainClient, expectedCount uint64) error {
-	validatorRequest := &eth.GetValidatorsRequest{}
-	validators, err := client.GetValidators(context.Background(), validatorRequest)
+	validatorRequest := &eth.GetValidatorParticipationRequest{
+		QueryFilter: &eth.GetValidatorParticipationRequest_Epoch{
+			Epoch: 2,
+		},
+	}
+	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
-		return errors.New("failed to get validators")
+		return errors.New("failed to get validator participation")
 	}
 
-	receivedCount := uint64(len(validators.Validators))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+	partRate := participation.Participation.GlobalParticipationRate
+	if partRate < 0.95 {
+		return fmt.Errorf("validator participation not as high as expected, received: %f", partRate)
 	}
-
-	for i, val := range validators.Validators {
-		if val.ActivationEpoch != 0 {
-			return fmt.Errorf("genesis validator epoch should be 0, received %d", val.ActivationEpoch)
-		}
-		if val.EffectiveBalance <= 3.2*1e9 {
-			return fmt.Errorf("expected genesis validator balance to be greater than 3.2 ETH, received %d", val.EffectiveBalance)
-		}
-		if val.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
-			return fmt.Errorf()
-		}
-	}
+	return nil
 }
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
@@ -90,11 +82,11 @@ func FinalizationOccurs(client eth.BeaconChainClient) error {
 		return errors.New("failed to get chain head")
 	}
 
-	currentEpoch := helpers.SlotToEpoch(chainHead.BlockSlot)
+	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
 	if currentEpoch < 4 {
 		return fmt.Errorf("current epoch is less than 2, received: %d", currentEpoch)
 	}
-	finalizedEpoch := helpers.SlotToEpoch(chainHead.FinalizedSlot)
+	finalizedEpoch := chainHead.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch
 	if finalizedEpoch < 2 {
 		return fmt.Errorf("expected finalized epoch to be greater than 2, received: %d", currentEpoch)
 	}

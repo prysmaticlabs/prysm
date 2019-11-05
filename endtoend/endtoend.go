@@ -15,9 +15,10 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
@@ -47,6 +48,12 @@ type beaconNodeInfo struct {
 }
 
 func main() {
+	binaryPath, found := bazel.FindBinary("//beacon-chain", "beacon-chain")
+	if !found {
+		panic("binary not found")
+	}
+	fmt.Println(binaryPath)
+
 	// Clear out the e2e folder so theres no conflicting data.
 	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
 		panic(err)
@@ -62,18 +69,32 @@ func main() {
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}
-	time.Sleep(2 * time.Second)
-	beaconChainClient := eth.NewBeaconChainClient(conn)
-	time.Sleep(2 * time.Second)
-	request := &eth.GetValidatorsRequest{
-		PageSize: 32,
+	time.Sleep(1 * time.Second)
+	beaconClient := eth.NewBeaconChainClient(conn)
+	time.Sleep(1 * time.Second)
+
+	for i := 0; i < 1; i++ {
+		in := new(ptypes.Empty)
+		chainHead, err := beaconClient.GetChainHead(context.Background(), in)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(chainHead.BlockSlot)
+
+		// if AfterChainStart(chainHead) {
+		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
+		// 		panic(err)
+		// 	}
+		// }
+
+		// if AfterChainStart(chainHead) {
+		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
+		// 		panic(err)
+		// 	}
+		// }
+
+		time.Sleep(time.Second * 6)
 	}
-	validatorResponse, err := beaconChainClient.GetValidators(context.Background(), request)
-	if err != nil {
-		panic(err)
-	}
-	validators := validatorResponse.Validators
-	fmt.Printf("%d validators retrieved\n", len(validators))
 }
 
 // StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
@@ -146,7 +167,6 @@ func StartEth1() (common.Address, string) {
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
 func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
-	// bazel.FindBinary()
 	nodeInfo := make([]*beaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		args := []string{
