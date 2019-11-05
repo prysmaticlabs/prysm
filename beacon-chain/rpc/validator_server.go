@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -198,6 +199,7 @@ func (vs *ValidatorServer) assignment(idx uint64, beaconState *pbp2p.BeaconState
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(committee, committeeIndex)
 	status := vs.assignmentStatus(idx, beaconState)
 	return &pb.AssignmentResponse_ValidatorAssignment{
 		Committee:    committee,

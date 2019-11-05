@@ -28,7 +28,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
-	log = log.WithField("slot", slot)
 
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
@@ -43,6 +42,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 			break
 		}
 	}
+
 	idxReq := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey[:],
 	}
@@ -54,7 +54,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	v.waitToSlotMidpoint(ctx, slot)
 
-	req := &pb.AttestationRequest{Slot:           slot}
+	req := &pb.AttestationRequest{Slot: slot, CommitteeIndex: assignment.CommitteeIndex}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)
 	if err != nil {
 		log.Errorf("Could not request attestation to sign at slot %d: %v",
@@ -107,8 +107,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
-
-	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
+	log = log.WithField("committee", assignment.Committee)
+	log = log.WithField("vIndex", validatorIndexRes.Index)
+	log = log.WithField("IndexInCommittee", indexInCommittee)
+	log = log.WithField("committeeIndex", attestation.Data.Index)
+	log = log.WithField("aggregationBitfield", fmt.Sprintf("%08b", attestation.AggregationBits))
+	log = log.WithField("slot", attestation.Data.Slot)
+	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(attestation.Data.BeaconBlockRoot))
 	log = log.WithField("signature", fmt.Sprintf("%#x", attestation.Signature))
 	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
 

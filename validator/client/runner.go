@@ -81,28 +81,28 @@ func run(ctx context.Context, v Validator) {
 			}
 
 			var wg sync.WaitGroup
-			for id, role := range v.RolesAt(slot) {
+			for pubKey, role := range v.RolesAt(slot) {
 				wg.Add(1)
-				go func(role pb.ValidatorRole, id [48]byte) {
+				go func(role pb.ValidatorRole, pubKey [48]byte) {
 					log := log.WithFields(logrus.Fields{
-						"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
+						"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
 						"role":   role,
 					})
 					switch role {
 					case pb.ValidatorRole_BOTH:
-						go v.AttestToBlockHead(slotCtx, slot, id)
-						v.ProposeBlock(slotCtx, slot, id)
+						go v.AttestToBlockHead(slotCtx, slot, pubKey)
+						v.ProposeBlock(slotCtx, slot, pubKey)
 					case pb.ValidatorRole_ATTESTER:
-						v.AttestToBlockHead(slotCtx, slot, id)
+						v.AttestToBlockHead(slotCtx, slot, pubKey)
 					case pb.ValidatorRole_PROPOSER:
-						v.ProposeBlock(slotCtx, slot, id)
+						v.ProposeBlock(slotCtx, slot, pubKey)
 					case pb.ValidatorRole_UNKNOWN:
 						log.Debug("No active role, doing nothing")
 					default:
 						log.Warn("Unhandled role")
 					}
 
-				}(role, id)
+				}(role, pubKey)
 			}
 			// Wait for all processes to complete, then report span complete.
 			go func() {
