@@ -63,8 +63,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	if fromSelf {
 		return false, nil
 	}
-	if r.chain.FinalizedCheckpt().Epoch > att.Data.Target.Epoch {
-
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
+	if finalizedEpoch > att.Data.Source.Epoch || finalizedEpoch > att.Data.Target.Epoch {
+		log.Debug("Rejecting old attestation with root %#x and target epoch of %d ", attRoot, att.Data.Target.Epoch)
+		return false, nil
 	}
 
 	if err := p.Broadcast(ctx, msg); err != nil {
