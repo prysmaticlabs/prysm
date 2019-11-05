@@ -1,10 +1,13 @@
-package main
+package endtoend
 
 import (
 	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"path"
+	"testing"
+
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	"io"
 	"io/ioutil"
@@ -23,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	// "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -47,21 +52,21 @@ type beaconNodeInfo struct {
 	multiAddr   string
 }
 
-func main() {
-	// Clear out the e2e folder so theres no conflicting data.
-	if err := exec.Command("rm", "-rf", "/tmp/e2e/").Run(); err != nil {
-		panic(err)
+func TestEndToEnd(t *testing.T) {
+	// Clear out the e2e folder so there's no conflicting data.
+	if err := exec.Command("rm", "-rf", path.Join(testutil.TempDir(), "e2e")).Run(); err != nil {
+		t.Fatal(err)
 	}
 	params.UseDemoBeaconConfig()
-	contractAddr, keystorePath := StartEth1()
-	StartBeaconNodes(contractAddr, 1)
-	InitializeValidators(contractAddr, keystorePath, 1, 8)
+	contractAddr, keystorePath := StartEth1(t)
+	StartBeaconNodes(t, contractAddr, 1)
+	InitializeValidators(t, contractAddr, keystorePath, 1, 8)
 
 	time.Sleep(1 * time.Minute)
 
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
+		t.Fatalf("fail to dial: %v", err)
 	}
 	time.Sleep(1 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
@@ -71,19 +76,19 @@ func main() {
 		in := new(ptypes.Empty)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), in)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		fmt.Println(chainHead.BlockSlot)
 
 		// if AfterChainStart(chainHead) {
 		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
-		// 		panic(err)
+		// 		t.Fatal(err)
 		// 	}
 		// }
 
 		// if AfterChainStart(chainHead) {
 		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
-		// 		panic(err)
+		// 		t.Fatal(err)
 		// 	}
 		// }
 
@@ -92,7 +97,12 @@ func main() {
 }
 
 // StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
-func StartEth1() (common.Address, string) {
+func StartEth1(t *testing.T) (common.Address, string) {
+	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
+	if !found {
+		t.Fatal("go-ethereum binary not found")
+	}
+
 	args := []string{
 		"--datadir=/tmp/e2e/eth1data",
 		"--dev.period=4",
@@ -105,52 +115,52 @@ func StartEth1() (common.Address, string) {
 		"--wsorigins=\"*\"",
 		"--dev",
 	}
-	cmd := exec.Command("geth", args...)
-	file, err := os.Create("/tmp/eth1.log")
+	cmd := exec.Command(binaryPath, args...)
+	file, err := os.Create(path.Join(testutil.TempDir(), "eth1.log"))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	cmd.Stdout = file
 	cmd.Stderr = file
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	time.Sleep(12 * time.Second)
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.Dial("/tmp/e2e/eth1data/geth.ipc")
+	client, err := rpc.Dial(path.Join(testutil.TempDir(), "e2e/eth1data/geth.ipc"))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
 	fileName, err := exec.Command("ls", "/tmp/e2e/eth1data/keystore").Output()
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	keystorePath := fmt.Sprintf("/tmp/e2e/eth1data/keystore/%s", strings.TrimSpace(string(fileName)))
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	key := bytes.NewReader(jsonBytes)
 
 	txOpts, err := bind.NewTransactor(key, "")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	fmt.Printf("Dev Account: %s\n", txOpts.From.Hex())
 	minDeposit := big.NewInt(1e9)
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, minDeposit, txOpts.From)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	// Wait for contract to mine.
 	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
 		time.Sleep(4 * time.Second)
 	}
@@ -160,10 +170,11 @@ func StartEth1() (common.Address, string) {
 }
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
+func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uint64) {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
-		panic("beacon chain binary not found")
+		t.Log(binaryPath)
+		t.Fatal("beacon chain binary not found")
 	}
 
 	nodeInfo := make([]*beaconNodeInfo, numNodes)
@@ -189,12 +200,12 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 		cmd := exec.Command(binaryPath, args...)
 		file, err := os.Create(fmt.Sprintf("/tmp/e2e/beacon-%d.log", i))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		cmd.Stderr = file
 		cmd.Stdout = file
 		if err := cmd.Start(); err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		time.Sleep(24 * time.Second)
 
@@ -207,7 +218,9 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 		// Get the response body as a string
 		dataInBytes, err := ioutil.ReadAll(response.Body)
 		pageContent := string(dataInBytes)
-		response.Body.Close()
+		if err := response.Body.Close(); err != nil {
+			t.Fatal(err)
+		}
 
 		startIdx := strings.Index(pageContent, "self=") + 5
 		multiAddr := pageContent[startIdx : startIdx+86]
@@ -224,14 +237,14 @@ func StartBeaconNodes(contractAddress common.Address, numNodes uint64) {
 }
 
 // InitializeValidators sends the deposits to the eth1 chain and starts the validator clients.
-func InitializeValidators(contractAddress common.Address, keystorePath string, beaconNodeNum uint64, validatorNum uint64) {
+func InitializeValidators(t *testing.T, contractAddress common.Address, keystorePath string, beaconNodeNum uint64, validatorNum uint64) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
-		panic("validator binary not found")
+		t.Fatal("validator binary not found")
 	}
 
 	if validatorNum%beaconNodeNum != 0 {
-		panic("Validator count is not easily divisible by beacon node count.")
+		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
@@ -243,7 +256,7 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 				fmt.Sprintf("--keystore-path=/tmp/e2e/valkeys%d/", n),
 			}
 			if err := exec.Command(binaryPath, args...).Start(); err != nil {
-				panic(err)
+				t.Fatal(err)
 			}
 			time.Sleep(4 * time.Second)
 		}
@@ -253,7 +266,7 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(fmt.Sprintf("/tmp/e2e/vals%d.log", n))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		args := []string{
 			"run",
@@ -269,14 +282,14 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 		cmd.Stderr = file
 		time.Sleep(10 * time.Second)
 		if err := cmd.Start(); err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
 	client, err := rpc.Dial("/tmp/e2e/eth1data/geth.ipc")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	web3 := ethclient.NewClient(client)
 
@@ -287,7 +300,7 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 	r := bytes.NewReader(jsonBytes)
 	txOps, err := bind.NewTransactor(r, "")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	minDeposit := big.NewInt(3.2 * 1e9)
 	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(1e9))
@@ -305,7 +318,7 @@ func InitializeValidators(contractAddress common.Address, keystorePath string, b
 		prefix := params.BeaconConfig().ValidatorPrivkeyFileName
 		keysForNode, err := store.GetKeys(prysmKeystorePath, prefix, "e2etest")
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		for k, v := range keysForNode {
 			validatorKeys[k] = v

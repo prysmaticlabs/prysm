@@ -1,22 +1,38 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "endtoend.go",
-        "evaluators.go",
-    ],
-    data = [
-        "//beacon-chain:beacon-chain",
-    ],
+    testonly = True,
+    srcs = ["evaluators.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/endtoend",
     visibility = ["//visibility:private"],
+    deps = [
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "large",
+    srcs = ["endtoend_test.go"],
+    data = [
+        "//beacon-chain",
+        "@com_github_ethereum_go_ethereum//cmd/geth",
+    ],
+    embed = [":go_default_library"],
+    tags = [
+        "block-network",
+        "exclusive",
+    ],
     deps = [
         "//contracts/deposit-contract:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
@@ -26,10 +42,4 @@ go_library(
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
-)
-
-go_binary(
-    name = "endtoend",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
 )
