@@ -104,7 +104,7 @@ func StartEth1(t *testing.T) (common.Address, string) {
 	}
 
 	args := []string{
-		"--datadir=/tmp/e2e/eth1data",
+		fmt.Sprintf("--datadir=%s/e2e/eth1data", testutil.TempDir()),
 		"--dev.period=4",
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
@@ -135,11 +135,11 @@ func StartEth1(t *testing.T) (common.Address, string) {
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", "/tmp/e2e/eth1data/keystore").Output()
+	fileName, err := exec.Command("ls", path.Join(testutil.TempDir(), "e2e/eth1data/keystore")).Output()
 	if err != nil {
 		t.Fatal(err)
 	}
-	keystorePath := fmt.Sprintf("/tmp/e2e/eth1data/keystore/%s", strings.TrimSpace(string(fileName)))
+	keystorePath := path.Join(testutil.TempDir(), fmt.Sprintf("e2e/eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +184,7 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 			"--no-genesis-delay",
 			"--http-web3provider=http://127.0.0.1:8545",
 			"--web3provider=ws://127.0.0.1:8546",
-			fmt.Sprintf("--datadir=/tmp/e2e/eth2-beacon-node-%d", i),
+			fmt.Sprintf("--datadir=%s/e2e/eth2-beacon-node-%d", testutil.TempDir(), i),
 			fmt.Sprintf("--deposit-contract=%s", contractAddress.Hex()),
 			fmt.Sprintf("--rpc-port=%d", 4000+i),
 			fmt.Sprintf("--monitoring-port=%d", 8080+i),
@@ -198,7 +198,7 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 		}
 
 		cmd := exec.Command(binaryPath, args...)
-		file, err := os.Create(fmt.Sprintf("/tmp/e2e/beacon-%d.log", i))
+		file, err := os.Create(path.Join(testutil.TempDir(), fmt.Sprintf("e2e/beacon-%d.log", i)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -227,7 +227,7 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 
 		nodeInfo[i] = &beaconNodeInfo{
 			processID:   cmd.Process.Pid,
-			datadir:     fmt.Sprintf("/tmp/e2e/eth2-beacon-node-%d", i),
+			datadir:     fmt.Sprintf("%s/e2e/eth2-beacon-node-%d", testutil.TempDir(), i),
 			rpcPort:     4000 + i,
 			monitorPort: 8080 + i,
 			grpcPort:    3200 + i,
@@ -253,7 +253,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 				"accounts",
 				"create",
 				"--password=e2etest",
-				fmt.Sprintf("--keystore-path=/tmp/e2e/valkeys%d/", n),
+				fmt.Sprintf("--keystore-path=%s/e2e/valkeys%d/", testutil.TempDir(), n),
 			}
 			if err := exec.Command(binaryPath, args...).Start(); err != nil {
 				t.Fatal(err)
@@ -264,7 +264,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 	log.Printf("%d accounts created\n", validatorNum)
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(fmt.Sprintf("/tmp/e2e/vals%d.log", n))
+		file, err := os.Create(path.Join(testutil.TempDir(), fmt.Sprintf("e2e/vals%d.log", n)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -273,7 +273,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 			"//validator",
 			"--",
 			"--password=e2etest",
-			fmt.Sprintf("--keystore-path=/tmp/e2e/valkeys%d/", n),
+			fmt.Sprintf("--keystore-path=%s/e2e/valkeys%d/",testutil.TempDir(), n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
@@ -287,7 +287,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
-	client, err := rpc.Dial("/tmp/e2e/eth1data/geth.ipc")
+	client, err := rpc.Dial(path.Join(testutil.TempDir(), "e2e/eth1data/geth.ipc"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 
 	validatorKeys := make(map[string]*prysmKeyStore.Key)
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		prysmKeystorePath := fmt.Sprintf("/tmp/e2e/valkeys%d/", n)
+		prysmKeystorePath := path.Join(testutil.TempDir(), fmt.Sprintf("e2e/valkeys%d/", n))
 		store := prysmKeyStore.NewKeystore(prysmKeystorePath)
 		prefix := params.BeaconConfig().ValidatorPrivkeyFileName
 		keysForNode, err := store.GetKeys(prysmKeystorePath, prefix, "e2etest")
