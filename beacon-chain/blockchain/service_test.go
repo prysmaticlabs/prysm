@@ -199,13 +199,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
-	client := &mockClient{}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
-		Reader:          client,
-		Client:          client,
-		Logger:          client,
 	})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
@@ -354,11 +350,26 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
+	genesis := b.NewGenesisBlock([]byte{})
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Fatal(err)
+	}
+
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot}
+	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
 	headRoot, _ := ssz.SigningRoot(headBlock)
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, headBlock); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
