@@ -8,6 +8,7 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -45,9 +46,13 @@ func (g *Gateway) Start() {
 	}
 
 	g.conn = conn
-
-	gwmux := gwruntime.NewServeMux()
-	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{} {
+	
+	gwmux := gwruntime.NewServeMux(gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{OrigName:false}))
+	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
+		ethpb.RegisterNodeHandler,
+		ethpb.RegisterBeaconChainHandler,
+		ethpb.RegisterBeaconNodeValidatorHandler,
+	} {
 		if err := f(ctx, gwmux, conn); err != nil {
 			log.WithError(err).Error("Failed to start gateway")
 			g.startFailure = err

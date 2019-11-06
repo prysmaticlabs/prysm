@@ -283,10 +283,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(s.FinalizedCheckpt().Root)); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
-	}
-
 	s.headBlock = genesisBlk
 	s.headState = genesisState
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]

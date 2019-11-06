@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -62,6 +63,9 @@ func NewActiveCountCache() *ActiveCountCache {
 // ActiveCountInEpoch fetches ActiveCountByEpoch by epoch. Returns true with a
 // reference to the ActiveCountInEpoch info, if exists. Otherwise returns false, nil.
 func (c *ActiveCountCache) ActiveCountInEpoch(epoch uint64) (uint64, error) {
+	if !featureconfig.Get().EnableActiveCountCache {
+		return params.BeaconConfig().FarFutureEpoch, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.activeCountCache.GetByKey(strconv.Itoa(int(epoch)))

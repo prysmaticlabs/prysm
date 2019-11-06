@@ -210,7 +210,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "7e767fb53d02ea220428a6cc0850ee6e17d71bb1",
+    commit = "58b2f86b0f02f06e634db06dee0c838ad41849f8",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1202,7 +1202,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "b4ca5785e074dd8fed39f18a61aae0318b57b4b0",
+    commit = "1205871db17ccc2fb824fc6dfa40d01c48fb6a7e",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
