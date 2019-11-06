@@ -35,13 +35,13 @@ var (
 
 // Committee defines the committee per epoch and shard.
 type Committee struct {
-	StartShard     uint64
+	CommitteeIndex uint64
 	CommitteeCount uint64
 	Epoch          uint64
 	Committee      []uint64
 }
 
-// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and shard.
+// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and committee.
 type CommitteeCache struct {
 	CommitteeCache *cache.FIFO
 	lock           sync.RWMutex
@@ -64,8 +64,8 @@ func NewCommitteeCache() *CommitteeCache {
 	}
 }
 
-// ShuffledIndices fetches the shuffled indices by epoch and shard. Every list of indices
-// represent one committee. Returns true if the list exists with epoch and shard. Otherwise returns false, nil.
+// ShuffledIndices fetches the shuffled indices by epoch and committee. Every list of indices
+// represent one committee. Returns true if the list exists with epoch and committee. Otherwise returns false, nil.
 func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil, nil
@@ -174,8 +174,8 @@ func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
 	return item.CommitteeCount, true, nil
 }
 
-// StartShard returns the start shard number in a given epoch as stored in cache.
-func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
+// CommitteeIndex returns the committee index in a given epoch as stored in cache.
+func (c *CommitteeCache) CommitteeIndex(epoch uint64) (uint64, bool, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return 0, false, nil
 	}
@@ -198,7 +198,7 @@ func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
 		return 0, false, ErrNotCommittee
 	}
 
-	return item.StartShard, true, nil
+	return item.CommitteeIndex, true, nil
 }
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.

@@ -689,7 +689,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	epoch := uint64(1)
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
+	comitteeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
 
@@ -702,7 +702,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 
 	var atts []*pb.PendingAttestation
-	for i := uint64(0); i < shardCount; i++ {
+	for i := uint64(0); i < comitteeCount; i++ {
 		atts = append(atts, &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{},
 			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -723,7 +723,7 @@ func BenchmarkProcessEpoch65536Validators(b *testing.B) {
 	}
 
 	// Precache the shuffled indices
-	for i := uint64(0); i < shardCount; i++ {
+	for i := uint64(0); i < comitteeCount; i++ {
 		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
@@ -743,7 +743,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	helpers.ClearAllCaches()
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	shardCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
+	committeeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -878,7 +878,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 
 	// Precache the shuffled indices
-	for i := uint64(0); i < shardCount; i++ {
+	for i := uint64(0); i < committeeCount; i++ {
 		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
 			b.Fatal(err)
 		}

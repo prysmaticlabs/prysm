@@ -506,40 +506,27 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//    """
-//    Process ``Attestation`` operation.
-//    """
 //    data = attestation.data
-//    assert data.crosslink.shard < SHARD_COUNT
+//    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
-//    attestation_slot = get_attestation_data_slot(state, data)
-//    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
-//
-//    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
+//    committee = get_beacon_committee(state, data.slot, data.index)
 //    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
-//        aggregation_bitfield=attestation.aggregation_bitfield,
-//        inclusion_delay=state.slot - attestation_slot,
+//        aggregation_bits=attestation.aggregation_bits,
+//        inclusion_delay=state.slot - data.slot,
 //        proposer_index=get_beacon_proposer_index(state),
 //    )
 //
-//    if data.target_epoch == get_current_epoch(state):
-//      assert data.source == state.current_justified_checkpoint
-//      parent_crosslink = state.current_crosslinks[data.crosslink.shard]
-//      state.current_epoch_attestations.append(pending_attestation)
+//    if data.target.epoch == get_current_epoch(state):
+//        assert data.source == state.current_justified_checkpoint
+//        state.current_epoch_attestations.append(pending_attestation)
 //    else:
-//      assert data.source == state.previous_justified_checkpoint
-//      parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
-//      state.previous_epoch_attestations.append(pending_attestation)
-//
-//    # Check crosslink against expected parent crosslink
-//    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
-//    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
-//    assert data.crosslink.end_epoch == min(data.target.epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
-//    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
+//        assert data.source == state.previous_justified_checkpoint
+//        state.previous_epoch_attestations.append(pending_attestation)
 //
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
