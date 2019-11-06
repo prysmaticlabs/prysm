@@ -52,42 +52,66 @@ func TestEndToEnd(t *testing.T) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
 
+	fmt.Printf("Path for this test is %s\n", tmpPath)
+
 	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
 	beaconNodes := StartBeaconNodes(t, tmpPath, contractAddr, 1)
-	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 8)
+	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 16)
 
-	time.Sleep(1 * time.Minute)
+	log.Println("Sleeping")
+	time.Sleep(15 * time.Second)
+	log.Println("Woke")
 
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 7; i++ {
 		in := new(ptypes.Empty)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), in)
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Println(chainHead.BlockSlot)
+		fmt.Printf("Current Slot %d\n", chainHead.BlockSlot)
+		fmt.Printf("Current Epoch: %d\n", chainHead.BlockSlot/params.BeaconConfig().SlotsPerEpoch)
 
-		// if AfterChainStart(chainHead) {
-		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
-		// 		t.Fatal(err)
-		// 	}
+		if AfterChainStart(chainHead) {
+			fmt.Println("Running chainstart test")
+			t.Run("validators activate", func(t *testing.T) {
+				if err := ValidatorsActivate(beaconClient, 8); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+
+		if AfterNEpochs(chainHead, 4) {
+			fmt.Println("Running finalization test")
+			t.Run("finalization occurs", func(t *testing.T) {
+				if err := FinalizationOccurs(beaconClient); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+
+		// if AfterNEpochs(chainHead, 6) {
+		// 	fmt.Println("Running participation test")
+		// 	// Requesting last epoch here since I can't guarantee which slot this request is being made.
+		// 	t.Run("validators are participating", func(t *testing.T) {
+		// 		if err := ValidatorsParticipating(beaconClient, 5); err != nil {
+		// 			t.Fatal(err)
+		// 		}
+		// 	})
 		// }
 
-		// if AfterChainStart(chainHead) {
-		// 	if err := ValidatorsActivate(beaconClient, 8); err != nil {
-		// 		t.Fatal(err)
-		// 	}
-		// }
+		fmt.Println("")
 
-		time.Sleep(time.Second * 6)
+		epochSeconds := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
+		time.Sleep(time.Second * time.Duration(epochSeconds))
 	}
 }
 
@@ -100,6 +124,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
+		"--dev.period=4",
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
@@ -110,7 +135,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		"--dev",
 	}
 	cmd := exec.Command(binaryPath, args...)
-	file, err := os.Create(path.Join("/tmp", "eth1.log"))
+	file, err := os.Create(path.Join(tmpPath, "eth1.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,6 +199,7 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 	nodeInfo := make([]*beaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		args := []string{
+			// "--minimal-config",
 			"--no-discovery",
 			"--no-genesis-delay",
 			"--http-web3provider=http://127.0.0.1:8545",
@@ -201,7 +227,7 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(24 * time.Second)
+		time.Sleep(30 * time.Second)
 
 		response, err := http.Get("http://127.0.0.1:8080/p2p")
 		if err != nil {
@@ -276,7 +302,7 @@ func InitializeValidators(
 			"--password=e2etest",
 			fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconNodes[n].rpcPort),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
