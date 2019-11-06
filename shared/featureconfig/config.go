@@ -36,15 +36,15 @@ type Flag struct {
 	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableAttestationCache     bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache    bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache             bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache       bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableShuffledIndexCache   bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
-	EnableActiveIndicesCache bool // EnableActiveIndicesCache.
-	EnableActiveCountCache   bool // EnableActiveCountCache.
+	EnableCommitteeCache       bool // EnableCommitteeCache to cache committee computation.
+	EnableActiveIndicesCache   bool // EnableActiveIndicesCache.
+	EnableActiveCountCache     bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flag

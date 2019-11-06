@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -41,18 +40,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	defer cancel()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 
 	var lastEmptyRequests int
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
-
-		// shuffle peers to prevent a bad peer from
-		// stalling sync with invalid blocks
-		randGenerator.Shuffle(len(peers), func(i, j int) {
-			peers[i], peers[j] = peers[j], peers[i]
-		})
 
 		// request a range of blocks to be requested from multiple peers.
 		// Example:
@@ -170,10 +162,6 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			logSyncStatus(genesis, blk, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
-				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.ParentRoot)
-				continue
-			}
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
 					return err

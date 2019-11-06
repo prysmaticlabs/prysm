@@ -39,7 +39,6 @@ type Config struct {
 type InitialSync struct {
 	chain        blockchainService
 	p2p          p2p.P2P
-	db           db.Database
 	synced       bool
 	chainStarted bool
 }
@@ -50,7 +49,6 @@ func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
 		chain: cfg.Chain,
 		p2p:   cfg.P2P,
-		db:    cfg.DB,
 	}
 }
 
