@@ -66,7 +66,7 @@ func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
 func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	if featureconfig.Get().EnableNewCache {
-		indices, err := committeeCache.ShuffledIndices(epoch, index)
+		indices, err := committeeCache.ShuffledIndices(slot, index)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}
@@ -319,7 +319,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		count, err := CommitteeCountAtSlot(state, state.Slot)
+		count, err := CommitteeCountAtSlot(state, epoch * params.BeaconConfig().SlotsPerEpoch)
 		if err != nil {
 			return err
 		}

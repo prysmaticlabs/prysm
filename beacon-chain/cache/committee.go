@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -33,15 +34,14 @@ var (
 	})
 )
 
-// Committee defines the committee per epoch and shard.
+// Committee defines the committee per epoch and index.
 type Committee struct {
-	CommitteeIndex uint64
 	CommitteeCount uint64
 	Epoch          uint64
 	Committee      []uint64
 }
 
-// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and committee.
+// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and committee index.
 type CommitteeCache struct {
 	CommitteeCache *cache.FIFO
 	lock           sync.RWMutex
@@ -64,15 +64,17 @@ func NewCommitteeCache() *CommitteeCache {
 	}
 }
 
-// ShuffledIndices fetches the shuffled indices by epoch and committee. Every list of indices
-// represent one committee. Returns true if the list exists with epoch and committee. Otherwise returns false, nil.
-func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, error) {
+// ShuffledIndices fetches the shuffled indices by slot and committee index. Every list of indices
+// represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
+func (c *CommitteeCache) ShuffledIndices(slot uint64, index uint64) ([]uint64, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil, nil
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+
+	epoch := int(slot/params.BeaconConfig().SlotsPerEpoch)
+	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(epoch))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +91,9 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, 
 		return nil, ErrNotCommittee
 	}
 
-	start, end := startEndIndices(item, index)
+	committeeCountPerSlot := item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch
+	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
+	start, end := startEndIndices(item, indexOffSet)
 	return item.Committee[start:end], nil
 }
 
@@ -147,13 +151,14 @@ func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
 	return false, nil
 }
 
-// CommitteeCount returns the total number of committees in a given epoch as stored in cache.
-func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
+// CommitteeCount returns the total number of committees in a given slot as stored in cache.
+func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return 0, false, nil
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+	epoch := int(slot/params.BeaconConfig().SlotsPerEpoch)
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
 	if err != nil {
 		return 0, false, err
@@ -171,34 +176,7 @@ func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
 		return 0, false, ErrNotCommittee
 	}
 
-	return item.CommitteeCount, true, nil
-}
-
-// CommitteeIndex returns the committee index in a given epoch as stored in cache.
-func (c *CommitteeCache) CommitteeIndex(epoch uint64) (uint64, bool, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return 0, false, nil
-	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
-	if err != nil {
-		return 0, false, err
-	}
-
-	if exists {
-		CommitteeCacheHit.Inc()
-	} else {
-		CommitteeCacheMiss.Inc()
-		return 0, false, nil
-	}
-
-	item, ok := obj.(*Committee)
-	if !ok {
-		return 0, false, ErrNotCommittee
-	}
-
-	return item.CommitteeIndex, true, nil
+	return item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch, true, nil
 }
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.
