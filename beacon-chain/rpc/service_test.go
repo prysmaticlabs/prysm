@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -30,6 +31,7 @@ func TestLifecycle_OK(t *testing.T) {
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
 		StateFeedListener:   &mock.ChainService{},
+		POWChainService:     &mockPOW.POWChain{},
 	})
 
 	rpcService.Start()
@@ -49,6 +51,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 		BlockReceiver:       &mock.ChainService{},
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
+		POWChainService:     &mockPOW.POWChain{},
 		StateFeedListener:   &mock.ChainService{},
 	})
 
@@ -81,6 +84,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
 		StateFeedListener:   &mock.ChainService{},
+		POWChainService:     &mockPOW.POWChain{},
 	})
 
 	rpcService.Start()

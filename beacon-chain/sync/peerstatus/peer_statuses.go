@@ -44,7 +44,6 @@ func Set(pid peer.ID, status *pb.Status) {
 		status:      status,
 		lastUpdated: roughtime.Now(),
 	}
-	failureCount[pid] = 0
 }
 
 // Delete peer status from cache. Threadsafe.
@@ -88,10 +87,10 @@ func IncreaseFailureCount(pid peer.ID) {
 	defer lock.Unlock()
 	count, ok := failureCount[pid]
 	if !ok {
+		failureCount[pid] = 1
 		return
 	}
-	count++
-	failureCount[pid] = count
+	failureCount[pid] = count + 1
 }
 
 // FailureCount returns the failure count for the particular peer.

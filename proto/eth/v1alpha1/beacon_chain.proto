@@ -251,9 +251,21 @@ message GetValidatorBalancesRequest {
         
     // Validator indices to filter validators for the given epoch.
     repeated uint64 indices = 4;
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 5;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 6;
 }
 
 message ValidatorBalances {
+    // Epoch which the state was considered to determine the validator balances.
+    uint64 epoch = 1;
+
     message Balance {
         // Validator's 48 byte BLS public key. 
         bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
@@ -265,7 +277,14 @@ message ValidatorBalances {
         uint64 balance = 3;
     }
 
-    repeated Balance balances = 1;
+    repeated Balance balances = 2;
+
+    // A pagination token returned from a previous call to `GetListValidatorBalances`
+    // that indicates from where listing should continue.
+    string next_page_token = 3;
+
+    // Total count of Validators matching the request filter.
+    int32 total_size = 4;
 }
 
 message GetValidatorsRequest {

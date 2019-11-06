@@ -112,7 +112,8 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	}
 
 	res = &ethpb.AttestationData{
-		// TODO(#3865): Fill in rest of the missing information
+		Slot: req.Slot,
+		Index: req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{

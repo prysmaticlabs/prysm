@@ -98,12 +98,26 @@ To understand the role that both the beacon node and validator play in Prysm, se
 To start your beacon node, issue the following command:
 
 ```
-docker run -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
+docker run -v $HOME/prysm-data:/data -p 4000:4000 \
+  --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --no-genesis-delay \
   --datadir=/data
 ```
 
-The beacon node can be halted by either using `Ctrl+c` or with the command:
+(Optional) If you want to enable gRPC, then run this command instead of the one above:
+
+```
+docker run -v $HOME/prysm-data:/data -p 4000:4000 -p 7000:7000 \
+  --name beacon-node \
+  gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --datadir=/data \
+  --no-genesis-delay \
+  --grpc-gateway-port=7000
+```
+
+You can stop the beacon node using `Ctrl+c` or with the following command:
+=======
 
 ```
 docker stop beacon-node
@@ -121,13 +135,13 @@ To delete a corrupted container, issue the command:
 docker rm beacon-node
 ```
 
-To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
+To recreate a deleted container and refresh the chain database, issue the start command with an additional `--force-clear-db` parameter:
 
 ```
 docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
-  --clear-db
+  --force-clear-db
 ```
 
 **Docker on Windows:**
@@ -142,14 +156,14 @@ docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
 
 4) To run the beacon node, issue the command:
 ```
-docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data
 ```
 
 ### Running via Bazel
 
 1) To start your Beacon Node with Bazel, issue the command:
 ```
-bazel run //beacon-chain -- --clear-db --datadir=/tmp/prysm-data
+bazel run //beacon-chain -- --datadir=/tmp/prysm-data
 ```
 This will sync up the Beacon Node with the latest head block in the network. Note that the beacon node must be **completely synced** before attempting to initialise a validator client, otherwise the validator will not be able to complete the deposit and funds will be lost.
 
