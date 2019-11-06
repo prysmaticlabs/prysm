@@ -88,7 +88,6 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
-
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
