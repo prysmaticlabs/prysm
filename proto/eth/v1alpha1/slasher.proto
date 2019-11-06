@@ -47,3 +47,12 @@ message ProposerSlashingRequest {
 message ProposerSlashingResponse {
     repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing=1;
 }
+
+message MinMaxSpan {
+    uint32 min_span=1;
+    uint32 max_span=2;
+}
+
+message EpochSpanMap{
+    map<uint64, MinMaxSpan> epoch_span_map = 1;
+}

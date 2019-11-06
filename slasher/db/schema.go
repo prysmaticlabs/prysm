@@ -10,6 +10,7 @@ var (
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
 	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
 	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
+	validatorsMinMaxSpanBucket        = []byte("validators-min-max-span-bucket")
 )
 
 func encodeEpochValidatorID(epoch uint64, validatorID uint64) []byte {
