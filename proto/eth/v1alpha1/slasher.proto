@@ -41,9 +41,23 @@ message ValidatorIDToIdxAttList {
 }
 
 message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.BeaconBlockHeader block_header=1;
-    uint64 validator_index=2;
+    ethereum.eth.v1alpha1.BeaconBlockHeader block_header = 1;
+    uint64 validator_index = 2;
 }
 message ProposerSlashingResponse {
-    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing=1;
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
+// In order to detect surrounded attestation we need to compare
+// each attestation source to those spans
+// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
+// for further details.
+message MinMaxSpan {
+    uint32 min_span = 1;
+    uint32 max_span = 2;
+}
+// every validator will have his own spans map containing min and max value for each epoch
+// in order to detect slashable attestation as quick as possible.
+message EpochSpanMap {
+    // uint64 is for storing the epoch
+    map<uint64, MinMaxSpan> epoch_span_map = 1;
 }
