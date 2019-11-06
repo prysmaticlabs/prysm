@@ -52,7 +52,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *ethpb.Epoch
 	return err
 }
 
-// DeleteValidatorSpanMap deletes a validator span map using the validator indices as bucket key.
+// DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
