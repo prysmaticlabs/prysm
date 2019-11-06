@@ -151,7 +151,7 @@ func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
 	return false, nil
 }
 
-// CommitteeCount returns the total number of committees in a given slot as stored in cache.
+// CommitteeCountPerSlot returns the number of committees in a given slot as stored in cache.
 func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return 0, false, nil
