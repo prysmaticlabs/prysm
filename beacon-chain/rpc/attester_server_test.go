@@ -129,6 +129,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: 2,
@@ -210,6 +211,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	expectedInfo := &ethpb.AttestationData{
+		Slot: req.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),

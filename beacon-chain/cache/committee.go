@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -66,6 +67,10 @@ func NewCommitteeCache() *CommitteeCache {
 // ShuffledIndices fetches the shuffled indices by epoch and shard. Every list of indices
 // represent one committee. Returns true if the list exists with epoch and shard. Otherwise returns false, nil.
 func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -92,6 +97,9 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
 func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.CommitteeCache.AddIfNotPresent(committee); err != nil {
@@ -103,6 +111,9 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
 
 // Epochs returns the epochs stored in the committee cache. These are the keys to the cache.
 func (c *CommitteeCache) Epochs() ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache {
+		return nil, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -119,6 +130,9 @@ func (c *CommitteeCache) Epochs() ([]uint64, error) {
 
 // EpochInCache returns true if an input epoch is part of keys in cache.
 func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return false, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -136,6 +150,9 @@ func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
 
 // CommitteeCount returns the total number of committees in a given epoch as stored in cache.
 func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return 0, false, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -160,6 +177,9 @@ func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
 
 // StartShard returns the start shard number in a given epoch as stored in cache.
 func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return 0, false, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -184,6 +204,10 @@ func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.
 func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))

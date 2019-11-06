@@ -11,7 +11,6 @@ import (
 
 func TestServer_IsSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -57,7 +56,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 
 	slasherServer := &Server{
@@ -95,7 +93,6 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 
 func TestServer_DoubleBlock(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -126,7 +123,6 @@ func TestServer_DoubleBlock(t *testing.T) {
 
 func TestServer_SameSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
-
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{

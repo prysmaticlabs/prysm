@@ -347,6 +347,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		headFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{},
 		},
+		eth1InfoFetcher: p,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -419,6 +420,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -494,6 +496,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -573,6 +576,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -642,6 +646,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		beaconDB:          db,
 		chainStartFetcher: p,
 		blockFetcher:      p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
@@ -710,6 +715,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:          db,
 		chainStartFetcher: p,
+		eth1InfoFetcher:   p,
 		depositFetcher:    depositCache,
 		blockFetcher:      p,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
@@ -780,6 +786,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:          db,
 		chainStartFetcher: p,
+		eth1InfoFetcher:   p,
 		blockFetcher:      p,
 		depositFetcher:    depositCache,
 		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
@@ -802,7 +809,8 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	pubKey := []byte{'A'}
 	depositCache := depositcache.NewDepositCache()
 	vs := &ValidatorServer{
-		depositFetcher: depositCache,
+		depositFetcher:  depositCache,
+		eth1InfoFetcher: &mockPOW.POWChain{},
 		headFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{
 				Slot: 0,
@@ -845,6 +853,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		ctx:                ctx,
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		depositFetcher:     depositcache.NewDepositCache(),
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
@@ -949,6 +958,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
@@ -1062,6 +1072,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		chainStartFetcher:  &mockPOW.POWChain{},
 		blockFetcher:       &mockPOW.POWChain{},
+		eth1InfoFetcher:    &mockPOW.POWChain{},
 		depositFetcher:     depositCache,
 		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}

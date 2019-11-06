@@ -224,12 +224,12 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 1.6 * 1e9
+	demoConfig.EjectionBalance = 3 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
 
 	return demoConfig
 }
