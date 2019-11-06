@@ -70,7 +70,6 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, index uint64) ([]uint64, 
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil, nil
 	}
-
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))

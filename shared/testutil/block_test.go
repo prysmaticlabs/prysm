@@ -25,7 +25,6 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		MaxDeposits:          0,
 		MaxVoluntaryExits:    0,
 	}
-
 	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {

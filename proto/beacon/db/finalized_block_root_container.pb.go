@@ -5,16 +5,9 @@ package db
 
 import (
 	fmt "fmt"
-<<<<<<< HEAD
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
-=======
-	io "io"
-	math "math"
-
-	proto "github.com/gogo/protobuf/proto"
->>>>>>> 9c1e3c260a9be24657336a9c3c71c9f5ad776dd6
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
