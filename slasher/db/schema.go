@@ -9,6 +9,11 @@ var (
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
 	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
+	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
+	// in order to quickly detect surround and surrounded attestations we need to store
+	// the min and max span for each validator for each epoch.
+	// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
+	validatorsMinMaxSpanBucket = []byte("validators-min-max-span-bucket")
 )
 
 func encodeEpochValidatorID(epoch uint64, validatorID uint64) []byte {
