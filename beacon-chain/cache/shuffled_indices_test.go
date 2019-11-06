@@ -4,7 +4,15 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
+
+func init() {
+	fc := featureconfig.Get()
+	fc.EnableShuffledIndexCache = true
+	featureconfig.Init(fc)
+}
 
 func TestShuffleKeyFn_OK(t *testing.T) {
 	sInfo := &IndicesByIndexSeed{

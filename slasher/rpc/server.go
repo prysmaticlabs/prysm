@@ -3,9 +3,10 @@ package rpc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -30,6 +31,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attesta
 // IsSlashableBlock returns a proposer slashing if the block header submitted is
 // a slashable proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *ethpb.ProposerSlashingRequest) (*ethpb.ProposerSlashingResponse, error) {
+	//TODO(#3133): add signature validation
 	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
 	blockHeaders, err := ss.SlasherDb.BlockHeader(epoch, psr.ValidatorIndex)
 	if err != nil {
