@@ -18,7 +18,7 @@ func createEpochSpanMap(enc []byte) (*ethpb.EpochSpanMap, error) {
 }
 
 // ValidatorSpansMap accepts validator indices and returns the corresponding spans
-// map for slashing detection and update.
+// map for slashing detection.
 // Returns nil if the span map for this validator index does not exist.
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, error) {
 	var sm *ethpb.EpochSpanMap
