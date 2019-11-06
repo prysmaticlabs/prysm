@@ -8,8 +8,8 @@ import (
 )
 
 type spanMapTestStruct struct {
-	validatorID uint64
-	spanMap     *ethpb.EpochSpanMap
+	validatorIdx uint64
+	spanMap      *ethpb.EpochSpanMap
 }
 
 var spanTests []spanMapTestStruct
@@ -17,7 +17,7 @@ var spanTests []spanMapTestStruct
 func init() {
 	spanTests = []spanMapTestStruct{
 		{
-			validatorID: 1,
+			validatorIdx: 1,
 			spanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1: {MinSpan: 10, MaxSpan: 20},
@@ -27,7 +27,7 @@ func init() {
 			},
 		},
 		{
-			validatorID: 2,
+			validatorIdx: 2,
 			spanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1: {MinSpan: 10, MaxSpan: 20},
@@ -37,7 +37,7 @@ func init() {
 			},
 		},
 		{
-			validatorID: 3,
+			validatorIdx: 3,
 			spanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1: {MinSpan: 10, MaxSpan: 20},
@@ -49,12 +49,12 @@ func init() {
 	}
 }
 
-func TestNilDBValidatorSpanMap(t *testing.T) {
+func TestValidatorSpanMap_NilDB(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 
-	validatorID := uint64(1)
-	vsm, err := db.ValidatorSpansMap(validatorID)
+	validatorIdx := uint64(1)
+	vsm, err := db.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
 	}
@@ -63,16 +63,16 @@ func TestNilDBValidatorSpanMap(t *testing.T) {
 	}
 }
 
-func TestSaveValidatorSpanMap(t *testing.T) {
+func TestValidatorSpanMap_Save(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(tt.validatorID, tt.spanMap)
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
-		sm, err := db.ValidatorSpansMap(tt.validatorID)
+		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
@@ -83,31 +83,31 @@ func TestSaveValidatorSpanMap(t *testing.T) {
 	}
 }
 
-func TestDeleteValidatorSpanMap(t *testing.T) {
+func TestValidatorSpanMap_Delete(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 
-		err := db.SaveValidatorSpansMap(tt.validatorID, tt.spanMap)
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
 
 	for _, tt := range spanTests {
-		sm, err := db.ValidatorSpansMap(tt.validatorID)
+		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v", sm)
 		}
-		err = db.DeleteValidatorSpanMap(tt.validatorID)
+		err = db.DeleteValidatorSpanMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}
-		sm, err = db.ValidatorSpansMap(tt.validatorID)
+		sm, err = db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
