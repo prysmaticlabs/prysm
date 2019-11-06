@@ -56,7 +56,7 @@ func TestNilDBValidatorSpanMap(t *testing.T) {
 	validatorID := uint64(1)
 	vsm, err := db.ValidatorSpansMap(validatorID)
 	if err != nil {
-		t.Fatalf("nil ValidatorSpansMap should not return error: %v", err)
+		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
 	}
 	if vsm.EpochSpanMap != nil {
 		t.Fatal("ValidatorSpansMap should return nil")
@@ -70,15 +70,15 @@ func TestSaveValidatorSpanMap(t *testing.T) {
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorID, tt.spanMap)
 		if err != nil {
-			t.Fatalf("save validator span map failed: %v", err)
+			t.Fatalf("Save validator span map failed: %v", err)
 		}
 		sm, err := db.ValidatorSpansMap(tt.validatorID)
 		if err != nil {
-			t.Fatalf("failed to get validator span map: %v", err)
+			t.Fatalf("Failed to get validator span map: %v", err)
 		}
 
 		if sm == nil || !proto.Equal(sm, tt.spanMap) {
-			t.Fatalf("get should return validator span map: %v got: %v", tt.spanMap, sm)
+			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
 	}
 }
@@ -91,21 +91,21 @@ func TestDeleteValidatorSpanMap(t *testing.T) {
 
 		err := db.SaveValidatorSpansMap(tt.validatorID, tt.spanMap)
 		if err != nil {
-			t.Fatalf("save validator span map failed: %v", err)
+			t.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
 
 	for _, tt := range spanTests {
 		sm, err := db.ValidatorSpansMap(tt.validatorID)
 		if err != nil {
-			t.Fatalf("failed to get validator span map: %v", err)
+			t.Fatalf("Failed to get validator span map: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.spanMap) {
-			t.Fatalf("get should return validator span map: %v", sm)
+			t.Fatalf("Get should return validator span map: %v", sm)
 		}
 		err = db.DeleteValidatorSpanMap(tt.validatorID)
 		if err != nil {
-			t.Fatalf("delete validator span map error: %v", err)
+			t.Fatalf("Delete validator span map error: %v", err)
 		}
 		sm, err = db.ValidatorSpansMap(tt.validatorID)
 		if err != nil {

@@ -57,7 +57,7 @@ message MinMaxSpan {
 }
 // every validator will have his own spans map containing min and max value for each epoch
 // in order to detect slashable attestation as quick as possible.
-message EpochSpanMap{
+message EpochSpanMap {
     // uint64 is for storing the epoch
     map<uint64, MinMaxSpan> epoch_span_map = 1;
 }
