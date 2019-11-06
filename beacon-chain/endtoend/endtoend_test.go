@@ -5,33 +5,29 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"path"
-	"testing"
-
-	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pborman/uuid"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
-	// "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -53,14 +49,13 @@ type beaconNodeInfo struct {
 }
 
 func TestEndToEnd(t *testing.T) {
-	// Clear out the e2e folder so there's no conflicting data.
-	if err := exec.Command("rm", "-rf", path.Join(testutil.TempDir(), "e2e")).Run(); err != nil {
-		t.Fatal(err)
-	}
+	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String())
+	os.MkdirAll(tmpPath, os.ModePerm)
+
 	params.UseDemoBeaconConfig()
-	contractAddr, keystorePath := StartEth1(t)
-	StartBeaconNodes(t, contractAddr, 1)
-	InitializeValidators(t, contractAddr, keystorePath, 1, 8)
+	contractAddr, keystorePath := StartEth1(t, tmpPath)
+	beaconNodes := StartBeaconNodes(t, tmpPath, contractAddr, 1)
+	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 8)
 
 	time.Sleep(1 * time.Minute)
 
@@ -97,15 +92,14 @@ func TestEndToEnd(t *testing.T) {
 }
 
 // StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
-func StartEth1(t *testing.T) (common.Address, string) {
+func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		t.Fatal("go-ethereum binary not found")
 	}
 
 	args := []string{
-		fmt.Sprintf("--datadir=%s/e2e/eth1data", testutil.TempDir()),
-		"--dev.period=4",
+		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
@@ -116,31 +110,30 @@ func StartEth1(t *testing.T) (common.Address, string) {
 		"--dev",
 	}
 	cmd := exec.Command(binaryPath, args...)
-	file, err := os.Create(path.Join(testutil.TempDir(), "eth1.log"))
+	file, err := os.Create(path.Join("/tmp", "eth1.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	cmd.Stdout = file
 	cmd.Stderr = file
 	if err := cmd.Start(); err != nil {
-		t.Log(binaryPath)
 		t.Fatal(err)
 	}
 	time.Sleep(12 * time.Second)
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.Dial(path.Join(testutil.TempDir(), "e2e/eth1data/geth.ipc"))
+	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(testutil.TempDir(), "e2e/eth1data/keystore")).Output()
+	fileName, err := exec.Command("ls", path.Join(tmpPath, "eth1data/keystore")).Output()
 	if err != nil {
 		t.Fatal(err)
 	}
-	keystorePath := path.Join(testutil.TempDir(), fmt.Sprintf("e2e/eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
+	keystorePath := path.Join(tmpPath, fmt.Sprintf("eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +164,7 @@ func StartEth1(t *testing.T) (common.Address, string) {
 }
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uint64) {
+func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Address, numNodes uint64) []*beaconNodeInfo {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -185,7 +178,7 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 			"--no-genesis-delay",
 			"--http-web3provider=http://127.0.0.1:8545",
 			"--web3provider=ws://127.0.0.1:8546",
-			fmt.Sprintf("--datadir=%s/e2e/eth2-beacon-node-%d", testutil.TempDir(), i),
+			fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, i),
 			fmt.Sprintf("--deposit-contract=%s", contractAddress.Hex()),
 			fmt.Sprintf("--rpc-port=%d", 4000+i),
 			fmt.Sprintf("--monitoring-port=%d", 8080+i),
@@ -199,7 +192,7 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 		}
 
 		cmd := exec.Command(binaryPath, args...)
-		file, err := os.Create(path.Join(testutil.TempDir(), fmt.Sprintf("e2e/beacon-%d.log", i)))
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", i)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -228,22 +221,32 @@ func StartBeaconNodes(t *testing.T, contractAddress common.Address, numNodes uin
 
 		nodeInfo[i] = &beaconNodeInfo{
 			processID:   cmd.Process.Pid,
-			datadir:     fmt.Sprintf("%s/e2e/eth2-beacon-node-%d", testutil.TempDir(), i),
+			datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, i),
 			rpcPort:     4000 + i,
 			monitorPort: 8080 + i,
 			grpcPort:    3200 + i,
 			multiAddr:   multiAddr,
 		}
 	}
+
+	return nodeInfo
 }
 
 // InitializeValidators sends the deposits to the eth1 chain and starts the validator clients.
-func InitializeValidators(t *testing.T, contractAddress common.Address, keystorePath string, beaconNodeNum uint64, validatorNum uint64) {
+func InitializeValidators(
+	t *testing.T,
+	tmpPath string,
+	contractAddress common.Address,
+	keystorePath string,
+	beaconNodes []*beaconNodeInfo,
+	validatorNum uint64,
+) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
 	}
 
+	beaconNodeNum := uint64(len(beaconNodes))
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
@@ -254,9 +257,9 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 				"accounts",
 				"create",
 				"--password=e2etest",
-				fmt.Sprintf("--keystore-path=%s/e2e/valkeys%d/", testutil.TempDir(), n),
+				fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
 			}
-			if err := exec.Command(binaryPath, args...).Start(); err != nil {
+			if err := exec.Command(binaryPath, args...).Run(); err != nil {
 				t.Fatal(err)
 			}
 			time.Sleep(4 * time.Second)
@@ -265,20 +268,17 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 	log.Printf("%d accounts created\n", validatorNum)
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(testutil.TempDir(), fmt.Sprintf("e2e/vals%d.log", n)))
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		args := []string{
-			"run",
-			"//validator",
-			"--",
 			"--password=e2etest",
-			fmt.Sprintf("--keystore-path=%s/e2e/valkeys%d/",testutil.TempDir(), n),
+			fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconNodes[n].rpcPort),
 		}
-		cmd := exec.Command("bazel", args...)
+		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
 		time.Sleep(10 * time.Second)
@@ -288,7 +288,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
-	client, err := rpc.Dial(path.Join(testutil.TempDir(), "e2e/eth1data/geth.ipc"))
+	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +314,7 @@ func InitializeValidators(t *testing.T, contractAddress common.Address, keystore
 
 	validatorKeys := make(map[string]*prysmKeyStore.Key)
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		prysmKeystorePath := path.Join(testutil.TempDir(), fmt.Sprintf("e2e/valkeys%d/", n))
+		prysmKeystorePath := path.Join(tmpPath, fmt.Sprintf("valkeys%d/", n))
 		store := prysmKeyStore.NewKeystore(prysmKeystorePath)
 		prefix := params.BeaconConfig().ValidatorPrivkeyFileName
 		keysForNode, err := store.GetKeys(prysmKeystorePath, prefix, "e2etest")

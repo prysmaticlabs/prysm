@@ -11,7 +11,9 @@ go_library(
         "usage.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
@@ -78,7 +80,10 @@ go_binary(
     name = "validator",
     embed = [":go_default_library"],
     pure = "on",  # Enabled unless there is a valid reason to include cgo dep.
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//validator:__subpackages__",
+        "//beacon-chain/endtoend:__pkg__",
+    ],
 )
 
 [go_binary(
