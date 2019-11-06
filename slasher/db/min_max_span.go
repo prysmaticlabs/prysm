@@ -45,7 +45,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *ethpb.Epoch
 			return errors.Wrap(err, "failed to marshal span map")
 		}
 		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to include the span map for validator idx: %v in the validators min max span bucket", validatorID)
+			return errors.Wrapf(err, "failed to include the span map for validator idx: %v in the validators min max span bucket", validatorIdx)
 		}
 		return err
 	})
