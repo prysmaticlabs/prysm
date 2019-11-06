@@ -49,7 +49,7 @@ type beaconNodeInfo struct {
 }
 
 func TestEndToEnd(t *testing.T) {
-	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String())
+	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
 
 	params.UseDemoBeaconConfig()
