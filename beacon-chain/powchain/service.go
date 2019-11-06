@@ -66,6 +66,7 @@ type ChainStartFetcher interface {
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
+	IsConnectedToETH1() bool
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -140,6 +141,7 @@ type Service struct {
 	depositedPubkeys        map[[48]byte]uint64
 	processingLock          sync.RWMutex
 	eth2GenesisTime         uint64
+	connectedETH1           bool
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -245,6 +247,11 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
+func (s *Service) IsConnectedToETH1() bool {
+	return s.connectedETH1
+}
+
 // DepositRoot returns the Merkle root of the latest deposit trie
 // from the ETH1.0 deposit contract.
 func (s *Service) DepositRoot() [32]byte {
@@ -335,6 +342,7 @@ func (s *Service) initializeConnection(powClient *ethclient.Client,
 func (s *Service) waitForConnection() {
 	err := s.connectToPowChain()
 	if err == nil {
+		s.connectedETH1 = true
 		log.WithFields(logrus.Fields{
 			"endpoint": s.eth1Endpoint,
 		}).Info("Connected to eth1 proof-of-work chain")
@@ -347,16 +355,18 @@ func (s *Service) waitForConnection() {
 		case <-ticker.C:
 			err := s.connectToPowChain()
 			if err == nil {
+				s.connectedETH1 = true
 				log.WithFields(logrus.Fields{
 					"endpoint": s.eth1Endpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
 				ticker.Stop()
-				break
+				return
 			}
 			log.WithError(err).Error("Could not connect to powchain endpoint")
 		case <-s.ctx.Done():
 			ticker.Stop()
-			log.Debug("Received cancelled context, existing powchain service")
+			log.Debug("Received cancelled context,closing existing powchain service")
+			return
 		}
 	}
 }
@@ -458,10 +468,13 @@ func (s *Service) run(done <-chan struct{}) {
 		case <-done:
 			s.isRunning = false
 			s.runError = nil
+			s.connectedETH1 = false
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
 			log.WithError(s.runError).Error("Subscription to new head notifier failed")
+			s.connectedETH1 = false
+			s.waitForConnection()
 			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
 			if err != nil {
 				log.WithError(err).Error("Unable to re-subscribe to incoming ETH1.0 chain headers")

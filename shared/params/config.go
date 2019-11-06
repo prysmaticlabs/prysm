@@ -234,7 +234,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MinGenesisActiveValidatorCount = 8
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 2}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
 
 	return demoConfig
 }

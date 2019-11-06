@@ -208,7 +208,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "7e767fb53d02ea220428a6cc0850ee6e17d71bb1",
+    commit = "58b2f86b0f02f06e634db06dee0c838ad41849f8",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1012,7 +1012,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "e652ba06e9067ef41c199af59b9c6c67724850d4",
+    commit = "da7a886035e25b2f274f89b6f3c64bf70a9f6780",
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1200,7 +1200,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "e3a2cacc543bb187e8acae1cb1e4731d5dde3d87",
+    commit = "1205871db17ccc2fb824fc6dfa40d01c48fb6a7e",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
