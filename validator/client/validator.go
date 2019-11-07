@@ -144,7 +144,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 			}
 			log.Info("Waiting for beacon node to sync to latest chain head")
 		case <-ctx.Done():
-			return errors.New("rpc context closed, exiting goroutine")
+			return errors.New("context has been canceled, exiting goroutine")
 		}
 	}
 }
