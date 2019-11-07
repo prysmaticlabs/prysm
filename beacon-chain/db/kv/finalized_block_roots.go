@@ -46,13 +46,13 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	// TODO: Abstract
 	// De-index recent finalized block roots, to be re-indexed.
 	prevousFinalizedCheckpoint := &ethpb.Checkpoint{}
-	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil{
+	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
 		if err := proto.Unmarshal(b, prevousFinalizedCheckpoint); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	}
-	blockRoots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)))
+	blockRoots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -63,8 +63,6 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			return err
 		}
 	}
-
-
 
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
@@ -133,13 +131,20 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		if bytes.Equal(root, checkpoint.Root) || bkt.Get(root) != nil {
 			continue
 		}
-		if err := bkt.Put(root, []byte("recent block needs reindexing to determine canonical")); err != nil{
+		if err := bkt.Put(root, []byte("recent block needs reindexing to determine canonical")); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	}
 
-	return nil
+	// Update previous checkpoint
+	enc, err := proto.Marshal(checkpoint)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	return bkt.Put(previousFinalizedCheckpointKey, enc)
 }
 
 // IsFinalizedBlock returns true if the block root is present in the finalized block root index.
