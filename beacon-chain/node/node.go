@@ -372,6 +372,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
+		DB:    b.db,
 		Chain: chainService,
 		P2P:   b.fetchP2P(ctx),
 	})
@@ -479,7 +480,7 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	gatewayPort := ctx.GlobalInt(flags.GRPCGatewayPort.Name)
 	if gatewayPort > 0 {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
-		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}
 	return nil

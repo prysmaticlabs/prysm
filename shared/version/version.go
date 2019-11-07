@@ -18,9 +18,10 @@ func GetVersion() string {
 	if gitCommit == "{STABLE_GIT_COMMIT}" {
 		commit, err := exec.Command("git", "rev-parse", "HEAD").Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+		} else {
+			gitCommit = strings.TrimRight(string(commit), "\r\n")
 		}
-		gitCommit = strings.TrimRight(string(commit), "\r\n")
 	}
 	if buildDate == "{DATE}" {
 		now := time.Now().Format(time.RFC3339)
