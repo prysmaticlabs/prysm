@@ -90,7 +90,7 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 		}
 
 		isRequestedSlotStep := (blk.Slot-startSlot)%m.Step == 0
-		isRecentUnfinalizedSlot := blk.Slot >= helpers.StartSlot(checkpoint.Epoch+1)
+		isRecentUnfinalizedSlot := blk.Slot >= helpers.StartSlot(checkpoint.Epoch+1) || checkpoint.Epoch == 0
 		if isRequestedSlotStep && (isRecentUnfinalizedSlot || r.db.IsFinalizedBlock(ctx, roots[i])) {
 			if err := r.chunkWriter(stream, blk); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
