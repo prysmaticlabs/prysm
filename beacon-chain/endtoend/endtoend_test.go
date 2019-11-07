@@ -38,7 +38,7 @@ type End2EndConfig struct {
 	NumBeaconNodes uint64
 }
 
-type beaconNodeInfo struct {
+type BeaconNodeInfo struct {
 	processID   int
 	datadir     string
 	rpcPort     uint64
@@ -208,14 +208,14 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 }
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Address, numNodes uint64) []*beaconNodeInfo {
+func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Address, numNodes uint64) []*BeaconNodeInfo {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
 
-	nodeInfo := make([]*beaconNodeInfo, numNodes)
+	nodeInfo := make([]*BeaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		args := []string{
 			// "--minimal-config",
@@ -267,7 +267,7 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 		startIdx := strings.Index(pageContent, "self=") + 5
 		multiAddr := pageContent[startIdx : startIdx+86]
 
-		nodeInfo[i] = &beaconNodeInfo{
+		nodeInfo[i] = &BeaconNodeInfo{
 			processID:   cmd.Process.Pid,
 			datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, i),
 			rpcPort:     4000 + i,
@@ -286,7 +286,7 @@ func InitializeValidators(
 	tmpPath string,
 	contractAddress common.Address,
 	keystorePath string,
-	beaconNodes []*beaconNodeInfo,
+	beaconNodes []*BeaconNodeInfo,
 	validatorNum uint64,
 ) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
