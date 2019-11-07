@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -61,6 +62,16 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if fromSelf {
+		return false, nil
+	}
+
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
+	if finalizedEpoch >= att.Data.Source.Epoch || finalizedEpoch >= att.Data.Target.Epoch {
+		log.WithFields(logrus.Fields{
+			"AttestationRoot": fmt.Sprintf("%#x", attRoot),
+			"TargetEpoch":     att.Data.Target.Epoch,
+			"SourceEpoch":     att.Data.Source.Epoch,
+		}).Debug("Rejecting old attestation")
 		return false, nil
 	}
 
