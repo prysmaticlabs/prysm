@@ -6,6 +6,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
+// UpdateMaxSpan is used to update the max span of an incoming attestation after the slashing detection phase.
+// logic is following protolambda detection method.
+// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
@@ -31,6 +34,9 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 	return nil
 }
 
+// UpdateMinSpan is used to update the min span of an incoming attestation after the slashing detection phase.
+// logic is following protolambda detection method.
+// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMinSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
