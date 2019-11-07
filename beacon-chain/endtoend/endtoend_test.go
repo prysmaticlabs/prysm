@@ -67,7 +67,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 		evaluators: []evaluator{
 			evaluator{
 				name:       "activate_validators",
-				policy:     onChainStart,
+				policy:     onGenesisEpoch,
 				evaluation: validatorsActivate,
 			},
 			evaluator{

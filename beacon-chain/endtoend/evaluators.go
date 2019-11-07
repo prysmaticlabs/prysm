@@ -73,8 +73,7 @@ func afterNEpochs(epochs uint64) func(uint64) bool {
 	}
 }
 
-// TODO change this to make more sense
-func onChainStart(currentEpoch uint64) bool {
+func onGenesisEpoch(currentEpoch uint64) bool {
 	return currentEpoch == 0
 }
 
