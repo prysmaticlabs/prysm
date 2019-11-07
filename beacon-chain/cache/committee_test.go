@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestCommitteeKeyFn_OK(t *testing.T) {
@@ -38,9 +40,9 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 		CommitteeCount: 3,
 	}
 
-	epoch := uint64(1)
+	slot := uint64(item.Epoch * params.BeaconConfig().SlotsPerEpoch)
 	committeeIndex := uint64(1)
-	indices, err := cache.ShuffledIndices(epoch, committeeIndex)
+	indices, err := cache.ShuffledIndices(slot, committeeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,11 +53,12 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	if err := cache.AddCommitteeShuffledList(item); err != nil {
 		t.Fatal(err)
 	}
-	wantedIndex := uint64(2)
-	indices, err = cache.ShuffledIndices(epoch, wantedIndex)
+	wantedIndex := uint64(0)
+	indices, err = cache.ShuffledIndices(slot, wantedIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	start, end := startEndIndices(item, wantedIndex)
 	if !reflect.DeepEqual(indices, item.Committee[start:end]) {
 		t.Errorf(

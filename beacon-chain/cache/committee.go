@@ -73,7 +73,7 @@ func (c *CommitteeCache) ShuffledIndices(slot uint64, index uint64) ([]uint64, e
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	epoch := int(slot/params.BeaconConfig().SlotsPerEpoch)
+	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(epoch))
 	if err != nil {
 		return nil, err
@@ -91,7 +91,11 @@ func (c *CommitteeCache) ShuffledIndices(slot uint64, index uint64) ([]uint64, e
 		return nil, ErrNotCommittee
 	}
 
-	committeeCountPerSlot := item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch
+	committeeCountPerSlot := uint64(1)
+	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch > 1 {
+		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	}
+
 	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
 	return item.Committee[start:end], nil
@@ -158,7 +162,7 @@ func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	epoch := int(slot/params.BeaconConfig().SlotsPerEpoch)
+	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
 	if err != nil {
 		return 0, false, err
