@@ -4,18 +4,22 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Formally defining them might not be needed.
+// Policy defines an function that returns a bool
+// for whether the evaluator it is assigned to runs.
 type Policy func(currentEpoch uint64) bool
+
+// Evaluation defines a function that takes in BeaconChainClient
+// and uses it to monitor the chain, to determine where it fulfills the conditions required.
 type Evaluation func(client eth.BeaconChainClient) error
 
-// Evaluator defines the function signature for function to run during the E2E.
+// Evaluator defines a struct for executing a given evaluation
+// on a running E2E test given that the policy returns true.
 type Evaluator struct {
 	Name       string
 	Policy     Policy
@@ -75,7 +79,6 @@ func AfterNEpochs(epochs uint64) func(uint64) bool {
 func OnChainStart(currentEpoch uint64) bool {
 	return currentEpoch == 0
 }
-
 
 // ValidatorsActivate ensures the expected amount of validators
 // are active.
