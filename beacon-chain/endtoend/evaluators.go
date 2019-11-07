@@ -10,20 +10,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Policy defines an function that returns a bool
+// policy defines an function that returns a bool
 // for whether the evaluator it is assigned to runs.
-type Policy func(currentEpoch uint64) bool
+type policy func(currentEpoch uint64) bool
 
-// Evaluation defines a function that takes in BeaconChainClient
+// evaluation defines a function that takes in BeaconChainClient
 // and uses it to monitor the chain, to determine where it fulfills the conditions required.
-type Evaluation func(client eth.BeaconChainClient) error
+type evaluation func(client eth.BeaconChainClient) error
 
-// Evaluator defines a struct for executing a given evaluation
+// evaluator defines a struct for executing a given evaluation
 // on a running E2E test given that the policy returns true.
-type Evaluator struct {
-	Name       string
-	Policy     Policy
-	Evaluation Evaluation
+type evaluator struct {
+	name       string
+	policy     policy
+	evaluation evaluation
 }
 
 // if AfterNEpochs(chainHead, 6) {
@@ -45,9 +45,9 @@ type Evaluator struct {
 // 	return currentEpoch, nil
 // }
 
-// RunEvaluators takes in testing.T, BeaconChainClient and an array of evaluators.
+// runEvaluators takes in testing.T, BeaconChainClient and an array of evaluators.
 // Using the client to check the state, it runs each evaluator in a subtest.
-func RunEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []Evaluator) {
+func runEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []evaluator) {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
@@ -56,10 +56,10 @@ func RunEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []Eval
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
 
 	for _, evaluator := range evaluators {
-		if evaluator.Policy(currentEpoch) {
-			fmt.Printf("Running %s\n", evaluator.Name)
-			t.Run(evaluator.Name, func(t *testing.T) {
-				if err := evaluator.Evaluation(client); err != nil {
+		if evaluator.policy(currentEpoch) {
+			fmt.Printf("Running %s\n", evaluator.name)
+			t.Run(evaluator.name, func(t *testing.T) {
+				if err := evaluator.evaluation(client); err != nil {
 					t.Fatal(err)
 				}
 			})
@@ -67,22 +67,20 @@ func RunEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []Eval
 	}
 }
 
-// AfterNEpochs run the evaluator after N epochs.
-func AfterNEpochs(epochs uint64) func(uint64) bool {
+func afterNEpochs(epochs uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch == epochs
 	}
 }
 
 // TODO change this to make more sense
-// OnChainStart ensures the chain has started before performing the evaluator.
-func OnChainStart(currentEpoch uint64) bool {
+func onChainStart(currentEpoch uint64) bool {
 	return currentEpoch == 0
 }
 
-// ValidatorsActivate ensures the expected amount of validators
+// validatorsActivate ensures the expected amount of validators
 // are active.
-func ValidatorsActivate(client eth.BeaconChainClient) error {
+func validatorsActivate(client eth.BeaconChainClient) error {
 	validatorRequest := &eth.GetValidatorsRequest{}
 	validators, err := client.GetValidators(context.Background(), validatorRequest)
 	if err != nil {
@@ -106,8 +104,8 @@ func ValidatorsActivate(client eth.BeaconChainClient) error {
 	return nil
 }
 
-// ValidatorsParticipating ensures the validators have an acceptable participation rate.
-func ValidatorsParticipating(client eth.BeaconChainClient) error {
+// validatorsParticipating ensures the validators have an acceptable participation rate.
+func validatorsParticipating(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
@@ -135,9 +133,9 @@ func ValidatorsParticipating(client eth.BeaconChainClient) error {
 	return nil
 }
 
-// FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
+// finalizationOccurs is an evaluator to make sure finalization is performing as it should.
 // Requires to be run after at least 4 epochs have passed.
-func FinalizationOccurs(client eth.BeaconChainClient) error {
+func finalizationOccurs(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {

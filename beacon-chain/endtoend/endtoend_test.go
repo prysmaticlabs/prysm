@@ -34,16 +34,16 @@ import (
 
 var log = logrus.WithField("prefix", "e2e")
 
-type End2EndConfig struct {
-	TmpPath        string
-	MinimalConfig  bool
-	EpochsToRun    uint64
-	NumValidators  uint64
-	NumBeaconNodes uint64
-	Evaluators     []Evaluator
+type end2EndConfig struct {
+	tmpPath        string
+	minimalConfig  bool
+	epochsToRun    uint64
+	numValidators  uint64
+	numBeaconNodes uint64
+	evaluators     []evaluator
 }
 
-type BeaconNodeInfo struct {
+type beaconNodeInfo struct {
 	processID   int
 	datadir     string
 	rpcPort     uint64
@@ -55,24 +55,24 @@ type BeaconNodeInfo struct {
 func TestEndToEnd_DemoConfig(t *testing.T) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
-	fmt.Printf("Path for this test is %s\n", tmpPath)
+	fmt.Printf("Test Path: %s\n", tmpPath)
 
-	demoConfig := &End2EndConfig{
-		TmpPath:        tmpPath,
-		MinimalConfig:  false,
-		EpochsToRun:    8,
-		NumBeaconNodes: 2,
-		NumValidators:  8,
-		Evaluators: []Evaluator{
-			Evaluator{
-				Name:       "activate_validators",
-				Policy:     OnChainStart,
-				Evaluation: ValidatorsActivate,
+	demoConfig := &end2EndConfig{
+		tmpPath:        tmpPath,
+		minimalConfig:  false,
+		epochsToRun:    8,
+		numBeaconNodes: 2,
+		numValidators:  8,
+		evaluators: []evaluator{
+			evaluator{
+				name:       "activate_validators",
+				policy:     onChainStart,
+				evaluation: validatorsActivate,
 			},
-			Evaluator{
-				Name:       "finalize_checkpoint",
-				Policy:     AfterNEpochs(4),
-				Evaluation: FinalizationOccurs,
+			evaluator{
+				name:       "finalize_checkpoint",
+				policy:     afterNEpochs(4),
+				evaluation: finalizationOccurs,
 			},
 			// Evaluator{
 			//	Name:       "validators_participate",
@@ -81,7 +81,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 			// },
 		},
 	}
-	RunEndToEndTest(t, demoConfig)
+	runEndToEndTest(t, demoConfig)
 }
 
 // func TestEndToEnd_MinimalConfig(t *testing.T) {
@@ -115,12 +115,12 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 // 	RunEndToEndTest(t, demoConfig)
 // }
 
-func RunEndToEndTest(t *testing.T, config *End2EndConfig) {
-	tmpPath := config.TmpPath
+func runEndToEndTest(t *testing.T, config *end2EndConfig) {
+	tmpPath := config.tmpPath
 	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
-	beaconNodes := StartBeaconNodes(t, config, contractAddr)
-	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, config.NumValidators)
+	beaconNodes := startBeaconNodes(t, config, contractAddr)
+	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, config.numValidators)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 	if err != nil {
@@ -132,7 +132,7 @@ func RunEndToEndTest(t *testing.T, config *End2EndConfig) {
 	fmt.Println("Chain has started")
 
 	t.Run("peers_connect", func(t *testing.T) {
-		if err := PeersConnect(config.NumBeaconNodes - 1); err != nil {
+		if err := PeersConnect(config.numBeaconNodes - 1); err != nil {
 			t.Fatalf("failed to connect to peers: %v", err)
 		}
 	})
@@ -147,10 +147,10 @@ func RunEndToEndTest(t *testing.T, config *End2EndConfig) {
 	time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
 	currentEpoch := uint64(0)
 	// Run the evaluators for any in chainstart to execute.
-	RunEvaluators(t, beaconClient, config.Evaluators)
+	runEvaluators(t, beaconClient, config.evaluators)
 
 	scanner := bufio.NewScanner(beaconLogFile)
-	for scanner.Scan() && currentEpoch < config.EpochsToRun {
+	for scanner.Scan() && currentEpoch < config.epochsToRun {
 		currentLine := scanner.Text()
 		if strings.Contains(currentLine, "Finished applying state transition") {
 			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
@@ -170,13 +170,13 @@ func RunEndToEndTest(t *testing.T, config *End2EndConfig) {
 		fmt.Println("")
 		fmt.Printf("Current Epoch: %d\n", currentEpoch)
 
-		RunEvaluators(t, beaconClient, config.Evaluators)
+		runEvaluators(t, beaconClient, config.evaluators)
 	}
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
 	}
 
-	if currentEpoch < config.EpochsToRun {
+	if currentEpoch < config.epochsToRun {
 		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
 	}
 }
@@ -256,17 +256,17 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	return contractAddr, keystorePath
 }
 
-// StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *End2EndConfig, contractAddress common.Address) []*BeaconNodeInfo {
-	tmpPath := config.TmpPath
-	numNodes := config.NumBeaconNodes
+// startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
+func startBeaconNodes(t *testing.T, config *end2EndConfig, contractAddress common.Address) []*beaconNodeInfo {
+	tmpPath := config.tmpPath
+	numNodes := config.numBeaconNodes
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
 
-	nodeInfo := make([]*BeaconNodeInfo, numNodes)
+	nodeInfo := make([]*beaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", i)))
 		if err != nil {
@@ -286,7 +286,7 @@ func StartBeaconNodes(t *testing.T, config *End2EndConfig, contractAddress commo
 			fmt.Sprintf("--grpc-gateway-port=%d", 3200+i),
 		}
 
-		if config.MinimalConfig {
+		if config.minimalConfig {
 			args = append(args, "--minimal-config")
 		}
 		// After the first node is made, have all following nodes connect to all previously made nodes.
@@ -323,7 +323,7 @@ func StartBeaconNodes(t *testing.T, config *End2EndConfig, contractAddress commo
 		startIdx := strings.Index(pageContent, "self=") + 5
 		multiAddr := pageContent[startIdx : startIdx+85]
 
-		nodeInfo[i] = &BeaconNodeInfo{
+		nodeInfo[i] = &beaconNodeInfo{
 			processID:   cmd.Process.Pid,
 			datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, i),
 			rpcPort:     4000 + i,
@@ -342,7 +342,7 @@ func InitializeValidators(
 	tmpPath string,
 	contractAddress common.Address,
 	keystorePath string,
-	beaconNodes []*BeaconNodeInfo,
+	beaconNodes []*beaconNodeInfo,
 	validatorNum uint64,
 ) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
@@ -368,7 +368,6 @@ func InitializeValidators(
 			}
 		}
 	}
-	log.Printf("%d accounts created\n", validatorNum)
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
