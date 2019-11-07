@@ -20,6 +20,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	WaitForSync(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
@@ -46,6 +47,9 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
+		log.Fatalf("Could not wait for validator activation: %v", err)
+	}
+	if err := v.WaitForSync(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
 	headSlot, err := v.CanonicalHeadSlot(ctx)

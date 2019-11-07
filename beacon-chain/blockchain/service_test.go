@@ -358,7 +358,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err  := db.SaveBlock(ctx, genesis); err != nil {
+	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Fatal(err)
 	}
 

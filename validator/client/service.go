@@ -9,6 +9,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
@@ -100,6 +101,7 @@ func (v *ValidatorService) Start() {
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
 		pubkeys:              pubKeys,
 		logValidatorBalances: v.logValidatorBalances,
