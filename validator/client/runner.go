@@ -46,11 +46,11 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForChainStart(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
 	}
-	if err := v.WaitForActivation(ctx); err != nil {
-		log.Fatalf("Could not wait for validator activation: %v", err)
-	}
 	if err := v.WaitForSync(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon node synced: %v", err)
+	}
+	if err := v.WaitForActivation(ctx); err != nil {
+		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
