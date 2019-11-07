@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["server.go"],
+    srcs = [
+        "server.go",
+        "update_min_max_span.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
     deps = [
@@ -19,7 +22,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["server_test.go"],
+    srcs = [
+        "server_test.go",
+        "update_min_max_span_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
