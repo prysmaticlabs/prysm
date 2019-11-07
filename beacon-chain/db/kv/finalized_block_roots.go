@@ -39,7 +39,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
 // maintaining only canonical and finalized blocks older than the current finalized epoch.
-func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
+func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateFinalizedBlockRoots")
 	defer span.End()
 
@@ -57,7 +57,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			return err
 		}
 	}
-	blockRoots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
+	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -76,7 +76,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			break
 		}
 
-		block, err := db.Block(ctx, bytesutil.ToBytes32(root))
+		block, err := kv.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
@@ -126,7 +126,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
+	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
