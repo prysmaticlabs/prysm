@@ -50,7 +50,7 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
 	if err := v.WaitForSync(ctx); err != nil {
-		log.Fatalf("Could not wait for validator activation: %v", err)
+		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
