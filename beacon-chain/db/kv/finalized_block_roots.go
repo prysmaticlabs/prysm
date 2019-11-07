@@ -18,6 +18,12 @@ import (
 
 var previousFinalizedCheckpointKey = []byte("previous-finalized-checkpoint")
 
+// Blocks from the recent finalized epoch are not part of the finalized and canonical chain in this
+// index. These containers will be removed on the next update of finalized checkpoint. Note that
+// these block roots may be considered canonical in the "head view" of the beacon chain, but not so
+// in this index.
+var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to determine canonical")
+
 // The finalized block roots index tracks beacon blocks which are finalized in the canonical chain.
 // The finalized checkpoint contains the the epoch which was finalized and the highest beacon block
 // root where block.slot <= start_slot(epoch). As a result, we cannot index the finalized canonical
@@ -130,7 +136,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		if bytes.Equal(root, checkpoint.Root) || bkt.Get(root) != nil {
 			continue
 		}
-		if err := bkt.Put(root, []byte("recent block needs reindexing to determine canonical")); err != nil {
+		if err := bkt.Put(root, containerFinalizedButNotCanonical); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
