@@ -3,6 +3,7 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -18,6 +19,37 @@ import (
 // 	Policy     policy
 // 	Evaluation evaluation
 // }
+
+func RunChainStartEvaluators(t *testing.T, client eth.BeaconChainClient, currentEpoch uint64) {
+	if OnChainStart(currentEpoch) {
+		fmt.Println("Running chainstart test")
+		t.Run("validators activate", func(t *testing.T) {
+			if err := ValidatorsActivate(client, 8); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func RunEvaluators(t *testing.T, client eth.BeaconChainClient, currentEpoch uint64) {
+	if AfterNEpochs(currentEpoch, 4) {
+		fmt.Println("Running finalization test")
+		t.Run("finalization occurs", func(t *testing.T) {
+			if err := FinalizationOccurs(client); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	// if AfterNEpochs(chainHead, 6) {
+	// 	fmt.Println("Running participation test")
+	// 	// Requesting last epoch here since I can't guarantee which slot this request is being made.
+	// 	t.Run("validators are participating", func(t *testing.T) {
+	// 		if err := ValidatorsParticipating(beaconClient, 5); err != nil {
+	// 			t.Fatal(err)
+	// 		}
+	// 	})
+}
 
 // AfterNEpochs run the evaluator after N epochs.
 func AfterNEpochs(currentEpoch uint64, epochs uint64) bool {

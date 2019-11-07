@@ -20,6 +20,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pborman/uuid"
@@ -70,61 +71,36 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
 	}
-	time.Sleep(4 * time.Second)
+	time.Sleep(2 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
-
 	currentEpoch := uint64(0)
-	fmt.Printf("Current Epoch: %d\n", currentEpoch)
-	if OnChainStart(currentEpoch) {
-		fmt.Println("Running chainstart test")
-		t.Run("validators activate", func(t *testing.T) {
-			if err := ValidatorsActivate(beaconClient, 8); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
+	// Run chainstart evaluators outside of the loop.
+	RunChainStartEvaluators(t, beaconClient, currentEpoch)
 
 	scanner := bufio.NewScanner(beaconLogFile)
 	for scanner.Scan() && currentEpoch < 8 {
 		currentLine := scanner.Text()
-		// Only run evaluators when a new epoch is started.
 		if strings.Contains(currentLine, "Finished applying state transition") {
 			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
 			continue
 		} else if !strings.Contains(currentLine, "Starting next epoch") {
 			time.Sleep(time.Microsecond * 600)
 			continue
+		} else {
+			// Only run evaluators when a new epoch is started.
+			newEpochIndex := strings.Index(currentLine, "epoch=") + 6
+			newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
+			if err != nil {
+				t.Fatalf("failed to convert logs to int: %v", err)
+			}
+			currentEpoch = uint64(newEpoch)
+			fmt.Println("")
+			fmt.Printf("Current Epoch: %d\n", currentEpoch)
 		}
 
-		newEpochIndex := strings.Index(currentLine, "epoch=") + 6
-		newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
-		if err != nil {
-			t.Fatalf("failed to convert logs to int: %v", err)
-		}
-		currentEpoch = uint64(newEpoch)
-
-		fmt.Println("")
-		fmt.Printf("Current Epoch: %d\n", currentEpoch)
-
-		if AfterNEpochs(currentEpoch, 4) {
-			fmt.Println("Running finalization test")
-			t.Run("finalization occurs", func(t *testing.T) {
-				if err := FinalizationOccurs(beaconClient); err != nil {
-					t.Fatal(err)
-				}
-			})
-		}
-
-		// if AfterNEpochs(chainHead, 6) {
-		// 	fmt.Println("Running participation test")
-		// 	// Requesting last epoch here since I can't guarantee which slot this request is being made.
-		// 	t.Run("validators are participating", func(t *testing.T) {
-		// 		if err := ValidatorsParticipating(beaconClient, 5); err != nil {
-		// 			t.Fatal(err)
-		// 		}
-		// 	})
+		RunEvaluators(t, beaconClient, currentEpoch)
 	}
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
@@ -188,7 +164,6 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("Dev Account: %s\n", txOpts.From.Hex())
 	minDeposit := big.NewInt(1e9)
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, minDeposit, txOpts.From)
 	if err != nil {
@@ -203,6 +178,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		time.Sleep(4 * time.Second)
 	}
 
+	fmt.Printf("Dev Account: %s\n", txOpts.From.Hex())
 	log.Printf("Contract deployed at %s\n", contractAddr.Hex())
 	return contractAddr, keystorePath
 }
@@ -377,6 +353,7 @@ func InitializeValidators(
 		}
 	}
 
+	var tx *types.Transaction
 	for _, validatorKey := range validatorKeys {
 		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, 3200000000)
 		if err != nil {
@@ -384,20 +361,21 @@ func InitializeValidators(
 			continue
 		}
 
-		tx, err := depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+		tx, err = depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature)
 		if err != nil {
 			log.Error("unable to send transaction to contract")
 			continue
 		}
-
-		// Wait for contract to mine.
-		for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
-			if err != nil {
-				log.Fatal(err)
-			}
-			time.Sleep(4 * time.Second)
-		}
 	}
+
+	// Wait for last tx to mine.
+	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
+		if err != nil {
+			log.Fatal(err)
+		}
+		time.Sleep(4 * time.Second)
+	}
+
 	// Sleep 5 ETH blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
 	time.Sleep(5 * 4 * time.Second)
