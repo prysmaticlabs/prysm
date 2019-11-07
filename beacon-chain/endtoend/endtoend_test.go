@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,11 +22,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pborman/uuid"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -51,45 +50,65 @@ type beaconNodeInfo struct {
 func TestEndToEnd(t *testing.T) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
-
 	fmt.Printf("Path for this test is %s\n", tmpPath)
 
 	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
 	beaconNodes := StartBeaconNodes(t, tmpPath, contractAddr, 1)
-	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 16)
+	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 8)
 
-	log.Println("Sleeping")
-	time.Sleep(15 * time.Second)
-	log.Println("Woke")
+	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("Chain has started")
 
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
-	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 7; i++ {
-		in := new(ptypes.Empty)
-		chainHead, err := beaconClient.GetChainHead(context.Background(), in)
+	time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
+
+	currentEpoch := uint64(0)
+	fmt.Printf("Current Epoch: %d\n", currentEpoch)
+	if OnChainStart(currentEpoch) {
+		fmt.Println("Running chainstart test")
+		t.Run("validators activate", func(t *testing.T) {
+			if err := ValidatorsActivate(beaconClient, 8); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	scanner := bufio.NewScanner(beaconLogFile)
+	for scanner.Scan() && currentEpoch < 8 {
+		currentLine := scanner.Text()
+		// Only run evaluators when a new epoch is started.
+		if strings.Contains(currentLine, "Finished applying state transition") {
+			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
+			continue
+		} else if !strings.Contains(currentLine, "Starting next epoch") {
+			time.Sleep(time.Microsecond * 600)
+			continue
+		}
+
+		newEpochIndex := strings.Index(currentLine, "epoch=") + 6
+		newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("failed to convert logs to int: %v", err)
 		}
-		fmt.Printf("Current Slot %d\n", chainHead.BlockSlot)
-		fmt.Printf("Current Epoch: %d\n", chainHead.BlockSlot/params.BeaconConfig().SlotsPerEpoch)
+		currentEpoch = uint64(newEpoch)
 
-		if AfterChainStart(chainHead) {
-			fmt.Println("Running chainstart test")
-			t.Run("validators activate", func(t *testing.T) {
-				if err := ValidatorsActivate(beaconClient, 8); err != nil {
-					t.Fatal(err)
-				}
-			})
-		}
+		fmt.Println("")
+		fmt.Printf("Current Epoch: %d\n", currentEpoch)
 
-		if AfterNEpochs(chainHead, 4) {
+		if AfterNEpochs(currentEpoch, 4) {
 			fmt.Println("Running finalization test")
 			t.Run("finalization occurs", func(t *testing.T) {
 				if err := FinalizationOccurs(beaconClient); err != nil {
@@ -106,12 +125,9 @@ func TestEndToEnd(t *testing.T) {
 		// 			t.Fatal(err)
 		// 		}
 		// 	})
-		// }
-
-		fmt.Println("")
-
-		epochSeconds := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
-		time.Sleep(time.Second * time.Duration(epochSeconds))
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -144,7 +160,10 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(12 * time.Second)
+
+	if err = WaitForTextInFile(file, "IPC endpoint opened"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Connect to the started geth dev chain.
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
@@ -227,7 +246,10 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(30 * time.Second)
+
+		if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
+			t.Fatal(err)
+		}
 
 		response, err := http.Get("http://127.0.0.1:8080/p2p")
 		if err != nil {
@@ -288,7 +310,6 @@ func InitializeValidators(
 			if err := exec.Command(binaryPath, args...).Run(); err != nil {
 				t.Fatal(err)
 			}
-			time.Sleep(4 * time.Second)
 		}
 	}
 	log.Printf("%d accounts created\n", validatorNum)
@@ -307,10 +328,14 @@ func InitializeValidators(
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
-		time.Sleep(10 * time.Second)
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
+
+		if err = WaitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
+			t.Fatal(err)
+		}
+
 		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
@@ -372,25 +397,34 @@ func InitializeValidators(
 			}
 			time.Sleep(4 * time.Second)
 		}
-
-		log.WithFields(logrus.Fields{
-			"Transaction Hash": fmt.Sprintf("%#x", bytesutil.Trunc(tx.Hash().Bytes())),
-			"Public Key":       fmt.Sprintf("%#x", bytesutil.Trunc(validatorKey.PublicKey.Marshal())),
-		}).Info("Deposit mined")
 	}
+	// Sleep 5 ETH blocks.
+	log.Printf("%d deposits mined", len(validatorKeys))
+	time.Sleep(5 * 4 * time.Second)
 }
 
-func printCMDLogs(stdout io.Reader, maxLines int) {
-	// read command's stdout line by line
-	in := bufio.NewScanner(stdout)
+func WaitForTextInFile(file *os.File, text string) error {
+	found := false
+	for !found {
+		// Pass some time to not spam file checks.
+		time.Sleep(2 * time.Second)
+		// Rewind the file pointer to the start of the file so we can read it again.
+		_, err := file.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("could not rewind file to start: %v", err)
+		}
 
-	// Sometimes get stuck so limiting at 25 lines
-	lines := 0
-	for in.Scan() && lines < maxLines {
-		log.Printf(in.Text()) // write each line to your log, or anything you need
-		lines++
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			currentLine := scanner.Text()
+			if strings.Contains(currentLine, text) {
+				found = true
+				break
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	}
-	if err := in.Err(); err != nil {
-		log.Printf("error: %s", err)
-	}
+	return nil
 }

@@ -20,14 +20,13 @@ import (
 // }
 
 // AfterNEpochs run the evaluator after N epochs.
-func AfterNEpochs(chainHead *eth.ChainHead, epochs uint64) bool {
-	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
+func AfterNEpochs(currentEpoch uint64, epochs uint64) bool {
 	return currentEpoch == epochs
 }
 
-// AfterChainStart ensures the chain has started before performing the evaluator.
-func AfterChainStart(chainHead *eth.ChainHead) bool {
-	return chainHead.BlockSlot >= 0 && chainHead.BlockSlot < params.BeaconConfig().SlotsPerEpoch
+// OnChainStart ensures the chain has started before performing the evaluator.
+func OnChainStart(currentEpoch uint64) bool {
+	return currentEpoch == 0
 }
 
 // ValidatorsActivate ensures the expected amount of validators
