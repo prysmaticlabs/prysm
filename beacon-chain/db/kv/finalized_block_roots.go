@@ -64,22 +64,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		}
 	}
 
-	// Upsert blocks from the current finalized epoch.
-	roots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)-1))
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return err
-	}
-	for _, root := range roots {
-		root := root[:]
-		if bytes.Equal(root, checkpoint.Root) {
-			continue
-		}
-		if err := bkt.Put(root, []byte("recent block needs reindexing to determine canonical")); err != nil{
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	}
+
 
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
@@ -113,6 +98,8 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			traceutil.AnnotateError(span, err)
 			return err
 		}
+
+		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
 			parent := &dbpb.FinalizedBlockRootContainer{}
 			if err := proto.Unmarshal(parentBytes, parent); err != nil {
@@ -125,11 +112,34 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 				traceutil.AnnotateError(span, err)
 				return err
 			}
-			return bkt.Put(block.ParentRoot, enc)
+			if err := bkt.Put(block.ParentRoot, enc); err != nil {
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			break
 		}
 		previousRoot = root
 		root = block.ParentRoot
 	}
+
+	// Upsert blocks from the current finalized epoch.
+	roots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)-1))
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	for _, root := range roots {
+		root := root[:]
+		if bytes.Equal(root, checkpoint.Root) || bkt.Get(root) != nil {
+			continue
+		}
+		if err := bkt.Put(root, []byte("recent block needs reindexing to determine canonical")); err != nil{
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+	}
+
+	return nil
 }
 
 // IsFinalizedBlock returns true if the block root is present in the finalized block root index.
