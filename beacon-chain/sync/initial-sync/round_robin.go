@@ -73,6 +73,10 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
 
+			if start > helpers.StartSlot(highestFinalizedEpoch()+1) {
+				return nil, nil
+			}
+
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
 			for i, pid := range peers {
 				if ctx.Err() != nil {
