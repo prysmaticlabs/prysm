@@ -75,55 +75,6 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 }
 
-func TestComputeCommittee_WithCache(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.EnableShuffledIndexCache = true
-	featureconfig.Init(fc)
-	defer featureconfig.Init(nil)
-
-	// Create 10 committees
-	committeeCount := uint64(10)
-	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*ethpb.Validator, validatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state := &pb.BeaconState{
-		Validators:  validators,
-		Slot:        200,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	epoch := CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Test shuffled indices are correct for index 3 committee
-	index := uint64(3)
-	committee3, err := ComputeCommittee(indices, seed, index, committeeCount)
-	if err != nil {
-		t.Errorf("could not compute committee: %v", err)
-	}
-
-	cachedIndices, err := shuffledIndicesCache.IndicesByIndexSeed(index, seed[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(cachedIndices, committee3) {
-		t.Error("committee has different shuffled indices")
-	}
-}
-
 func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	committeeSize := uint64(16)
 	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
@@ -530,7 +481,6 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
-	ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 300000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -568,7 +518,6 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
-	ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 3000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -606,7 +555,6 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
-	ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 128000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -645,7 +593,6 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
-	ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 1000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -684,7 +631,6 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 }
 
 func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
-	ClearShuffledValidatorCache()
 	validators := make([]*ethpb.Validator, 4000000)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
