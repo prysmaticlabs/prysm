@@ -126,7 +126,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)-1))
+	roots, err := db.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err

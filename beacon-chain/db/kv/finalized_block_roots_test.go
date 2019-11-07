@@ -14,6 +14,7 @@ import (
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 
 func TestStore_IsFinalizedBlock(t *testing.T) {
+	slotsPerEpoch := int(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
@@ -22,12 +23,12 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blks := makeBlocks(t, 0, 128, genesisBlockRoot)
+	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
 	if err := db.SaveBlocks(ctx, blks); err != nil {
 		t.Fatal(err)
 	}
 
-	root, err := ssz.SigningRoot(blks[64])
+	root, err := ssz.SigningRoot(blks[slotsPerEpoch])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,8 +47,8 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// All blocks up to 64 should be in the finalized index.
-	for i := 0; i <= 64; i++ {
+	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
+	for i := 0; i < slotsPerEpoch*2; i++ {
 		root, err := ssz.SigningRoot(blks[i])
 		if err != nil {
 			t.Fatal(err)
@@ -56,7 +57,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 			t.Errorf("Block at index %d was not considered finalized in the index", i)
 		}
 	}
-	for i := 65; i < len(blks); i++ {
+	for i := slotsPerEpoch*3; i < len(blks); i++ {
 		root, err := ssz.SigningRoot(blks[i])
 		if err != nil {
 			t.Fatal(err)
