@@ -33,6 +33,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "e2e")
+var eth1BlockTime = 4
 
 type end2EndConfig struct {
 	tmpPath        string
@@ -132,8 +133,10 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	fmt.Println("Chain has started")
 
 	t.Run("peers_connect", func(t *testing.T) {
-		if err := PeersConnect(config.numBeaconNodes - 1); err != nil {
-			t.Fatalf("failed to connect to peers: %v", err)
+		for _, bNode := range beaconNodes {
+			if err := PeersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
+				t.Fatalf("failed to connect to peers: %v", err)
+			}
 		}
 	})
 
@@ -167,7 +170,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatalf("failed to convert logs to int: %v", err)
 		}
 		currentEpoch = uint64(newEpoch)
-		fmt.Println("")
 		fmt.Printf("Current Epoch: %d\n", currentEpoch)
 
 		runEvaluators(t, beaconClient, config.evaluators)
@@ -190,6 +192,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
+		fmt.Sprintf("--dev.period=%d", eth1BlockTime),
 		"--dev.period=4",
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
@@ -457,11 +460,11 @@ func InitializeValidators(
 
 	// Sleep 5 ETH blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
-	time.Sleep(5 * 4 * time.Second)
+	time.Sleep(5 * time.Duration(eth1BlockTime) * time.Second)
 }
 
-func PeersConnect(expectedPeers uint64) error {
-	response, err := http.Get("http://127.0.0.1:8080/p2p")
+func PeersConnect(port uint64, expectedPeers uint64) error {
+	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", port))
 	if err != nil {
 		return err
 	}
