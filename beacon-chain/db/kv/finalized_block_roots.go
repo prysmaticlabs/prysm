@@ -68,7 +68,7 @@ func (db *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	// index bucket or genesis block root.
 	for {
 		if bytes.Equal(root, genesisRoot) {
-			return nil
+			break
 		}
 
 		block, err := db.Block(ctx, bytesutil.ToBytes32(root))
