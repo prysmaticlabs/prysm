@@ -35,8 +35,12 @@ import (
 var log = logrus.WithField("prefix", "e2e")
 
 type End2EndConfig struct {
+	TmpPath        string
+	MinimalConfig  bool
+	EpochsToRun    uint64
 	NumValidators  uint64
 	NumBeaconNodes uint64
+	Evaluators     []Evaluator
 }
 
 type BeaconNodeInfo struct {
@@ -48,15 +52,75 @@ type BeaconNodeInfo struct {
 	multiAddr   string
 }
 
-func TestEndToEnd(t *testing.T) {
+func TestEndToEnd_DemoConfig(t *testing.T) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
 	fmt.Printf("Path for this test is %s\n", tmpPath)
 
+	demoConfig := &End2EndConfig{
+		TmpPath:        tmpPath,
+		MinimalConfig:  false,
+		EpochsToRun:    8,
+		NumBeaconNodes: 2,
+		NumValidators:  8,
+		Evaluators: []Evaluator{
+			Evaluator{
+				Name:       "activate_validators",
+				Policy:     OnChainStart,
+				Evaluation: ValidatorsActivate,
+			},
+			Evaluator{
+				Name:       "finalize_checkpoint",
+				Policy:     AfterNEpochs(4),
+				Evaluation: FinalizationOccurs,
+			},
+			// Evaluator{
+			//	Name:       "validators_participate",
+			// 	Policy:     AfterNEpochs(4),
+			// 	Evaluation: ValidatorsParticipating,
+			// },
+		},
+	}
+	RunEndToEndTest(t, demoConfig)
+}
+
+// func TestEndToEnd_MinimalConfig(t *testing.T) {
+// 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
+// 	os.MkdirAll(tmpPath, os.ModePerm)
+// 	fmt.Printf("Path for this test is %s\n", tmpPath)
+
+// 	demoConfig := &End2EndConfig{
+// 		NumBeaconNodes: 4,
+// 		NumValidators:  64,
+// 		MinimalConfig:  true,
+// 		TmpPath:        tmpPath,
+// 		Evaluators: []Evaluator{
+// 			Evaluator{
+// 				Name:       "activate_validators",
+// 				Policy:     OnChainStart,
+// 				Evaluation: ValidatorsActivate,
+// 			},
+// 			Evaluator{
+// 				Name:       "finalize_checkpoint",
+// 				Policy:     AfterNEpochs(4),
+// 				Evaluation: FinalizationOccurs,
+// 			},
+// 			// Evaluator{
+// 			//	Name:       "validators_participate",
+// 			// 	Policy:     AfterNEpochs(4),
+// 			// 	Evaluation: ValidatorsParticipating,
+// 			// },
+// 		},
+// 	}
+// 	RunEndToEndTest(t, demoConfig)
+// }
+
+func RunEndToEndTest(t *testing.T, config *End2EndConfig) {
+	tmpPath := config.TmpPath
 	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
-	beaconNodes := StartBeaconNodes(t, tmpPath, contractAddr, 1)
-	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, 8)
+	beaconNodes := StartBeaconNodes(t, config, contractAddr)
+	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, config.NumValidators)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 	if err != nil {
@@ -67,6 +131,12 @@ func TestEndToEnd(t *testing.T) {
 	}
 	fmt.Println("Chain has started")
 
+	t.Run("peers_connect", func(t *testing.T) {
+		if err := PeersConnect(config.NumBeaconNodes - 1); err != nil {
+			t.Fatalf("failed to connect to peers: %v", err)
+		}
+	})
+
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
@@ -76,11 +146,11 @@ func TestEndToEnd(t *testing.T) {
 
 	time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
 	currentEpoch := uint64(0)
-	// Run chainstart evaluators outside of the loop.
-	RunChainStartEvaluators(t, beaconClient, currentEpoch)
+	// Run the evaluators for any in chainstart to execute.
+	RunEvaluators(t, beaconClient, config.Evaluators)
 
 	scanner := bufio.NewScanner(beaconLogFile)
-	for scanner.Scan() && currentEpoch < 8 {
+	for scanner.Scan() && currentEpoch < config.EpochsToRun {
 		currentLine := scanner.Text()
 		if strings.Contains(currentLine, "Finished applying state transition") {
 			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
@@ -88,22 +158,26 @@ func TestEndToEnd(t *testing.T) {
 		} else if !strings.Contains(currentLine, "Starting next epoch") {
 			time.Sleep(time.Microsecond * 600)
 			continue
-		} else {
-			// Only run evaluators when a new epoch is started.
-			newEpochIndex := strings.Index(currentLine, "epoch=") + 6
-			newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
-			if err != nil {
-				t.Fatalf("failed to convert logs to int: %v", err)
-			}
-			currentEpoch = uint64(newEpoch)
-			fmt.Println("")
-			fmt.Printf("Current Epoch: %d\n", currentEpoch)
 		}
 
-		RunEvaluators(t, beaconClient, currentEpoch)
+		// Only run evaluators when a new epoch is started.
+		newEpochIndex := strings.Index(currentLine, "epoch=") + 6
+		newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
+		if err != nil {
+			t.Fatalf("failed to convert logs to int: %v", err)
+		}
+		currentEpoch = uint64(newEpoch)
+		fmt.Println("")
+		fmt.Printf("Current Epoch: %d\n", currentEpoch)
+
+		RunEvaluators(t, beaconClient, config.Evaluators)
 	}
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
+	}
+
+	if currentEpoch < config.EpochsToRun {
+		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
 	}
 }
 
@@ -178,13 +252,14 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		time.Sleep(4 * time.Second)
 	}
 
-	fmt.Printf("Dev Account: %s\n", txOpts.From.Hex())
-	log.Printf("Contract deployed at %s\n", contractAddr.Hex())
+	fmt.Printf("Contract deployed at %s\n", contractAddr.Hex())
 	return contractAddr, keystorePath
 }
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Address, numNodes uint64) []*BeaconNodeInfo {
+func StartBeaconNodes(t *testing.T, config *End2EndConfig, contractAddress common.Address) []*BeaconNodeInfo {
+	tmpPath := config.TmpPath
+	numNodes := config.NumBeaconNodes
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -193,30 +268,35 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 
 	nodeInfo := make([]*BeaconNodeInfo, numNodes)
 	for i := uint64(0); i < numNodes; i++ {
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		args := []string{
-			// "--minimal-config",
 			"--no-discovery",
-			"--no-genesis-delay",
 			"--http-web3provider=http://127.0.0.1:8545",
 			"--web3provider=ws://127.0.0.1:8546",
+			"--p2p-host-ip=127.0.0.1",
 			fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, i),
 			fmt.Sprintf("--deposit-contract=%s", contractAddress.Hex()),
 			fmt.Sprintf("--rpc-port=%d", 4000+i),
+			fmt.Sprintf("--p2p-tcp-port=%d", 13000+i),
 			fmt.Sprintf("--monitoring-port=%d", 8080+i),
 			fmt.Sprintf("--grpc-gateway-port=%d", 3200+i),
 		}
+
+		if config.MinimalConfig {
+			args = append(args, "--minimal-config")
+		}
 		// After the first node is made, have all following nodes connect to all previously made nodes.
 		if i >= 1 {
-			for p := uint64(0); p < i-1; p++ {
+			for p := uint64(0); p < i; p++ {
 				args = append(args, fmt.Sprintf("--peer=%s", nodeInfo[p].multiAddr))
 			}
 		}
 
 		cmd := exec.Command(binaryPath, args...)
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", i)))
-		if err != nil {
-			t.Fatal(err)
-		}
 		cmd.Stderr = file
 		cmd.Stdout = file
 		if err := cmd.Start(); err != nil {
@@ -227,7 +307,7 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 			t.Fatal(err)
 		}
 
-		response, err := http.Get("http://127.0.0.1:8080/p2p")
+		response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+i))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -241,7 +321,7 @@ func StartBeaconNodes(t *testing.T, tmpPath string, contractAddress common.Addre
 		}
 
 		startIdx := strings.Index(pageContent, "self=") + 5
-		multiAddr := pageContent[startIdx : startIdx+86]
+		multiAddr := pageContent[startIdx : startIdx+85]
 
 		nodeInfo[i] = &BeaconNodeInfo{
 			processID:   cmd.Process.Pid,
@@ -379,6 +459,28 @@ func InitializeValidators(
 	// Sleep 5 ETH blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
 	time.Sleep(5 * 4 * time.Second)
+}
+
+func PeersConnect(expectedPeers uint64) error {
+	response, err := http.Get("http://127.0.0.1:8080/p2p")
+	if err != nil {
+		return err
+	}
+	time.Sleep(2 * time.Second)
+	dataInBytes, err := ioutil.ReadAll(response.Body)
+	pageContent := string(dataInBytes)
+	if err := response.Body.Close(); err != nil {
+		return err
+	}
+	startIdx := strings.Index(pageContent, "peers") - 2
+	peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
+	if err != nil {
+		return err
+	}
+	if expectedPeers != uint64(peerCount) {
+		return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, peerCount)
+	}
+	return nil
 }
 
 func WaitForTextInFile(file *os.File, text string) error {
