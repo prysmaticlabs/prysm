@@ -144,14 +144,14 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 	ctx := context.Background()
 
 	slasherServer := &Server{
-		SlasherDb: dbs,
+		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
 
 		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
-		sm, err := slasherServer.SlasherDb.ValidatorSpansMap(tt.validatorIdx)
+		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("failed to retrieve span: %v", err)
 		}
@@ -166,14 +166,14 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDb: dbs,
+		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
 
 		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
-		sm, err := slasherServer.SlasherDb.ValidatorSpansMap(tt.validatorIdx)
+		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("failed to retrieve span: %v", err)
 		}
