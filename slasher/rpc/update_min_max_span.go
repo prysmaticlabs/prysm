@@ -7,7 +7,7 @@ import (
 )
 
 // UpdateMaxSpan is used to update the max span of an incoming attestation after the slashing detection phase.
-// logic is following protolambda detection method.
+// logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
