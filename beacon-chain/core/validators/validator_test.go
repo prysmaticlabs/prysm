@@ -113,12 +113,12 @@ func TestSlashValidator_OK(t *testing.T) {
 	}
 
 	bState := &pb.BeaconState{
-		Validators:       registry,
-		Slot:             0,
-		Slashings:        make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Balances:         balances,
+		Validators:  registry,
+		Slot:        0,
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+
+		Balances: balances,
 	}
 
 	slashedIdx := uint64(2)

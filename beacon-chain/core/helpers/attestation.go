@@ -5,14 +5,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/core/helpers"
-	ssz "github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_prysmaticlabs_go_ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 var (
@@ -27,39 +25,6 @@ var (
 	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
 )
 
-// AttestationDataSlot returns current slot of AttestationData for given state
-//
-// Spec pseudocode definition:
-//   def get_attestation_data_slot(state: BeaconState, data: AttestationData) -> Slot:
-//    """
-//    Return the slot corresponding to the attestation ``data``.
-//    """
-//    committee_count = get_committee_count(state, data.target.epoch)
-//    offset = (data.crosslink.shard + SHARD_COUNT - get_start_shard(state, data.target.epoch)) % SHARD_COUNT
-//    return Slot(compute_start_slot_of_epoch(data.target.epoch) + offset // (committee_count // SLOTS_PER_EPOCH))
-func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (uint64, error) {
-	if state == nil {
-		return 0, ErrAttestationDataSlotNilState
-	}
-	if data == nil {
-		return 0, ErrAttestationDataSlotNilData
-	}
-
-	committeeCount, err := CommitteeCount(state, data.Target.Epoch)
-	if err != nil {
-		return 0, err
-	}
-
-	epochStartShardNumber, err := StartShard(state, data.Target.Epoch)
-	if err != nil { // This should never happen if CommitteeCount was successful
-		return 0, errors.Wrap(err, "could not determine epoch start shard")
-	}
-	offset := (data.Crosslink.Shard + params.BeaconConfig().ShardCount -
-		epochStartShardNumber) % params.BeaconConfig().ShardCount
-
-	return StartSlot(data.Target.Epoch) + (offset / (committeeCount / params.BeaconConfig().SlotsPerEpoch)), nil
-}
-
 // SlotSignature returns the signed signature of the hash tree root of input slot.
 //
 // Spec pseudocode definition:
@@ -67,7 +32,7 @@ func AttestationDataSlot(state *pb.BeaconState, data *ethpb.AttestationData) (ui
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
 func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	d := Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainAttestation)
+	d := Domain(state.Fork, CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
 	s, err := ssz.HashTreeRoot(slot)
 	if err != nil {
 		return nil, err
@@ -83,7 +48,7 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
 func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, sig *bls.Signature) (bool, error) {
-	committee, err := CrosslinkCommittee(state, slot, index)
+	committee, err := BeaconCommittee(state, slot, index)
 	if err != nil {
 		return false, err
 	}
