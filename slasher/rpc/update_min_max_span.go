@@ -12,7 +12,7 @@ import (
 func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return errors.Wrapf(err, "couldnt retrieve span map for validatorIdx: %v", validatorIdx)
+		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
