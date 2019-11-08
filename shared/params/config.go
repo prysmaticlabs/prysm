@@ -255,7 +255,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 12
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
@@ -278,7 +278,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32
-	minimalConfig.BaseRewardsPerEpoch = 5
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16

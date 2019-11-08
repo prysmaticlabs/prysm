@@ -946,7 +946,7 @@ func TestEth1Data(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
-			60000: big.NewInt(4096),
+			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			3072: []byte("3072"),
