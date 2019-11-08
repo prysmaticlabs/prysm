@@ -86,6 +86,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			historicBlockHeadersBucket,
 			indexedAttestationsIndicesBucket,
 			validatorsPublicKeysBucket,
+			validatorsMinMaxSpanBucket,
 		)
 	}); err != nil {
 		return nil, err

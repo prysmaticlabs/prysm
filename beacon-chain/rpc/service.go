@@ -222,9 +222,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.syncService.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)
