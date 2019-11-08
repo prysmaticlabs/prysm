@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -140,12 +141,14 @@ func init() {
 func TestServer_UpdateMaxSpan(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+
 	slasherServer := &Server{
 		SlasherDb: dbs,
 	}
 	for _, tt := range spanTestsMax {
 
-		if err := slasherServer.UpdateMaxSpan(tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
+		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDb.ValidatorSpansMap(tt.validatorIdx)
@@ -161,12 +164,13 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 func TestServer_UpdateMinSpan(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
 	slasherServer := &Server{
 		SlasherDb: dbs,
 	}
 	for _, tt := range spanTestsMin {
 
-		if err := slasherServer.UpdateMinSpan(tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
+		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDb.ValidatorSpansMap(tt.validatorIdx)

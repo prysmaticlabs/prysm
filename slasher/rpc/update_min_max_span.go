@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -11,7 +12,7 @@ import (
 // UpdateMaxSpan is used to update the max span of an incoming attestation after the slashing detection phase.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint64) error {
+func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
@@ -19,11 +20,11 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
 	}
+	diff := target - source
+	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
+		return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+	}
 	for i := uint64(1); i < target-source; i++ {
-		diff := target - source
-		if diff > params.BeaconConfig().WeakSubjectivityPeriod {
-			return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
-		}
 		val := uint32(diff - i)
 		if spanMap.EpochSpanMap[source+i] == nil {
 			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxSpan{MinSpan: 0, MaxSpan: 0}
@@ -41,15 +42,19 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 }
 
 // UpdateMinSpan is used to update the min span of an incoming attestation after the slashing detection phase.
-// logic is following protolambda detection method.
+// logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) UpdateMinSpan(source uint64, target uint64, validatorIdx uint64) error {
+func (ss *Server) UpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
+	}
+	diff := target - source
+	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
+		return fmt.Errorf("attestation slashing detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
 	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
