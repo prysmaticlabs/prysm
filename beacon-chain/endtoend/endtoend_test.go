@@ -56,14 +56,14 @@ type beaconNodeInfo struct {
 func TestEndToEnd_DemoConfig(t *testing.T) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
-	fmt.Printf("Test Path: %s\n", tmpPath)
+	log.Printf("Test Path: %s\n", tmpPath)
 
 	demoConfig := &end2EndConfig{
 		tmpPath:        tmpPath,
 		minimalConfig:  false,
 		epochsToRun:    8,
 		numBeaconNodes: 2,
-		numValidators:  8,
+		numValidators:  128,
 		evaluators: []evaluator{
 			evaluator{
 				name:       "activate_validators",
@@ -90,21 +90,22 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 // 	os.MkdirAll(tmpPath, os.ModePerm)
 // 	fmt.Printf("Path for this test is %s\n", tmpPath)
 
-// 	demoConfig := &End2EndConfig{
-// 		NumBeaconNodes: 4,
-// 		NumValidators:  64,
-// 		MinimalConfig:  true,
-// 		TmpPath:        tmpPath,
-// 		Evaluators: []Evaluator{
-// 			Evaluator{
-// 				Name:       "activate_validators",
-// 				Policy:     OnChainStart,
-// 				Evaluation: ValidatorsActivate,
+// 	minimalConfig := &end2EndConfig{
+// 		tmpPath:        tmpPath,
+// 		minimalConfig:  true,
+// 		epochsToRun:    8,
+// 		numBeaconNodes: 4,
+// 		numValidators:  128,
+// 		evaluators: []evaluator{
+// 			evaluator{
+// 				name:       "activate_validators",
+// 				policy:     onGenesisEpoch,
+// 				evaluation: validatorsActivate,
 // 			},
-// 			Evaluator{
-// 				Name:       "finalize_checkpoint",
-// 				Policy:     AfterNEpochs(4),
-// 				Evaluation: FinalizationOccurs,
+// 			evaluator{
+// 				name:       "finalize_checkpoint",
+// 				policy:     afterNEpochs(4),
+// 				evaluation: finalizationOccurs,
 // 			},
 // 			// Evaluator{
 // 			//	Name:       "validators_participate",
@@ -113,7 +114,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 // 			// },
 // 		},
 // 	}
-// 	RunEndToEndTest(t, demoConfig)
+// 	runEndToEndTest(t, minimalConfig)
 // }
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
@@ -130,7 +131,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err := WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("Chain has started")
+	log.Println("Chain has started")
 
 	t.Run("peers_connect", func(t *testing.T) {
 		for _, bNode := range beaconNodes {
@@ -170,7 +171,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatalf("failed to convert logs to int: %v", err)
 		}
 		currentEpoch = uint64(newEpoch)
-		fmt.Printf("Current Epoch: %d\n", currentEpoch)
+		log.Printf("Current Epoch: %d\n", currentEpoch)
 
 		runEvaluators(t, beaconClient, config.evaluators)
 	}
@@ -255,7 +256,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		time.Sleep(4 * time.Second)
 	}
 
-	fmt.Printf("Contract deployed at %s\n", contractAddr.Hex())
+	log.Printf("Contract deployed at %s\n", contractAddr.Hex())
 	return contractAddr, keystorePath
 }
 
@@ -371,6 +372,7 @@ func InitializeValidators(
 			}
 		}
 	}
+	log.Printf("%d validators accounts created.", validatorNum)
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
@@ -387,6 +389,38 @@ func InitializeValidators(
 		cmd.Stdout = file
 		cmd.Stderr = file
 		if err := cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+
+		if err = WaitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
+			t.Fatal(err)
+		}
+
+		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
+	}
+
+	for n := uint64(0); n < beaconNodeNum; n++ {
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		args := []string{
+			"--password=e2etest",
+			fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
+			fmt.Sprintf("--monitoring-port=%d", 9080+n),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
+		}
+		cmd := exec.Command(binaryPath, args...)
+		cmd.Stdout = file
+		cmd.Stderr = file
+		if err := cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for n := uint64(0); n < beaconNodeNum; n++ {
+		file, err := os.Open(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -460,7 +494,7 @@ func InitializeValidators(
 
 	// Sleep 5 ETH blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
-	time.Sleep(5 * time.Duration(eth1BlockTime) * time.Second)
+	time.Sleep(time.Duration(params.BeaconConfig().Eth1FollowDistance) * time.Duration(eth1BlockTime) * time.Second)
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {
