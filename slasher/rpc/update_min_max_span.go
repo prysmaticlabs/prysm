@@ -9,12 +9,12 @@ import (
 )
 
 // UpdateMaxSpan is used to update the max span of an incoming attestation after the slashing detection phase.
-// logic is following protolambda detection method.
+// logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return errors.Wrapf(err, "couldnt retrieve span map for validatorIdx: %v", validatorIdx)
+		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
@@ -35,7 +35,7 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 		}
 	}
 	if err := ss.SlasherDb.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		errors.Wrap(err, "Got error while trying to save validator spans")
+		return err
 	}
 	return nil
 }
@@ -46,7 +46,7 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 func (ss *Server) UpdateMinSpan(source uint64, target uint64, validatorIdx uint64) error {
 	spanMap, err := ss.SlasherDb.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't retrieve span map for validatorIdx: %v", validatorIdx)
+		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
@@ -63,7 +63,7 @@ func (ss *Server) UpdateMinSpan(source uint64, target uint64, validatorIdx uint6
 		}
 	}
 	if err := ss.SlasherDb.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		errors.Wrap(err, "Got error while trying to save validator spans")
+		errors.Wrap(err, "could not save validator spans")
 	}
 	return nil
 }

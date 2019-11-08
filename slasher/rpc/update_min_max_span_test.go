@@ -19,7 +19,7 @@ var spanTestsMax []spanMapTestStruct
 var spanTestsMin []spanMapTestStruct
 
 func init() {
-	// test data following example of max span by protolambda
+	// Test data following example of a max span by https://github.com/protolambda
 	// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 	spanTestsMax = []spanMapTestStruct{
 		{
