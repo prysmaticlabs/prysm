@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-
 	"fmt"
 	"sort"
 
@@ -618,12 +617,10 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
-	var ffgTargetEpoch uint64
 	var parentCrosslink *ethpb.Crosslink
 	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
-		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
 		crosslinkShard := data.Crosslink.Shard
 		if int(crosslinkShard) >= len(beaconState.CurrentCrosslinks) {
 			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
@@ -634,7 +631,6 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
-		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
 		crosslinkShard := data.Crosslink.Shard
 		if int(crosslinkShard) >= len(beaconState.PreviousCrosslinks) {
 			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
@@ -648,8 +644,13 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	if !bytes.Equal(data.Source.Root, ffgSourceRoot) {
 		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.Source.Root)
 	}
-	if data.Target.Epoch != ffgTargetEpoch {
-		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
+	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
+		return nil, fmt.Errorf(
+			"expected target epoch %d or %d, received %d",
+			helpers.PrevEpoch(beaconState),
+			helpers.CurrentEpoch(beaconState),
+			data.Target.Epoch,
+		)
 	}
 	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
 	if data.Target.Epoch < endEpoch {
