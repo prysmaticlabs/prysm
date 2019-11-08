@@ -57,7 +57,7 @@ func (ss *Server) UpdateMinSpan(source uint64, target uint64, validatorIdx uint6
 		}
 	}
 	if err := ss.SlasherDb.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		errors.Wrap(err, "Got error while trying to save validator spans")
+		errors.Wrap(err, "could not save validator spans")
 	}
 	return nil
 }
