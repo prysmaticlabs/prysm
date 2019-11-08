@@ -205,7 +205,6 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	if err != nil {
 		return err
 	}
-
 	if a, ok := s.attsQueue[root]; ok {
 		a, err := helpers.AggregateAttestation(a, att)
 		if err != nil {

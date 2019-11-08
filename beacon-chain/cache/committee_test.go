@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestCommitteeKeyFn_OK(t *testing.T) {
@@ -36,12 +38,11 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 		Epoch:          1,
 		Committee:      []uint64{1, 2, 3, 4, 5, 6},
 		CommitteeCount: 3,
-		CommitteeIndex: 1,
 	}
 
-	epoch := uint64(1)
+	slot := uint64(item.Epoch * params.BeaconConfig().SlotsPerEpoch)
 	committeeIndex := uint64(1)
-	indices, err := cache.ShuffledIndices(epoch, committeeIndex)
+	indices, err := cache.ShuffledIndices(slot, committeeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +53,12 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	if err := cache.AddCommitteeShuffledList(item); err != nil {
 		t.Fatal(err)
 	}
-	wantedIndex := uint64(2)
-	indices, err = cache.ShuffledIndices(epoch, wantedIndex)
+	wantedIndex := uint64(0)
+	indices, err = cache.ShuffledIndices(slot, wantedIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	start, end := startEndIndices(item, wantedIndex)
 	if !reflect.DeepEqual(indices, item.Committee[start:end]) {
 		t.Errorf(
@@ -140,68 +142,6 @@ func TestCommitteeCache_EpochInCache(t *testing.T) {
 	}
 	if !inCache {
 		t.Error("Epoch should be in cache")
-	}
-}
-
-func TestCommitteeCache_CommitteesCount(t *testing.T) {
-	cache := NewCommitteeCache()
-
-	committeeCount := uint64(3)
-	epoch := uint64(10)
-	item := &Committee{Epoch: epoch, CommitteeCount: committeeCount}
-
-	_, exists, err := cache.CommitteeCount(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Expected committee count not to exist in empty cache")
-	}
-
-	if err := cache.AddCommitteeShuffledList(item); err != nil {
-		t.Fatal(err)
-	}
-
-	count, exists, err := cache.CommitteeCount(epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Expected committee count to be in cache")
-	}
-	if count != committeeCount {
-		t.Errorf("wanted: %d, got: %d", committeeCount, count)
-	}
-}
-
-func TestCommitteeCache_IndexCount(t *testing.T) {
-	cache := NewCommitteeCache()
-
-	committeeIndex := uint64(7)
-	epoch := uint64(3)
-	item := &Committee{Epoch: epoch, CommitteeIndex: committeeIndex}
-
-	_, exists, err := cache.CommitteeIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Expected start index not to exist in empty cache")
-	}
-
-	if err := cache.AddCommitteeShuffledList(item); err != nil {
-		t.Fatal(err)
-	}
-
-	index, exists, err := cache.CommitteeIndex(epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Expected start index to be in cache")
-	}
-	if index != committeeIndex {
-		t.Errorf("wanted: %d, got: %d", committeeIndex, index)
 	}
 }
 
