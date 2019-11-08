@@ -1,7 +1,9 @@
 package rpc
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
@@ -18,7 +20,11 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
 	}
 	for i := uint64(1); i < target-source; i++ {
-		val := uint32(target - source - i)
+		diff := target - source
+		if diff > params.BeaconConfig().WeakSubjectivityPeriod {
+			return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+		}
+		val := uint32(diff - i)
 		if spanMap.EpochSpanMap[source+i] == nil {
 			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxSpan{MinSpan: 0, MaxSpan: 0}
 		}
