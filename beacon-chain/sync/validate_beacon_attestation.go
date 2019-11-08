@@ -66,7 +66,8 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	}
 
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
-	if finalizedEpoch >= att.Data.Source.Epoch || finalizedEpoch >= att.Data.Target.Epoch {
+	attestationDataEpochOld := finalizedEpoch >= att.Data.Source.Epoch || finalizedEpoch >= att.Data.Target.Epoch
+	if finalizedEpoch != 0 && attestationDataEpochOld {
 		log.WithFields(logrus.Fields{
 			"AttestationRoot": fmt.Sprintf("%#x", attRoot),
 			"TargetEpoch":     att.Data.Target.Epoch,
