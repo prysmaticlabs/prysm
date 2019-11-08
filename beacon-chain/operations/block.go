@@ -41,7 +41,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 		log.WithFields(logrus.Fields{
 			"index":            i,
 			"root":             fmt.Sprintf("%#x", root),
-			"aggregation_bits": fmt.Sprintf("%4b", att.AggregationBits.Bytes()),
+			"aggregation_bits": fmt.Sprintf("%08b", att.AggregationBits.Bytes()),
 			"committeeIndex":   att.Data.Index,
 		}).Debug("block attestation")
 	}
