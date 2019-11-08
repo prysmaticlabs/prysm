@@ -29,7 +29,7 @@ func (ss *Server) UpdateMaxSpan(source uint64, target uint64, validatorIdx uint6
 		}
 	}
 	if err := ss.SlasherDb.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		errors.Wrap(err, "Got error while trying to save validator spans")
+		return err
 	}
 	return nil
 }
