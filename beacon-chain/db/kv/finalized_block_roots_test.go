@@ -57,7 +57,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 			t.Errorf("Block at index %d was not considered finalized in the index", i)
 		}
 	}
-	for i := slotsPerEpoch*3; i < len(blks); i++ {
+	for i := slotsPerEpoch * 3; i < len(blks); i++ {
 		root, err := ssz.SigningRoot(blks[i])
 		if err != nil {
 			t.Fatal(err)
@@ -83,10 +83,9 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
 	blocks1 := append(
 		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
-		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...
+		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...,
 	)
 	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
-
 
 	db := setupDB(t)
 	defer teardownDB(t, db)
