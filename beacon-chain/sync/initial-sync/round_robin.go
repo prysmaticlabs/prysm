@@ -73,6 +73,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
 
+			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
+			if start > helpers.StartSlot(highestFinalizedEpoch()+1) {
+				return nil, errors.New("attempted to ask for a start slot greater than the next highest epoch")
+			}
+
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
 			for i, pid := range peers {
 				if ctx.Err() != nil {
