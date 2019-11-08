@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "attester_service_mock.go",
+        "node_mock.go",
         "proposer_service_mock.go",
         "validator_service_mock.go",
     ],

@@ -253,6 +253,10 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			expectedNumBlocks: 5,
 		},
 		{
+			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(10),
+			expectedNumBlocks: 4,
+		},
+		{
 			// Composite filter criteria.
 			filter: filters.NewFilter().
 				SetParentRoot([]byte("parent2")).
