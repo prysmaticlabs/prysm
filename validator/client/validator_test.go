@@ -379,6 +379,75 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	}
 }
 
+func TestWaitSync_ContextCanceled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	n := internal.NewMockNodeClient(ctrl)
+
+	v := validator{
+		node: n,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	n.EXPECT().GetSyncStatus(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
+
+	err := v.WaitForSync(ctx)
+	want := cancelledCtx
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitSync_NotSyncing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	n := internal.NewMockNodeClient(ctrl)
+
+	v := validator{
+		node: n,
+	}
+
+	n.EXPECT().GetSyncStatus(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
+
+	err := v.WaitForSync(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWaitSync_Syncing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	n := internal.NewMockNodeClient(ctrl)
+
+	v := validator{
+		node: n,
+	}
+
+	n.EXPECT().GetSyncStatus(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
+
+	n.EXPECT().GetSyncStatus(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
+
+	err := v.WaitForSync(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -6,8 +6,10 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
@@ -81,9 +83,11 @@ func (v *ValidatorService) Start() {
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
+			grpc_prometheus.StreamClientInterceptor,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
+			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
@@ -97,6 +101,7 @@ func (v *ValidatorService) Start() {
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
 		pubkeys:              pubKeys,
 		logValidatorBalances: v.logValidatorBalances,

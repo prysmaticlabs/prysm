@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -151,6 +152,13 @@ contract in order to activate the validator client`,
 		debug.Exit(ctx)
 		return nil
 	}
+
+	defer func() {
+		if x := recover(); x != nil {
+			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			panic(x)
+		}
+	}()
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())

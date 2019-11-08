@@ -51,6 +51,11 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 		return false, err
 	}
 
+	if r.chain.FinalizedCheckpt().Epoch > helpers.SlotToEpoch(m.Slot) {
+		log.Debug("Block older than finalized checkpoint received,rejecting it")
+		return false, nil
+	}
+
 	_, err = bls.SignatureFromBytes(m.Signature)
 	if err == nil {
 		p.Broadcast(ctx, m)

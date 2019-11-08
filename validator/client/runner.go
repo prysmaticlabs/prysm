@@ -20,6 +20,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	WaitForSync(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
@@ -44,6 +45,9 @@ func run(ctx context.Context, v Validator) {
 	defer v.Done()
 	if err := v.WaitForChainStart(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
+	}
+	if err := v.WaitForSync(ctx); err != nil {
+		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
@@ -73,7 +77,7 @@ func run(ctx context.Context, v Validator) {
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
-			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
+			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
 				span.End()

@@ -10,21 +10,21 @@ import (
 
 func TestInitFeatureConfig(t *testing.T) {
 	cfg := &featureconfig.Flag{
-		NoGenesisDelay: true,
+		GenesisDelay: true,
 	}
 	featureconfig.Init(cfg)
-	if c := featureconfig.Get(); !c.NoGenesisDelay {
-		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+	if c := featureconfig.Get(); !c.GenesisDelay {
+		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(featureconfig.NoGenesisDelayFlag.Name, true, "enable attestation verification")
+	set.Bool(featureconfig.GenesisDelayFlag.Name, true, "enable attestation verification")
 	context := cli.NewContext(app, set, nil)
 	featureconfig.ConfigureBeaconChain(context)
-	if c := featureconfig.Get(); !c.NoGenesisDelay {
-		t.Errorf("NoGenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+	if c := featureconfig.Get(); !c.GenesisDelay {
+		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
 	}
 }

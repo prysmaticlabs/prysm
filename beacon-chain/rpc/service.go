@@ -193,6 +193,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 		blockFetcher:       s.powChainService,
 		chainStartFetcher:  s.chainStartFetcher,
+		eth1InfoFetcher:    s.powChainService,
 		depositFetcher:     s.depositFetcher,
 		stateFeedListener:  s.stateFeedListener,
 		chainStartChan:     make(chan time.Time),
@@ -221,9 +222,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.syncService.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)
