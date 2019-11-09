@@ -1345,15 +1345,15 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1452,15 +1452,15 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1530,15 +1530,15 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[1:4] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1607,15 +1607,15 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[3:5] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1639,15 +1639,15 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	for _, index := range activeIndices[6:7] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
