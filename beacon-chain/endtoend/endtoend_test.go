@@ -33,7 +33,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "e2e")
-var eth1BlockTime = 4
+var eth1BlockTime = uint64(4)
 
 type end2EndConfig struct {
 	minimalConfig  bool
@@ -55,17 +55,16 @@ type beaconNodeInfo struct {
 }
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	params.UseDemoBeaconConfig()
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
-	log.Printf("Test Path: %s\n", tmpPath)
+	fmt.Printf("Test Path: %s\n", tmpPath)
 
 	demoConfig := &end2EndConfig{
 		tmpPath:        tmpPath,
 		minimalConfig:  false,
 		epochsToRun:    8,
 		numBeaconNodes: 2,
-		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
+		numValidators:  8,
 		evaluators: []evaluator{
 			evaluator{
 				name:       "activate_validators",
@@ -88,17 +87,16 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 }
 
 // func TestEndToEnd_MinimalConfig(t *testing.T) {
-// 	params.UseMinimalConfig()
 // 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 // 	os.MkdirAll(tmpPath, os.ModePerm)
-// 	fmt.Printf("Path for this test is %s\n", tmpPath)
+// 	fmt.Printf("Test path: %s\n", tmpPath)
 
 // 	minimalConfig := &end2EndConfig{
 // 		tmpPath:        tmpPath,
 // 		minimalConfig:  true,
 // 		epochsToRun:    8,
-// 		numBeaconNodes: 2,
-// 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
+// 		numBeaconNodes: 4,
+// 		numValidators:  64,
 // 		evaluators: []evaluator{
 // 			evaluator{
 // 				name:       "activate_validators",
@@ -110,17 +108,18 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 // 				policy:     afterNEpochs(4),
 // 				evaluation: finalizationOccurs,
 // 			},
-// 			// Evaluator{
-// 			//	Name:       "validators_participate",
-// 			// 	Policy:     AfterNEpochs(4),
-// 			// 	Evaluation: ValidatorsParticipating,
-// 			// },
 // 		},
 // 	}
 // 	runEndToEndTest(t, minimalConfig)
 // }
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
+	if config.minimalConfig {
+		params.UseMinimalConfig()
+	} else {
+		params.UseDemoBeaconConfig()
+	}
+
 	tmpPath := config.tmpPath
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -199,7 +198,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	args := []string{
 		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
 		fmt.Sprintf("--dev.period=%d", eth1BlockTime),
-		"--dev.period=4",
+		"--dev.period=1",
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
@@ -258,7 +257,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(4 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	log.Printf("Contract deployed at %s\n", contractAddr.Hex())
@@ -477,12 +476,12 @@ func initializeValidators(
 		if err != nil {
 			log.Fatal(err)
 		}
-		time.Sleep(4 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
-	// Sleep 5 ETH blocks.
+	// Sleep the Eth1FollowDistance blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
-	time.Sleep(5 * time.Duration(eth1BlockTime) * time.Second)
+	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {
