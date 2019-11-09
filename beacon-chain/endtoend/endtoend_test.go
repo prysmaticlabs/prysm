@@ -66,12 +66,12 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 		numBeaconNodes: 2,
 		numValidators:  8,
 		evaluators: []evaluator{
-			evaluator{
+			{
 				name:       "activate_validators",
 				policy:     onGenesisEpoch,
 				evaluation: validatorsActivate,
 			},
-			evaluator{
+			{
 				name:       "finalize_checkpoint",
 				policy:     afterNEpochs(4),
 				evaluation: finalizationOccurs,
@@ -98,12 +98,12 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		numBeaconNodes: 4,
 		numValidators:  64,
 		evaluators: []evaluator{
-			evaluator{
+			{
 				name:       "activate_validators",
 				policy:     onGenesisEpoch,
 				evaluation: validatorsActivate,
 			},
-			evaluator{
+			{
 				name:       "finalize_checkpoint",
 				policy:     afterNEpochs(4),
 				evaluation: finalizationOccurs,
