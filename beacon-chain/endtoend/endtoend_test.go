@@ -63,7 +63,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 		minimalConfig:  false,
 		epochsToRun:    8,
 		numBeaconNodes: 2,
-		numValidators:  128,
+		numValidators:  8,
 		evaluators: []evaluator{
 			evaluator{
 				name:       "activate_validators",
@@ -133,13 +133,15 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 	log.Println("Chain has started")
 
-	t.Run("peers_connect", func(t *testing.T) {
-		for _, bNode := range beaconNodes {
-			if err := PeersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
-				t.Fatalf("failed to connect to peers: %v", err)
+	if config.numBeaconNodes > 1 {
+		t.Run("peers_connect", func(t *testing.T) {
+			for _, bNode := range beaconNodes {
+				if err := PeersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
+					t.Fatalf("failed to connect to peers: %v", err)
+				}
 			}
-		}
-	})
+		})
+	}
 
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
@@ -373,31 +375,6 @@ func InitializeValidators(
 		}
 	}
 	log.Printf("%d validators accounts created.", validatorNum)
-
-	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		args := []string{
-			"--password=e2etest",
-			fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
-			fmt.Sprintf("--monitoring-port=%d", 9080+n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
-		}
-		cmd := exec.Command(binaryPath, args...)
-		cmd.Stdout = file
-		cmd.Stderr = file
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err = WaitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
-			t.Fatal(err)
-		}
-
-		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
-	}
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
