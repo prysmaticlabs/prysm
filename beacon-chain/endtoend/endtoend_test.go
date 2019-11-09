@@ -36,11 +36,12 @@ var log = logrus.WithField("prefix", "e2e")
 var eth1BlockTime = 4
 
 type end2EndConfig struct {
-	tmpPath        string
 	minimalConfig  bool
+	tmpPath        string
 	epochsToRun    uint64
 	numValidators  uint64
 	numBeaconNodes uint64
+	contractAddr   common.Address
 	evaluators     []evaluator
 }
 
@@ -54,6 +55,7 @@ type beaconNodeInfo struct {
 }
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
+	params.UseDemoBeaconConfig()
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 	os.MkdirAll(tmpPath, os.ModePerm)
 	log.Printf("Test Path: %s\n", tmpPath)
@@ -63,7 +65,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 		minimalConfig:  false,
 		epochsToRun:    8,
 		numBeaconNodes: 2,
-		numValidators:  8,
+		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []evaluator{
 			evaluator{
 				name:       "activate_validators",
@@ -86,6 +88,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 }
 
 // func TestEndToEnd_MinimalConfig(t *testing.T) {
+// 	params.UseMinimalConfig()
 // 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
 // 	os.MkdirAll(tmpPath, os.ModePerm)
 // 	fmt.Printf("Path for this test is %s\n", tmpPath)
@@ -94,8 +97,8 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 // 		tmpPath:        tmpPath,
 // 		minimalConfig:  true,
 // 		epochsToRun:    8,
-// 		numBeaconNodes: 4,
-// 		numValidators:  128,
+// 		numBeaconNodes: 2,
+// 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 // 		evaluators: []evaluator{
 // 			evaluator{
 // 				name:       "activate_validators",
@@ -119,10 +122,10 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := config.tmpPath
-	params.UseDemoBeaconConfig()
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
-	beaconNodes := startBeaconNodes(t, config, contractAddr)
-	InitializeValidators(t, tmpPath, contractAddr, keystorePath, beaconNodes, config.numValidators)
+	config.contractAddr = contractAddr
+	beaconNodes := startBeaconNodes(t, config)
+	initializeValidators(t, config, keystorePath, beaconNodes)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 	if err != nil {
@@ -150,7 +153,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	time.Sleep(2 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
-	time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
+	time.Sleep(time.Second * 4 * time.Duration(params.BeaconConfig().SecondsPerSlot))
 	currentEpoch := uint64(0)
 	// Run the evaluators for any in chainstart to execute.
 	runEvaluators(t, beaconClient, config.evaluators)
@@ -263,101 +266,108 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 }
 
 // startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func startBeaconNodes(t *testing.T, config *end2EndConfig, contractAddress common.Address) []*beaconNodeInfo {
-	tmpPath := config.tmpPath
+func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
 	numNodes := config.numBeaconNodes
-	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("beacon chain binary not found")
-	}
 
-	nodeInfo := make([]*beaconNodeInfo, numNodes)
+	nodeInfo := []*beaconNodeInfo{}
 	for i := uint64(0); i < numNodes; i++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", i)))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		args := []string{
-			"--no-discovery",
-			"--http-web3provider=http://127.0.0.1:8545",
-			"--web3provider=ws://127.0.0.1:8546",
-			"--p2p-host-ip=127.0.0.1",
-			fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, i),
-			fmt.Sprintf("--deposit-contract=%s", contractAddress.Hex()),
-			fmt.Sprintf("--rpc-port=%d", 4000+i),
-			fmt.Sprintf("--p2p-tcp-port=%d", 13000+i),
-			fmt.Sprintf("--monitoring-port=%d", 8080+i),
-			fmt.Sprintf("--grpc-gateway-port=%d", 3200+i),
-		}
-
-		if config.minimalConfig {
-			args = append(args, "--minimal-config")
-		}
-		// After the first node is made, have all following nodes connect to all previously made nodes.
-		if i >= 1 {
-			for p := uint64(0); p < i; p++ {
-				args = append(args, fmt.Sprintf("--peer=%s", nodeInfo[p].multiAddr))
-			}
-		}
-
-		cmd := exec.Command(binaryPath, args...)
-		cmd.Stderr = file
-		cmd.Stdout = file
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
-			t.Fatal(err)
-		}
-		log.Printf("Beacon node %d started.\n", i)
-
-		response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+i))
-		if err != nil {
-			log.Fatal(err)
-		}
-		time.Sleep(2 * time.Second)
-
-		// Get the response body as a string
-		dataInBytes, err := ioutil.ReadAll(response.Body)
-		pageContent := string(dataInBytes)
-		if err := response.Body.Close(); err != nil {
-			t.Fatal(err)
-		}
-
-		startIdx := strings.Index(pageContent, "self=") + 5
-		multiAddr := pageContent[startIdx : startIdx+85]
-
-		nodeInfo[i] = &beaconNodeInfo{
-			processID:   cmd.Process.Pid,
-			datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, i),
-			rpcPort:     4000 + i,
-			monitorPort: 8080 + i,
-			grpcPort:    3200 + i,
-			multiAddr:   multiAddr,
-		}
+		newNode := startNewBeaconNode(t, config, nodeInfo)
+		nodeInfo = append(nodeInfo, newNode)
 	}
 
 	return nodeInfo
 }
 
-// InitializeValidators sends the deposits to the eth1 chain and starts the validator clients.
-func InitializeValidators(
+func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beaconNodeInfo) *beaconNodeInfo {
+	tmpPath := config.tmpPath
+	index := len(beaconNodes)
+	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
+	if !found {
+		t.Log(binaryPath)
+		t.Fatal("beacon chain binary not found")
+	}
+	file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", index)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{
+		"--no-discovery",
+		"--http-web3provider=http://127.0.0.1:8545",
+		"--web3provider=ws://127.0.0.1:8546",
+		"--p2p-host-ip=127.0.0.1",
+		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
+		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
+		fmt.Sprintf("--rpc-port=%d", 4000+index),
+		fmt.Sprintf("--p2p-tcp-port=%d", 13000+index),
+		fmt.Sprintf("--monitoring-port=%d", 8080+index),
+		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
+	}
+
+	if config.minimalConfig {
+		args = append(args, "--minimal-config")
+	}
+	// After the first node is made, have all following nodes connect to all previously made nodes.
+	if index >= 1 {
+		for p := 0; p < index; p++ {
+			args = append(args, fmt.Sprintf("--peer=%s", beaconNodes[p].multiAddr))
+		}
+	}
+
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Stderr = file
+	cmd.Stdout = file
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("Beacon node %d started.\n", index)
+
+	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+index))
+	if err != nil {
+		log.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+
+	// Get the response body as a string
+	dataInBytes, err := ioutil.ReadAll(response.Body)
+	pageContent := string(dataInBytes)
+	if err := response.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	startIdx := strings.Index(pageContent, "self=") + 5
+	multiAddr := pageContent[startIdx : startIdx+85]
+
+	return &beaconNodeInfo{
+		processID:   cmd.Process.Pid,
+		datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
+		rpcPort:     (4000) + uint64(index),
+		monitorPort: 8080 + uint64(index),
+		grpcPort:    3200 + uint64(index),
+		multiAddr:   multiAddr,
+	}
+}
+
+// initializeValidators sends the deposits to the eth1 chain and starts the validator clients.
+func initializeValidators(
 	t *testing.T,
-	tmpPath string,
-	contractAddress common.Address,
+	config *end2EndConfig,
 	keystorePath string,
 	beaconNodes []*beaconNodeInfo,
-	validatorNum uint64,
 ) {
+	tmpPath := config.tmpPath
+	contractAddress := config.contractAddr
+	validatorNum := config.numValidators
+	beaconNodeNum := config.numBeaconNodes
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
 	}
 
-	beaconNodeNum := uint64(len(beaconNodes))
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
@@ -424,7 +434,7 @@ func InitializeValidators(
 	if err != nil {
 		t.Fatal(err)
 	}
-	minDeposit := big.NewInt(3.2 * 1e9)
+	minDeposit := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
 	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(1e9))
 	txOps.GasLimit = 4000000
 
@@ -449,7 +459,7 @@ func InitializeValidators(
 
 	var tx *types.Transaction
 	for _, validatorKey := range validatorKeys {
-		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, 3200000000)
+		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, params.BeaconConfig().MaxEffectiveBalance)
 		if err != nil {
 			log.Errorf("Could not generate deposit input data: %v", err)
 			continue
@@ -472,7 +482,7 @@ func InitializeValidators(
 
 	// Sleep 5 ETH blocks.
 	log.Printf("%d deposits mined", len(validatorKeys))
-	time.Sleep(time.Duration(params.BeaconConfig().Eth1FollowDistance) * time.Duration(eth1BlockTime) * time.Second)
+	time.Sleep(5 * time.Duration(eth1BlockTime) * time.Second)
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {
