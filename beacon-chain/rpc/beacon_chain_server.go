@@ -742,8 +742,13 @@ func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := activeBalances[candidateIndex]
-		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+		effectiveBalance := activeBalances[candidateIndex]
+		if effectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			// if the actual balance is greater than or equal to the max effective balance,
+			// we just determine the proposer index using config.MaxEffectiveBalance.
+			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		}
+		if effectiveBalance*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
 	}
