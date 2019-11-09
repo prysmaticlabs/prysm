@@ -647,6 +647,9 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
+			fmt.Println(archivedInfo)
+			fmt.Println(activeIndices)
+			fmt.Println(archivedBalances)
 			committee, committeeIndex, attesterSlot, proposerSlot, err = archivedValidatorCommittee(
 				requestedEpoch,
 				index,

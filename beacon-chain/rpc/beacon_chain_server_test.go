@@ -13,6 +13,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"gopkg.in/d4l3k/messagediff.v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1281,7 +1282,7 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsDefaultNoPage(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1482,6 +1483,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
+		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
 }
 
