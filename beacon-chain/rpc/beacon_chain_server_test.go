@@ -21,6 +21,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
@@ -1363,7 +1364,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
-	t.Skip("Disabled until v0.9.0 (#3865) completes")
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1467,6 +1467,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
+		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
 }
 

@@ -675,7 +675,8 @@ func (bs *BeaconChainServer) archivedValidatorCommittee(
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		for i := uint64(0); i < committeesPerSlot; i++ {
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, i, committeeCount)
+			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, epochOffset, committeeCount)
 			if err != nil {
 				return nil, 0, 0, errors.Wrap(err, "could not compute committee")
 			}
