@@ -13,6 +13,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -21,7 +22,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
@@ -1337,7 +1337,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1444,7 +1444,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1467,7 +1467,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
-		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
 }
 
@@ -1522,7 +1521,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1599,7 +1598,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var assignments []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
