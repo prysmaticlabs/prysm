@@ -46,7 +46,6 @@ func (g *Gateway) Start() {
 	}
 
 	g.conn = conn
-
 	gwmux := gwruntime.NewServeMux(gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{OrigName: false}))
 	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 		ethpb.RegisterNodeHandler,
