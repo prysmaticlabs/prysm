@@ -1282,7 +1282,7 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsDefaultNoPage(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1436,15 +1436,9 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	proposerIndex, err := helpers.BeaconProposerIndex(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
 		Seed:           seed[:],
 		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
-		ProposerIndex:  proposerIndex,
 	}); err != nil {
 		t.Fatal(err)
 	}
