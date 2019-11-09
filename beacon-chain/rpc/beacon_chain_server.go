@@ -691,7 +691,6 @@ func archivedValidatorCommittee(
 	archivedBalances []uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
 	committeeCount := archivedInfo.CommitteeCount
-	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
 	proposerSeed := bytesutil.ToBytes32(archivedInfo.ProposerSeed)
 	attesterSeed := bytesutil.ToBytes32(archivedInfo.AttesterSeed)
 
@@ -704,13 +703,19 @@ func archivedValidatorCommittee(
 		if err != nil {
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", slot)
 		}
-		fmt.Printf("%d archive and slot %d\n", i, slot)
 		proposerIndexToSlot[i] = slot
 	}
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		for i := uint64(0); i < committeesPerSlot; i++ {
-			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
+		}
+		if countAtSlot == 0 {
+			countAtSlot = 1
+		}
+		for i := uint64(0); i < countAtSlot; i++ {
+			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, committeeCount)
 			if err != nil {
 				return nil, 0, 0, 0, errors.Wrap(err, "could not compute committee")

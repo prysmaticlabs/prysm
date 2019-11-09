@@ -13,6 +13,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"gopkg.in/d4l3k/messagediff.v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1375,7 +1376,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 1000
+	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
@@ -1465,7 +1466,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+	for _, index := range activeIndices[0:100] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
@@ -1481,12 +1482,14 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+		PageSize:    100,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
+		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
 }
 

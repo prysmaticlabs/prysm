@@ -89,7 +89,6 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
-
 	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
@@ -209,6 +208,7 @@ func CommitteeAssignment(
 		}
 		proposerIndexToSlot[i] = slot
 	}
+
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
