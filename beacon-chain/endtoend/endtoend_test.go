@@ -312,6 +312,7 @@ func startBeaconNodes(t *testing.T, config *end2EndConfig, contractAddress commo
 		if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
 			t.Fatal(err)
 		}
+		log.Printf("Beacon node %d started.\n", i)
 
 		response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+i))
 		if err != nil {
