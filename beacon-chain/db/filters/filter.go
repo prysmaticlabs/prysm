@@ -3,14 +3,12 @@
 // For example, one can specify a filter query for data by start epoch + end epoch + shard
 // for attestations, build a filter as follows, and respond to it accordingly:
 //
-//   f := filters.NewFilter().SetStartEpoch(3).SetEndEpoch(5).SetShard(5)
+//   f := filters.NewFilter().SetStartEpoch(3).SetEndEpoch(5)
 //   for k, v := range f.Filters() {
 //       switch k {
 //       case filters.StartEpoch:
 //          // Verify data matches filter criteria...
 //       case filters.EndEpoch:
-//          // Verify data matches filter criteria...
-//       case filters.Shard:
 //          // Verify data matches filter criteria...
 //       }
 //   }
@@ -31,18 +29,16 @@ const (
 	StartEpoch FilterType = 3
 	// EndEpoch is used for range filters of objects by their epoch (inclusive).
 	EndEpoch FilterType = 4
-	// Shard is used for filtering data by shard index.
-	Shard FilterType = 5
 	// HeadBlockRoot defines a filter for the head block root attribute of objects.
-	HeadBlockRoot FilterType = 6
+	HeadBlockRoot FilterType = 5
 	// SourceEpoch defines a filter for the source epoch attribute of objects.
-	SourceEpoch FilterType = 7
+	SourceEpoch FilterType = 6
 	// SourceRoot defines a filter for the source root attribute of objects.
-	SourceRoot FilterType = 8
+	SourceRoot FilterType = 7
 	// TargetEpoch defines a filter for the target epoch attribute of objects.
-	TargetEpoch FilterType = 9
+	TargetEpoch FilterType = 8
 	// TargetRoot defines a filter for the target root attribute of objects.
-	TargetRoot FilterType = 10
+	TargetRoot FilterType = 9
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -123,11 +119,5 @@ func (q *QueryFilter) SetStartEpoch(val uint64) *QueryFilter {
 // SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
 func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
 	q.queries[EndEpoch] = val
-	return q
-}
-
-// SetShard enabled filtering by the Shard attribute of an object.
-func (q *QueryFilter) SetShard(val uint64) *QueryFilter {
-	q.queries[Shard] = val
 	return q
 }

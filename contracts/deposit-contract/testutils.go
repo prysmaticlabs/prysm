@@ -28,7 +28,7 @@ type TestAccount struct {
 	TxOpts       *bind.TransactOpts
 }
 
-// Setup creates the simulated backedn with the deposit contract deployed
+// Setup creates the simulated backend with the deposit contract deployed
 func Setup() (*TestAccount, error) {
 	genesis := make(core.GenesisAlloc)
 	privKey, _ := crypto.GenerateKey()
@@ -48,8 +48,7 @@ func Setup() (*TestAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 210000000000)
 
-	minDeposit := big.NewInt(1e9)
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, minDeposit, addr)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, addr)
 	if err != nil {
 		return nil, err
 	}

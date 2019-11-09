@@ -11,15 +11,11 @@ This is a utility to help users deploy deposit contract for running their own be
    deployContract [global options] command [command options] [arguments...]
 
 *Flags:*  
-- --skipChainstartDelay    Whether to skip ChainStart log being fired a day later
 - --ipcPath value          Filename for IPC socket/pipe within the datadir
 - --httpPath value         HTTP-RPC server listening interface (default: "http://localhost:8545/")
 - --passwordFile value     Password file for unlock account (default: "./password.txt")
 - --privKey value          Private key to unlock account
 - --k8sConfig value        Name of kubernetes config map to update with the contract address
-- --chainStart value       Number of validators required for chain start (default: 16384)
-- --minDeposit value       Minimum deposit value allowed in contract (default: 1000000000)
-- --maxDeposit value       Maximum deposit value allowed in contract (default: 32000000000)
 - --help, -h               show help
 - --version, -v            print the version
 
@@ -28,7 +24,7 @@ This is a utility to help users deploy deposit contract for running their own be
 To use private key with default RPC:
 
 ```
-bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net --privKey=$(echo /path/to/private/key/file) --chainStart=8 --minDeposit=100 --maxDeposit=3200
+bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net --privKey=$(echo /path/to/private/key/file)
 ```
 
 

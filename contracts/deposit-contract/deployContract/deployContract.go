@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -33,10 +32,6 @@ func main() {
 	var httpPath string
 	var privKeyString string
 	var k8sConfigMapName string
-	var depositsForChainStart int64
-	var minDepositAmount int64
-	var maxDepositAmount int64
-	var customChainstartDelay uint64
 	var drainAddress string
 
 	customFormatter := new(prefixed.TextFormatter)
@@ -54,12 +49,6 @@ func main() {
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
-		},
-		cli.Uint64Flag{
-			Name:        "customChainstartDelay",
-			Usage:       "Number of seconds to delay the ChainStart genesis timestamp",
-			Value:       0,
-			Destination: &customChainstartDelay,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -87,24 +76,6 @@ func main() {
 			Name:        "k8sConfig",
 			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
-		},
-		cli.Int64Flag{
-			Name:        "chainStart",
-			Value:       params.ContractConfig().MinGenesisActiveValidatorCount.Int64(),
-			Usage:       "Number of validators required for chain start",
-			Destination: &depositsForChainStart,
-		},
-		cli.Int64Flag{
-			Name:        "minDeposit",
-			Value:       params.ContractConfig().MinDepositAmount.Int64(),
-			Usage:       "Minimum deposit value allowed in contract",
-			Destination: &minDepositAmount,
-		},
-		cli.Int64Flag{
-			Name:        "maxDeposit",
-			Value:       params.ContractConfig().MaxEffectiveBalance.Int64(),
-			Usage:       "Maximum deposit value allowed in contract",
-			Destination: &maxDepositAmount,
 		},
 		cli.StringFlag{
 			Name:        "drainAddress",
@@ -180,7 +151,6 @@ func main() {
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			big.NewInt(minDepositAmount),
 			drain,
 		)
 

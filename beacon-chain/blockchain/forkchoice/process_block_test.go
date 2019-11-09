@@ -133,7 +133,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	params.UseMinimalConfig()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,10 +144,6 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: []byte{255},
 		CustodyBits:     []byte{255},
@@ -187,7 +183,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	params.UseMinimalConfig()
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,10 +197,6 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-				Crosslink: &ethpb.Crosslink{
-					Shard:      uint64(i),
-					StartEpoch: 0,
-				},
 			},
 			AggregationBits: []byte{255},
 			CustodyBits:     []byte{255},

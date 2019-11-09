@@ -42,17 +42,17 @@ type BeaconChainServer struct {
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
-// by shard as the canonical sorting attribute.
+// by slot as the canonical sorting attribute.
 type sortableAttestations []*ethpb.Attestation
 
 func (s sortableAttestations) Len() int      { return len(s) }
 func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s sortableAttestations) Less(i, j int) bool {
-	return s[i].Data.Crosslink.Shard < s[j].Data.Crosslink.Shard
+	return s[i].Data.Slot < s[j].Data.Slot
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
-// Attestations are sorted by crosslink shard by default.
+// Attestations are sorted by data slot by default.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
@@ -612,7 +612,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				index, len(headState.Validators))
 		}
 		var committee []uint64
-		var shard uint64
+		var committeeIndex uint64
 		var slot uint64
 		var isProposer bool
 		if shouldFetchFromArchive {
@@ -631,24 +631,24 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			committee, shard, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			committee, committeeIndex, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
 			isProposer = archivedInfo.ProposerIndex == index
 		} else {
-			committee, shard, slot, isProposer, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			committee, committeeIndex, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
 		}
 
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			CrosslinkCommittees: committee,
-			Shard:               shard,
-			Slot:                slot,
-			Proposer:            isProposer,
-			PublicKey:           headState.Validators[index].PublicKey,
+			BeaconCommittees: committee,
+			CommitteeIndex:   committeeIndex,
+			Slot:             slot,
+			Proposer:         isProposer,
+			PublicKey:        headState.Validators[index].PublicKey,
 		})
 	}
 
@@ -671,23 +671,18 @@ func (bs *BeaconChainServer) archivedValidatorCommittee(
 	startSlot := helpers.StartSlot(epoch)
 	committeeCount := archivedInfo.CommitteeCount
 	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	epochStartShard := archivedInfo.StartShard
 	seed := bytesutil.ToBytes32(archivedInfo.Seed)
-	shardCount := params.BeaconConfig().ShardCount
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		offset := committeesPerSlot * (slot % params.BeaconConfig().SlotsPerEpoch)
-		slotStartShard := (epochStartShard + offset) % params.BeaconConfig().ShardCount
 		for i := uint64(0); i < committeesPerSlot; i++ {
-			shard := (slotStartShard + i) % params.BeaconConfig().ShardCount
-			currentShard := (shard + shardCount - epochStartShard) % shardCount
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, currentShard, committeeCount)
+			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, epochOffset, committeeCount)
 			if err != nil {
 				return nil, 0, 0, errors.Wrap(err, "could not compute committee")
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					return committee, shard, slot, nil
+					return committee, i, slot, nil
 				}
 			}
 		}

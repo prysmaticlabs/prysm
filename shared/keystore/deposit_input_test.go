@@ -22,7 +22,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := keystore.DepositInput(k1, k2, 0)
+	result, _, err := keystore.DepositInput(k1, k2, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
