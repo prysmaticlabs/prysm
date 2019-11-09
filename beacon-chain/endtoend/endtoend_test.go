@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -26,14 +27,13 @@ import (
 	"github.com/pborman/uuid"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
 var log = logrus.WithField("prefix", "e2e")
-var eth1BlockTime = uint64(4)
+var eth1BlockTime = uint64(1)
 
 type end2EndConfig struct {
 	minimalConfig  bool
@@ -86,32 +86,32 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 	runEndToEndTest(t, demoConfig)
 }
 
-// func TestEndToEnd_MinimalConfig(t *testing.T) {
-// 	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
-// 	os.MkdirAll(tmpPath, os.ModePerm)
-// 	fmt.Printf("Test path: %s\n", tmpPath)
+func TestEndToEnd_MinimalConfig(t *testing.T) {
+	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
+	os.MkdirAll(tmpPath, os.ModePerm)
+	fmt.Printf("Test path: %s\n", tmpPath)
 
-// 	minimalConfig := &end2EndConfig{
-// 		tmpPath:        tmpPath,
-// 		minimalConfig:  true,
-// 		epochsToRun:    8,
-// 		numBeaconNodes: 4,
-// 		numValidators:  64,
-// 		evaluators: []evaluator{
-// 			evaluator{
-// 				name:       "activate_validators",
-// 				policy:     onGenesisEpoch,
-// 				evaluation: validatorsActivate,
-// 			},
-// 			evaluator{
-// 				name:       "finalize_checkpoint",
-// 				policy:     afterNEpochs(4),
-// 				evaluation: finalizationOccurs,
-// 			},
-// 		},
-// 	}
-// 	runEndToEndTest(t, minimalConfig)
-// }
+	minimalConfig := &end2EndConfig{
+		tmpPath:        tmpPath,
+		minimalConfig:  true,
+		epochsToRun:    8,
+		numBeaconNodes: 4,
+		numValidators:  64,
+		evaluators: []evaluator{
+			evaluator{
+				name:       "activate_validators",
+				policy:     onGenesisEpoch,
+				evaluation: validatorsActivate,
+			},
+			evaluator{
+				name:       "finalize_checkpoint",
+				policy:     afterNEpochs(4),
+				evaluation: finalizationOccurs,
+			},
+		},
+	}
+	runEndToEndTest(t, minimalConfig)
+}
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if config.minimalConfig {
@@ -164,7 +164,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
 			continue
 		} else if !strings.Contains(currentLine, "Starting next epoch") {
-			time.Sleep(time.Microsecond * 600)
+			time.Sleep(time.Microsecond * 500)
 			continue
 		}
 
@@ -175,7 +175,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatalf("failed to convert logs to int: %v", err)
 		}
 		currentEpoch = uint64(newEpoch)
-		log.Printf("Current Epoch: %d\n", currentEpoch)
+		log.Printf("Current Epoch: %d", currentEpoch)
 
 		runEvaluators(t, beaconClient, config.evaluators)
 	}
@@ -230,6 +230,10 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	}
 	web3 := ethclient.NewClient(client)
 
+	// Sleeping to allow the eth1chain to advance Eth1FollowDistance blocks.
+	log.Printf("Sleeping %d eth1 blocks for ETH1_FOLLOW_DISTANCE", params.BeaconConfig().Eth1FollowDistance)
+	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
+
 	// Access the dev account keystore to deploy the contract.
 	fileName, err := exec.Command("ls", path.Join(tmpPath, "eth1data/keystore")).Output()
 	if err != nil {
@@ -260,7 +264,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Printf("Contract deployed at %s\n", contractAddr.Hex())
+	log.Printf("Contract deployed at %s", contractAddr.Hex())
 	return contractAddr, keystorePath
 }
 
@@ -323,7 +327,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("Beacon node %d started.\n", index)
+	log.Printf("Beacon node %d started", index)
 
 	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+index))
 	if err != nil {
@@ -372,28 +376,15 @@ func initializeValidators(
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		for i := n * validatorsPerNode; i < (n+1)*validatorsPerNode; i++ {
-			args := []string{
-				"accounts",
-				"create",
-				"--password=e2etest",
-				fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
-			}
-			if err := exec.Command(binaryPath, args...).Run(); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	log.Printf("%d validators accounts created.", validatorNum)
-
-	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		args := []string{
-			"--password=e2etest",
-			fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
+			// "--password=e2etest",
+			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
+			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
+			// fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
@@ -437,38 +428,20 @@ func initializeValidators(
 	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(1e9))
 	txOps.GasLimit = 4000000
 
-	depositContract, err := contracts.NewDepositContract(contractAddress, web3)
+	contract, err := contracts.NewDepositContract(contractAddress, web3)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	validatorKeys := make(map[string]*prysmKeyStore.Key)
-	for n := uint64(0); n < beaconNodeNum; n++ {
-		prysmKeystorePath := path.Join(tmpPath, fmt.Sprintf("valkeys%d/", n))
-		store := prysmKeyStore.NewKeystore(prysmKeystorePath)
-		prefix := params.BeaconConfig().ValidatorPrivkeyFileName
-		keysForNode, err := store.GetKeys(prysmKeystorePath, prefix, "e2etest")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for k, v := range keysForNode {
-			validatorKeys[k] = v
-		}
-	}
-
+	deposits, _, _ := testutil.SetupInitialDeposits(t, validatorNum)
 	var tx *types.Transaction
-	for _, validatorKey := range validatorKeys {
-		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, params.BeaconConfig().MaxEffectiveBalance)
-		if err != nil {
-			log.Errorf("Could not generate deposit input data: %v", err)
-			continue
-		}
-
-		tx, err = depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+	for _, dd := range deposits {
+		tx, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature)
 		if err != nil {
 			log.Error("unable to send transaction to contract")
 			continue
 		}
+		time.Sleep(500 * time.Microsecond)
 	}
 
 	// Wait for last tx to mine.
@@ -480,8 +453,7 @@ func initializeValidators(
 	}
 
 	// Sleep the Eth1FollowDistance blocks.
-	log.Printf("%d deposits mined", len(validatorKeys))
-	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
+	log.Printf("%d deposits mined", len(deposits))
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {

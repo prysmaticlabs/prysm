@@ -15,7 +15,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "large",
+    size = "enormous",
     srcs = ["endtoend_test.go"],
     data = [
         "//beacon-chain",
@@ -32,6 +32,7 @@ go_test(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",

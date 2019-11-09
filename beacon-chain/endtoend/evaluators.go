@@ -26,25 +26,6 @@ type evaluator struct {
 	evaluation evaluation
 }
 
-// if AfterNEpochs(chainHead, 6) {
-// 	fmt.Println("Running participation test")
-// 	// Requesting last epoch here since I can't guarantee which slot this request is being made.
-// 	t.Run("validators are participating", func(t *testing.T) {
-// 		if err := ValidatorsParticipating(beaconClient, 5); err != nil {
-// 			t.Fatal(err)
-// 		}
-// 	})
-
-// func currentEpoch(client eth.BeaconChainClient) (uint64, error) {
-// 	in := new(ptypes.Empty)
-// 	chainHead, err := client.GetChainHead(context.Background(), in)
-// 	if err != nil {
-// 		return 0, fmt.Errorf("failed to get chain head: %v", err)
-// 	}
-// 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
-// 	return currentEpoch, nil
-// }
-
 // runEvaluators takes in testing.T, BeaconChainClient and an array of evaluators.
 // Using the client to check the state, it runs each evaluator in a subtest.
 func runEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []evaluator) {
