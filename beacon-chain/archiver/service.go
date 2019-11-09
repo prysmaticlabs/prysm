@@ -73,13 +73,18 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	if err != nil {
 		return errors.Wrap(err, "could not get committee count")
 	}
-	seed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	proposerSeed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return errors.Wrap(err, "could not generate seed")
+	}
+	attesterSeed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
 	}
 
 	info := &ethpb.ArchivedCommitteeInfo{
-		Seed:           seed[:],
+		ProposerSeed:   proposerSeed[:],
+		AttesterSeed:   attesterSeed[:],
 		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {

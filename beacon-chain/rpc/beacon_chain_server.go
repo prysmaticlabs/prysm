@@ -647,9 +647,6 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			fmt.Println(archivedInfo)
-			fmt.Println(activeIndices)
-			fmt.Println(archivedBalances)
 			committee, committeeIndex, attesterSlot, proposerSlot, err = archivedValidatorCommittee(
 				requestedEpoch,
 				index,
@@ -693,24 +690,28 @@ func archivedValidatorCommittee(
 	activeIndices []uint64,
 	archivedBalances []uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
-	startSlot := helpers.StartSlot(epoch)
 	committeeCount := archivedInfo.CommitteeCount
 	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	seed := bytesutil.ToBytes32(archivedInfo.Seed)
+	proposerSeed := bytesutil.ToBytes32(archivedInfo.ProposerSeed)
+	attesterSeed := bytesutil.ToBytes32(archivedInfo.AttesterSeed)
 
+	startSlot := helpers.StartSlot(epoch)
 	proposerIndexToSlot := make(map[uint64]uint64)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		i, err := archivedProposerIndex(activeIndices, archivedBalances, seed)
+		seedWithSlot := append(proposerSeed[:], bytesutil.Bytes8(slot)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		i, err := archivedProposerIndex(activeIndices, archivedBalances, seedWithSlotHash)
 		if err != nil {
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", slot)
 		}
+		fmt.Printf("%d archive and slot %d\n", i, slot)
 		proposerIndexToSlot[i] = slot
 	}
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		for i := uint64(0); i < committeesPerSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, epochOffset, committeeCount)
+			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, committeeCount)
 			if err != nil {
 				return nil, 0, 0, 0, errors.Wrap(err, "could not compute committee")
 			}

@@ -13,7 +13,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"gopkg.in/d4l3k/messagediff.v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1295,9 +1294,16 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey: []byte{byte(i)},
+				ExitEpoch: 0,
+			})
 		} else {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey:        []byte{byte(i)},
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			})
 		}
 	}
 
@@ -1432,25 +1438,23 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	proposerSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attesterSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
-		Seed:           seed[:],
+		ProposerSeed:   proposerSeed[:],
+		AttesterSeed:   attesterSeed[:],
 		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	if err := db.SaveArchivedBalances(context.Background(), 0, balances); err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
-		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-	})
-	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -1475,9 +1479,14 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		})
 	}
 
+	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
-		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
 }
 

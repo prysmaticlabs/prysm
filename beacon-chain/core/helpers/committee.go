@@ -209,7 +209,6 @@ func CommitteeAssignment(
 		}
 		proposerIndexToSlot[i] = slot
 	}
-
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {

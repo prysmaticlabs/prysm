@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -213,7 +214,7 @@ func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(uint64(i)%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
 		if err != nil {
 			return 0, err
 		}
