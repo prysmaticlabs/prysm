@@ -190,10 +190,10 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
-	validatorIndex uint64) ([]uint64, uint64, uint64, bool, uint64, error) {
+	validatorIndex uint64) ([]uint64, uint64, uint64, uint64, error) {
 
 	if epoch > NextEpoch(state) {
-		return nil, 0, 0, false, 0, fmt.Errorf(
+		return nil, 0, 0, 0, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
 	}
@@ -205,7 +205,7 @@ func CommitteeAssignment(
 		state.Slot = slot
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, 0, 0, false, 0, fmt.Errorf(
+			return nil, 0, 0, 0, fmt.Errorf(
 				"could not check proposer v: %v", err)
 		}
 		proposerIndexToSlot[i] = slot
@@ -214,25 +214,25 @@ func CommitteeAssignment(
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
-			return nil, 0, 0, false, 0, fmt.Errorf(
+			return nil, 0, 0, 0, fmt.Errorf(
 				"could not get committee count at slot: %v", err)
 		}
 		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
-				return nil, 0, 0, false, 0, fmt.Errorf(
+				return nil, 0, 0, 0, fmt.Errorf(
 					"could not get crosslink committee: %v", err)
 			}
 			for _, v := range committee {
 				if validatorIndex == v {
-					proposerSlot, isProposer := proposerIndexToSlot[v]
-					return committee, uint64(i), slot, isProposer, proposerSlot, nil
+					proposerSlot, _ := proposerIndexToSlot[v]
+					return committee, uint64(i), slot, proposerSlot, nil
 				}
 			}
 		}
 	}
 
-	return []uint64{}, 0, 0, false, 0, status.Error(codes.NotFound, "validator not found in assignments")
+	return []uint64{}, 0, 0, 0, status.Error(codes.NotFound, "validator not found in assignments")
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.

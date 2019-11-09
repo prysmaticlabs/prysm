@@ -613,8 +613,8 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		}
 		var committee []uint64
 		var committeeIndex uint64
-		var slot uint64
-		var isProposer bool
+		var attesterSlot uint64
+		var proposerSlot uint64
 		if shouldFetchFromArchive {
 			archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
 			if err != nil {
@@ -631,13 +631,12 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			committee, committeeIndex, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			committee, committeeIndex, attesterSlot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
-			isProposer = archivedInfo.ProposerIndex == index
 		} else {
-			committee, committeeIndex, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			committee, committeeIndex, attesterSlot, proposerSlot, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
 			}
@@ -646,8 +645,8 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        headState.Validators[index].PublicKey,
 		})
 	}
