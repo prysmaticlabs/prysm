@@ -1370,16 +1370,25 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	ctx := context.Background()
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
+	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
 		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey: []byte{byte(i)},
+				ExitEpoch: 0,
+			})
 		} else {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey:        []byte{byte(i)},
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			})
 		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -1395,7 +1404,9 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Balances:    balances,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1434,6 +1445,10 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
 		ProposerIndex:  proposerIndex,
 	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveArchivedBalances(context.Background(), 0, balances); err != nil {
 		t.Fatal(err)
 	}
 
