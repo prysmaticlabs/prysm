@@ -195,7 +195,7 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 }
 
 func (vs *ValidatorServer) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	committee, committeeIndex, aSlot, _, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
+	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
 	if err != nil {
 		return nil, err
 	}
