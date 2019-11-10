@@ -1371,8 +1371,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
 		t.Error("Did not receive wanted assignments")
 	}
-	t.Log(res.Assignments[0])
-	t.Log(wanted[207])
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
@@ -1495,12 +1493,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	}
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
-		for idx, _ := range res.Assignments {
-			if !reflect.DeepEqual(res.Assignments[idx], wanted[idx]) {
-				t.Log(res.Assignments[idx])
-				t.Log(wanted[idx])
-			}
-		}
 	}
 }
 
