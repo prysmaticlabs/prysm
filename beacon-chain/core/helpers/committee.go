@@ -207,6 +207,7 @@ func CommitteeAssignment(
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
 		}
 		proposerIndexToSlot[i] = slot
+		fmt.Println(proposerIndexToSlot)
 	}
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {

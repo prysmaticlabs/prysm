@@ -1496,8 +1496,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
 		t.Error("Did not receive wanted assignments")
 	}
-	t.Log(wanted[207])
-	t.Log(res.Assignments[0])
 }
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
