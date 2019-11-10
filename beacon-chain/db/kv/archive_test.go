@@ -104,8 +104,8 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	ctx := context.Background()
 	someSeed := [32]byte{1, 2, 3}
 	info := &ethpb.ArchivedCommitteeInfo{
-		Seed:           someSeed[:],
-		StartShard:     10,
+		ProposerSeed:   someSeed[:],
+		AttesterSeed:   someSeed[:],
 		CommitteeCount: 4096,
 	}
 	epoch := uint64(10)
