@@ -288,6 +288,9 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
 	}
+	if baseState == nil {
+		return errors.New("no state found in db with attestation tgt root")
+	}
 	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
