@@ -28,11 +28,9 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-var log = logrus.WithField("prefix", "e2e")
 var eth1BlockTime = uint64(1)
 
 type end2EndConfig struct {
@@ -133,7 +131,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err := WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 		t.Fatal(err)
 	}
-	log.Println("Chain has started")
+	t.Log("Chain has started")
 
 	if config.numBeaconNodes > 1 {
 		t.Run("peers_connect", func(t *testing.T) {
@@ -175,7 +173,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatalf("failed to convert logs to int: %v", err)
 		}
 		currentEpoch = uint64(newEpoch)
-		log.Printf("Current Epoch: %d", currentEpoch)
+		t.Logf("Current Epoch: %d", currentEpoch)
 
 		runEvaluators(t, beaconClient, config.evaluators)
 	}
@@ -216,23 +214,23 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	cmd.Stdout = file
 	cmd.Stderr = file
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to start eth1 chain: %v", err)
 	}
 
 	if err = WaitForTextInFile(file, "IPC endpoint opened"); err != nil {
 		t.Fatal(err)
 	}
 
+	// Sleeping to allow the eth1chain to advance Eth1FollowDistance blocks.
+	t.Logf("Sleeping %d eth1 blocks for ETH1_FOLLOW_DISTANCE", params.BeaconConfig().Eth1FollowDistance)
+	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
+
 	// Connect to the started geth dev chain.
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to connect to ipc: %v", err)
 	}
 	web3 := ethclient.NewClient(client)
-
-	// Sleeping to allow the eth1chain to advance Eth1FollowDistance blocks.
-	log.Printf("Sleeping %d eth1 blocks for ETH1_FOLLOW_DISTANCE", params.BeaconConfig().Eth1FollowDistance)
-	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
 
 	// Access the dev account keystore to deploy the contract.
 	fileName, err := exec.Command("ls", path.Join(tmpPath, "eth1data/keystore")).Output()
@@ -253,7 +251,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	minDeposit := big.NewInt(1e9)
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, minDeposit, txOpts.From)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to deploy deposit contract: %v", err)
 	}
 
 	// Wait for contract to mine.
@@ -264,7 +262,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Printf("Contract deployed at %s", contractAddr.Hex())
+	t.Logf("Contract deployed at %s", contractAddr.Hex())
 	return contractAddr, keystorePath
 }
 
@@ -321,17 +319,17 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	cmd.Stderr = file
 	cmd.Stdout = file
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to start beacon node: %v", err)
 	}
 
 	if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("Beacon node %d started", index)
+	t.Logf("Beacon node %d started", index)
 
 	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+index))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatalf("failed to get p2p info: %v", err)
 	}
 	time.Sleep(2 * time.Second)
 
@@ -406,7 +404,7 @@ func initializeValidators(
 			t.Fatal(err)
 		}
 
-		log.Printf("%d Validators started for beacon node %d", validatorsPerNode, n)
+		t.Logf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
@@ -417,7 +415,7 @@ func initializeValidators(
 
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	r := bytes.NewReader(jsonBytes)
 	txOps, err := bind.NewTransactor(r, "")
@@ -430,7 +428,7 @@ func initializeValidators(
 
 	contract, err := contracts.NewDepositContract(contractAddress, web3)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, validatorNum)
@@ -438,7 +436,7 @@ func initializeValidators(
 	for _, dd := range deposits {
 		tx, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature)
 		if err != nil {
-			log.Error("unable to send transaction to contract")
+			t.Error("unable to send transaction to contract")
 			continue
 		}
 		time.Sleep(500 * time.Microsecond)
@@ -447,13 +445,13 @@ func initializeValidators(
 	// Wait for last tx to mine.
 	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
 		time.Sleep(2 * time.Second)
 	}
 
 	// Sleep the Eth1FollowDistance blocks.
-	log.Printf("%d deposits mined", len(deposits))
+	t.Logf("%d deposits mined", len(deposits))
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {

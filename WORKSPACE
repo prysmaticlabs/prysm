@@ -8,11 +8,13 @@ http_archive(
     url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
 )
 
-# TODO: Update to latest release after https://github.com/bazelbuild/rules_go/pull/2274 merges.
 http_archive(
     name = "io_bazel_rules_go",
-    strip_prefix = "rules_go-ec3dfc399e49941680ceb002a6a82c7c710a2526",
-    url = "https://github.com/prestonvanloon/rules_go/archive/ec3dfc399e49941680ceb002a6a82c7c710a2526.tar.gz",
+    sha256 = "b9aa86ec08a292b97ec4591cf578e020b35f98e12173bbd4a921f84f583aebd9",
+    urls = [
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.20.2/rules_go-v0.20.2.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.20.2/rules_go-v0.20.2.tar.gz",
+    ],
 )
 
 http_archive(
