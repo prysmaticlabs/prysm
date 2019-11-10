@@ -25,7 +25,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "depositContract_test.go",
         "deposit_tree_test.go",
