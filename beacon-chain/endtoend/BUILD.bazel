@@ -26,6 +26,7 @@ go_test(
     tags = [
         "block-network",
         "exclusive",
+        "manual",
         "minimal",
     ],
     deps = [
