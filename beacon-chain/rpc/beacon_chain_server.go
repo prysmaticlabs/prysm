@@ -708,9 +708,7 @@ func archivedValidatorCommittee(
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", slot)
 		}
 		proposerIndexToSlot[i] = slot
-		fmt.Println(proposerIndexToSlot)
 	}
-
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -728,7 +726,6 @@ func archivedValidatorCommittee(
 			for _, index := range committee {
 				if validatorIndex == index {
 					proposerSlot, _ := proposerIndexToSlot[validatorIndex]
-					fmt.Println(proposerIndexToSlot)
 					return committee, i, slot, proposerSlot, nil
 				}
 			}

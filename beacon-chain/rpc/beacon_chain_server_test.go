@@ -1392,8 +1392,9 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey: pubKey[:],
-				ExitEpoch: 0,
+				PublicKey:        pubKey[:],
+				ExitEpoch:        0,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
@@ -1488,13 +1489,18 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
+	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
+		for idx, _ := range res.Assignments {
+			if !reflect.DeepEqual(res.Assignments[idx], wanted[idx]) {
+				t.Log(res.Assignments[idx])
+				t.Log(wanted[idx])
+			}
+		}
 	}
 }
 

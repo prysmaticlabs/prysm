@@ -207,7 +207,6 @@ func CommitteeAssignment(
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
 		}
 		proposerIndexToSlot[i] = slot
-		fmt.Println(proposerIndexToSlot)
 	}
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
@@ -222,10 +221,8 @@ func CommitteeAssignment(
 			}
 			for _, v := range committee {
 				if validatorIndex == v {
-					proposerSlot, ok := proposerIndexToSlot[v]
-					if !ok {
-						return nil, 0, 0, 0, errors.Wrapf(err, "could not check fetch proposer slot for index %d", v)
-					}
+					proposerSlot, _ := proposerIndexToSlot[v]
+					//fmt.Printf("val %d, committee %d, slot %d, proposer %d\n", validatorIndex, i, slot, proposerSlot)
 					return committee, i, slot, proposerSlot, nil
 				}
 			}
