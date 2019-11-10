@@ -654,8 +654,10 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				activeIndices,
 				archivedBalances,
 			)
+			fmt.Println(committee)
+			fmt.Printf("%s\n", headState.Validators[index].PublicKey)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+				return nil, status.Errorf(codes.Internal, "could not retrieve archived assignment for validator %d: %v", index, err)
 			}
 		} else {
 			committee, committeeIndex, attesterSlot, proposerSlot, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)

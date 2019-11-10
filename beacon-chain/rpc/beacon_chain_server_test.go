@@ -13,7 +13,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"gopkg.in/d4l3k/messagediff.v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1290,18 +1289,20 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		var pubKey [48]byte
+		copy(pubKey[:], strconv.Itoa(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey: []byte{byte(i)},
+				PublicKey: pubKey[:],
 				ExitEpoch: 0,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        []byte{byte(i)},
+				PublicKey:        pubKey[:],
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
@@ -1340,6 +1341,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1366,9 +1368,11 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 		})
 	}
 
-	if !reflect.DeepEqual(res.Assignments, wanted) {
+	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
 		t.Error("Did not receive wanted assignments")
 	}
+	t.Log(res.Assignments[0])
+	t.Log(wanted[207])
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
@@ -1376,22 +1380,24 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 100
+	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		var pubKey [48]byte
+		copy(pubKey[:], strconv.Itoa(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey: []byte{byte(i)},
+				PublicKey: pubKey[:],
 				ExitEpoch: 0,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        []byte{byte(i)},
+				PublicKey:        pubKey[:],
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
@@ -1461,36 +1467,37 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
-
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:100] {
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
-		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
+		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
-		})
+		}
+		wanted = append(wanted, assign)
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-		PageSize:    100,
+		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res.Assignments, wanted) {
+	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
 		t.Error("Did not receive wanted assignments")
-		t.Error(messagediff.PrettyDiff(res.Assignments, wanted))
 	}
+	t.Log(wanted[207])
+	t.Log(res.Assignments[0])
 }
 
 func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
