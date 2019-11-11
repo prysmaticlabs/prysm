@@ -1,4 +1,4 @@
-package rpc
+package attester
 
 import (
 	"context"
@@ -16,10 +16,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var log logrus.FieldLogger
+
+func init() {
+	log = logrus.WithField("prefix", "rpc/attester")
+}
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.

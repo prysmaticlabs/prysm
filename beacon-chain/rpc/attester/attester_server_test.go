@@ -1,4 +1,4 @@
-package rpc
+package attester
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -115,7 +116,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
 		p2p:              &mockp2p.MockBroadcaster{},
-		syncChecker:      &mockSyncChecker{false},
+		syncChecker:      &mockSync.Sync{IsSyncing: false},
 		attestationCache: cache.NewAttestationCache(),
 		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
@@ -149,7 +150,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 func TestRequestAttestation_SyncNotReady(t *testing.T) {
 	as := &AttesterServer{
-		syncChecker: &mockSyncChecker{syncing: true},
+		syncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := as.RequestAttestation(context.Background(), &pb.AttestationRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
@@ -211,7 +212,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		attestationCache: cache.NewAttestationCache(),
 		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		syncChecker:      &mockSyncChecker{false},
+		syncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
 	req := &pb.AttestationRequest{
@@ -252,7 +253,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	ctx := context.Background()
 	server := &AttesterServer{
 		attestationCache: cache.NewAttestationCache(),
-		syncChecker:      &mockSyncChecker{false},
+		syncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
 	req := &pb.AttestationRequest{

@@ -1,4 +1,4 @@
-package rpc
+package node
 
 import (
 	"bytes"
