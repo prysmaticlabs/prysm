@@ -2,12 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "finality.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/endtoend/evaluators",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain/endtoend:__subpackages__"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
