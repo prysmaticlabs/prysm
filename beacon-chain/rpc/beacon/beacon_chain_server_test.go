@@ -46,7 +46,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
@@ -128,7 +128,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
@@ -201,7 +201,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	tests := []struct {
@@ -358,7 +358,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	req := &ethpb.ListAttestationsRequest{
@@ -409,7 +409,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	req := &ethpb.ListAttestationsRequest{
@@ -436,7 +436,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 		Slot: 10,
 	}
 	bs := &BeaconChainServer{
-		pool: &mockOps.Operations{
+		Pool: &mockOps.Operations{
 			Attestations: []*ethpb.Attestation{
 				{
 					Data: &ethpb.AttestationData{
@@ -450,7 +450,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 				},
 			},
 		},
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			Block: block,
 		},
 	}
@@ -458,7 +458,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := bs.pool.AttestationPoolNoVerify(ctx)
+	want, _ := bs.Pool.AttestationPoolNoVerify(ctx)
 	if !reflect.DeepEqual(res.Attestations, want) {
 		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
@@ -476,7 +476,7 @@ func TestBeaconChainServer_ListValidatorBalances_PaginationOutOfRange(t *testing
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
@@ -515,8 +515,8 @@ func TestBeaconChainServer_ListValidatorBalances_NoPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB:    db,
-		headFetcher: &mock.ChainService{State: headState},
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{State: headState},
 	}
 
 	tests := []struct {
@@ -597,7 +597,7 @@ func TestBeaconChainServer_ListValidatorBalances_Pagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
@@ -663,8 +663,8 @@ func TestBeaconChainServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB:    db,
-		headFetcher: &mock.ChainService{State: headState},
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{State: headState},
 	}
 
 	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
@@ -690,8 +690,8 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive(t *testing.T) {
 		newerBalances[i] = balances[i] * 2
 	}
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
 				Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 				Validators: validators,
@@ -735,8 +735,8 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive_NewValidatorNotFoun
 
 	newValidators, newBalances := setupValidators(t, db, 200)
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
 				Slot:       params.BeaconConfig().SlotsPerEpoch * 3,
 				Validators: newValidators,
@@ -765,10 +765,10 @@ func TestBeaconChainServer_GetValidators_NoPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -798,10 +798,10 @@ func TestBeaconChainServer_GetValidators_Pagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -867,10 +867,10 @@ func TestBeaconChainServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -906,10 +906,10 @@ func TestBeaconChainServer_GetValidators_DefaultPageSize(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -942,12 +942,12 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
 				Validators: validators,
 			},
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 200,
 			},
@@ -1014,10 +1014,10 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
 		}
 	}
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0},
 		},
 	}
@@ -1088,11 +1088,11 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 		t.Fatal(err)
 	}
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			// Pick an epoch far in the future so that we trigger fetching from the archive.
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100},
 		},
@@ -1159,7 +1159,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 		},
 	}
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
@@ -1212,7 +1212,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		},
 	}
 	bs := &BeaconChainServer{
-		headFetcher: &mock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
@@ -1249,8 +1249,8 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
@@ -1327,11 +1327,11 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: s,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -1426,11 +1426,11 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	// We tell the beacon chain server that our finalized epoch is 10 so that when
 	// we request assignments for epoch 0, it looks within the archived data.
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: s,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 10,
 			},
@@ -1529,11 +1529,11 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: s,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -1606,11 +1606,11 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: s,
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
@@ -1702,11 +1702,11 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
-		headFetcher: &mock.ChainService{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
 		},
-		finalizationFetcher: &mock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: epoch + 1,
 			},
@@ -1782,8 +1782,8 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB:    db,
-		headFetcher: &mock.ChainService{State: s},
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{State: s},
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
@@ -1825,7 +1825,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	}
 
 	bs := &BeaconChainServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	tests := []struct {
@@ -1901,7 +1901,7 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
-	bs := &BeaconChainServer{beaconDB: db}
+	bs := &BeaconChainServer{BeaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
@@ -1975,7 +1975,7 @@ func TestBeaconChainServer_GetChainHead(t *testing.T) {
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	}
 
-	bs := &BeaconChainServer{headFetcher: &mock.ChainService{State: s}}
+	bs := &BeaconChainServer{HeadFetcher: &mock.ChainService{State: s}}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	if err != nil {

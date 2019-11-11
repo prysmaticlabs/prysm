@@ -30,16 +30,16 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type BeaconChainServer struct {
-	beaconDB            db.Database
-	ctx                 context.Context
-	chainStartFetcher   powchain.ChainStartFetcher
-	headFetcher         blockchain.HeadFetcher
-	finalizationFetcher blockchain.FinalizationFetcher
-	stateFeedListener   blockchain.ChainFeeds
-	pool                operations.Pool
-	incomingAttestation chan *ethpb.Attestation
-	canonicalStateChan  chan *pbp2p.BeaconState
-	chainStartChan      chan time.Time
+	BeaconDB            db.Database
+	Ctx                 context.Context
+	ChainStartFetcher   powchain.ChainStartFetcher
+	HeadFetcher         blockchain.HeadFetcher
+	FinalizationFetcher blockchain.FinalizationFetcher
+	StateFeedListener   blockchain.ChainFeeds
+	Pool                operations.Pool
+	IncomingAttestation chan *ethpb.Attestation
+	CanonicalStateChan  chan *pbp2p.BeaconState
+	ChainStartChan      chan time.Time
 }
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -69,27 +69,27 @@ func (bs *BeaconChainServer) ListAttestations(
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_SourceEpoch:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_SourceRoot:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_TargetEpoch:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_TargetRoot:
-		atts, err = bs.beaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 		}
@@ -123,8 +123,7 @@ func (bs *BeaconChainServer) ListAttestations(
 func (bs *BeaconChainServer) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-
-	atts, err := bs.pool.AttestationPoolNoVerify(ctx)
+	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
 	}
@@ -152,7 +151,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
 		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
 
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
 		}
@@ -174,7 +173,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
-		blk, err := bs.beaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
+		blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
 		}
@@ -189,7 +188,7 @@ func (bs *BeaconChainServer) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, err := bs.beaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
@@ -220,13 +219,13 @@ func (bs *BeaconChainServer) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.headFetcher.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.headFetcher.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.headFetcher.HeadState().PreviousJustifiedCheckpoint
+	finalizedCheckpoint := bs.HeadFetcher.HeadState().FinalizedCheckpoint
+	justifiedCheckpoint := bs.HeadFetcher.HeadState().CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.HeadFetcher.HeadState().PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.headFetcher.HeadRoot(),
-		BlockSlot:                  bs.headFetcher.HeadSlot(),
+		BlockRoot:                  bs.HeadFetcher.HeadRoot(),
+		BlockSlot:                  bs.HeadFetcher.HeadSlot(),
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
@@ -251,7 +250,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -267,12 +266,12 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 	var err error
 	validators := headState.Validators
 	if requestingGenesis {
-		balances, err = bs.beaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
+		balances, err = bs.BeaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
 		}
 	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.beaconDB.ArchivedBalances(ctx, epoch)
+		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
 		}
@@ -286,7 +285,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 			continue
 		}
 
-		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
@@ -362,7 +361,7 @@ func (bs *BeaconChainServer) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	requestedEpoch := helpers.CurrentEpoch(headState)
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorsRequest_Genesis:
@@ -373,7 +372,7 @@ func (bs *BeaconChainServer) GetValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 	validators := headState.Validators
 	if requestedEpoch < finalizedEpoch {
 		stopIdx := len(validators)
@@ -408,7 +407,7 @@ func (bs *BeaconChainServer) GetValidators(
 func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	requestedEpoch := helpers.CurrentEpoch(headState)
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
@@ -422,11 +421,11 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 	activatedIndices := make([]uint64, 0)
 	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
-	finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 	var err error
 
 	if requestedEpoch < finalizedEpoch {
-		archivedChanges, err := bs.beaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
+		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived active validator changes: %v", err)
 		}
@@ -467,7 +466,7 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 func (bs *BeaconChainServer) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
 	// Additionally, determine those validators queued to exit
 	awaitingExit := make([]uint64, 0)
@@ -557,7 +556,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
 	requestedEpoch := helpers.CurrentEpoch(headState)
@@ -573,7 +572,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok, err := bs.beaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
 		}
@@ -605,7 +604,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 		return nil, err
 	}
 
-	shouldFetchFromArchive := requestedEpoch < bs.finalizationFetcher.FinalizedCheckpt().Epoch
+	shouldFetchFromArchive := requestedEpoch < bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= len(headState.Validators) {
@@ -613,7 +612,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 				index, len(headState.Validators))
 		}
 		if shouldFetchFromArchive {
-			archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+			archivedInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -628,7 +627,7 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			archivedBalances, err := bs.beaconDB.ArchivedBalances(ctx, requestedEpoch)
+			archivedBalances, err := bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -765,7 +764,7 @@ func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed
 func (bs *BeaconChainServer) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	headState := bs.headFetcher.HeadState()
+	headState := bs.HeadFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 
 	var requestedEpoch uint64
@@ -788,7 +787,7 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 	// If the request is from genesis or another past epoch, we look into our archived
 	// data to find it and return it if it exists.
 	if isGenesis {
-		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, 0)
+		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, 0)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
 		}
@@ -801,14 +800,14 @@ func (bs *BeaconChainServer) GetValidatorParticipation(
 			Participation: participation,
 		}, nil
 	} else if requestedEpoch < helpers.SlotToEpoch(headState.Slot) {
-		participation, err := bs.beaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
+		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
 			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", requestedEpoch)
 		}
-		finalizedEpoch := bs.finalizationFetcher.FinalizedCheckpt().Epoch
+		finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
 		finalized := requestedEpoch <= finalizedEpoch
 		return &ethpb.ValidatorParticipationResponse{
