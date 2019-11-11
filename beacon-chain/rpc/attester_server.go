@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -65,7 +64,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	defer span.End()
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(req.Slot)),
-		trace.Int64Attribute("shard", int64(req.Shard)),
+		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
 	if as.syncChecker.Syncing() {
@@ -104,6 +103,14 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 	headState := as.headFetcher.HeadState()
 	headRoot := as.headFetcher.HeadRoot()
 
+	// Safe guard against head state is nil in chain service. This should not happen.
+	if headState == nil {
+		headState, err = as.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
@@ -121,28 +128,14 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}
 
-	startEpoch := headState.CurrentCrosslinks[req.Shard].EndEpoch
-	endEpoch := startEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if endEpoch > targetEpoch {
-		endEpoch = targetEpoch
-	}
-	crosslinkRoot, err := ssz.HashTreeRoot(headState.CurrentCrosslinks[req.Shard])
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not tree hash crosslink for shard %d", req.Shard)
-	}
 	res = &ethpb.AttestationData{
+		Slot:            req.Slot,
+		Index:           req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
 			Root:  targetRoot,
-		},
-		Crosslink: &ethpb.Crosslink{
-			Shard:      req.Shard,
-			StartEpoch: startEpoch,
-			EndEpoch:   endEpoch,
-			ParentRoot: crosslinkRoot[:],
-			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		},
 	}
 

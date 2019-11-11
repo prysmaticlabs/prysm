@@ -55,10 +55,9 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	}
 
 	state := &pbp2p.BeaconState{
-		Slot:             params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:       validators,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
@@ -71,12 +70,8 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	req := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Crosslink: &ethpb.Crosslink{
-				Shard:    935,
-				DataRoot: []byte{'a'},
-			},
-			Source: &ethpb.Checkpoint{},
-			Target: &ethpb.Checkpoint{},
+			Source:          &ethpb.Checkpoint{},
+			Target:          &ethpb.Checkpoint{},
 		},
 	}
 	if _, err := attesterServer.SubmitAttestation(context.Background(), req); err != nil {
@@ -110,16 +105,6 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
 		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		CurrentCrosslinks: []*ethpb.Crosslink{
-			{
-				DataRoot: []byte("A"),
-			},
-		},
-		PreviousCrosslinks: []*ethpb.Crosslink{
-			{
-				DataRoot: []byte("A"),
-			},
-		},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
@@ -137,20 +122,16 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 0,
-		Slot:  3*params.BeaconConfig().SlotsPerEpoch + 1,
+		CommitteeIndex: 0,
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	expectedInfo := &ethpb.AttestationData{
+		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: 2,
@@ -158,11 +139,6 @@ func TestRequestAttestation_OK(t *testing.T) {
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: 3,
-		},
-		Crosslink: &ethpb.Crosslink{
-			EndEpoch:   3,
-			ParentRoot: crosslinkRoot[:],
-			DataRoot:   params.BeaconConfig().ZeroHash[:],
 		},
 	}
 
@@ -222,16 +198,6 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
 		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		PreviousCrosslinks: []*ethpb.Crosslink{
-			{
-				DataRoot: []byte("A"),
-			},
-		},
-		CurrentCrosslinks: []*ethpb.Crosslink{
-			{
-				DataRoot: []byte("A"),
-			},
-		},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
@@ -249,32 +215,23 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 0,
-		Slot:  10000,
+		CommitteeIndex: 0,
+		Slot:           10000,
 	}
 	res, err := attesterServer.RequestAttestation(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 
-	crosslinkRoot, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[req.Shard])
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	expectedInfo := &ethpb.AttestationData{
+		Slot:            req.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
 		Target: &ethpb.Checkpoint{
-			Epoch: 156,
-		},
-		Crosslink: &ethpb.Crosslink{
-			ParentRoot: crosslinkRoot[:],
-			EndEpoch:   params.BeaconConfig().SlotsPerEpoch,
-			DataRoot:   params.BeaconConfig().ZeroHash[:],
+			Epoch: 312,
 		},
 	}
 
@@ -299,8 +256,8 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	req := &pb.AttestationRequest{
-		Shard: 1,
-		Slot:  2,
+		CommitteeIndex: 1,
+		Slot:           2,
 	}
 
 	res := &ethpb.AttestationData{

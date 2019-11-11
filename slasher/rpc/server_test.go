@@ -121,7 +121,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 
 }
 
-func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
+func TestServer_SameSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
@@ -138,7 +138,7 @@ func TestServer_SameEpochDifferentSlotSlashable(t *testing.T) {
 	}
 	psr2 := &ethpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      63,
+			Slot:      1,
 			StateRoot: []byte("B"),
 		},
 		ValidatorIndex: 1,

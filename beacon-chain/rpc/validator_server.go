@@ -26,7 +26,7 @@ import (
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots
-// and shards in which particular validators need to perform their responsibilities,
+// and committees in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
 	ctx                context.Context
@@ -201,17 +201,17 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 }
 
 func (vs *ValidatorServer) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
+	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
 	if err != nil {
 		return nil, err
 	}
 	status := vs.assignmentStatus(idx, beaconState)
 	return &pb.AssignmentResponse_ValidatorAssignment{
-		Committee:  committee,
-		Shard:      shard,
-		Slot:       slot,
-		IsProposer: isProposer,
-		Status:     status,
+		Committee:      committee,
+		CommitteeIndex: committeeIndex,
+		AttesterSlot:   aSlot,
+		ProposerSlot:   pSlot,
+		Status:         status,
 	}, nil
 }
 

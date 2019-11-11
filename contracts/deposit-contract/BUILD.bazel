@@ -25,11 +25,19 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
-    srcs = ["depositContract_test.go"],
+    size = "medium",
+    srcs = [
+        "depositContract_test.go",
+        "deposit_tree_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/interop:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )

@@ -171,4 +171,5 @@ func ResetCache() {
 	trie = nil
 	privKeys = []*bls.SecretKey{}
 	deposits = []*ethpb.Deposit{}
+	depositDataRoots = [][32]byte{}
 }

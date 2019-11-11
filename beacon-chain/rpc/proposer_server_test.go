@@ -41,7 +41,7 @@ func TestProposeBlock_OK(t *testing.T) {
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, _ := testutil.SetupInitialDeposits(t, numDeposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
@@ -946,7 +946,7 @@ func TestEth1Data(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
-			60000: big.NewInt(4096),
+			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			3072: []byte("3072"),
