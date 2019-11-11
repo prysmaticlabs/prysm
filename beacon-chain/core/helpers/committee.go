@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -222,7 +221,6 @@ func CommitteeAssignment(
 			for _, v := range committee {
 				if validatorIndex == v {
 					proposerSlot, _ := proposerIndexToSlot[v]
-					//fmt.Printf("val %d, committee %d, slot %d, proposer %d\n", validatorIndex, i, slot, proposerSlot)
 					return committee, i, slot, proposerSlot, nil
 				}
 			}
