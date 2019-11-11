@@ -3,14 +3,14 @@ package client
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	bitfield "github.com/prysmaticlabs/go-bitfield"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -41,8 +41,8 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
 		},
 	}}
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -65,9 +65,9 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	defer finish()
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: make([]uint64, 111),
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      make([]uint64, 111),
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -82,7 +82,6 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		BeaconBlockRoot: []byte{},
 		Target:          &ethpb.Checkpoint{},
 		Source:          &ethpb.Checkpoint{},
-		Crosslink:       &ethpb.Crosslink{},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -106,9 +105,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -123,7 +122,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -149,7 +147,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			BeaconBlockRoot: []byte("A"),
 			Target:          &ethpb.Checkpoint{Root: []byte("B")},
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-			Crosslink:       &ethpb.Crosslink{Shard: 5, DataRoot: []byte{'D'}},
 		},
 		AggregationBits: aggregationBitfield,
 		CustodyBits:     custodyBitfield,
@@ -166,8 +163,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	sig := validator.keys[validatorPubKey].SecretKey.Sign(root[:], 0).Marshal()
 	expectedAttestation.Signature = sig
-
-	if !proto.Equal(generatedAttestation, expectedAttestation) {
+	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
 	testutil.AssertLogsContain(t, hook, "Submitted new attestation")
@@ -217,9 +213,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 
 	m.attesterClient.EXPECT().RequestAttestation(
@@ -229,7 +225,6 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink:       &ethpb.Crosslink{DataRoot: []byte{'D'}},
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -263,9 +258,9 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-			Shard:     5,
-			Committee: committee,
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
 		}}}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -277,9 +272,8 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Root: []byte("B")},
-		Source:    &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-		Crosslink: &ethpb.Crosslink{DataRoot: []byte{'D'}},
+		Target: &ethpb.Checkpoint{Root: []byte("B")},
+		Source: &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(

@@ -195,18 +195,12 @@ func generateAttesterSlashings(
 ) []*ethpb.AttesterSlashing {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, maxSlashings)
 	for i := uint64(0); i < maxSlashings; i++ {
-		crosslink := &ethpb.Crosslink{
-			Shard:      i % params.BeaconConfig().ShardCount,
-			StartEpoch: i,
-			EndEpoch:   i + 1,
-		}
-		committee, err := helpers.CrosslinkCommittee(bState, i, crosslink.Shard)
+		committee, err := helpers.BeaconCommittee(bState, i, i%params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		committeeSize := uint64(len(committee))
 		attData1 := &ethpb.AttestationData{
-			Crosslink: crosslink,
 			Target: &ethpb.Checkpoint{
 				Epoch: i,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -231,12 +225,11 @@ func generateAttesterSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
 		sig := privs[committee[i]].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		attData2 := &ethpb.AttestationData{
-			Crosslink: crosslink,
 			Target: &ethpb.Checkpoint{
 				Epoch: i,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -297,44 +290,10 @@ func generateAttestations(
 	currentEpoch := helpers.CurrentEpoch(bState)
 	attestations := make([]*ethpb.Attestation, maxAttestations)
 
-	committeeCount, err := helpers.CommitteeCount(bState, currentEpoch)
+	committee, err := helpers.BeaconCommittee(bState, currentEpoch, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	offSet := committeesPerSlot * (bState.Slot % params.BeaconConfig().SlotsPerEpoch)
-	startShard, err := helpers.StartShard(bState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	shard := (startShard + offSet) % params.BeaconConfig().ShardCount
-
-	parentCrosslink := bState.CurrentCrosslinks[shard]
-	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if currentEpoch < endEpoch {
-		endEpoch = currentEpoch
-	}
-	parentRoot, err := ssz.HashTreeRoot(parentCrosslink)
-	if err != nil {
-		t.Fatal(err)
-	}
-	crosslink := &ethpb.Crosslink{
-		Shard:      shard,
-		StartEpoch: parentCrosslink.EndEpoch,
-		EndEpoch:   endEpoch,
-		ParentRoot: parentRoot[:],
-		DataRoot:   params.BeaconConfig().ZeroHash[:],
-	}
-	committee, err := helpers.CrosslinkCommittee(bState, currentEpoch, shard)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committeeSize := uint64(len(committee))
-	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
-	if err != nil {
-		panic(err)
-	}
-	crosslink.ParentRoot = crosslinkParentRoot[:]
 
 	headRoot, err := helpers.BlockRootAtSlot(headState, bState.Slot)
 	if err != nil {
@@ -352,11 +311,17 @@ func generateAttestations(
 		}
 	}
 
+	committeeSize := uint64(len(committee))
 	custodyBits := bitfield.NewBitlist(committeeSize)
+	attestingSlot := uint64(0)
+	if bState.Slot > 0 {
+		attestingSlot = bState.Slot - 1
+	}
+
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Slot:            attestingSlot,
 			BeaconBlockRoot: headRoot,
-			Crosslink:       crosslink,
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
@@ -383,7 +348,7 @@ func generateAttestations(
 	}
 
 	bitsPerAtt := committeeSize / maxAttestations
-	domain := helpers.Domain(bState.Fork, parentCrosslink.EndEpoch+1, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 		aggregationBits := bitfield.NewBitlist(committeeSize)
 		sigs := []*bls.Signature{}

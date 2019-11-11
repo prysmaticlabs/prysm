@@ -98,7 +98,6 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 			Attestations: atts,
 			RandaoReveal: req.RandaoReveal,
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
-			Transfers:         []*ethpb.Transfer{},
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
 			VoluntaryExits:    []*ethpb.VoluntaryExit{},

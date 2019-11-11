@@ -10,36 +10,39 @@ message Attestation {
     // A bitfield representation of validator indices that have voted exactly
     // the same vote and have been aggregated into this attestation.
     // Spec type: Bitlist[N]
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     AttestationData data = 2;
 
     // Not used in phase 0.
-    bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
     // 96 byte BLS aggregate signature.
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message AttestationData {
+    // Slot of the attestation for.
+    uint64 slot = 1;
+
+    // Committee index voted this attestation.
+    uint64 index = 2;
+
     // Attestation data includes information on Casper the Friendly Finality Gadget's votes
     // See: https://arxiv.org/pdf/1710.09437.pdf
 
     // 32 byte root of the LMD GHOST block vote.
-    bytes beacon_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Source contains information relating to the recent justified epoch
     // as well as the 32 byte root of the epoch boundary block at the
     // source epoch.
-    Checkpoint source = 2;
+    Checkpoint source = 4;
 
     // Target contains information relating to the epoch the attestation
     // is targeting as well as the 32 byte root of the epoch boundary
     // block at the source epoch.
-    Checkpoint target = 3;
-
-    // Crosslink voted by this attestation.
-    Crosslink crosslink = 4;
+    Checkpoint target = 5;
 }
 
 message Checkpoint {
@@ -50,23 +53,4 @@ message Checkpoint {
     uint64 epoch = 1;
     // block root of the check point reference to.
     bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-}
-
-message Crosslink {
-    // The shard that crosslinks to the beacon chain.
-    uint64 shard = 1;
-
-    // 32 byte root of the parent crosslink.
-    bytes parent_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-
-    // Start epoch must match the parent crosslink's end epoch.
-    uint64 start_epoch = 3;
-
-    // Ending epoch for this crosslink period. This field matches the attestation
-    // target epoch or the start epoch + MAX_EPOCHS_PER_CROSSLINK, whichever is
-    // less.
-    uint64 end_epoch = 4;
-
-    // 32 byte root of the crosslinked shard data since the previous crosslink.
-    bytes data_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
