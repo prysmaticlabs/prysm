@@ -102,14 +102,19 @@ func (s *SecretKey) PublicKey() *PublicKey {
 	return &PublicKey{p: s.p.GetPublicKey()}
 }
 
+func concatMsgAndDomain(msg []byte, domain uint64) []byte {
+	b := [40]byte{}
+	binary.LittleEndian.PutUint64(b[32:], domain)
+	copy(b[0:32], msg)
+	return b[:]
+}
+
 // Sign a message using a secret key - in a beacon/validator client.
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	signature := s.p.SignHash(HashWithDomain(bytesutil.ToBytes32(msg), b))
+	signature := s.p.SignHashWithDomain(concatMsgAndDomain(msg, domain))
 	return &Signature{s: signature}
 }
 
@@ -151,10 +156,7 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	hashedMsg := HashWithDomain(bytesutil.ToBytes32(msg), b)
-	return s.s.VerifyHash(pub.p, hashedMsg)
+	return s.s.VerifyHashWithDomain(pub.p, concatMsgAndDomain(msg, domain))
 }
 
 // VerifyAggregate verifies each public key against its respective message.
@@ -173,13 +175,14 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	}
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
-	var hashedMsgs [][]byte
+	hashWithDomains := make([]byte, size * 40)
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
-		hashedMsgs = append(hashedMsgs, HashWithDomain(msg[i], b))
+		copy(hashWithDomains[i*40:i*40+32], msg[i][:])
+		copy(hashWithDomains[i*40+32:], b[:])
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.VerifyAggregateHashes(rawKeys, hashedMsgs)
+	return s.s.VerifyAggregateHashWithDomain(rawKeys, hashWithDomains)
 }
 
 // VerifyAggregateCommon verifies each public key against its respective message.
@@ -192,9 +195,6 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 	if len(pubKeys) == 0 {
 		return false
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	hashedMsg := HashWithDomain(msg, b)
 	//#nosec G104
 	aggregated, _ := pubKeys[0].Copy()
 
@@ -202,7 +202,7 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 		aggregated.p.Add(pubKeys[i].p)
 	}
 
-	return s.s.VerifyHash(aggregated.p, hashedMsg)
+	return s.s.VerifyHashWithDomain(aggregated.p, concatMsgAndDomain(msg[:], domain))
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
