@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,7 +27,7 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
-		return fmt.Errorf("failed to get chain head: %v", err)
+		return errors.Wrap(err, "failed to get chain head")
 	}
 	// Balances actually fluctuate but we just want to check initial balance.
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
@@ -36,7 +37,7 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 	validatorRequest := &eth.GetValidatorsRequest{}
 	validators, err := client.GetValidators(context.Background(), validatorRequest)
 	if err != nil {
-		return fmt.Errorf("failed to get validators: %v", err)
+		return errors.Wrap(err, "failed to get validators")
 	}
 
 	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -66,13 +67,13 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 	return nil
 }
 
-// ValidatorsParticipating ensures the validators have an acceptable participation rate.
+// validatorsParticipating ensures the validators have an acceptable participation rate.
 // TODO(#3971) - Fix validator participation API to calculate based on previous epoch.
-func ValidatorsParticipating(client eth.BeaconChainClient) error {
+func validatorsParticipating(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
-		return fmt.Errorf("failed to get chain head: %v", err)
+		return errors.Wrap(err, "failed to get chain head")
 	}
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
 	if currentEpoch > 0 {
@@ -86,7 +87,7 @@ func ValidatorsParticipating(client eth.BeaconChainClient) error {
 	}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
-		return fmt.Errorf("failed to get validator participation: %v", err)
+		return errors.Wrap(err, "failed to get validator participation")
 	}
 
 	slotsPerEpoch := float32(params.BeaconConfig().SlotsPerEpoch)

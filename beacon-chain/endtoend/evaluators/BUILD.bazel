@@ -13,5 +13,6 @@ go_library(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )

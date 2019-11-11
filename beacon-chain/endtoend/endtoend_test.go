@@ -93,7 +93,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
 	}
-	time.Sleep(2 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	currentEpoch := uint64(0)
@@ -105,7 +104,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 		}
 
-		t.Logf("Current Epoch: %d\n", currentEpoch)
 		for _, evaluator := range config.evaluators {
 			t.Run(evaluator.Name, func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
@@ -114,7 +112,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			})
 		}
 		currentEpoch++
-		time.Sleep(time.Second)
 	}
 
 	if currentEpoch < config.epochsToRun {
@@ -172,8 +169,6 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	if err = WaitForTextInFile(file, "IPC endpoint opened"); err != nil {
 		t.Fatal(err)
 	}
-	// Small sleep to make sure IPC endpoint starts.
-	time.Sleep(4 * time.Second)
 
 	// Connect to the started geth dev chain.
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
@@ -193,7 +188,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatal(err)
 	}
 	key := bytes.NewReader(jsonBytes)
-	keystore, err := keystore.DecryptKey(jsonBytes, "")
+	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,12 +197,12 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatalf("unable to advance chain: %v", err)
 	}
 
-	txOpts, err := bind.NewTransactor(key, "")
+	txOpts, err := bind.NewTransactor(key, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	minDeposit := big.NewInt(1e9)
+	minDeposit := big.NewInt(int64(params.BeaconConfig().MinDepositAmount))
 	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
 	if err != nil {
 		t.Fatal(err)
@@ -223,10 +218,9 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	t.Logf("Contract deployed at %s", contractAddr.Hex())
 	return contractAddr, keystorePath, cmd.Process.Pid
 }
 
@@ -289,15 +283,11 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Beacon node %d started", index)
 
 	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+index))
 	if err != nil {
 		t.Fatalf("failed to get p2p info: %v", err)
 	}
-	time.Sleep(1 * time.Second)
-
-	// Get the response body as a string
 	dataInBytes, err := ioutil.ReadAll(response.Body)
 	pageContent := string(dataInBytes)
 	if err := response.Body.Close(); err != nil {
@@ -371,8 +361,6 @@ func initializeValidators(
 		if err = WaitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
 			t.Fatal(err)
 		}
-
-		t.Logf("%d Validators started for beacon node %d", validatorsPerNode, n)
 	}
 
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
@@ -386,12 +374,12 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 	r := bytes.NewReader(jsonBytes)
-	txOps, err := bind.NewTransactor(r, "")
+	txOps, err := bind.NewTransactor(r, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
 	minDeposit := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
-	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(1e9))
+	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = 4000000
 
 	contract, err := contracts.NewDepositContract(contractAddress, web3)
@@ -407,7 +395,6 @@ func initializeValidators(
 			t.Error("unable to send transaction to contract")
 			continue
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	// Wait for last tx to mine.
@@ -415,10 +402,10 @@ func initializeValidators(
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	keystore, err := keystore.DecryptKey(jsonBytes, "")
+	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,7 +413,6 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	t.Logf("%d deposits mined", len(deposits))
 	return valClients
 }
 
@@ -435,7 +421,6 @@ func PeersConnect(port uint64, expectedPeers uint64) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(2 * time.Second)
 	dataInBytes, err := ioutil.ReadAll(response.Body)
 	pageContent := string(dataInBytes)
 	if err := response.Body.Close(); err != nil {
@@ -467,8 +452,7 @@ func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 	}
 	finishBlock := block.NumberU64() + blocksToMake
 
-	// Little extra in case of batching
-	for i := uint64(0); i < blocksToMake || block.NumberU64() <= finishBlock; i++ {
+	for block.NumberU64() <= finishBlock {
 		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
 		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), keystore.PrivateKey)
 		if err != nil {

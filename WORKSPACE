@@ -32,16 +32,16 @@ http_archive(
 )
 
 http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
+    strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
+    urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
+)
+
+http_archive(
     name = "build_bazel_rules_nodejs",
     sha256 = "0942d188f4d0de6ddb743b9f6642a26ce1ad89f09c0035a9a5ca5ba9615c96aa",
     urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.1/rules_nodejs-0.38.1.tar.gz"],
-)
-
-git_repository(
-    name = "io_bazel_rules_go",
-    commit = "9bb1562710f7077cd109b66cd4b45900e6d7ae73",
-    remote = "https://github.com/bazelbuild/rules_go",
-    shallow_since = "1573170158 -0500",
 )
 
 git_repository(

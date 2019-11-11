@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -20,7 +21,7 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
-		return fmt.Errorf("failed to get chain head: %v", err)
+		return errors.Wrap(err, "failed to get chain head")
 	}
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
 	finalizedEpoch := chainHead.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch
