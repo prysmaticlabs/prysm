@@ -150,7 +150,7 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 	}
 	for _, tt := range spanTestsMax {
 		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
-			t.Fatalf("failed to update span: %v", err)
+			t.Fatalf("Failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
