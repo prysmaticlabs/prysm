@@ -118,6 +118,14 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		}
 	}
 
+	// Safe guard against head state is nil in chain service. This should not happen.
+	if headState == nil {
+		headState, err = as.BeaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
