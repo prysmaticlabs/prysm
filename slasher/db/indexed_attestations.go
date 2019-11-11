@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"reflect"
 	"sort"
 
@@ -117,7 +118,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 
 	// prune history to max size every 10th epoch
 	if idxAttestation.Data.Source.Epoch%10 == 0 {
-		weakSubjectivityPeriod := uint64(54000)
+		weakSubjectivityPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 		err = db.PruneHistory(idxAttestation.Data.Source.Epoch, weakSubjectivityPeriod)
 	}
 	return err
