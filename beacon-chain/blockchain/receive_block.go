@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -61,14 +62,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) er
 func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
+	blockCopy := proto.Clone(block).(*ethpb.BeaconBlock)
 
 	// Apply state transition on the new block.
-	if err := s.forkChoiceStore.OnBlock(ctx, block); err != nil {
+	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
-	root, err := ssz.SigningRoot(block)
+	root, err := ssz.SigningRoot(blockCopy)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -91,18 +93,18 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	}
 
 	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := s.cleanupBlockOperations(ctx, block); err != nil {
+	if err := s.cleanupBlockOperations(ctx, blockCopy); err != nil {
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(block.Slot)
+	s.reportSlotMetrics(blockCopy.Slot)
 
 	// Log if block is a competing block.
-	isCompetingBlock(root[:], block.Slot, headRoot, headBlk.Slot)
+	isCompetingBlock(root[:], blockCopy.Slot, headRoot, headBlk.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(block, root[:])
+	logStateTransitionData(blockCopy, root[:])
 
 	processedBlkNoPubsub.Inc()
 

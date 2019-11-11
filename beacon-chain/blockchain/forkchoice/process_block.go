@@ -73,7 +73,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
