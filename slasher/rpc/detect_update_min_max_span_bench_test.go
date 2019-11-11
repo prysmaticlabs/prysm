@@ -9,7 +9,7 @@ import (
 )
 
 func BenchmarkMinSpan(b *testing.B) {
-	diffs := []uint64{2, 10, 100, 1000, 10000, 54000}
+	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
 	dbs := db.SetupSlasherDB(b)
 	defer db.TeardownSlasherDB(b, dbs)
 	ctx := context.Background()
