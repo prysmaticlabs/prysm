@@ -213,7 +213,7 @@ func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(uint64(i)%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
 		if err != nil {
 			return 0, err
 		}

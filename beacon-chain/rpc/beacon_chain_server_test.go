@@ -1280,7 +1280,7 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
+func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1288,14 +1288,23 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		var pubKey [48]byte
+		copy(pubKey[:], strconv.Itoa(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey: pubKey[:],
+				ExitEpoch: 0,
+			})
 		} else {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey:        pubKey[:],
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			})
 		}
 	}
 
@@ -1331,12 +1340,13 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1344,42 +1354,53 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
 
-	if !reflect.DeepEqual(res.Assignments, wanted) {
+	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
 		t.Error("Did not receive wanted assignments")
 	}
 }
 
 func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
-	t.Skip("Disabled until v0.9.0 (#3865) completes")
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
+	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		var pubKey [48]byte
+		copy(pubKey[:], strconv.Itoa(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: 0})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey:        pubKey[:],
+				ExitEpoch:        0,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			})
 		} else {
-			validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+			validators = append(validators, &ethpb.Validator{
+				PublicKey:        pubKey[:],
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			})
 		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -1395,7 +1416,9 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		Balances:    balances,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1420,21 +1443,45 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	proposerSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	proposerIndex, err := helpers.BeaconProposerIndex(s)
+	attesterSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
+		ProposerSeed:   proposerSeed[:],
+		AttesterSeed:   attesterSeed[:],
+		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
+	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
-		Seed:           seed[:],
-		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
-		ProposerIndex:  proposerIndex,
-	}); err != nil {
+	if err := db.SaveArchivedBalances(context.Background(), 0, balances); err != nil {
 		t.Fatal(err)
+	}
+
+	// Construct the wanted assignments.
+	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
+	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
+			BeaconCommittees: committee,
+			CommitteeIndex:   committeeIndex,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
+			PublicKey:        s.Validators[index].PublicKey,
+		}
+		wanted = append(wanted, assign)
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -1443,28 +1490,6 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Construct the wanted assignments
-	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
-
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: committee,
-			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
-			PublicKey:        s.Validators[index].PublicKey,
-		})
-	}
-
 	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
 	}
@@ -1521,7 +1546,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1529,15 +1554,15 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[1:4] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1598,7 +1623,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 
-	// Construct the wanted assignments
+	// Construct the wanted assignments.
 	var assignments []*ethpb.ValidatorAssignments_CommitteeAssignment
 
 	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
@@ -1606,15 +1631,15 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 	for _, index := range activeIndices[3:5] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}
@@ -1638,15 +1663,15 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 
 	for _, index := range activeIndices[6:7] {
-		committee, committeeIndex, slot, isProposer, _, err := helpers.CommitteeAssignment(s, 0, index)
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        s.Validators[index].PublicKey,
 		})
 	}

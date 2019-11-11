@@ -19,6 +19,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -611,10 +612,6 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
-		var committee []uint64
-		var committeeIndex uint64
-		var slot uint64
-		var isProposer bool
 		if shouldFetchFromArchive {
 			archivedInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
 			if err != nil {
@@ -631,25 +628,53 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 					requestedEpoch,
 				)
 			}
-			committee, committeeIndex, slot, err = bs.archivedValidatorCommittee(requestedEpoch, index, archivedInfo, activeIndices)
+			archivedBalances, err := bs.beaconDB.ArchivedBalances(ctx, requestedEpoch)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+				return nil, status.Errorf(
+					codes.Internal,
+					"could not retrieve archived balances for epoch %d",
+					requestedEpoch,
+				)
 			}
-			isProposer = archivedInfo.ProposerIndex == index
-		} else {
-			committee, committeeIndex, slot, isProposer, _, err = helpers.CommitteeAssignment(headState, requestedEpoch, index)
+			if archivedBalances == nil {
+				return nil, status.Errorf(
+					codes.NotFound,
+					"no archival balances found for epoch %d",
+					requestedEpoch,
+				)
+			}
+			committee, committeeIndex, attesterSlot, proposerSlot, err := archivedValidatorCommittee(
+				requestedEpoch,
+				index,
+				archivedInfo,
+				activeIndices,
+				archivedBalances,
+			)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+				return nil, status.Errorf(codes.Internal, "could not retrieve archived assignment for validator %d: %v", index, err)
 			}
+			assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
+				BeaconCommittees: committee,
+				CommitteeIndex:   committeeIndex,
+				AttesterSlot:     attesterSlot,
+				ProposerSlot:     proposerSlot,
+				PublicKey:        headState.Validators[index].PublicKey,
+			}
+			res = append(res, assign)
+			continue
 		}
-
-		res = append(res, &ethpb.ValidatorAssignments_CommitteeAssignment{
+		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(headState, requestedEpoch, index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+		}
+		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
-			Slot:             slot,
-			Proposer:         isProposer,
+			AttesterSlot:     attesterSlot,
+			ProposerSlot:     proposerSlot,
 			PublicKey:        headState.Validators[index].PublicKey,
-		})
+		}
+		res = append(res, assign)
 	}
 
 	return &ethpb.ValidatorAssignments{
@@ -661,32 +686,77 @@ func (bs *BeaconChainServer) ListValidatorAssignments(
 }
 
 // Computes validator assignments for an epoch and validator index using archived committee
-// information and a set of active validators.
-func (bs *BeaconChainServer) archivedValidatorCommittee(
+// information, archived balances, and a set of active validators.
+func archivedValidatorCommittee(
 	epoch uint64,
 	validatorIndex uint64,
 	archivedInfo *ethpb.ArchivedCommitteeInfo,
 	activeIndices []uint64,
-) ([]uint64, uint64, uint64, error) {
-	startSlot := helpers.StartSlot(epoch)
+	archivedBalances []uint64,
+) ([]uint64, uint64, uint64, uint64, error) {
 	committeeCount := archivedInfo.CommitteeCount
-	committeesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	seed := bytesutil.ToBytes32(archivedInfo.Seed)
+	proposerSeed := bytesutil.ToBytes32(archivedInfo.ProposerSeed)
+	attesterSeed := bytesutil.ToBytes32(archivedInfo.AttesterSeed)
 
+	startSlot := helpers.StartSlot(epoch)
+	proposerIndexToSlot := make(map[uint64]uint64)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		for i := uint64(0); i < committeesPerSlot; i++ {
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, i, committeeCount)
+		seedWithSlot := append(proposerSeed[:], bytesutil.Bytes8(slot)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		i, err := archivedProposerIndex(activeIndices, archivedBalances, seedWithSlotHash)
+		if err != nil {
+			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", slot)
+		}
+		proposerIndexToSlot[i] = slot
+	}
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
+		}
+		if countAtSlot == 0 {
+			countAtSlot = 1
+		}
+		for i := uint64(0); i < countAtSlot; i++ {
+			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
+			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, committeeCount)
 			if err != nil {
-				return nil, 0, 0, errors.Wrap(err, "could not compute committee")
+				return nil, 0, 0, 0, errors.Wrap(err, "could not compute committee")
 			}
 			for _, index := range committee {
 				if validatorIndex == index {
-					return committee, i, slot, nil
+					proposerSlot, _ := proposerIndexToSlot[validatorIndex]
+					return committee, i, slot, proposerSlot, nil
 				}
 			}
 		}
 	}
-	return nil, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
+	return nil, 0, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
+}
+
+func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(activeIndices))
+	if length == 0 {
+		return 0, errors.New("empty indices list")
+	}
+	maxRandomByte := uint64(1<<8 - 1)
+	for i := uint64(0); ; i++ {
+		candidateIndex, err := helpers.ComputeShuffledIndex(i%length, length, seed, true)
+		if err != nil {
+			return 0, err
+		}
+		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		randomByte := hashutil.Hash(b)[i%32]
+		effectiveBalance := activeBalances[candidateIndex]
+		if effectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			// if the actual balance is greater than or equal to the max effective balance,
+			// we just determine the proposer index using config.MaxEffectiveBalance.
+			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		}
+		if effectiveBalance*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+			return candidateIndex, nil
+		}
+	}
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
