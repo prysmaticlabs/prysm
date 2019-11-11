@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -24,6 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -41,6 +44,7 @@ type ProposerServer struct {
 	canonicalStateChan     chan *pbp2p.BeaconState
 	depositFetcher         depositcache.DepositFetcher
 	pendingDepositsFetcher depositcache.PendingDepositsFetcher
+	syncChecker            sync.Checker
 }
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
@@ -49,6 +53,10 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	if ps.syncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
 
 	// Retrieve the parent block as the current head of the canonical chain
 	parent := ps.headFetcher.HeadBlock()
