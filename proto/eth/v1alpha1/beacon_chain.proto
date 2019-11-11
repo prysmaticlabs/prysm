@@ -278,6 +278,9 @@ message BeaconCommittees {
     message CommitteeItem {
         // A committee of validator indices that need to attest to beacon blocks.
         repeated uint64 committee = 1;
+
+        // The slot at which the committee is assigned to.
+        uint64 slot = 2;
     }
     // The epoch for which the committees in the response belong to.
     uint64 epoch = 1;
@@ -285,12 +288,16 @@ message BeaconCommittees {
     // A list of committees of validators for given  epoch.
     repeated CommitteeItem committees = 2;
 
+
+    // The number of active validators at the given epoch.
+    uint64 active_validator_count = 3;
+
     // A pagination token returned from a previous call
     // that indicates from where the listing should continue.
-    string next_page_token = 3;
+    string next_page_token = 4;
 
     // Total count of committees matching the request filter.
-    int32 total_size = 4;
+    int32 total_size = 5;
 }
 
 message GetValidatorBalancesRequest {

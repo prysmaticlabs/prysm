@@ -315,14 +315,16 @@ func (bs *BeaconChainServer) ListBeaconCommittees(
 			}
 			committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
 				Committee: committee,
+				Slot:      slot,
 			})
 		}
 	}
 	return &ethpb.BeaconCommittees{
-		Epoch:         helpers.SlotToEpoch(startSlot),
-		Committees:    committees,
-		NextPageToken: "",
-		TotalSize:     int32(len(committees)),
+		Epoch:                helpers.SlotToEpoch(startSlot),
+		ActiveValidatorCount: uint64(len(activeIndices)),
+		Committees:           committees,
+		NextPageToken:        "",
+		TotalSize:            int32(len(committees)),
 	}, nil
 }
 
