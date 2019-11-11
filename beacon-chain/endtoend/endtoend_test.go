@@ -19,6 +19,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -31,7 +32,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var eth1BlockTime = uint64(1)
+var eth1BlockTime = uint64(4)
 
 type end2EndConfig struct {
 	minimalConfig  bool
@@ -52,17 +53,19 @@ type beaconNodeInfo struct {
 	multiAddr   string
 }
 
+type validatorClientInfo struct {
+	processID   int
+	monitorPort uint64
+}
+
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
-	os.MkdirAll(tmpPath, os.ModePerm)
-	fmt.Printf("Test Path: %s\n", tmpPath)
+	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
-		tmpPath:        tmpPath,
 		minimalConfig:  false,
 		epochsToRun:    8,
-		numBeaconNodes: 2,
-		numValidators:  8,
+		numBeaconNodes: 4,
+		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []evaluator{
 			{
 				name:       "activate_validators",
@@ -85,16 +88,13 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	tmpPath := path.Join("/tmp/e2e/", uuid.NewUUID().String()[:18])
-	os.MkdirAll(tmpPath, os.ModePerm)
-	fmt.Printf("Test path: %s\n", tmpPath)
+	params.UseMinimalConfig()
 
 	minimalConfig := &end2EndConfig{
-		tmpPath:        tmpPath,
 		minimalConfig:  true,
 		epochsToRun:    8,
 		numBeaconNodes: 4,
-		numValidators:  64,
+		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []evaluator{
 			{
 				name:       "activate_validators",
@@ -112,13 +112,13 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 }
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
-	if config.minimalConfig {
-		params.UseMinimalConfig()
-	} else {
-		params.UseDemoBeaconConfig()
+	tmpPath := path.Join("/tmp/e2e/", uuid.NewRandom().String()[:18])
+	if err := os.MkdirAll(tmpPath, os.ModePerm); err != nil {
+		t.Fatal(err)
 	}
+	fmt.Printf("Test Path: %s\n", tmpPath)
+	config.tmpPath = tmpPath
 
-	tmpPath := config.tmpPath
 	contractAddr, keystorePath := StartEth1(t, tmpPath)
 	config.contractAddr = contractAddr
 	beaconNodes := startBeaconNodes(t, config)
@@ -150,39 +150,28 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	time.Sleep(2 * time.Second)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
-	time.Sleep(time.Second * 4 * time.Duration(params.BeaconConfig().SecondsPerSlot))
 	currentEpoch := uint64(0)
-	// Run the evaluators for any in chainstart to execute.
-	runEvaluators(t, beaconClient, config.evaluators)
-
-	scanner := bufio.NewScanner(beaconLogFile)
-	for scanner.Scan() && currentEpoch < config.epochsToRun {
-		currentLine := scanner.Text()
-		if strings.Contains(currentLine, "Finished applying state transition") {
-			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
-			continue
-		} else if !strings.Contains(currentLine, "Starting next epoch") {
-			time.Sleep(time.Microsecond * 500)
-			continue
+	for currentEpoch < config.epochsToRun {
+		if currentEpoch > 0 {
+			newEpochText := fmt.Sprintf("\"Starting next epoch\" epoch=%d", currentEpoch)
+			if err := WaitForTextInFile(beaconLogFile, newEpochText); err != nil {
+				t.Fatal(err)
+			}
 		}
 
-		// Only run evaluators when a new epoch is started.
-		newEpochIndex := strings.Index(currentLine, "epoch=") + 6
-		newEpoch, err := strconv.Atoi(currentLine[newEpochIndex : newEpochIndex+1])
-		if err != nil {
-			t.Fatalf("failed to convert logs to int: %v", err)
-		}
-		currentEpoch = uint64(newEpoch)
-		t.Logf("Current Epoch: %d", currentEpoch)
-
+		t.Logf("Current Epoch: %d\n", currentEpoch)
 		runEvaluators(t, beaconClient, config.evaluators)
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatal(err)
+		currentEpoch++
+		time.Sleep(time.Second)
 	}
 
 	if currentEpoch < config.epochsToRun {
 		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
+	}
+
+	process, err := os.FindProcess()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -195,8 +184,6 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
-		fmt.Sprintf("--dev.period=%d", eth1BlockTime),
-		"--dev.period=1",
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
@@ -205,6 +192,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		"--wsaddr=0.0.0.0",
 		"--wsorigins=\"*\"",
 		"--dev",
+		"--dev.period=0",
 	}
 	cmd := exec.Command(binaryPath, args...)
 	file, err := os.Create(path.Join(tmpPath, "eth1.log"))
@@ -220,10 +208,8 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	if err = WaitForTextInFile(file, "IPC endpoint opened"); err != nil {
 		t.Fatal(err)
 	}
-
-	// Sleeping to allow the eth1chain to advance Eth1FollowDistance blocks.
-	t.Logf("Sleeping %d eth1 blocks for ETH1_FOLLOW_DISTANCE", params.BeaconConfig().Eth1FollowDistance)
-	time.Sleep(time.Duration(eth1BlockTime*params.BeaconConfig().Eth1FollowDistance) * time.Second)
+	// Small sleep to make sure IPC endpoint starts.
+	time.Sleep(4 * time.Second)
 
 	// Connect to the started geth dev chain.
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
@@ -243,12 +229,26 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		t.Fatal(err)
 	}
 	key := bytes.NewReader(jsonBytes)
+	keystore, err := keystore.DecryptKey(jsonBytes, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
+	if err := MineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		t.Fatalf("unable to advance chain: %v", err)
+	}
 
 	txOpts, err := bind.NewTransactor(key, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	minDeposit := big.NewInt(1e9)
+	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txOpts.Nonce = big.NewInt(int64(nonce))
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, minDeposit, txOpts.From)
 	if err != nil {
 		t.Fatalf("failed to deploy deposit contract: %v", err)
@@ -259,7 +259,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Second)
 	}
 
 	t.Logf("Contract deployed at %s", contractAddr.Hex())
@@ -331,7 +331,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	if err != nil {
 		t.Fatalf("failed to get p2p info: %v", err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Get the response body as a string
 	dataInBytes, err := ioutil.ReadAll(response.Body)
@@ -439,7 +439,7 @@ func initializeValidators(
 			t.Error("unable to send transaction to contract")
 			continue
 		}
-		time.Sleep(500 * time.Microsecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	// Wait for last tx to mine.
@@ -447,7 +447,15 @@ func initializeValidators(
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
+	}
+
+	keystore, err := keystore.DecryptKey(jsonBytes, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := MineBlocks(web3, keystore, 20); err != nil {
+		t.Fatal(err)
 	}
 
 	// Sleep the Eth1FollowDistance blocks.
@@ -476,11 +484,46 @@ func PeersConnect(port uint64, expectedPeers uint64) error {
 	return nil
 }
 
+func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {
+	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
+	if err != nil {
+		return err
+	}
+	chainID, err := web3.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
+	block, err := web3.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	finishBlock := block.NumberU64() + blocksToMake
+
+	// Little extra in case of batching
+	for i := uint64(0); i < blocksToMake || block.NumberU64() <= finishBlock; i++ {
+		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
+		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), keystore.PrivateKey)
+		if err != nil {
+			return err
+		}
+		if err := web3.SendTransaction(context.Background(), signed); err != nil {
+			return err
+		}
+		nonce++
+		time.Sleep(250 * time.Microsecond)
+		block, err = web3.BlockByNumber(context.Background(), nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func WaitForTextInFile(file *os.File, text string) error {
 	found := false
 	for !found {
 		// Pass some time to not spam file checks.
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {

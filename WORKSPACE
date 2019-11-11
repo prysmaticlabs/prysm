@@ -47,6 +47,13 @@ http_archive(
 )
 
 git_repository(
+    name = "io_bazel_rules_go",
+    commit = "9bb1562710f7077cd109b66cd4b45900e6d7ae73",
+    remote = "https://github.com/bazelbuild/rules_go",
+    shallow_since = "1573170158 -0500",
+)
+
+git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
     remote = "https://github.com/graknlabs/bazel-distribution",

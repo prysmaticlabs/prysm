@@ -38,7 +38,7 @@ func runEvaluators(t *testing.T, client eth.BeaconChainClient, evaluators []eval
 
 	for _, evaluator := range evaluators {
 		if evaluator.policy(currentEpoch) {
-			fmt.Printf("Running %s\n", evaluator.name)
+			t.Logf("Running %s\n", evaluator.name)
 			t.Run(evaluator.name, func(t *testing.T) {
 				if err := evaluator.evaluation(client); err != nil {
 					t.Fatal(err)
