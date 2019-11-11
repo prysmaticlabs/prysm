@@ -84,6 +84,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		syncChecker: &mockSyncChecker{false},
 	}
 	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
@@ -113,6 +114,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		syncChecker: &mockSyncChecker{false},
 	}
 
 	pubKey := make([]byte, 96)
@@ -166,6 +168,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		syncChecker: &mockSyncChecker{false},
 	}
 
 	// Test the first validator in registry.
@@ -240,6 +243,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		syncChecker: &mockSyncChecker{false},
 	}
 
 	// Test the first validator in registry.
@@ -294,6 +298,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:    db,
 		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		syncChecker: &mockSyncChecker{false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -311,6 +316,16 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	if len(res.ValidatorAssignment) != 2 {
 		t.Fatalf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
+	}
+}
+
+func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
+	vs := &ValidatorServer{
+		syncChecker: &mockSyncChecker{syncing: true},
+	}
+	_, err := vs.CommitteeAssignment(context.Background(), &pb.AssignmentRequest{})
+	if strings.Contains(err.Error(), "syncing to latest head") {
+		t.Error("Did not get wanted error")
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,6 +38,7 @@ type ValidatorServer struct {
 	depositFetcher     depositcache.DepositFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
 	eth1InfoFetcher    powchain.ChainInfoFetcher
+	syncChecker        sync.Checker
 	stateFeedListener  blockchain.ChainFeeds
 	chainStartChan     chan time.Time
 }
@@ -150,6 +152,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
+	if vs.syncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	var err error
 	s := vs.headFetcher.HeadState()
 	// Advance state with empty transitions up to the requested epoch start slot.
