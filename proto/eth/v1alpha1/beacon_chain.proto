@@ -275,15 +275,15 @@ message ListCommitteesRequest {
 }
 
 message BeaconCommittees {
-    message Committee {
+    message CommitteeItem {
         // A committee of validator indices that need to attest to beacon blocks.
-        repeated uint64 = 1;
+        repeated uint64 committee = 1;
     }
     // The epoch for which the committees in the response belong to.
     uint64 epoch = 1;
 
     // A list of committees of validators for given  epoch.
-    repeated Committee committees = 2;
+    repeated CommitteeItem committees = 2;
 
     // A pagination token returned from a previous call
     // that indicates from where the listing should continue.

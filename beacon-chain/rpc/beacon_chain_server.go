@@ -236,6 +236,26 @@ func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) 
 	}, nil
 }
 
+// ListBeaconCommittees for a given epoch.
+//
+// This request may specify validator indices or public keys to filter out
+// validator beacon chain committees. If no filter criteria is specified, the response returns
+// all beacon committees for the current epoch. The results are paginated by default.
+func (bs *BeaconChainServer) ListBeaconCommittees(
+	ctx context.Context,
+	req *ethpb.ListCommitteesRequest,
+) (*ethpb.BeaconCommittees, error) {
+	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"requested page size %d can not be greater than max size %d",
+			req.PageSize,
+			params.BeaconConfig().MaxPageSize,
+		)
+	}
+	return nil, nil
+}
+
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
 // An optional Epoch parameter is provided to request historical validator balances from
 // archived, persistent data.
