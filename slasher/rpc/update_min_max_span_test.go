@@ -2,8 +2,9 @@ package rpc
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"

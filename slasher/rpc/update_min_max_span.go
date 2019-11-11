@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 

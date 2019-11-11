@@ -17,15 +17,15 @@ func TestRecentAttestationMultiMap_Contains(t *testing.T) {
 	}{
 		{
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000001, 0b1},
-				bitfield.Bitlist{0b00000010, 0b1},
+				{0b00000001, 0b1},
+				{0b00000010, 0b1},
 			},
 			contains: bitfield.Bitlist{0b00000001, 0b1},
 			want:     true,
 		}, {
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00111000, 0b1},
-				bitfield.Bitlist{0b00000011, 0b1},
+				{0b00111000, 0b1},
+				{0b00000011, 0b1},
 			},
 			contains: bitfield.Bitlist{0b00000100, 0b1},
 			want:     false,

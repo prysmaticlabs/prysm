@@ -164,11 +164,11 @@ func TestAggregateAttestations(t *testing.T) {
 		{
 			name: "two attestations with no overlap",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000001, 0b1},
-				bitfield.Bitlist{0b00000010, 0b1},
+				{0b00000001, 0b1},
+				{0b00000010, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000011, 0b1},
+				{0b00000011, 0b1},
 			},
 		},
 		{
@@ -188,57 +188,57 @@ func TestAggregateAttestations(t *testing.T) {
 		{
 			name: "two attestations with overlap",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000101, 0b1},
-				bitfield.Bitlist{0b00000110, 0b1},
+				{0b00000101, 0b1},
+				{0b00000110, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000101, 0b1},
-				bitfield.Bitlist{0b00000110, 0b1},
+				{0b00000101, 0b1},
+				{0b00000110, 0b1},
 			},
 		},
 		{
 			name: "some attestations overlap",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00001001, 0b1},
-				bitfield.Bitlist{0b00010110, 0b1},
-				bitfield.Bitlist{0b00001010, 0b1},
-				bitfield.Bitlist{0b00110001, 0b1},
+				{0b00001001, 0b1},
+				{0b00010110, 0b1},
+				{0b00001010, 0b1},
+				{0b00110001, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00111011, 0b1},
-				bitfield.Bitlist{0b00011111, 0b1},
+				{0b00111011, 0b1},
+				{0b00011111, 0b1},
 			},
 		},
 		{
 			name: "some attestations produce duplicates which are removed",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000101, 0b1},
-				bitfield.Bitlist{0b00000110, 0b1},
-				bitfield.Bitlist{0b00001010, 0b1},
-				bitfield.Bitlist{0b00001001, 0b1},
+				{0b00000101, 0b1},
+				{0b00000110, 0b1},
+				{0b00001010, 0b1},
+				{0b00001001, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00001111, 0b1}, // both 0&1 and 2&3 produce this bitlist
+				{0b00001111, 0b1}, // both 0&1 and 2&3 produce this bitlist
 			},
 		},
 		{
 			name: "two attestations where one is fully contained within the other",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000001, 0b1},
-				bitfield.Bitlist{0b00000011, 0b1},
+				{0b00000001, 0b1},
+				{0b00000011, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000011, 0b1},
+				{0b00000011, 0b1},
 			},
 		},
 		{
 			name: "two attestations where one is fully contained within the other reversed",
 			inputs: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000011, 0b1},
-				bitfield.Bitlist{0b00000001, 0b1},
+				{0b00000011, 0b1},
+				{0b00000001, 0b1},
 			},
 			want: []bitfield.Bitlist{
-				bitfield.Bitlist{0b00000011, 0b1},
+				{0b00000011, 0b1},
 			},
 		},
 	}
