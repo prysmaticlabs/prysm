@@ -405,13 +405,12 @@ message ValidatorAssignments {
         uint64 committee_index = 2;
 
         // Beacon chain slot in which the validator must perform its assigned 
-        // duty.
-        uint64 slot = 3;
+        // duty as an attester.
+        uint64 attester_slot = 3;
 
-        // Whether or not the validator is assigned to propose at this slot. If
-        // This field is false, then they are only to attest during the
-        // assignment time.
-        bool proposer = 4;
+        // Beacon chain slot in which the validator must perform its assigned
+        // duty as an attester.
+        uint64 proposer_slot = 4;
 
         // 48 byte BLS public key 
         bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];

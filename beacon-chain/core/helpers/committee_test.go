@@ -7,13 +7,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
@@ -223,7 +222,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearAllCaches()
-			committee, committeeIndex, slot, isProposer, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
+			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 			}
@@ -234,10 +233,6 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 			if slot != tt.slot {
 				t.Errorf("wanted slot %d, got slot %d for validator index %d",
 					tt.slot, slot, tt.index)
-			}
-			if isProposer != tt.isProposer {
-				t.Errorf("wanted isProposer %v, got isProposer %v for validator index %d",
-					tt.isProposer, isProposer, tt.index)
 			}
 			if proposerSlot != tt.proposerSlot {
 				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
@@ -269,13 +264,9 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 
 	index := uint64(10000)
-	_, _, _, _, _, err := CommitteeAssignment(state, 1, index)
-	statusErr, ok := status.FromError(err)
-	if !ok {
-		t.Fatal(err)
-	}
-	if statusErr.Code() != codes.NotFound {
-		t.Errorf("Unexpected error: %v", err)
+	_, _, _, _, err := CommitteeAssignment(state, 1, index)
+	if err != nil && !strings.Contains(err.Error(), "not found in assignments") {
+		t.Errorf("Wanted 'not found in assignments', received %v", err)
 	}
 }
 

@@ -12,8 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var committeeCache = cache.NewCommitteeCache()
@@ -90,7 +88,6 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
-
 	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
@@ -190,23 +187,23 @@ func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bit
 func CommitteeAssignment(
 	state *pb.BeaconState,
 	epoch uint64,
-	validatorIndex uint64) ([]uint64, uint64, uint64, bool, uint64, error) {
+	validatorIndex uint64,
+) ([]uint64, uint64, uint64, uint64, error) {
 
 	if epoch > NextEpoch(state) {
-		return nil, 0, 0, false, 0, fmt.Errorf(
+		return nil, 0, 0, 0, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
 	}
 
-	// Track which slot has which proposer
+	// Track which slot has which proposer.
 	startSlot := StartSlot(epoch)
 	proposerIndexToSlot := make(map[uint64]uint64)
-	for slot := uint64(startSlot); slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		state.Slot = slot
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, 0, 0, false, 0, fmt.Errorf(
-				"could not check proposer v: %v", err)
+			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
 		}
 		proposerIndexToSlot[i] = slot
 	}
@@ -214,25 +211,22 @@ func CommitteeAssignment(
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
-			return nil, 0, 0, false, 0, fmt.Errorf(
-				"could not get committee count at slot: %v", err)
+			return nil, 0, 0, 0, errors.Wrapf(err, "could not get committee count at slot %d", slot)
 		}
 		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
-				return nil, 0, 0, false, 0, fmt.Errorf(
-					"could not get crosslink committee: %v", err)
+				return nil, 0, 0, 0, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
 			for _, v := range committee {
 				if validatorIndex == v {
-					proposerSlot, isProposer := proposerIndexToSlot[v]
-					return committee, uint64(i), slot, isProposer, proposerSlot, nil
+					proposerSlot, _ := proposerIndexToSlot[v]
+					return committee, i, slot, proposerSlot, nil
 				}
 			}
 		}
 	}
-
-	return []uint64{}, 0, 0, false, 0, status.Error(codes.NotFound, "validator not found in assignments")
+	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
