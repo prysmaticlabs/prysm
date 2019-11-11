@@ -149,7 +149,6 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
-
 		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
@@ -171,7 +170,6 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
-
 		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
 			t.Fatalf("failed to update span: %v", err)
 		}
