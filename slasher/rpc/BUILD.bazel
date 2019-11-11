@@ -35,3 +35,25 @@ go_test(
         "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )
+
+# gazelle:exclude detect_update_min_max_span_bench_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "medium",
+    srcs = ["detect_update_min_max_span_bench_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+        "//slasher/db:go_default_library",
+    ],
+)
