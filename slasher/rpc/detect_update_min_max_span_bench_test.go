@@ -19,7 +19,7 @@ func BenchmarkMinSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MinSpan with diff: %d", diff), func(ib *testing.B) {
 			for i := uint64(ib.N) - 10; i < uint64(ib.N); i++ {
-				_, _ = slasherServer.DetectAndUpdateMinSpan(ctx, i, i+diff, 1)
+				slasherServer.DetectAndUpdateMinSpan(ctx, i, i+diff, 1)
 			}
 		})
 	}
