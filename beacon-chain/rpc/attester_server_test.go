@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
@@ -129,6 +130,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &AttesterServer{
 		p2p:              &mockp2p.MockBroadcaster{},
+		syncChecker:      &mockSyncChecker{false},
 		attestationCache: cache.NewAttestationCache(),
 		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
@@ -166,6 +168,16 @@ func TestRequestAttestation_OK(t *testing.T) {
 
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
+	}
+}
+
+func TestRequestAttestation_SyncNotReady(t *testing.T) {
+	as := &AttesterServer{
+		syncChecker: &mockSyncChecker{syncing: true},
+	}
+	_, err := as.RequestAttestation(context.Background(), &pb.AttestationRequest{})
+	if strings.Contains(err.Error(), "syncing to latest head") {
+		t.Error("Did not get wanted error")
 	}
 }
 
@@ -233,6 +245,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		attestationCache: cache.NewAttestationCache(),
 		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		syncChecker:      &mockSyncChecker{false},
 	}
 
 	req := &pb.AttestationRequest{
@@ -282,6 +295,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	ctx := context.Background()
 	server := &AttesterServer{
 		attestationCache: cache.NewAttestationCache(),
+		syncChecker:      &mockSyncChecker{false},
 	}
 
 	req := &pb.AttestationRequest{
