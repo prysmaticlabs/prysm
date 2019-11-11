@@ -24,6 +24,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -50,7 +51,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 	}
 
 	validatorServer := &ValidatorServer{
-		beaconDB: db,
+		BeaconDB: db,
 	}
 
 	req := &pb.ValidatorIndexRequest{
@@ -82,9 +83,9 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	}
 
 	validatorServer := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		syncChecker: &mockSyncChecker{false},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
@@ -112,9 +113,9 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		syncChecker: &mockSyncChecker{false},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	pubKey := make([]byte, 96)
@@ -166,9 +167,9 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
-		syncChecker: &mockSyncChecker{false},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -241,9 +242,9 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
-		syncChecker: &mockSyncChecker{false},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -296,9 +297,9 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
-		syncChecker: &mockSyncChecker{false},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -321,7 +322,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
 	vs := &ValidatorServer{
-		syncChecker: &mockSyncChecker{syncing: true},
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := vs.CommitteeAssignment(context.Background(), &pb.AssignmentRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
@@ -356,13 +357,13 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:       db,
-		depositFetcher: depositCache,
-		blockFetcher:   p,
-		headFetcher: &mockChain.ChainService{
+		BeaconDB:       db,
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{},
 		},
-		eth1InfoFetcher: p,
+		Eth1InfoFetcher: p,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -432,12 +433,12 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		eth1InfoFetcher:   p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -508,12 +509,12 @@ func TestValidatorStatus_Active(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		eth1InfoFetcher:   p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -588,12 +589,12 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		eth1InfoFetcher:   p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -658,12 +659,12 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		blockFetcher:      p,
-		eth1InfoFetcher:   p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -728,12 +729,12 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		eth1InfoFetcher:   p,
-		depositFetcher:    depositCache,
-		blockFetcher:      p,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		BlockFetcher:      p,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -799,12 +800,12 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		},
 	}
 	vs := &ValidatorServer{
-		beaconDB:          db,
-		chainStartFetcher: p,
-		eth1InfoFetcher:   p,
-		blockFetcher:      p,
-		depositFetcher:    depositCache,
-		headFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -824,9 +825,9 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	pubKey := []byte{'A'}
 	depositCache := depositcache.NewDepositCache()
 	vs := &ValidatorServer{
-		depositFetcher:  depositCache,
-		eth1InfoFetcher: &mockPOW.POWChain{},
-		headFetcher: &mockChain.ChainService{
+		DepositFetcher:  depositCache,
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		HeadFetcher: &mockChain.ChainService{
 			State: &pbp2p.BeaconState{
 				Slot: 0,
 			},
@@ -864,14 +865,14 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	vs := &ValidatorServer{
-		beaconDB:           db,
-		ctx:                ctx,
-		chainStartFetcher:  &mockPOW.POWChain{},
-		blockFetcher:       &mockPOW.POWChain{},
-		eth1InfoFetcher:    &mockPOW.POWChain{},
-		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		depositFetcher:     depositcache.NewDepositCache(),
-		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		BeaconDB:           db,
+		Ctx:                ctx,
+		ChainStartFetcher:  &mockPOW.POWChain{},
+		BlockFetcher:       &mockPOW.POWChain{},
+		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		DepositFetcher:     depositcache.NewDepositCache(),
+		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{[]byte("A")},
@@ -968,14 +969,14 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
-		beaconDB:           db,
-		ctx:                context.Background(),
-		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		chainStartFetcher:  &mockPOW.POWChain{},
-		blockFetcher:       &mockPOW.POWChain{},
-		eth1InfoFetcher:    &mockPOW.POWChain{},
-		depositFetcher:     depositCache,
-		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		BeaconDB:           db,
+		Ctx:                context.Background(),
+		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		ChainStartFetcher:  &mockPOW.POWChain{},
+		BlockFetcher:       &mockPOW.POWChain{},
+		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		DepositFetcher:     depositCache,
+		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &pb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -1082,14 +1083,14 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &ValidatorServer{
-		beaconDB:           db,
-		ctx:                context.Background(),
-		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		chainStartFetcher:  &mockPOW.POWChain{},
-		blockFetcher:       &mockPOW.POWChain{},
-		eth1InfoFetcher:    &mockPOW.POWChain{},
-		depositFetcher:     depositCache,
-		headFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		BeaconDB:           db,
+		Ctx:                context.Background(),
+		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		ChainStartFetcher:  &mockPOW.POWChain{},
+		BlockFetcher:       &mockPOW.POWChain{},
+		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		DepositFetcher:     depositCache,
+		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	activeExists, response, err := vs.multipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
@@ -1121,12 +1122,12 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	validatorServer := &ValidatorServer{
-		ctx: ctx,
-		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		Ctx: ctx,
+		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		stateFeedListener: &mockChain.ChainService{},
-		beaconDB:          db,
+		StateFeedListener: &mockChain.ChainService{},
+		BeaconDB:          db,
 	}
 
 	exitRoutine := make(chan bool)
@@ -1156,12 +1157,12 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	}
 
 	validatorServer := &ValidatorServer{
-		ctx: context.Background(),
-		chainStartFetcher: &mockPOW.POWChain{
+		Ctx: context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
-		stateFeedListener: &mockChain.ChainService{},
-		beaconDB:          db,
+		StateFeedListener: &mockChain.ChainService{},
+		BeaconDB:          db,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1183,13 +1184,13 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	hook := logTest.NewGlobal()
 	validatorServer := &ValidatorServer{
-		ctx:            context.Background(),
-		chainStartChan: make(chan time.Time, 1),
-		chainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		Ctx:            context.Background(),
+		ChainStartChan: make(chan time.Time, 1),
+		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		stateFeedListener: &mockChain.ChainService{},
-		beaconDB:          db,
+		StateFeedListener: &mockChain.ChainService{},
+		BeaconDB:          db,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -1207,7 +1208,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	validatorServer.chainStartChan <- time.Unix(0, 0)
+	validatorServer.ChainStartChan <- time.Unix(0, 0)
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending genesis time")
 }
@@ -1251,8 +1252,8 @@ func BenchmarkAssignment(b *testing.B) {
 	}
 
 	vs := &ValidatorServer{
-		beaconDB:    db,
-		headFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	// Set up request for 100 public keys at a time

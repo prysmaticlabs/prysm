@@ -19,26 +19,26 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type NodeServer struct {
-	syncChecker        sync.Checker
-	server             *grpc.Server
-	beaconDB           db.Database
-	genesisTimeFetcher blockchain.GenesisTimeFetcher
+	SyncChecker        sync.Checker
+	Server             *grpc.Server
+	BeaconDB           db.Database
+	GenesisTimeFetcher blockchain.GenesisTimeFetcher
 }
 
 // GetSyncStatus checks the current network sync status of the node.
 func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
 	return &ethpb.SyncStatus{
-		Syncing: ns.syncChecker.Syncing(),
+		Syncing: ns.SyncChecker.Syncing(),
 	}, nil
 }
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
 func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
-	contractAddr, err := ns.beaconDB.DepositContractAddress(ctx)
+	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve contract address from db: %v", err)
 	}
-	genesisTime := ns.genesisTimeFetcher.GenesisTime()
+	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
 	gt, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto: %v", err)
@@ -62,7 +62,7 @@ func (ns *NodeServer) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.V
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
 func (ns *NodeServer) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
-	serviceInfo := ns.server.GetServiceInfo()
+	serviceInfo := ns.Server.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {
 		serviceNames = append(serviceNames, svc)

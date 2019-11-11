@@ -19,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
+	ns "github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	val "github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -188,25 +190,25 @@ func (s *Service) Start() {
 		AttestationCache:  cache.NewAttestationCache(),
 		SyncChecker:       s.syncService,
 	}
-	validatorServer := &ValidatorServer{
-		ctx:                s.ctx,
-		beaconDB:           s.beaconDB,
-		headFetcher:        s.headFetcher,
-		forkFetcher:        s.forkFetcher,
-		canonicalStateChan: s.canonicalStateChan,
-		blockFetcher:       s.powChainService,
-		chainStartFetcher:  s.chainStartFetcher,
-		eth1InfoFetcher:    s.powChainService,
-		depositFetcher:     s.depositFetcher,
-		syncChecker:        s.syncService,
-		stateFeedListener:  s.stateFeedListener,
-		chainStartChan:     make(chan time.Time),
+	validatorServer := &val.ValidatorServer{
+		Ctx:                s.ctx,
+		BeaconDB:           s.beaconDB,
+		HeadFetcher:        s.headFetcher,
+		ForkFetcher:        s.forkFetcher,
+		CanonicalStateChan: s.canonicalStateChan,
+		BlockFetcher:       s.powChainService,
+		ChainStartFetcher:  s.chainStartFetcher,
+		Eth1InfoFetcher:    s.powChainService,
+		DepositFetcher:     s.depositFetcher,
+		SyncChecker:        s.syncService,
+		StateFeedListener:  s.stateFeedListener,
+		ChainStartChan:     make(chan time.Time),
 	}
-	nodeServer := &NodeServer{
-		beaconDB:           s.beaconDB,
-		server:             s.grpcServer,
-		syncChecker:        s.syncService,
-		genesisTimeFetcher: s.genesisTimeFetcher,
+	nodeServer := &ns.NodeServer{
+		BeaconDB:           s.beaconDB,
+		Server:             s.grpcServer,
+		SyncChecker:        s.syncService,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	beaconChainServer := &BeaconChainServer{
 		beaconDB:            s.beaconDB,

@@ -10,43 +10,32 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-type mockSyncChecker struct {
-	syncing bool
-}
-
-func (m *mockSyncChecker) Syncing() bool {
-	return m.syncing
-}
-
-func (m *mockSyncChecker) Status() error {
-	return nil
-}
-
 func TestNodeServer_GetSyncStatus(t *testing.T) {
-	mSync := &mockSyncChecker{false}
+	mSync := &mockSync.Sync{IsSyncing: false}
 	ns := &NodeServer{
-		syncChecker: mSync,
+		SyncChecker: mSync,
 	}
 	res, err := ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Syncing != mSync.syncing {
-		t.Errorf("Wanted GetSyncStatus() = %v, received %v", mSync.syncing, res.Syncing)
+	if !res.Syncing {
+		t.Errorf("Wanted GetSyncStatus() = %v, received %v", false, res.Syncing)
 	}
-	mSync.syncing = true
+	ns.SyncChecker = &mockSync.Sync{IsSyncing: true}
 	res, err = ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Syncing != mSync.syncing {
-		t.Errorf("Wanted GetSyncStatus() = %v, received %v", mSync.syncing, res.Syncing)
+	if res.Syncing {
+		t.Errorf("Wanted GetSyncStatus() = %v, received %v", true, res.Syncing)
 	}
 }
 
@@ -59,8 +48,8 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 		t.Fatal(err)
 	}
 	ns := &NodeServer{
-		beaconDB:           db,
-		genesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
 	}
 	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
@@ -93,7 +82,7 @@ func TestNodeServer_GetVersion(t *testing.T) {
 func TestNodeServer_GetImplementedServices(t *testing.T) {
 	server := grpc.NewServer()
 	ns := &NodeServer{
-		server: server,
+		Server: server,
 	}
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
