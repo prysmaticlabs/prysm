@@ -176,6 +176,7 @@ func (s *Service) Start() {
 		canonicalStateChan:     s.canonicalStateChan,
 		depositFetcher:         s.depositFetcher,
 		pendingDepositsFetcher: s.pendingDepositFetcher,
+		syncChecker:            s.syncService,
 	}
 	attesterServer := &AttesterServer{
 		p2p:               s.p2p,
@@ -184,6 +185,7 @@ func (s *Service) Start() {
 		attReceiver:       s.attestationReceiver,
 		headFetcher:       s.headFetcher,
 		attestationCache:  cache.NewAttestationCache(),
+		syncChecker:       s.syncService,
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
@@ -195,6 +197,7 @@ func (s *Service) Start() {
 		chainStartFetcher:  s.chainStartFetcher,
 		eth1InfoFetcher:    s.powChainService,
 		depositFetcher:     s.depositFetcher,
+		syncChecker:        s.syncService,
 		stateFeedListener:  s.stateFeedListener,
 		chainStartChan:     make(chan time.Time),
 	}

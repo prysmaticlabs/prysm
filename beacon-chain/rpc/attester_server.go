@@ -13,10 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
@@ -28,6 +31,7 @@ type AttesterServer struct {
 	attReceiver       blockchain.AttestationReceiver
 	headFetcher       blockchain.HeadFetcher
 	attestationCache  *cache.AttestationCache
+	syncChecker       sync.Checker
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -63,6 +67,11 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("shard", int64(req.Shard)),
 	)
+
+	if as.syncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	res, err := as.attestationCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
