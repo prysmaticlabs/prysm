@@ -13,6 +13,10 @@ import (
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
+	diff := target - source
+	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
+		return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
@@ -20,10 +24,7 @@ func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint6
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
 	}
-	diff := target - source
-	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
-		return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
-	}
+
 	for i := uint64(1); i < target-source; i++ {
 		val := uint32(diff - i)
 		if spanMap.EpochSpanMap[source+i] == nil {
@@ -45,16 +46,16 @@ func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint6
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) UpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
+	diff := target - source
+	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
+		return fmt.Errorf("attestation slashing detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
-	}
-	diff := target - source
-	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
-		return fmt.Errorf("attestation slashing detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
 	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
