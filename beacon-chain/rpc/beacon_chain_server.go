@@ -268,19 +268,37 @@ func (bs *BeaconChainServer) ListBeaconCommittees(
 	var attesterSeed [32]byte
 	var committeeCount uint64
 	var activeIndices []uint64
-	if requestingGenesis {
-		activeIndices, err := helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
+	var err error
+	if requestingGenesis || startSlot != headState.Slot {
+		activeIndices, err = helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, err
 		}
-	} else if startSlot == headState.Slot {
-
+		archivedCommitteeInfo, err := bs.beaconDB.ArchivedCommitteeInfo(ctx, helpers.SlotToEpoch(startSlot))
+		if err != nil {
+			return nil, err
+		}
+		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
+		committeeCount = archivedCommitteeInfo.CommitteeCount
 	} else {
-		// Otherwise, we request archival data.
-
+		// Otherwise, we use data from the current epoch.
+		currentEpoch := helpers.SlotToEpoch(headState.Slot)
+		activeIndices, err = helpers.ActiveValidatorIndices(headState, currentEpoch)
+		if err != nil {
+			return nil, err
+		}
+		committeeCount, err = helpers.CommitteeCountAtSlot(headState, headState.Slot)
+		if err != nil {
+			return nil, err
+		}
+		attesterSeed, err = helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// If current epoch, compute. Otherwise, fetch from archive.
+	committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -295,9 +313,17 @@ func (bs *BeaconChainServer) ListBeaconCommittees(
 			if err != nil {
 				return nil, err
 			}
+			committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
+				Committee: committee,
+			})
 		}
 	}
-	return nil, nil
+	return &ethpb.BeaconCommittees{
+		Epoch:         helpers.SlotToEpoch(startSlot),
+		Committees:    committees,
+		NextPageToken: "",
+		TotalSize:     int32(len(committees)),
+	}, nil
 }
 
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
