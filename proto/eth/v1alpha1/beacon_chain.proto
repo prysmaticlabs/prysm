@@ -69,6 +69,17 @@ service BeaconChain {
         };
     }
 
+    // Retrieve the beacon chain committees for a given epoch.
+    //
+    // This request may specify validator indices or public keys to filter out
+    // validator beacon chain committees. If no filter criteria is specified, the response returns
+    // all beacon committees for the current epoch. The results are paginated by default.
+    rpc ListBeaconCommittees(ListCommitteesRequest) returns (BeaconCommittees) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/committees"
+        };
+    }
+
     // Retrieve validator balances for a given set of public keys at a specific 
     // epoch in time.
     rpc ListValidatorBalances(GetValidatorBalancesRequest) returns (ValidatorBalances) { 
@@ -235,6 +246,51 @@ message ChainHead {
 
     // Previous 32 byte justified block root.
     bytes previous_justified_block_root = 8 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
+
+message ListCommitteesRequest {
+    oneof query_filter {
+        // Optional criteria to retrieve data at a specific epoch.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve genesis data.
+        bool genesis = 2;
+    }
+    // Validator 48 byte BLS public keys to filter validator indices for the given
+    // epoch. This field is optional.
+    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+
+    // Validator indices to filter validator indices for the given epoch.
+    // This field is optional.
+    repeated uint64 indices = 4;
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 5;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 6;
+}
+
+message BeaconCommittees {
+    message Committee {
+        // A committee of validator indices that need to attest to beacon blocks.
+        repeated uint64 = 1;
+    }
+    // The epoch for which the committees in the response belong to.
+    uint64 epoch = 1;
+
+    // A list of committees of validators for given  epoch.
+    repeated Committee committees = 2;
+
+    // A pagination token returned from a previous call
+    // that indicates from where the listing should continue.
+    string next_page_token = 3;
+
+    // Total count of committees matching the request filter.
+    int32 total_size = 4;
 }
 
 message GetValidatorBalancesRequest {
