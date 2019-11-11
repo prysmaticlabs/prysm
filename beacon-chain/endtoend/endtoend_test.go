@@ -25,14 +25,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pborman/uuid"
+	ev "github.com/prysmaticlabs/prysm/beacon-chain/endtoend/evaluators"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
 )
-
-var eth1BlockTime = uint64(4)
 
 type end2EndConfig struct {
 	minimalConfig  bool
@@ -41,7 +40,7 @@ type end2EndConfig struct {
 	numValidators  uint64
 	numBeaconNodes uint64
 	contractAddr   common.Address
-	evaluators     []evaluator
+	evaluators     []ev.Evaluator
 }
 
 type beaconNodeInfo struct {
@@ -58,71 +57,18 @@ type validatorClientInfo struct {
 	monitorPort uint64
 }
 
-func TestEndToEnd_DemoConfig(t *testing.T) {
-	params.UseDemoBeaconConfig()
-
-	demoConfig := &end2EndConfig{
-		minimalConfig:  false,
-		epochsToRun:    8,
-		numBeaconNodes: 4,
-		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
-		evaluators: []evaluator{
-			{
-				name:       "activate_validators",
-				policy:     onGenesisEpoch,
-				evaluation: validatorsActivate,
-			},
-			{
-				name:       "finalize_checkpoint",
-				policy:     afterNEpochs(4),
-				evaluation: finalizationOccurs,
-			},
-			// Evaluator{
-			//	Name:       "validators_participate",
-			// 	Policy:     AfterNEpochs(4),
-			// 	Evaluation: ValidatorsParticipating,
-			// },
-		},
-	}
-	runEndToEndTest(t, demoConfig)
-}
-
-func TestEndToEnd_MinimalConfig(t *testing.T) {
-	params.UseMinimalConfig()
-
-	minimalConfig := &end2EndConfig{
-		minimalConfig:  true,
-		epochsToRun:    8,
-		numBeaconNodes: 4,
-		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
-		evaluators: []evaluator{
-			{
-				name:       "activate_validators",
-				policy:     onGenesisEpoch,
-				evaluation: validatorsActivate,
-			},
-			{
-				name:       "finalize_checkpoint",
-				policy:     afterNEpochs(4),
-				evaluation: finalizationOccurs,
-			},
-		},
-	}
-	runEndToEndTest(t, minimalConfig)
-}
-
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := path.Join("/tmp/e2e/", uuid.NewRandom().String()[:18])
 	if err := os.MkdirAll(tmpPath, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("Test Path: %s\n", tmpPath)
 	config.tmpPath = tmpPath
+	fmt.Printf("Test Path: %s\n", tmpPath)
 
-	contractAddr, keystorePath := StartEth1(t, tmpPath)
+	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
 	beaconNodes := startBeaconNodes(t, config)
-	initializeValidators(t, config, keystorePath, beaconNodes)
+	valClients := initializeValidators(t, config, keystorePath, beaconNodes)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 	if err != nil {
@@ -160,7 +106,13 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		}
 
 		t.Logf("Current Epoch: %d\n", currentEpoch)
-		runEvaluators(t, beaconClient, config.evaluators)
+		for _, evaluator := range config.evaluators {
+			t.Run(evaluator.Name, func(t *testing.T) {
+				if err := evaluator.Evaluation(beaconClient); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
 		currentEpoch++
 		time.Sleep(time.Second)
 	}
@@ -169,14 +121,26 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
 	}
 
-	process, err := os.FindProcess()
-	if err != nil {
-		t.Fatal(err)
+	processIDs := []int{eth1PID}
+	for _, vv := range valClients {
+		processIDs = append(processIDs, vv.processID)
+	}
+	for _, bb := range beaconNodes {
+		processIDs = append(processIDs, bb.processID)
+	}
+	for _, id := range processIDs {
+		process, err := os.FindProcess(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := process.Kill(); err != nil {
+			t.Fatalf("could not kill process: %v", err)
+		}
 	}
 }
 
-// StartEth1 starts an eth1 local dev chain and deploys a deposit contract.
-func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
+// startEth1 starts an eth1 local dev chain and deploys a deposit contract.
+func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		t.Fatal("go-ethereum binary not found")
@@ -263,7 +227,7 @@ func StartEth1(t *testing.T, tmpPath string) (common.Address, string) {
 	}
 
 	t.Logf("Contract deployed at %s", contractAddr.Hex())
-	return contractAddr, keystorePath
+	return contractAddr, keystorePath, cmd.Process.Pid
 }
 
 // startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
@@ -359,7 +323,7 @@ func initializeValidators(
 	config *end2EndConfig,
 	keystorePath string,
 	beaconNodes []*beaconNodeInfo,
-) {
+) []*validatorClientInfo {
 	tmpPath := config.tmpPath
 	contractAddress := config.contractAddr
 	validatorNum := config.numValidators
@@ -372,6 +336,8 @@ func initializeValidators(
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
+
+	valClients := make([]*validatorClientInfo, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
 		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
@@ -379,10 +345,8 @@ func initializeValidators(
 			t.Fatal(err)
 		}
 		args := []string{
-			// "--password=e2etest",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
-			// fmt.Sprintf("--keystore-path=%s/valkeys%d/", tmpPath, n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
@@ -391,6 +355,10 @@ func initializeValidators(
 		cmd.Stderr = file
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
+		}
+		valClients[n] = &validatorClientInfo{
+			processID:   cmd.Process.Pid,
+			monitorPort: 9080 + n,
 		}
 	}
 
@@ -458,8 +426,8 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	// Sleep the Eth1FollowDistance blocks.
 	t.Logf("%d deposits mined", len(deposits))
+	return valClients
 }
 
 func PeersConnect(port uint64, expectedPeers uint64) error {
