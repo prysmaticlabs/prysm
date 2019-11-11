@@ -89,7 +89,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
+	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
 		return 0, err
 	}
 
@@ -215,11 +215,6 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
-}
-
-// verifyAttSlotTime validates input attestation is not from the future.
-func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState, d *ethpb.AttestationData) error {
-	return helpers.VerifySlotTime(baseState.GenesisTime, d.Slot+1)
 }
 
 // verifyAttestation validates input attestation is valid.
