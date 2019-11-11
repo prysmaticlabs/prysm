@@ -154,7 +154,7 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to retrieve span: %v", err)
+			t.Fatalf("Failed to retrieve span: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.resultSpanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
