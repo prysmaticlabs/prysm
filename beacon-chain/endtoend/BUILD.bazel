@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "large",
+    size = "enormous",
     srcs = [
         "demo_e2e_test.go",
         "endtoend_test.go",
