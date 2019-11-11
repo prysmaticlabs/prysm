@@ -17,7 +17,12 @@ type Evaluator struct {
 }
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
-func ValidatorsAreActive(client eth.BeaconChainClient) error {
+var ValidatorsAreActive = Evaluator{
+	Name:       "checkpoint_finalizes",
+	Evaluation: finalizationOccurs,
+}
+
+func validatorsAreActive(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {

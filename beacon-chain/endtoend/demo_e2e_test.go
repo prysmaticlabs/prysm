@@ -17,14 +17,8 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
-			{
-				Name:       "validators_active",
-				Evaluation: ev.ValidatorsAreActive,
-			},
-			{
-				Name:       "checkpoint_finalizes",
-				Evaluation: ev.FinalizationOccurs,
-			},
+			ev.ValidatorsAreActive,
+			ev.FinalizationOccurs,
 		},
 	}
 	runEndToEndTest(t, demoConfig)

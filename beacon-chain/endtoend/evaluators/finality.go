@@ -11,7 +11,12 @@ import (
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
 // Requires to be run after at least 4 epochs have passed.
-func FinalizationOccurs(client eth.BeaconChainClient) error {
+var FinalizationOccurs = Evaluator{
+	Name:       "checkpoint_finalizes",
+	Evaluation: finalizationOccurs,
+}
+
+func finalizationOccurs(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
 	if err != nil {
