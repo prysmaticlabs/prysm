@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
+func TestServer_ListAttestationsNoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -45,7 +45,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 		atts = append(atts, attExample)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -63,7 +63,7 @@ func TestBeaconChainServer_ListAttestationsNoPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
+func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -127,7 +127,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -178,7 +178,7 @@ func TestBeaconChainServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
+func TestServer_ListAttestationsPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -200,7 +200,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 		atts = append(atts, attExample)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -336,7 +336,7 @@ func TestBeaconChainServer_ListAttestationsPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
+func TestServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -357,7 +357,7 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 		atts = append(atts, attExample)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -374,9 +374,9 @@ func TestBeaconChainServer_ListAttestationsPaginationOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
+func TestServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
-	bs := &BeaconChainServer{}
+	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
@@ -386,7 +386,7 @@ func TestBeaconChainServer_ListAttestationsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
+func TestServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -408,7 +408,7 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 		atts = append(atts, attExample)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -430,12 +430,12 @@ func TestBeaconChainServer_ListAttestationsDefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_AttestationPool(t *testing.T) {
+func TestServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
 	block := &ethpb.BeaconBlock{
 		Slot: 10,
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		Pool: &mockOps.Operations{
 			Attestations: []*ethpb.Attestation{
 				{
@@ -464,7 +464,7 @@ func TestBeaconChainServer_AttestationPool(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
+func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -475,7 +475,7 @@ func TestBeaconChainServer_ListValidatorBalances_PaginationOutOfRange(t *testing
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -488,8 +488,8 @@ func TestBeaconChainServer_ListValidatorBalances_PaginationOutOfRange(t *testing
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
-	bs := &BeaconChainServer{}
+func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
+	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf(
@@ -503,7 +503,7 @@ func TestBeaconChainServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_NoPagination(t *testing.T) {
+func TestServer_ListValidatorBalances_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -514,7 +514,7 @@ func TestBeaconChainServer_ListValidatorBalances_NoPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: headState},
 	}
@@ -584,7 +584,7 @@ func TestBeaconChainServer_ListValidatorBalances_NoPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_Pagination(t *testing.T) {
+func TestServer_ListValidatorBalances_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -596,7 +596,7 @@ func TestBeaconChainServer_ListValidatorBalances_Pagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -652,7 +652,7 @@ func TestBeaconChainServer_ListValidatorBalances_Pagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_OutOfRange(t *testing.T) {
+func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	setupValidators(t, db, 1)
@@ -662,7 +662,7 @@ func TestBeaconChainServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: headState},
 	}
@@ -674,7 +674,7 @@ func TestBeaconChainServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_FromArchive(t *testing.T) {
+func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -689,7 +689,7 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive(t *testing.T) {
 	for i := 0; i < len(newerBalances); i++ {
 		newerBalances[i] = balances[i] * 2
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
@@ -722,7 +722,7 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
+func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -734,7 +734,7 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive_NewValidatorNotFoun
 	}
 
 	newValidators, newBalances := setupValidators(t, db, 200)
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
@@ -754,7 +754,7 @@ func TestBeaconChainServer_ListValidatorBalances_FromArchive_NewValidatorNotFoun
 	}
 }
 
-func TestBeaconChainServer_GetValidators_NoPagination(t *testing.T) {
+func TestServer_GetValidators_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -764,7 +764,7 @@ func TestBeaconChainServer_GetValidators_NoPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -785,7 +785,7 @@ func TestBeaconChainServer_GetValidators_NoPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidators_Pagination(t *testing.T) {
+func TestServer_GetValidators_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -797,7 +797,7 @@ func TestBeaconChainServer_GetValidators_Pagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -855,7 +855,7 @@ func TestBeaconChainServer_GetValidators_Pagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidators_PaginationOutOfRange(t *testing.T) {
+func TestServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -866,7 +866,7 @@ func TestBeaconChainServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -884,8 +884,8 @@ func TestBeaconChainServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
-	bs := &BeaconChainServer{}
+func TestServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
+	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
@@ -895,7 +895,7 @@ func TestBeaconChainServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidators_DefaultPageSize(t *testing.T) {
+func TestServer_GetValidators_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -905,7 +905,7 @@ func TestBeaconChainServer_GetValidators_DefaultPageSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -929,7 +929,7 @@ func TestBeaconChainServer_GetValidators_DefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
+func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -941,7 +941,7 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 		}
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
 				Validators: validators,
@@ -981,7 +981,7 @@ func TestBeaconChainServer_GetValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
+func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 6)
 	headState := &pbp2p.BeaconState{
@@ -1013,7 +1013,7 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
 			ExitEpoch:         exitEpoch,
 		}
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -1047,7 +1047,7 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
+func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1087,7 +1087,7 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 	if err := db.SaveArchivedActiveValidatorChanges(ctx, 5, archivedChanges); err != nil {
 		t.Fatal(err)
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -1135,7 +1135,7 @@ func TestBeaconChainServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T
 	}
 }
 
-func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
+func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
@@ -1158,7 +1158,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 			Epoch: 0,
 		},
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -1185,7 +1185,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
+func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
@@ -1211,7 +1211,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 			Epoch: 0,
 		},
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -1238,7 +1238,7 @@ func TestBeaconChainServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
+func TestServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1248,7 +1248,7 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -1266,8 +1266,8 @@ func TestBeaconChainServer_ListAssignmentsInputOutOfRange(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
-	bs := &BeaconChainServer{}
+func TestServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
+	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
@@ -1280,7 +1280,7 @@ func TestBeaconChainServer_ListAssignmentsExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T) {
+func TestServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1326,7 +1326,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: s,
@@ -1372,7 +1372,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_NoArchive(t *testing.T
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
+func TestServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1425,7 +1425,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 
 	// We tell the beacon chain server that our finalized epoch is 10 so that when
 	// we request assignments for epoch 0, it looks within the archived data.
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: s,
@@ -1495,7 +1495,7 @@ func TestBeaconChainServer_ListAssignmentsDefaultPageSize_FromArchive(t *testing
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
+func TestServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1528,7 +1528,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: s,
@@ -1572,7 +1572,7 @@ func TestBeaconChainServer_ListAssignmentsFilterPubkeysIndices_NoPagination(t *t
 	}
 }
 
-func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination(t *testing.T) {
+func TestServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1605,7 +1605,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: s,
@@ -1687,7 +1687,7 @@ func TestBeaconChainServer_ListAssignmentsCanFilterPubkeysIndices_WithPagination
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
+func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1701,7 +1701,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
@@ -1746,7 +1746,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_FromArchive(t *testing.T) 
 	}
 }
 
-func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
+func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1781,7 +1781,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: s},
 	}
@@ -1802,7 +1802,7 @@ func TestBeaconChainServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T)
 	}
 }
 
-func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
+func TestServer_ListBlocksPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1824,7 +1824,7 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &BeaconChainServer{
+	bs := &Server{
 		BeaconDB: db,
 	}
 
@@ -1896,12 +1896,12 @@ func TestBeaconChainServer_ListBlocksPagination(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
+func TestServer_ListBlocksErrors(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
-	bs := &BeaconChainServer{BeaconDB: db}
+	bs := &Server{BeaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
@@ -1968,14 +1968,14 @@ func TestBeaconChainServer_ListBlocksErrors(t *testing.T) {
 	}
 }
 
-func TestBeaconChainServer_GetChainHead(t *testing.T) {
+func TestServer_GetChainHead(t *testing.T) {
 	s := &pbp2p.BeaconState{
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	}
 
-	bs := &BeaconChainServer{HeadFetcher: &mock.ChainService{State: s}}
+	bs := &Server{HeadFetcher: &mock.ChainService{State: s}}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	if err != nil {

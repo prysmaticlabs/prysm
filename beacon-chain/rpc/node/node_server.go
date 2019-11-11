@@ -15,10 +15,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// NodeServer defines a server implementation of the gRPC Node service,
+// Server defines a server implementation of the gRPC Node service,
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
-type NodeServer struct {
+type Server struct {
 	SyncChecker        sync.Checker
 	Server             *grpc.Server
 	BeaconDB           db.Database
@@ -26,14 +26,14 @@ type NodeServer struct {
 }
 
 // GetSyncStatus checks the current network sync status of the node.
-func (ns *NodeServer) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
+func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
 	return &ethpb.SyncStatus{
 		Syncing: ns.SyncChecker.Syncing(),
 	}, nil
 }
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0.
-func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
+func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not retrieve contract address from db: %v", err)
@@ -50,7 +50,7 @@ func (ns *NodeServer) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.G
 }
 
 // GetVersion checks the version information of the beacon node.
-func (ns *NodeServer) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Version, error) {
+func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
 		Version: version.GetVersion(),
 	}, nil
@@ -61,7 +61,7 @@ func (ns *NodeServer) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.V
 // Any service not present in this list may return UNIMPLEMENTED or
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
-func (ns *NodeServer) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
+func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
 	serviceInfo := ns.Server.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {

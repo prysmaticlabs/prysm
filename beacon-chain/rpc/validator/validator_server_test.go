@@ -50,14 +50,14 @@ func TestValidatorIndex_OK(t *testing.T) {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
-	validatorServer := &ValidatorServer{
+	Server := &Server{
 		BeaconDB: db,
 	}
 
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
-	if _, err := validatorServer.ValidatorIndex(context.Background(), req); err != nil {
+	if _, err := Server.ValidatorIndex(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
 	}
 }
@@ -82,7 +82,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	validatorServer := &ValidatorServer{
+	Server := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -92,7 +92,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		EpochStart: 0,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := validatorServer.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
+	if _, err := Server.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
@@ -112,7 +112,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -166,7 +166,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		}
 	}
 
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -241,7 +241,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		}
 	}
 
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -296,7 +296,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 		}
 	}
 
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -321,7 +321,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
-	vs := &ValidatorServer{
+	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := vs.CommitteeAssignment(context.Background(), &pb.AssignmentRequest{})
@@ -356,7 +356,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:       db,
 		DepositFetcher: depositCache,
 		BlockFetcher:   p,
@@ -432,7 +432,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		BlockFetcher:      p,
@@ -508,7 +508,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		BlockFetcher:      p,
@@ -588,7 +588,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		BlockFetcher:      p,
@@ -658,7 +658,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		BlockFetcher:      p,
@@ -728,7 +728,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
@@ -799,7 +799,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
@@ -824,7 +824,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	pubKey := []byte{'A'}
 	depositCache := depositcache.NewDepositCache()
-	vs := &ValidatorServer{
+	vs := &Server{
 		DepositFetcher:  depositCache,
 		Eth1InfoFetcher: &mockPOW.POWChain{},
 		HeadFetcher: &mockChain.ChainService{
@@ -864,7 +864,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                ctx,
 		ChainStartFetcher:  &mockPOW.POWChain{},
@@ -968,7 +968,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
@@ -1082,7 +1082,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[2]), 2); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
@@ -1121,7 +1121,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	validatorServer := &ValidatorServer{
+	Server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
@@ -1135,7 +1135,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "context closed") {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "context closed") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -1156,7 +1156,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validatorServer := &ValidatorServer{
+	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
@@ -1173,7 +1173,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},
 	).Return(nil)
-	if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+	if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 }
@@ -1183,7 +1183,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
-	validatorServer := &ValidatorServer{
+	Server := &Server{
 		Ctx:            context.Background(),
 		ChainStartChan: make(chan time.Time, 1),
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
@@ -1203,12 +1203,12 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 	).Return(nil)
 	go func(tt *testing.T) {
-		if err := validatorServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
 	}(t)
-	validatorServer.ChainStartChan <- time.Unix(0, 0)
+	Server.ChainStartChan <- time.Unix(0, 0)
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending genesis time")
 }
@@ -1251,7 +1251,7 @@ func BenchmarkAssignment(b *testing.B) {
 		}
 	}
 
-	vs := &ValidatorServer{
+	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}

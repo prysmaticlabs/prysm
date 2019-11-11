@@ -36,10 +36,10 @@ func init() {
 	log = logrus.WithField("prefix", "rpc/proposer")
 }
 
-// ProposerServer defines a server implementation of the gRPC Proposer service,
+// Server defines a server implementation of the gRPC Proposer service,
 // providing RPC endpoints for computing state transitions and state roots, proposing
 // beacon blocks to a beacon node, and more.
-type ProposerServer struct {
+type Server struct {
 	BeaconDB               db.Database
 	HeadFetcher            blockchain.HeadFetcher
 	BlockReceiver          blockchain.BlockReceiver
@@ -56,7 +56,7 @@ type ProposerServer struct {
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
-func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
+func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
@@ -126,7 +126,7 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
+func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash block")
@@ -146,7 +146,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 //  - Determine the most recent eth1 block before that timestamp.
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
-func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	if ps.MockEth1Votes || !ps.Eth1InfoFetcher.IsConnectedToETH1() {
 		return ps.mockETH1DataVote(slot)
 	}
@@ -163,7 +163,7 @@ func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth
 	return ps.defaultEth1DataResponse(ctx, blockNumber)
 }
 
-func (ps *ProposerServer) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
+func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
 	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
 		"ETH1 Data votes are now mocked.")
 	// If a mock eth1 data votes is specified, we use the following for the
@@ -192,7 +192,7 @@ func (ps *ProposerServer) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error)
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
+func (ps *Server) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
 	beaconState, err := ps.BeaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
@@ -216,7 +216,7 @@ func (ps *ProposerServer) computeStateRoot(ctx context.Context, block *ethpb.Bea
 // this eth1data has enough support to be considered for deposits inclusion. If current vote has
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
-func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
+func (ps *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
 	if ps.MockEth1Votes || !ps.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
@@ -278,7 +278,7 @@ func (ps *ProposerServer) deposits(ctx context.Context, currentVote *ethpb.Eth1D
 }
 
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
-func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
+func (ps *Server) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
@@ -306,7 +306,7 @@ func (ps *ProposerServer) canonicalEth1Data(ctx context.Context, beaconState *pb
 // default into returning the latest deposit root and the block
 // hash of eth1 block hash that is FOLLOW_DISTANCE back from its
 // latest block.
-func (ps *ProposerServer) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
+func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := ps.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)

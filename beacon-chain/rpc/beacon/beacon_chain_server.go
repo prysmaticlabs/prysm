@@ -26,10 +26,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// BeaconChainServer defines a server implementation of the gRPC Beacon Chain service,
+// Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
-type BeaconChainServer struct {
+type Server struct {
 	BeaconDB            db.Database
 	Ctx                 context.Context
 	ChainStartFetcher   powchain.ChainStartFetcher
@@ -58,7 +58,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
-func (bs *BeaconChainServer) ListAttestations(
+func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
@@ -120,7 +120,7 @@ func (bs *BeaconChainServer) ListAttestations(
 // Refer to the ethereum 2.0 specification for more details on how
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-func (bs *BeaconChainServer) AttestationPool(
+func (bs *Server) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
 	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
@@ -138,7 +138,7 @@ func (bs *BeaconChainServer) AttestationPool(
 // provided as the filter criteria. The server may return an empty list when
 // no blocks in their database match the filter criteria. This RPC should
 // not return NOT_FOUND. Only one filter criteria should be used.
-func (bs *BeaconChainServer) ListBlocks(
+func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
@@ -218,7 +218,7 @@ func (bs *BeaconChainServer) ListBlocks(
 //
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
-func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
 	finalizedCheckpoint := bs.HeadFetcher.HeadState().FinalizedCheckpoint
 	justifiedCheckpoint := bs.HeadFetcher.HeadState().CurrentJustifiedCheckpoint
 	prevJustifiedCheckpoint := bs.HeadFetcher.HeadState().PreviousJustifiedCheckpoint
@@ -238,7 +238,7 @@ func (bs *BeaconChainServer) GetChainHead(ctx context.Context, _ *ptypes.Empty) 
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
 // An optional Epoch parameter is provided to request historical validator balances from
 // archived, persistent data.
-func (bs *BeaconChainServer) ListValidatorBalances(
+func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
@@ -352,7 +352,7 @@ func (bs *BeaconChainServer) ListValidatorBalances(
 
 // GetValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
-func (bs *BeaconChainServer) GetValidators(
+func (bs *Server) GetValidators(
 	ctx context.Context,
 	req *ethpb.GetValidatorsRequest,
 ) (*ethpb.Validators, error) {
@@ -404,7 +404,7 @@ func (bs *BeaconChainServer) GetValidators(
 //
 // This data includes any activations, voluntary exits, and involuntary
 // ejections.
-func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
+func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
 	headState := bs.HeadFetcher.HeadState()
@@ -463,7 +463,7 @@ func (bs *BeaconChainServer) GetValidatorActiveSetChanges(
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
-func (bs *BeaconChainServer) GetValidatorQueue(
+func (bs *Server) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	headState := bs.HeadFetcher.HeadState()
@@ -547,7 +547,7 @@ func (bs *BeaconChainServer) GetValidatorQueue(
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
 // optional validator indices or public keys may be included to filter validator assignments.
-func (bs *BeaconChainServer) ListValidatorAssignments(
+func (bs *Server) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
@@ -761,7 +761,7 @@ func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
-func (bs *BeaconChainServer) GetValidatorParticipation(
+func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	headState := bs.HeadFetcher.HeadState()

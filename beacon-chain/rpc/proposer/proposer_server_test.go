@@ -57,7 +57,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	proposerServer := &ProposerServer{
+	proposerServer := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
@@ -113,7 +113,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	proposerServer := &ProposerServer{
+	proposerServer := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
@@ -197,7 +197,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
@@ -346,7 +346,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
@@ -490,7 +490,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
@@ -607,7 +607,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
@@ -716,7 +716,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
@@ -823,7 +823,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		BlockReceiver:          &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		ChainStartFetcher:      p,
@@ -858,7 +858,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	p := &mockPOW.FaultyMockPOWChain{
 		HashesByHeight: make(map[int][]byte),
 	}
-	proposerServer := &ProposerServer{
+	proposerServer := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
@@ -913,7 +913,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 			476: []byte("hash1024"),
 		},
 	}
-	proposerServer := &ProposerServer{
+	proposerServer := &Server{
 		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
@@ -955,7 +955,7 @@ func TestEth1Data(t *testing.T) {
 			DepositCount: 55,
 		},
 	}
-	ps := &ProposerServer{
+	ps := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
@@ -986,7 +986,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	ctx := context.Background()
-	ps := &ProposerServer{
+	ps := &Server{
 		HeadFetcher:   &mock.ChainService{State: &pbp2p.BeaconState{}},
 		BeaconDB:      db,
 		MockEth1Votes: true,
@@ -1088,7 +1088,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		LatestBlockNumber: big.NewInt(int64(currentHeight)),
 		HashesByHeight:    hashesByHeight,
 	}
-	proposerServer := &ProposerServer{
+	proposerServer := &Server{
 		BlockReceiver:          &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		ChainStartFetcher:      p,
@@ -1189,7 +1189,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 
-	bs := &ProposerServer{
+	bs := &Server{
 		BlockReceiver:          &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 		ChainStartFetcher:      p,

@@ -27,7 +27,7 @@ func TestSubmitAttestation_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	attesterServer := &AttesterServer{
+	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
 		AttReceiver:       &mock.ChainService{},
 		OperationsHandler: &mockOps.Operations{},
@@ -114,7 +114,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	attesterServer := &AttesterServer{
+	attesterServer := &Server{
 		P2p:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
@@ -149,7 +149,7 @@ func TestRequestAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_SyncNotReady(t *testing.T) {
-	as := &AttesterServer{
+	as := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := as.RequestAttestation(context.Background(), &pb.AttestationRequest{})
@@ -207,7 +207,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	attesterServer := &AttesterServer{
+	attesterServer := &Server{
 		P2p:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
@@ -251,7 +251,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	server := &AttesterServer{
+	server := &Server{
 		AttestationCache: cache.NewAttestationCache(),
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}

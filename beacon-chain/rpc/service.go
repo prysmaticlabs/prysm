@@ -18,11 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	att "github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
-	bs "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
-	ns "github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
-	prop "github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer"
-	val "github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -169,7 +169,7 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	proposerServer := &prop.ProposerServer{
+	proposerServer := &proposer.Server{
 		BeaconDB:               s.beaconDB,
 		HeadFetcher:            s.headFetcher,
 		BlockReceiver:          s.blockReceiver,
@@ -183,7 +183,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SyncChecker:            s.syncService,
 	}
-	attesterServer := &att.AttesterServer{
+	attesterServer := &attester.Server{
 		P2p:               s.p2p,
 		BeaconDB:          s.beaconDB,
 		OperationsHandler: s.operationsHandler,
@@ -192,7 +192,7 @@ func (s *Service) Start() {
 		AttestationCache:  cache.NewAttestationCache(),
 		SyncChecker:       s.syncService,
 	}
-	validatorServer := &val.ValidatorServer{
+	validatorServer := &validator.Server{
 		Ctx:                s.ctx,
 		BeaconDB:           s.beaconDB,
 		HeadFetcher:        s.headFetcher,
@@ -206,13 +206,13 @@ func (s *Service) Start() {
 		StateFeedListener:  s.stateFeedListener,
 		ChainStartChan:     make(chan time.Time),
 	}
-	nodeServer := &ns.NodeServer{
+	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
 	}
-	beaconChainServer := &bs.BeaconChainServer{
+	beaconChainServer := &beacon.Server{
 		BeaconDB:            s.beaconDB,
 		Pool:                s.attestationsPool,
 		HeadFetcher:         s.headFetcher,

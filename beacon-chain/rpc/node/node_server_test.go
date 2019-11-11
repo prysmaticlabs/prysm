@@ -19,7 +19,7 @@ import (
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
 	mSync := &mockSync.Sync{IsSyncing: false}
-	ns := &NodeServer{
+	ns := &Server{
 		SyncChecker: mSync,
 	}
 	res, err := ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
@@ -47,7 +47,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
-	ns := &NodeServer{
+	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
 	}
@@ -69,7 +69,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 
 func TestNodeServer_GetVersion(t *testing.T) {
 	v := version.GetVersion()
-	ns := &NodeServer{}
+	ns := &Server{}
 	res, err := ns.GetVersion(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func TestNodeServer_GetVersion(t *testing.T) {
 
 func TestNodeServer_GetImplementedServices(t *testing.T) {
 	server := grpc.NewServer()
-	ns := &NodeServer{
+	ns := &Server{
 		Server: server,
 	}
 	ethpb.RegisterNodeServer(server, ns)

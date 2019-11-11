@@ -28,9 +28,9 @@ func init() {
 	log = logrus.WithField("prefix", "rpc/attester")
 }
 
-// AttesterServer defines a server implementation of the gRPC Attester service,
+// Server defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
-type AttesterServer struct {
+type Server struct {
 	P2p               p2p.Broadcaster
 	BeaconDB          db.Database
 	OperationsHandler operations.Handler
@@ -42,7 +42,7 @@ type AttesterServer struct {
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
-func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
+func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to hash tree root attestation")
@@ -66,7 +66,7 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 
 // RequestAttestation requests that the beacon node produce an IndexedAttestation,
 // with a blank signature field, which the validator will then sign.
-func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
+func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationRequest) (*ethpb.AttestationData, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
 	defer span.End()
 	span.AddAttributes(
