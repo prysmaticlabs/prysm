@@ -31,13 +31,13 @@ func init() {
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	p2p               p2p.Broadcaster
-	beaconDB          db.Database
-	operationsHandler operations.Handler
-	attReceiver       blockchain.AttestationReceiver
-	headFetcher       blockchain.HeadFetcher
-	attestationCache  *cache.AttestationCache
-	syncChecker       sync.Checker
+	P2p               p2p.Broadcaster
+	BeaconDB          db.Database
+	OperationsHandler operations.Handler
+	AttReceiver       blockchain.AttestationReceiver
+	HeadFetcher       blockchain.HeadFetcher
+	AttestationCache  *cache.AttestationCache
+	SyncChecker       sync.Checker
 }
 
 // SubmitAttestation is a function called by an attester in a sharding validator to vote
@@ -51,11 +51,11 @@ func (as *AttesterServer) SubmitAttestation(ctx context.Context, att *ethpb.Atte
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := as.attReceiver.ReceiveAttestation(ctx, att); err != nil {
+		if err := as.AttReceiver.ReceiveAttestation(ctx, att); err != nil {
 			log.WithError(err).Error("could not receive attestation in chain service")
 			return
 		}
-		if err := as.operationsHandler.HandleAttestation(ctx, attCopy); err != nil {
+		if err := as.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
 			log.WithError(err).Error("could not handle attestation in operations service")
 			return
 		}
@@ -74,11 +74,11 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
-	if as.syncChecker.Syncing() {
+	if as.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	res, err := as.attestationCache.Get(ctx, req)
+	res, err := as.AttestationCache.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +87,9 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return res, nil
 	}
 
-	if err := as.attestationCache.MarkInProgress(req); err != nil {
+	if err := as.AttestationCache.MarkInProgress(req); err != nil {
 		if err == cache.ErrAlreadyInProgress {
-			res, err := as.attestationCache.Get(ctx, req)
+			res, err := as.AttestationCache.Get(ctx, req)
 			if err != nil {
 				return nil, err
 			}
@@ -102,17 +102,17 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		return nil, err
 	}
 	defer func() {
-		if err := as.attestationCache.MarkNotInProgress(req); err != nil {
+		if err := as.AttestationCache.MarkNotInProgress(req); err != nil {
 			log.WithError(err).Error("Failed to mark cache not in progress")
 		}
 	}()
 
-	headState := as.headFetcher.HeadState()
-	headRoot := as.headFetcher.HeadRoot()
+	headState := as.HeadFetcher.HeadState()
+	headRoot := as.HeadFetcher.HeadRoot()
 
 	// Safe guard against head state is nil in chain service. This should not happen.
 	if headState == nil {
-		headState, err = as.beaconDB.HeadState(ctx)
+		headState, err = as.BeaconDB.HeadState(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +146,7 @@ func (as *AttesterServer) RequestAttestation(ctx context.Context, req *pb.Attest
 		},
 	}
 
-	if err := as.attestationCache.Put(ctx, req, res); err != nil {
+	if err := as.AttestationCache.Put(ctx, req, res); err != nil {
 		return nil, err
 	}
 

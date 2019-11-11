@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	att "github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -178,14 +179,14 @@ func (s *Service) Start() {
 		pendingDepositsFetcher: s.pendingDepositFetcher,
 		syncChecker:            s.syncService,
 	}
-	attesterServer := &AttesterServer{
-		p2p:               s.p2p,
-		beaconDB:          s.beaconDB,
-		operationsHandler: s.operationsHandler,
-		attReceiver:       s.attestationReceiver,
-		headFetcher:       s.headFetcher,
-		attestationCache:  cache.NewAttestationCache(),
-		syncChecker:       s.syncService,
+	attesterServer := &att.AttesterServer{
+		P2p:               s.p2p,
+		BeaconDB:          s.beaconDB,
+		OperationsHandler: s.operationsHandler,
+		AttReceiver:       s.attestationReceiver,
+		HeadFetcher:       s.headFetcher,
+		AttestationCache:  cache.NewAttestationCache(),
+		SyncChecker:       s.syncService,
 	}
 	validatorServer := &ValidatorServer{
 		ctx:                s.ctx,
