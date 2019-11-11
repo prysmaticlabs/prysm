@@ -21,6 +21,7 @@ import (
 	att "github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
 	bs "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	ns "github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	prop "github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer"
 	val "github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -168,19 +169,19 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	proposerServer := &ProposerServer{
-		beaconDB:               s.beaconDB,
-		headFetcher:            s.headFetcher,
-		blockReceiver:          s.blockReceiver,
-		chainStartFetcher:      s.chainStartFetcher,
-		eth1InfoFetcher:        s.powChainService,
-		eth1BlockFetcher:       s.powChainService,
-		mockEth1Votes:          s.mockEth1Votes,
-		pool:                   s.attestationsPool,
-		canonicalStateChan:     s.canonicalStateChan,
-		depositFetcher:         s.depositFetcher,
-		pendingDepositsFetcher: s.pendingDepositFetcher,
-		syncChecker:            s.syncService,
+	proposerServer := &prop.ProposerServer{
+		BeaconDB:               s.beaconDB,
+		HeadFetcher:            s.headFetcher,
+		BlockReceiver:          s.blockReceiver,
+		ChainStartFetcher:      s.chainStartFetcher,
+		Eth1InfoFetcher:        s.powChainService,
+		Eth1BlockFetcher:       s.powChainService,
+		MockEth1Votes:          s.mockEth1Votes,
+		Pool:                   s.attestationsPool,
+		CanonicalStateChan:     s.canonicalStateChan,
+		DepositFetcher:         s.depositFetcher,
+		PendingDepositsFetcher: s.pendingDepositFetcher,
+		SyncChecker:            s.syncService,
 	}
 	attesterServer := &att.AttesterServer{
 		P2p:               s.p2p,
