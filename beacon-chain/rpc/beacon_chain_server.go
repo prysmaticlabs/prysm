@@ -319,12 +319,18 @@ func (bs *BeaconChainServer) ListBeaconCommittees(
 			})
 		}
 	}
+
+	numCommittees := len(committees)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.BeaconCommittees{
 		Epoch:                helpers.SlotToEpoch(startSlot),
 		ActiveValidatorCount: uint64(len(activeIndices)),
-		Committees:           committees,
-		NextPageToken:        "",
-		TotalSize:            int32(len(committees)),
+		Committees:           committees[start:end],
+		TotalSize:            int32(numCommittees),
+		NextPageToken:        nextPageToken,
 	}, nil
 }
 
