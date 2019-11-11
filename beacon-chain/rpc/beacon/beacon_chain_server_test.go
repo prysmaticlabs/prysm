@@ -1802,7 +1802,7 @@ func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 	}
 }
 
-func TestServer_ListBlocksPagination(t *testing.T) {
+func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
