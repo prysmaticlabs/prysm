@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // UpdateMaxSpan is used to update the max span of an incoming attestation after the slashing detection phase.
