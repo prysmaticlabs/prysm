@@ -18,12 +18,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestToBlockHead completes the validator client's attester responsibility at a given slot.
+// ProposeAttestation completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte) {
-	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
+func (v *validator) ProposeAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProposeAttestation")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))

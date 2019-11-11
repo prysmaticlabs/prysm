@@ -27,7 +27,7 @@ type Validator interface {
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
 	RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole // validator pubKey -> role
-	AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte)
+	ProposeAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 }
 
@@ -94,10 +94,10 @@ func run(ctx context.Context, v Validator) {
 					})
 					switch role {
 					case pb.ValidatorRole_BOTH:
-						go v.AttestToBlockHead(slotCtx, slot, id)
+						go v.ProposeAttestation(slotCtx, slot, id)
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
-						v.AttestToBlockHead(slotCtx, slot, id)
+						v.ProposeAttestation(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:

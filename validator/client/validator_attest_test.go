@@ -30,7 +30,7 @@ func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
 }
 
@@ -54,7 +54,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not request attestation to sign at slot")
 }
 
@@ -92,7 +92,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -137,7 +137,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBitfield.SetBitAt(4, true)
@@ -196,7 +196,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
 	timer := time.NewTimer(time.Duration(1 * time.Second))
-	go validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
+	go validator.ProposeAttestation(context.Background(), 0, validatorPubKey)
 	<-timer.C
 }
 
@@ -248,7 +248,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
-	validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 0, validatorPubKey)
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
@@ -289,7 +289,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.ProposeAttestation(context.Background(), 30, validatorPubKey)
 
 	if len(generatedAttestation.AggregationBits) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))
