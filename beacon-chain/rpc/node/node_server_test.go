@@ -26,7 +26,7 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Syncing {
+	if res.Syncing {
 		t.Errorf("Wanted GetSyncStatus() = %v, received %v", false, res.Syncing)
 	}
 	ns.SyncChecker = &mockSync.Sync{IsSyncing: true}
@@ -34,7 +34,7 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Syncing {
+	if !res.Syncing {
 		t.Errorf("Wanted GetSyncStatus() = %v, received %v", true, res.Syncing)
 	}
 }
