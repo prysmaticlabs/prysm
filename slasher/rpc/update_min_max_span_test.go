@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,6 +19,7 @@ type spanMapTestStruct struct {
 
 var spanTestsMax []spanMapTestStruct
 var spanTestsMin []spanMapTestStruct
+var spanTestsFail []spanMapTestStruct
 
 func init() {
 	// Test data following example of a max span by https://github.com/protolambda
@@ -181,4 +183,32 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
 		}
 	}
+}
+
+func TestServer_FailToUpdate(t *testing.T) {
+	dbs := db.SetupSlasherDB(t)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	slasherServer := &Server{
+		SlasherDB: dbs,
+	}
+	spanTestsFail := spanMapTestStruct{
+
+		validatorIdx: 0,
+		sourceEpoch:  0,
+		targetEpoch:  params.BeaconConfig().WeakSubjectivityPeriod + 1,
+		resultSpanMap: &ethpb.EpochSpanMap{
+			EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
+				4: {MinSpan: 0, MaxSpan: 2},
+				5: {MinSpan: 0, MaxSpan: 1},
+			},
+		},
+	}
+	if err := slasherServer.UpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+	}
+	if err := slasherServer.UpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+	}
+
 }
