@@ -40,9 +40,9 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(128)}) {
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(64)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
-			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
+			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
 	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
@@ -90,9 +90,9 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(128)}) {
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(64)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
-			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
+			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
 	if newState.CurrentJustifiedCheckpoint.Epoch != 2 {
 		t.Errorf("Wanted justified epoch: %d, got: %d",
@@ -139,9 +139,9 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(128)}) {
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint.Root, []byte{byte(64)}) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
-			[]byte{byte(128)}, newState.CurrentJustifiedCheckpoint.Root)
+			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint.Root)
 	}
 	if newState.PreviousJustifiedCheckpoint.Epoch != 0 {
 		t.Errorf("Wanted previous justified epoch: %d, got: %d",

@@ -20,7 +20,7 @@ service BeaconChain {
     // TODO(preston): Batch requests?
 
     // Retrieve attestations by block root, slot, or epoch. 
-    // Attestations are sorted by crosslink shard by default.
+    // Attestations are sorted by slot by default.
     // 
     // The server may return an empty list when no attestations match the given 
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter 
@@ -394,15 +394,15 @@ message ListValidatorAssignmentsRequest {
 
 message ValidatorAssignments {
     message CommitteeAssignment {
-        // Crosslink committees is responsible for crosslinking shard data back to the beacon chain,
+        // Beacon committees is responsible for crosslinking committee data back to the beacon chain,
         // they also attest and produce beacon chain blocks. This is a list of validator indices that
         // are in the same committee as requested validator, everyone in the committee is assigned to the
-        // same slot and same shard.
-        repeated uint64 crosslink_committees = 1;
+        // same slot and same committee.
+        repeated uint64 beacon_committees = 1;
         
-        // The shard index of which the validator must perform the attestation
+        // The committee index of which the validator must perform the attestation
         // or block proposal.
-        uint64 shard = 2;
+        uint64 committee_index = 2;
 
         // Beacon chain slot in which the validator must perform its assigned 
         // duty.
