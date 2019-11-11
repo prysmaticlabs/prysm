@@ -11,10 +11,11 @@ import (
 )
 
 type spanMapTestStruct struct {
-	validatorIdx  uint64
-	sourceEpoch   uint64
-	targetEpoch   uint64
-	resultSpanMap *ethpb.EpochSpanMap
+	validatorIdx        uint64
+	sourceEpoch         uint64
+	targetEpoch         uint64
+	slashingTargetEpoch uint64
+	resultSpanMap       *ethpb.EpochSpanMap
 }
 
 var spanTestsMax []spanMapTestStruct
@@ -26,9 +27,10 @@ func init() {
 	// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 	spanTestsMax = []spanMapTestStruct{
 		{
-			validatorIdx: 0,
-			sourceEpoch:  3,
-			targetEpoch:  6,
+			validatorIdx:        0,
+			sourceEpoch:         3,
+			targetEpoch:         6,
+			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					4: {MinSpan: 0, MaxSpan: 2},
@@ -37,9 +39,10 @@ func init() {
 			},
 		},
 		{
-			validatorIdx: 0,
-			sourceEpoch:  8,
-			targetEpoch:  18,
+			validatorIdx:        0,
+			sourceEpoch:         8,
+			targetEpoch:         18,
+			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					4:  {MinSpan: 0, MaxSpan: 2},
@@ -57,9 +60,34 @@ func init() {
 			},
 		},
 		{
-			validatorIdx: 0,
-			sourceEpoch:  4,
-			targetEpoch:  12,
+			validatorIdx:        0,
+			sourceEpoch:         4,
+			targetEpoch:         12,
+			slashingTargetEpoch: 0,
+			resultSpanMap: &ethpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
+					4:  {MinSpan: 0, MaxSpan: 2},
+					5:  {MinSpan: 0, MaxSpan: 7},
+					6:  {MinSpan: 0, MaxSpan: 6},
+					7:  {MinSpan: 0, MaxSpan: 5},
+					8:  {MinSpan: 0, MaxSpan: 4},
+					9:  {MinSpan: 0, MaxSpan: 9},
+					10: {MinSpan: 0, MaxSpan: 8},
+					11: {MinSpan: 0, MaxSpan: 7},
+					12: {MinSpan: 0, MaxSpan: 6},
+					13: {MinSpan: 0, MaxSpan: 5},
+					14: {MinSpan: 0, MaxSpan: 4},
+					15: {MinSpan: 0, MaxSpan: 3},
+					16: {MinSpan: 0, MaxSpan: 2},
+					17: {MinSpan: 0, MaxSpan: 1},
+				},
+			},
+		},
+		{
+			validatorIdx:        0,
+			sourceEpoch:         10,
+			targetEpoch:         15,
+			slashingTargetEpoch: 18,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					4:  {MinSpan: 0, MaxSpan: 2},
@@ -83,9 +111,10 @@ func init() {
 
 	spanTestsMin = []spanMapTestStruct{
 		{
-			validatorIdx: 0,
-			sourceEpoch:  4,
-			targetEpoch:  6,
+			validatorIdx:        0,
+			sourceEpoch:         4,
+			targetEpoch:         6,
+			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1: {MinSpan: 5, MaxSpan: 0},
@@ -95,9 +124,10 @@ func init() {
 			},
 		},
 		{
-			validatorIdx: 0,
-			sourceEpoch:  13,
-			targetEpoch:  18,
+			validatorIdx:        0,
+			sourceEpoch:         13,
+			targetEpoch:         18,
+			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1:  {MinSpan: 5, MaxSpan: 0},
@@ -116,9 +146,32 @@ func init() {
 			},
 		},
 		{
-			validatorIdx: 0,
-			sourceEpoch:  11,
-			targetEpoch:  15,
+			validatorIdx:        0,
+			sourceEpoch:         11,
+			targetEpoch:         15,
+			slashingTargetEpoch: 0,
+			resultSpanMap: &ethpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
+					1:  {MinSpan: 5, MaxSpan: 0},
+					2:  {MinSpan: 4, MaxSpan: 0},
+					3:  {MinSpan: 3, MaxSpan: 0},
+					4:  {MinSpan: 11, MaxSpan: 0},
+					5:  {MinSpan: 10, MaxSpan: 0},
+					6:  {MinSpan: 9, MaxSpan: 0},
+					7:  {MinSpan: 8, MaxSpan: 0},
+					8:  {MinSpan: 7, MaxSpan: 0},
+					9:  {MinSpan: 6, MaxSpan: 0},
+					10: {MinSpan: 5, MaxSpan: 0},
+					11: {MinSpan: 7, MaxSpan: 0},
+					12: {MinSpan: 6, MaxSpan: 0},
+				},
+			},
+		},
+		{
+			validatorIdx:        0,
+			sourceEpoch:         10,
+			targetEpoch:         20,
+			slashingTargetEpoch: 15,
 			resultSpanMap: &ethpb.EpochSpanMap{
 				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 					1:  {MinSpan: 5, MaxSpan: 0},
@@ -149,13 +202,16 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
-
-		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
-			t.Fatalf("failed to update span: %v", err)
+		st, err := slasherServer.DetectAndUpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		if err != nil {
+			t.Fatalf("Failed to update span: %v", err)
+		}
+		if st != tt.slashingTargetEpoch {
+			t.Fatalf("Expected slashing target : %v got: %v", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to retrieve span: %v", err)
+			t.Fatalf("Failed to retrieve span: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.resultSpanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
@@ -171,9 +227,12 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
-
-		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
+		st, err := slasherServer.DetectAndUpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		if err != nil {
 			t.Fatalf("failed to update span: %v", err)
+		}
+		if st != tt.slashingTargetEpoch {
+			t.Fatalf("Expected slashing target : %v got: %v", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
@@ -194,9 +253,10 @@ func TestServer_FailToUpdate(t *testing.T) {
 	}
 	spanTestsFail := spanMapTestStruct{
 
-		validatorIdx: 0,
-		sourceEpoch:  0,
-		targetEpoch:  params.BeaconConfig().WeakSubjectivityPeriod + 1,
+		validatorIdx:        0,
+		sourceEpoch:         0,
+		slashingTargetEpoch: 0,
+		targetEpoch:         params.BeaconConfig().WeakSubjectivityPeriod + 1,
 		resultSpanMap: &ethpb.EpochSpanMap{
 			EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
 				4: {MinSpan: 0, MaxSpan: 2},
@@ -204,10 +264,10 @@ func TestServer_FailToUpdate(t *testing.T) {
 			},
 		},
 	}
-	if err := slasherServer.UpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	if _, err := slasherServer.DetectAndUpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
 		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	if err := slasherServer.UpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	if _, err := slasherServer.DetectAndUpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
 		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 
