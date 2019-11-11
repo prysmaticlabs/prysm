@@ -171,7 +171,7 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 	}
 	for _, tt := range spanTestsMin {
 		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
-			t.Fatalf("failed to update span: %v", err)
+			t.Fatalf("Failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
