@@ -6,6 +6,7 @@ go_library(
         "assignments.go",
         "attestations.go",
         "blocks.go",
+        "committees.go",
         "server.go",
         "validators.go",
     ],
