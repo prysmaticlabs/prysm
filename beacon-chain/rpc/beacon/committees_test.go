@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -172,6 +173,7 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
 
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
@@ -181,17 +183,27 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		headState.RandaoMixes[i] = make([]byte, 32)
 	}
 
+	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 10
+
+	// Store the genesis seed.
+	seed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveArchivedCommitteeInfo(ctx, 0, &ethpb.ArchivedCommitteeInfo{
+		AttesterSeed: seed[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &Server{
+		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +219,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
-			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
+			committee, err := helpers.ComputeCommittee(activeIndices, seed, epochOffset, totalCount)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -217,14 +229,34 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 			})
 		}
 	}
-	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
-		PageSize: 2,
+	res1, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Genesis{
+			Genesis: true,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res == nil {
+	res2, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+			Epoch: 0,
+		},
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(res1, res2) {
+		t.Fatal(err)
+	}
+	wantedRes := &ethpb.BeaconCommittees{
+		Epoch:                0,
+		Committees:           wanted,
+		ActiveValidatorCount: uint64(numValidators),
+		NextPageToken:        strconv.Itoa(1),
+		TotalSize:            int32(len(wanted)),
+	}
+	if !reflect.DeepEqual(wantedRes, res1) {
+		t.Errorf("Wanted %v, received %v", wantedRes, res1)
 	}
 }
 

@@ -2,15 +2,15 @@ package beacon
 
 import (
 	"context"
-	"fmt"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ListBeaconCommittees for a given epoch.
@@ -102,7 +102,6 @@ func (bs *Server) ListBeaconCommittees(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(activeIndices)
 	return &ethpb.BeaconCommittees{
 		Epoch:                helpers.SlotToEpoch(startSlot),
 		ActiveValidatorCount: uint64(len(activeIndices)),
