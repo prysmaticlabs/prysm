@@ -90,6 +90,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Run("peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
 				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
+					t.Fatalf("failed to connect to peers: %v", err)
 					scanner := bufio.NewScanner(beaconLogFile)
 					for scanner.Scan() {
 						currentLine := scanner.Text()
@@ -105,7 +106,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 						currentLine := scanner.Text()
 						t.Log(currentLine)
 					}
-					t.Fatalf("failed to connect to peers: %v", err)
 				}
 			}
 		})
@@ -281,6 +281,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		}
 	}
 
+	t.Logf("Starting beacon chain with flags %s", strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Stderr = file
 	cmd.Stdout = file
@@ -351,6 +352,7 @@ func initializeValidators(
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
+		t.Logf("Starting validator client with flags %s", strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
