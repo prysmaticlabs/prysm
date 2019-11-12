@@ -47,7 +47,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "ralph merkle!!!",
-		SyncService:         &mockSync.Sync{IsSyncing: true},
+		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &mock.ChainService{},
 		AttestationReceiver: &mock.ChainService{},
 		HeadFetcher:         &mock.ChainService{},
