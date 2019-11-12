@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,10 +15,6 @@ import (
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	genesisEpochNumber := uint64(0)
 
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0}) {
@@ -36,11 +31,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
 
-	if params.BeaconConfig().ShardCount != 1024 {
-		t.Error("ShardCount should be 1024 for these tests to pass")
-	}
-	shardCount := int(params.BeaconConfig().ShardCount)
-
 	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
@@ -54,11 +44,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisTime := uint64(99999)
 	deposits, _, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
 	eth1Data := testutil.GenerateEth1Data(t, deposits)
-	newState, err := state.GenesisBeaconState(
-		deposits,
-		genesisTime,
-		eth1Data,
-	)
+	newState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
@@ -93,7 +79,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.RandaoMixes) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
-	if !bytes.Equal(newState.RandaoMixes[0], make([]byte, 32)) {
+	if !bytes.Equal(newState.RandaoMixes[0], eth1Data.BlockHash) {
 		t.Error("RandaoMixes was not correctly initialized")
 	}
 
@@ -112,12 +98,6 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if len(newState.CurrentCrosslinks) != shardCount {
-		t.Error("Length of CurrentCrosslinks was not correctly initialized")
-	}
-	if len(newState.PreviousCrosslinks) != shardCount {
-		t.Error("Length of PreviousCrosslinks was not correctly initialized")
-	}
 	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}
@@ -128,31 +108,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 
-	activeValidators, _ := helpers.ActiveValidatorIndices(newState, 0)
-	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeValidators, params.BeaconConfig().ValidatorRegistryLimit)
-	if err != nil {
-		t.Errorf("could not hash tree root: %v", err)
-	}
-	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
-		t.Errorf(
-			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.ActiveIndexRoots[0],
-		)
-	}
-	if !bytes.Equal(newState.ActiveIndexRoots[0], genesisActiveIndexRoot[:]) {
-		t.Errorf(
-			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			newState.ActiveIndexRoots[0],
-		)
-	}
-
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
 	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
 		t.Error("StateRoots was not correctly initialized")
-	}
-	if bytes.Equal(newState.ActiveIndexRoots[0], zeroHash) || bytes.Equal(newState.ActiveIndexRoots[0], []byte{}) {
-		t.Error("ActiveIndexRoots was not correctly initialized")
 	}
 	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
 		t.Error("BlockRoots was not correctly initialized")
@@ -170,11 +129,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)
 	}
-	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)
 	}

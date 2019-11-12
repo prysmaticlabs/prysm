@@ -19,7 +19,7 @@ func BenchmarkMinSpan(b *testing.B) {
 	slasherServer.DetectAndUpdateMinSpan(ctx, 1, 53999, 1)
 	slasherServer.DetectAndUpdateMinSpan(ctx, 53998, 53999, 1)
 	for _, diff := range diffs {
-		b.Run(fmt.Sprintf("MinSpan with diff: %d", diff), func(ib *testing.B) {
+		b.Run(fmt.Sprintf("MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(ib.N%54000) - 10; i < uint64(ib.N%54000); i++ {
 				slasherServer.DetectAndUpdateMinSpan(ctx, i, i+diff, 1)
 			}
@@ -38,7 +38,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 	slasherServer.DetectAndUpdateMaxSpan(ctx, 1, 53999, 1)
 	slasherServer.DetectAndUpdateMinSpan(ctx, 53998, 53999, 1)
 	for _, diff := range diffs {
-		b.Run(fmt.Sprintf("MaxSpan with diff: %d", diff), func(ib *testing.B) {
+		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(ib.N%54000) - 10; i < uint64(ib.N%54000); i++ {
 				slasherServer.DetectAndUpdateMaxSpan(ctx, i, i+diff, 1)
 

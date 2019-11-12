@@ -19,14 +19,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Crosslink: &ethpb.Crosslink{
-				Shard:      5,
-				ParentRoot: []byte("parent"),
-				StartEpoch: 1,
-				EndEpoch:   2,
-			},
-		},
+		Data:            &ethpb.AttestationData{Slot: 10},
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 		CustodyBits:     bitfield.NewBitlist(8),
 	}
@@ -76,12 +69,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 		totalAtts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: []byte("head"),
-				Crosslink: &ethpb.Crosslink{
-					Shard:      uint64(i),
-					ParentRoot: []byte("parent"),
-					StartEpoch: 1,
-					EndEpoch:   2,
-				},
+				Slot:            uint64(i),
 			},
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 			CustodyBits:     bitfield.NewBitlist(8),
@@ -116,7 +104,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Slice(retrieved, func(i, j int) bool {
-		return retrieved[i].Data.Crosslink.Shard < retrieved[j].Data.Crosslink.Shard
+		return retrieved[i].Data.Slot < retrieved[j].Data.Slot
 	})
 	if !reflect.DeepEqual(retrieved, oddAtts) {
 		t.Errorf("Wanted %v, received %v", oddAtts, retrieved)
@@ -130,14 +118,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard:      5,
-					ParentRoot: []byte("parent"),
-					StartEpoch: uint64(i + 1),
-					EndEpoch:   2,
-				},
-			},
+			Data:            &ethpb.AttestationData{Slot: uint64(i)},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
@@ -162,14 +143,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			att := &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					Crosslink: &ethpb.Crosslink{
-						Shard:      5,
-						ParentRoot: []byte("parent"),
-						StartEpoch: uint64(startEpoch),
-						EndEpoch:   2,
-					},
-				},
+				Data:            &ethpb.AttestationData{Slot: uint64(startEpoch)},
 				AggregationBits: bitfield.Bitlist{0b11},
 			}
 			ctx := context.Background()
@@ -292,14 +266,7 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 }
 
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
-	commonData := &ethpb.AttestationData{
-		Crosslink: &ethpb.Crosslink{
-			Shard:      5,
-			ParentRoot: []byte("parent"),
-			StartEpoch: 1,
-			EndEpoch:   2,
-		},
-	}
+	commonData := &ethpb.AttestationData{Slot: 10}
 
 	tests := []struct {
 		name   string

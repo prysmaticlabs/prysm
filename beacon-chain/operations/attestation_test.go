@@ -30,7 +30,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	})
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,10 +40,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 			BeaconBlockRoot: []byte("block-root"),
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
@@ -57,7 +53,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		Data:       att.Data,
 		CustodyBit: false,
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
@@ -69,12 +65,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
@@ -95,12 +85,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att.Data.Crosslink.ParentRoot = encoded[:]
-	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	if err := service.HandleAttestation(context.Background(), att); err != nil {
 		t.Error(err)
@@ -120,10 +104,6 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{
-			Shard:      1,
-			StartEpoch: 0,
-		},
 	}
 	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
 		Data:       data,
@@ -140,7 +120,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 
 	// We setup the genesis state with 256 validators.
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +144,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// Next up, we compute the committee for the attestation we're testing.
-	committee, err := helpers.CrosslinkCommittee(beaconState, att.Data.Target.Epoch, att.Data.Crosslink.Shard)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.Index)
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,7 +153,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		t.Error(err)
 	}
 	totalAggBits := bitfield.NewBitlist(uint64(len(committee)))
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 	// For every single member of the committee, we sign the attestation data and handle
 	// the attestation through the operations service, which will perform basic aggregation
@@ -229,40 +209,22 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	att1 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att1.Data.Crosslink.ParentRoot = encoded[:]
-	att1.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
-
-	committee, err := helpers.CrosslinkCommittee(beaconState, att1.Data.Target.Epoch, att1.Data.Crosslink.Shard)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.Index)
 	if err != nil {
 		t.Error(err)
 	}
@@ -278,17 +240,13 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	att1.Signature = privKeys[committee[0]].Sign(hashTreeRoot[:], domain).Marshal()
 
 	att2 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
@@ -296,18 +254,12 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	aggregationBits.SetBitAt(1, true)
 	att2.AggregationBits = aggregationBits
 
-	att2.Data.Crosslink.ParentRoot = encoded[:]
-	att2.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 	att2.Signature = privKeys[committee[1]].Sign(hashTreeRoot[:], domain).Marshal()
 
 	att3 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
@@ -316,8 +268,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	aggregationBits.SetBitAt(1, true)
 	att3.AggregationBits = aggregationBits
 
-	att3.Data.Crosslink.ParentRoot = encoded[:]
-	att3.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 	att3Sig1 := privKeys[committee[0]].Sign(hashTreeRoot[:], domain)
 	att3Sig2 := privKeys[committee[1]].Sign(hashTreeRoot[:], domain)
 	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{att3Sig1, att3Sig2}).Marshal()
@@ -403,8 +353,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,10 +366,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard:      0,
-				StartEpoch: 0,
-			},
 		},
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
@@ -432,7 +378,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		Data:       att.Data,
 		CustodyBit: false,
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 
 	zeroSig := [96]byte{}
@@ -447,22 +393,10 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentCrosslinks = []*ethpb.Crosslink{
-		{
-			Shard:      0,
-			StartEpoch: 0,
-		},
-	}
+
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
-
-	encoded, err := ssz.HashTreeRoot(beaconState.CurrentCrosslinks[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	att.Data.Crosslink.ParentRoot = encoded[:]
-	att.Data.Crosslink.DataRoot = params.BeaconConfig().ZeroHash[:]
 
 	r, _ := ssz.HashTreeRoot(att.Data)
 	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
@@ -475,7 +409,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Test we can retrieve attestations from slot1 - slot61.
-	attestations, err := service.AttestationPool(context.Background(), 64)
+	attestations, err := service.AttestationPool(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -495,9 +429,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	for i := 0; i < len(origAttestations); i++ {
 		origAttestations[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: uint64(i),
-				},
+				Slot:   uint64(i),
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
@@ -513,10 +445,7 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: 200,
-		CurrentCrosslinks: []*ethpb.Crosslink{{
-			StartEpoch: 2,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
+		Slot: 200}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	attestations, err := service.AttestationPool(context.Background(), 200)
@@ -547,9 +476,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: uint64(i),
-				},
+				Slot:   uint64(i),
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},
@@ -563,11 +490,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: 15,
-		CurrentCrosslinks: []*ethpb.Crosslink{{
-			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
