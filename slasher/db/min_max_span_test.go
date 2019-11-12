@@ -59,7 +59,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
 	}
-	if vsm.EpochSpanMap != nil {
+	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*ethpb.MinMaxSpan{}) {
 		t.Fatal("ValidatorSpansMap should return nil")
 	}
 }
