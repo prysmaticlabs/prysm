@@ -14,8 +14,7 @@ import (
 
 // ListBeaconCommittees for a given epoch.
 //
-// This request may specify validator indices or public keys to filter out
-// validator beacon chain committees. If no filter criteria is specified, the response returns
+// If no filter criteria is specified, the response returns
 // all beacon committees for the current epoch. The results are paginated by default.
 func (bs *Server) ListBeaconCommittees(
 	ctx context.Context,
