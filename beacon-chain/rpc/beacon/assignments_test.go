@@ -65,7 +65,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 100
+	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		var pubKey [48]byte
@@ -157,7 +157,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 100
+	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
