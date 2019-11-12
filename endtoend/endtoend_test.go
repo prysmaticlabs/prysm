@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/multiformats/go-multiaddr"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -305,13 +306,15 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	if err := response.Body.Close(); err != nil {
 		t.Fatal(err)
 	}
-
-	selfIndex := strings.Index(pageContent, "self=")
-	if selfIndex == -1 {
+	addrPrefix := fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/", 13000+index)
+	startIdx := strings.Index(pageContent, addrPrefix)
+	if startIdx == -1 {
 		t.Fatalf("did not find peer text in %s", pageContent)
 	}
-	startIdx := selfIndex + 5
-	multiAddr := pageContent[startIdx : startIdx+85]
+	multiAddr, err := multiaddr.NewMultiaddr(pageContent[startIdx : startIdx+len(addrPrefix)+53])
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return &beaconNodeInfo{
 		processID:   cmd.Process.Pid,
@@ -319,7 +322,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		rpcPort:     (4000) + uint64(index),
 		monitorPort: 8080 + uint64(index),
 		grpcPort:    3200 + uint64(index),
-		multiAddr:   multiAddr,
+		multiAddr:   multiAddr.String(),
 	}
 }
 
