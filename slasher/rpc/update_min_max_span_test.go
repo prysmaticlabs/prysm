@@ -149,13 +149,12 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
-
 		if err := slasherServer.UpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
-			t.Fatalf("failed to update span: %v", err)
+			t.Fatalf("Failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to retrieve span: %v", err)
+			t.Fatalf("Failed to retrieve span: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.resultSpanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
@@ -171,13 +170,12 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
-
 		if err := slasherServer.UpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx); err != nil {
-			t.Fatalf("failed to update span: %v", err)
+			t.Fatalf("Failed to update span: %v", err)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to retrieve span: %v", err)
+			t.Fatalf("Failed to retrieve span: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.resultSpanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
@@ -205,10 +203,10 @@ func TestServer_FailToUpdate(t *testing.T) {
 		},
 	}
 	if err := slasherServer.UpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
-		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	if err := slasherServer.UpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
-		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 
 }

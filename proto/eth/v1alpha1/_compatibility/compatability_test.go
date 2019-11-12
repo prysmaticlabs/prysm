@@ -29,10 +29,6 @@ func TestProtoCompatability(t *testing.T) {
 			a: &pb.Checkpoint{},
 			b: &upstreampb.Checkpoint{},
 		},
-		{
-			a: &pb.Crosslink{},
-			b: &upstreampb.Crosslink{},
-		},
 		// beacon_block.proto
 		{
 			a: &pb.BeaconBlock{},
@@ -61,10 +57,6 @@ func TestProtoCompatability(t *testing.T) {
 		{
 			a: &pb.VoluntaryExit{},
 			b: &upstreampb.VoluntaryExit{},
-		},
-		{
-			a: &pb.Transfer{},
-			b: &upstreampb.Transfer{},
 		},
 		{
 			a: &pb.Eth1Data{},

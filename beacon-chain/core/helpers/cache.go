@@ -4,11 +4,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 )
 
-// ClearShuffledValidatorCache clears the shuffled indices cache from scratch.
-func ClearShuffledValidatorCache() {
-	shuffledIndicesCache = cache.NewShuffledIndicesCache()
-}
-
 // ClearActiveCountCache restarts the active validator count cache from scratch.
 func ClearActiveCountCache() {
 	activeCountCache = cache.NewActiveCountCache()
@@ -28,5 +23,4 @@ func ActiveIndicesKeys() []string {
 func ClearAllCaches() {
 	ClearActiveIndicesCache()
 	ClearActiveCountCache()
-	ClearShuffledValidatorCache()
 }

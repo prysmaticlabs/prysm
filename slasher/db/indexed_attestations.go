@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"

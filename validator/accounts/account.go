@@ -82,7 +82,7 @@ func NewValidatorAccount(directory string, password string) error {
 		validatorKeyFile,
 	).Info("Keystore generated for validator signatures at path")
 
-	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
+	data, depositRoot, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
 	if err != nil {
 		return errors.Wrap(err, "unable to generate deposit data")
 	}
@@ -92,7 +92,7 @@ func NewValidatorAccount(directory string, password string) error {
 	}
 	testAcc.TxOpts.GasLimit = 1000000
 
-	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoot)
 	if err != nil {
 		return errors.Wrap(err, "unable to create deposit transaction")
 	}

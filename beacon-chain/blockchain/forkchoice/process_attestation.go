@@ -89,7 +89,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := s.verifyAttSlotTime(ctx, baseState, a.Data); err != nil {
+	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
 		return 0, err
 	}
 
@@ -185,12 +185,7 @@ func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, t
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
 	defer span.End()
 
-	slot, err := helpers.AttestationDataSlot(targetState, a.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
-
-	nextSlot := slot + 1
+	nextSlot := a.Data.Slot + 1
 	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
 
@@ -210,7 +205,6 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	if err != nil {
 		return err
 	}
-
 	if a, ok := s.attsQueue[root]; ok {
 		a, err := helpers.AggregateAttestation(a, att)
 		if err != nil {
@@ -221,15 +215,6 @@ func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
 	return nil
-}
-
-// verifyAttSlotTime validates input attestation is not from the future.
-func (s *Store) verifyAttSlotTime(ctx context.Context, baseState *pb.BeaconState, d *ethpb.AttestationData) error {
-	aSlot, err := helpers.AttestationDataSlot(baseState, d)
-	if err != nil {
-		return errors.Wrap(err, "could not get attestation slot")
-	}
-	return helpers.VerifySlotTime(baseState.GenesisTime, aSlot+1)
 }
 
 // verifyAttestation validates input attestation is valid.
