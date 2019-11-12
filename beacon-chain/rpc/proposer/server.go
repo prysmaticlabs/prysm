@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"math/rand"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -147,8 +148,12 @@ func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	if ps.MockEth1Votes || !ps.Eth1InfoFetcher.IsConnectedToETH1() {
+	if ps.MockEth1Votes {
 		return ps.mockETH1DataVote(slot)
+	}
+
+	if !ps.Eth1InfoFetcher.IsConnectedToETH1() {
+		return ps.randomETH1DataVote()
 	}
 
 	eth1VotingPeriodStartTime, _ := ps.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -183,6 +188,21 @@ func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
 	}
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
+	return &ethpb.Eth1Data{
+		DepositRoot:  depRoot[:],
+		DepositCount: headState.Eth1DepositIndex,
+		BlockHash:    blockHash[:],
+	}, nil
+}
+
+func (ps *Server) randomETH1DataVote() (*ethpb.Eth1Data, error) {
+	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
+		"ETH1 Data votes are now random.")
+	headState := ps.HeadFetcher.HeadState()
+	// set random roots and block hashes to prevent a majority from being
+	// built if the eth1 node is offline
+	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
+	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex,

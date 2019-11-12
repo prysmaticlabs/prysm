@@ -4,7 +4,9 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
+	"os"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -40,6 +42,7 @@ var log logrus.FieldLogger
 
 func init() {
 	log = logrus.WithField("prefix", "rpc")
+	rand.Seed(int64(os.Getpid()))
 }
 
 // Service defining an RPC server for a beacon node.
