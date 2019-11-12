@@ -54,7 +54,7 @@ func (ss *Server) UpdateMinSpan(ctx context.Context, source uint64, target uint6
 	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
+		return errors.Wrapf(err, "could not retrieve span map for validatorIdx: %d", validatorIdx)
 	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
