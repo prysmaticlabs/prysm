@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -43,7 +44,6 @@ func (bs *Server) ListBeaconCommittees(
 	}
 
 	var attesterSeed [32]byte
-	var committeeCount uint64
 	var activeIndices []uint64
 	var err error
 	if requestingGenesis || startSlot != headState.Slot {
@@ -56,15 +56,10 @@ func (bs *Server) ListBeaconCommittees(
 			return nil, err
 		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-		committeeCount = archivedCommitteeInfo.CommitteeCount
 	} else {
 		// Otherwise, we use data from the current epoch.
 		currentEpoch := helpers.SlotToEpoch(headState.Slot)
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, currentEpoch)
-		if err != nil {
-			return nil, err
-		}
-		committeeCount, err = helpers.CommitteeCountAtSlot(headState, headState.Slot)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +81,8 @@ func (bs *Server) ListBeaconCommittees(
 		}
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
-			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, committeeCount)
+			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
+			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
 			if err != nil {
 				return nil, err
 			}
@@ -102,6 +98,11 @@ func (bs *Server) ListBeaconCommittees(
 	if err != nil {
 		return nil, err
 	}
+	activeIndices, err = helpers.ActiveValidatorIndices(headState, 0)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(activeIndices)
 	return &ethpb.BeaconCommittees{
 		Epoch:                helpers.SlotToEpoch(startSlot),
 		ActiveValidatorCount: uint64(len(activeIndices)),
