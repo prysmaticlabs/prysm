@@ -14,11 +14,8 @@ message Attestation {
 
     AttestationData data = 2;
 
-    // Not used in phase 0.
-    bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-
     // 96 byte BLS aggregate signature.
-    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message AttestationData {
