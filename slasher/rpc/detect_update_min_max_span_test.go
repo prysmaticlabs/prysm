@@ -232,7 +232,7 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 			t.Fatalf("failed to update span: %v", err)
 		}
 		if st != tt.slashingTargetEpoch {
-			t.Fatalf("Expected slashing target : %v got: %v", tt.slashingTargetEpoch, st)
+			t.Fatalf("Expected slashing target: %v got: %v", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
