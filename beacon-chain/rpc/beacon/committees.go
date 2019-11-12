@@ -45,7 +45,7 @@ func (bs *Server) ListBeaconCommittees(
 	var attesterSeed [32]byte
 	var activeIndices []uint64
 	var err error
-	if requestingGenesis || startSlot != headState.Slot {
+	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headState.Slot) {
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, status.Errorf(
@@ -58,14 +58,21 @@ func (bs *Server) ListBeaconCommittees(
 		archivedCommitteeInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, status.Errorf(
-				codes.NotFound,
-				"could not request data for epoch %d, perhaps --archive in the running beacon node is disabled: %v",
+				codes.Internal,
+				"could not request archival data for epoch %d: %v",
 				helpers.SlotToEpoch(startSlot),
 				err,
 			)
 		}
+		if archivedCommitteeInfo == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				helpers.SlotToEpoch(startSlot),
+			)
+		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-	} else {
+	} else if !requestingGenesis && helpers.SlotToEpoch(startSlot) == helpers.SlotToEpoch(headState.Slot) {
 		// Otherwise, we use data from the current epoch.
 		currentEpoch := helpers.SlotToEpoch(headState.Slot)
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, currentEpoch)
@@ -86,6 +93,14 @@ func (bs *Server) ListBeaconCommittees(
 				err,
 			)
 		}
+	} else {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.SlotToEpoch(headState.Slot),
+			helpers.StartSlot(startSlot),
+		)
 	}
 
 	// If current epoch, compute. Otherwise, fetch from archive.

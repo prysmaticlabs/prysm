@@ -157,7 +157,7 @@ func (s *Service) run(ctx context.Context) {
 			log.WithField(
 				"epoch",
 				helpers.CurrentEpoch(headState),
-			).Debug("Successfully archived beacon chain data during epoch")
+			).Info("Successfully archived beacon chain data during epoch")
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
