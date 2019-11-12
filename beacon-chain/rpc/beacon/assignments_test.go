@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	"gopkg.in/d4l3k/messagediff.v1"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"

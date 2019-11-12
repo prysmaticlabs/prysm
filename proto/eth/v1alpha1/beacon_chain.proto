@@ -256,22 +256,15 @@ message ListCommitteesRequest {
         // Optional criteria to retrieve genesis data.
         bool genesis = 2;
     }
-    // Validator 48 byte BLS public keys to filter validator indices for the given
-    // epoch. This field is optional.
-    repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
-
-    // Validator indices to filter validator indices for the given epoch.
-    // This field is optional.
-    repeated uint64 indices = 4;
 
     // The maximum number of Validators to return in the response.
     // This field is optional.
-    int32 page_size = 5;
+    int32 page_size = 3;
 
     // A pagination token returned from a previous call to `GetValidators`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 6;
+    string page_token = 4;
 }
 
 message BeaconCommittees {
@@ -287,7 +280,6 @@ message BeaconCommittees {
 
     // A list of committees of validators for given  epoch.
     repeated CommitteeItem committees = 2;
-
 
     // The number of active validators at the given epoch.
     uint64 active_validator_count = 3;
@@ -311,7 +303,7 @@ message GetValidatorBalancesRequest {
     // Validator 48 byte BLS public keys to filter validators for the given
     // epoch.
     repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
-        
+
     // Validator indices to filter validators for the given epoch.
     repeated uint64 indices = 4;
 
