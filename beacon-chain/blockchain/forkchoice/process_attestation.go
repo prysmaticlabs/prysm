@@ -51,7 +51,7 @@ import (
 //    assert is_valid_indexed_attestation(target_state, indexed_attestation)
 //
 //    # Update latest messages
-//    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
+//    for i in indexed_attestation.attesting_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
 func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
@@ -236,7 +236,7 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	indices := indexedAtt.AttestingIndices
 	newVoteIndices := make([]uint64, 0, len(indices))
 	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
 	for _, i := range indices {

@@ -101,13 +101,11 @@ func TestAttestationContainer_ToAttestations(t *testing.T) {
 			Data:            data,
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 			Signature:       sig,
-			CustodyBits:     bitfield.NewBitlist(8),
 		},
 		{
 			Data:            data,
 			AggregationBits: bitfield.Bitlist{0b00000010, 0b1},
 			Signature:       sig,
-			CustodyBits:     bitfield.NewBitlist(8),
 		},
 	}
 

@@ -143,7 +143,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	slashableIndices := block.Body.AttesterSlashings[0].Attestation_1.CustodyBit_0Indices
+	slashableIndices := block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
 	if !beaconState.Validators[slashableIndices[0]].Slashed {
 		t.Fatal("expected validator to be slashed")
 	}

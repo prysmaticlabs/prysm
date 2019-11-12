@@ -124,7 +124,6 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 }
 
 func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
 
 	if err != nil {
@@ -132,7 +131,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 	}
 	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
-		Indices:   indices,
+		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
 	key := append(bytesutil.Bytes8(idxAttestation.Data.Source.Epoch), bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)...)
@@ -173,11 +172,10 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 }
 
 func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
 	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
-		Indices:   indices,
+		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
 	key := append(bytesutil.Bytes8(idxAttestation.Data.Source.Epoch), bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)...)

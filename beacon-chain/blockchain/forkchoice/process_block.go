@@ -294,7 +294,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	for _, i := range indexedAtt.AttestingIndices {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
