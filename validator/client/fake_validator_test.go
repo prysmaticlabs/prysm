@@ -85,7 +85,7 @@ func (fv *fakeValidator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 	return vr
 }
 
-func (fv *fakeValidator) ProposeAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
