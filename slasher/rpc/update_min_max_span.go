@@ -15,7 +15,10 @@ import (
 func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
 	diff := target - source
 	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
-		return fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+		return fmt.Errorf("%d target - source: %d > weakSubjectivityPeriod",
+			params.BeaconConfig().WeakSubjectivityPeriod,
+			diff,
+		)
 	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
@@ -44,7 +47,10 @@ func (ss *Server) UpdateMaxSpan(ctx context.Context, source uint64, target uint6
 func (ss *Server) UpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) error {
 	diff := target - source
 	if diff > params.BeaconConfig().WeakSubjectivityPeriod {
-		return fmt.Errorf("attestation slashing detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, diff)
+		return fmt.Errorf("%d target - source: %d > weakSubjectivityPeriod",
+			params.BeaconConfig().WeakSubjectivityPeriod,
+			diff,
+		)
 	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
