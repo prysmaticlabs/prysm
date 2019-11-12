@@ -101,7 +101,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 10)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -136,7 +136,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
+	depChainStart := uint64(64)
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
@@ -209,7 +209,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
+	depChainStart := uint64(64)
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
@@ -267,7 +267,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount / 16
+	depChainStart := uint64(64)
 	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
 	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
