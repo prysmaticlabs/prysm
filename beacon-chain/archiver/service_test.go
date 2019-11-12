@@ -72,20 +72,20 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
 	attestedBalance := uint64(1)
-	currentEpoch := helpers.CurrentEpoch(headState)
+	previousEpoch := helpers.PrevEpoch(headState)
 	wanted := &ethpb.ValidatorParticipation{
 		VotedEther:              attestedBalance,
 		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
 	}
 
-	retrieved, err := svc.beaconDB.ArchivedValidatorParticipation(svc.ctx, currentEpoch)
+	retrieved, err := svc.beaconDB.ArchivedValidatorParticipation(svc.ctx, previousEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !proto.Equal(wanted, retrieved) {
-		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch, wanted, retrieved)
+		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", previousEpoch, wanted, retrieved)
 	}
 	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
