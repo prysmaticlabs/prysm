@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "detect_update_min_max_span.go",
         "server.go",
+        "update_min_max_span.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
@@ -26,6 +27,7 @@ go_test(
     srcs = [
         "detect_update_min_max_span_test.go",
         "server_test.go",
+        "update_min_max_span_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

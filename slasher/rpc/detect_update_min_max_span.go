@@ -36,12 +36,8 @@ func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc 
 	if err != nil {
 		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
 	}
-	if spanMap.EpochSpanMap == nil {
-		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
-	} else {
-		if _, ok := spanMap.EpochSpanMap[source]; ok {
-			return detectionFunc(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
-		}
+	if _, ok := spanMap.EpochSpanMap[source]; ok {
+		return detectionFunc(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
 	}
 	return 0, span, spanMap, nil
 }
