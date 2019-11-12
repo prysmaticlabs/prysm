@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "assignments.go",
+        "server.go",
         "status.go",
-        "validator_server.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -34,8 +34,8 @@ go_test(
     name = "go_default_test",
     srcs = [
         "assignments_test.go",
+        "server_test.go",
         "status_test.go",
-        "validator_server_test.go",
     ],
     embed = [":go_default_library"],
     shard_count = 4,

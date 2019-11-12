@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["proposer_server.go"],
+    srcs = ["server.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -34,7 +34,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["proposer_server_test.go"],
+    srcs = ["server_test.go"],
     embed = [":go_default_library"],
     shard_count = 4,
     deps = [

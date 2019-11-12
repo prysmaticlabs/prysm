@@ -5,8 +5,8 @@ go_library(
     srcs = [
         "assignments.go",
         "attestations.go",
-        "beacon_chain_server.go",
         "blocks.go",
+        "server.go",
         "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon",
