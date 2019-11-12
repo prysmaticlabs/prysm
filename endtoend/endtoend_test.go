@@ -91,7 +91,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Run("peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
 				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
-					t.Fatalf("failed to connect to peers: %v", err)
+					ogErr := err
 					scanner := bufio.NewScanner(beaconLogFile)
 					for scanner.Scan() {
 						currentLine := scanner.Text()
@@ -107,6 +107,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 						currentLine := scanner.Text()
 						t.Log(currentLine)
 					}
+					t.Fatalf("failed to connect to peers: %v", ogErr)
 				}
 			}
 		})
@@ -449,6 +450,7 @@ func peersConnect(port uint64, expectedPeers uint64) error {
 	if err := response.Body.Close(); err != nil {
 		return err
 	}
+	fmt.Println(pageContent)
 	startIdx := strings.Index(pageContent, "peers") - 2
 	peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
 	if err != nil {
