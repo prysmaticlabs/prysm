@@ -65,7 +65,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 1000
+	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		var pubKey [48]byte
@@ -133,7 +133,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+	for _, index := range activeIndices[0:100] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
@@ -157,7 +157,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 1000
+	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
@@ -249,7 +249,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
+	for _, index := range activeIndices[0:100] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
