@@ -133,7 +133,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:100] {
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
@@ -147,7 +147,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		})
 	}
 
-	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
+	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
 	}
 }
@@ -244,7 +244,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, index := range activeIndices[0:100] {
+	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
 			t.Fatal(err)
