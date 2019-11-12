@@ -298,12 +298,19 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatalf("failed to get p2p info: %v", err)
 	}
 	dataInBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pageContent := string(dataInBytes)
 	if err := response.Body.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	startIdx := strings.Index(pageContent, "self=") + 5
+	selfIndex := strings.Index(pageContent, "self=")
+	if selfIndex == -1 {
+		t.Fatalf("did not find peer text in %s", pageContent)
+	}
+	startIdx := selfIndex + 5
 	multiAddr := pageContent[startIdx : startIdx+85]
 
 	return &beaconNodeInfo{
