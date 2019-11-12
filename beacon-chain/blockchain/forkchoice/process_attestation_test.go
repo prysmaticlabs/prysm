@@ -82,12 +82,12 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErrString: "pre state of target block 0 does not exist",
 		},
 		{
-			name: "process attestation from future epoch",
+			name: "process attestation doesn't match current epoch",
 			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: params.BeaconConfig().FarFutureEpoch,
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not process slot from the future",
+			wantErrString: "does not match current epoch",
 		},
 	}
 
@@ -299,7 +299,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 		ctx,
 		0,
 		2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{}); strings.Contains(err.Error(), "target epoch 0 does not match current epoch 2 or prev epoch 1") {
+		&ethpb.Checkpoint{}); !strings.Contains(err.Error(), "target epoch 0 does not match current epoch 2 or prev epoch 1") {
 		t.Error("Did not receive wanted error")
 	}
 }
