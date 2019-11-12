@@ -261,6 +261,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	}
 
 	args := []string{
+		"--bootstrap-node=\"\"",
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
@@ -268,6 +269,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4000+index),
+		fmt.Sprintf("--p2p-udp-port=%d", 12000+index),
 		fmt.Sprintf("--p2p-tcp-port=%d", 13000+index),
 		fmt.Sprintf("--monitoring-port=%d", 8080+index),
 		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
