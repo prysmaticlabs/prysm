@@ -41,7 +41,6 @@ func BenchmarkMaxSpan(b *testing.B) {
 		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(ib.N%54000) - 10; i < uint64(ib.N%54000); i++ {
 				slasherServer.DetectAndUpdateMaxSpan(ctx, i, i+diff, 1)
-
 			}
 		})
 	}

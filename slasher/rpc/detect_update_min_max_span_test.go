@@ -190,14 +190,12 @@ func init() {
 			},
 		},
 	}
-
 }
 
 func TestServer_UpdateMaxSpan(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
-
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
@@ -252,7 +250,6 @@ func TestServer_FailToUpdate(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	spanTestsFail := spanMapTestStruct{
-
 		validatorIdx:        0,
 		sourceEpoch:         0,
 		slashingTargetEpoch: 0,

@@ -39,8 +39,7 @@ func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc 
 	if spanMap.EpochSpanMap == nil {
 		spanMap.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
 	} else {
-		_, ok := spanMap.EpochSpanMap[source]
-		if ok {
+		if _, ok := spanMap.EpochSpanMap[source]; ok {
 			return detectionFunc(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
 		}
 	}
