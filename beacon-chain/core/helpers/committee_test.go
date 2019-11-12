@@ -328,8 +328,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 					Target: &ethpb.Checkpoint{},
 				},
 			},
-			stateSlot:           20,
-			verificationFailure: true,
+			stateSlot: 20,
 		},
 		{
 			attestation: &ethpb.Attestation{
@@ -360,9 +359,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
-			if !strings.Contains(err.Error(), "custody bitfield") {
-				t.Errorf("%d expected custody bits to fail: %v", i, err)
-			}
 			if err == nil {
 				t.Error("verification succeeded when it was supposed to fail")
 			}

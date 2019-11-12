@@ -31,6 +31,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
+		AttestingIndices: []uint64{0, 1},
 	}
 	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
@@ -47,6 +48,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
+		AttestingIndices: []uint64{0, 1},
 	}
 	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {

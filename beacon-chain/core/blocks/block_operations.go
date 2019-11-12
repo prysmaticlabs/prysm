@@ -679,9 +679,10 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 	}
 
 	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
-	var pubkeys []*bls.PublicKey
+	var pubkey *bls.PublicKey
+	var err error
 	if len(indices) > 0 {
-		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[indices[0]].PublicKey)
+		pubkey, err = bls.PublicKeyFromBytes(beaconState.Validators[indices[0]].PublicKey)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
@@ -692,23 +693,19 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 			}
 			pubkey.Aggregate(pk)
 		}
-		pubkeys = append(pubkeys, pubkey)
 	}
 
-	var msgs [][32]byte
-	if len(indices) > 0 {
-		cus0Root, err := ssz.HashTreeRoot(indexedAtt.Data)
-		if err != nil {
-			return errors.Wrap(err, "could not tree hash att data and custody bit 0")
-		}
-		msgs = append(msgs, cus0Root)
+	messageHash, err := ssz.HashTreeRoot(indexedAtt.Data)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash att data and custody bit 0")
 	}
+
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 
-	if !sig.VerifyAggregate(pubkeys, msgs, domain) {
+	if !sig.Verify(messageHash[:], pubkey, domain) {
 		return fmt.Errorf("attestation aggregation signature did not verify")
 	}
 	return nil

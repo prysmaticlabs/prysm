@@ -204,6 +204,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
+		AttestingIndices: []uint64{0, 1},
 	}
 	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
@@ -220,6 +221,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
+		AttestingIndices: []uint64{0, 1},
 	}
 	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {
@@ -383,6 +385,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -486,7 +490,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.BlockRoots = blockRoots
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(1, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

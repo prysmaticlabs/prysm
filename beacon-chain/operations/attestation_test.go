@@ -334,6 +334,8 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
 
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
@@ -341,7 +343,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(1, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -356,7 +358,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
-
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 	for i, indice := range attestingIndices {
