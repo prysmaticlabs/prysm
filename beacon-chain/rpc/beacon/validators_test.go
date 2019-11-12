@@ -66,7 +66,7 @@ func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func TestServer_ListValidatorBalances_NoPagination(t *testing.T) {
+func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -147,7 +147,7 @@ func TestServer_ListValidatorBalances_NoPagination(t *testing.T) {
 	}
 }
 
-func TestServer_ListValidatorBalances_Pagination(t *testing.T) {
+func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
