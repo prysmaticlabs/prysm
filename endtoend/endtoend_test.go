@@ -77,6 +77,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for _, bb := range beaconNodes {
 		processIDs = append(processIDs, bb.processID)
 	}
+	defer logOutput(t, tmpPath)
 	defer killProcesses(t, processIDs)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
@@ -91,23 +92,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Run("peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
 				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
-					ogErr := err
-					scanner := bufio.NewScanner(beaconLogFile)
-					for scanner.Scan() {
-						currentLine := scanner.Text()
-						t.Log(currentLine)
-					}
-
-					beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
-					if err != nil {
-						t.Fatal(err)
-					}
-					scanner = bufio.NewScanner(beacon1LogFile)
-					for scanner.Scan() {
-						currentLine := scanner.Text()
-						t.Log(currentLine)
-					}
-					t.Fatalf("failed to connect to peers: %v", ogErr)
+					t.Fatalf("failed to connect to peers: %v", err)
 				}
 			}
 		})
@@ -506,6 +491,31 @@ func killProcesses(t *testing.T, pIDs []int) {
 		}
 		if err := process.Kill(); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+func logOutput(t *testing.T, tmpPath string) {
+	if t.Failed() {
+		t.Log("beacon-1.log")
+		beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		scanner := bufio.NewScanner(beacon1LogFile)
+		for scanner.Scan() {
+			currentLine := scanner.Text()
+			t.Log(currentLine)
+		}
+		t.Log("vals-1.log")
+		vals1LogFile, err := os.Open(path.Join(tmpPath, "vals-1.log"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		scanner = bufio.NewScanner(vals1LogFile)
+		for scanner.Scan() {
+			currentLine := scanner.Text()
+			t.Log(currentLine)
 		}
 	}
 }
