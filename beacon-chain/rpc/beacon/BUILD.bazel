@@ -35,8 +35,14 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["beacon_chain_server_test.go"],
+    srcs = [
+        "assignments_test.go",
+        "attestations_test.go",
+        "blocks_test.go",
+        "validators_test.go",
+    ],
     embed = [":go_default_library"],
+    shard_count = 4,
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

@@ -30,6 +30,7 @@ go_test(
     name = "go_default_test",
     srcs = ["validator_server_test.go"],
     embed = [":go_default_library"],
+    shard_count = 4,
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
