@@ -63,7 +63,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	config.tmpPath = tmpPath
-	fmt.Printf("Test Path: %s\n", tmpPath)
+	t.Logf("Test Path: %s\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -202,13 +202,12 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatal(err)
 	}
 
-	minDeposit := big.NewInt(int64(params.BeaconConfig().MinDepositAmount))
 	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
-	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, minDeposit, txOpts.From)
+	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
 	if err != nil {
 		t.Fatalf("failed to deploy deposit contract: %v", err)
 	}
@@ -387,10 +386,10 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, validatorNum)
+	deposits, roots, _ := testutil.SetupInitialDeposits(t, validatorNum)
 	var tx *types.Transaction
-	for _, dd := range deposits {
-		tx, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature)
+	for index, dd := range deposits {
+		tx, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {
 			t.Error("unable to send transaction to contract")
 			continue
@@ -472,8 +471,10 @@ func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 }
 
 func WaitForTextInFile(file *os.File, text string) error {
+	checks := 0
 	found := false
-	for !found {
+	// Put a limit on how many times we can check to prevent endless looping.
+	for !found && checks < 20 {
 		// Pass some time to not spam file checks.
 		time.Sleep(1 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
@@ -493,6 +494,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 		if err := scanner.Err(); err != nil {
 			return err
 		}
+		checks++
 	}
 	return nil
 }
