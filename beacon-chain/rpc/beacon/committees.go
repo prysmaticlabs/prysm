@@ -49,11 +49,21 @@ func (bs *Server) ListBeaconCommittees(
 	if requestingGenesis || startSlot != headState.Slot {
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(
+				codes.Internal,
+				"could not retrieve active indices for epoch %d: %v",
+				helpers.SlotToEpoch(startSlot),
+				err,
+			)
 		}
 		archivedCommitteeInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, helpers.SlotToEpoch(startSlot))
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(
+				codes.NotFound,
+				"could not request data for epoch %d, perhaps --archive in the running beacon node is disabled: %v",
+				helpers.SlotToEpoch(startSlot),
+				err,
+			)
 		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
 	} else {
@@ -61,11 +71,21 @@ func (bs *Server) ListBeaconCommittees(
 		currentEpoch := helpers.SlotToEpoch(headState.Slot)
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, currentEpoch)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(
+				codes.Internal,
+				"could not retrieve active indices for current epoch %d: %v",
+				currentEpoch,
+				err,
+			)
 		}
 		attesterSeed, err = helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(
+				codes.Internal,
+				"could not retrieve attester seed for current epoch %d: %v",
+				currentEpoch,
+				err,
+			)
 		}
 	}
 
@@ -84,7 +104,12 @@ func (bs *Server) ListBeaconCommittees(
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
 			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(
+					codes.Internal,
+					"could not compute committee for slot %d: %v",
+					slot,
+					err,
+				)
 			}
 			committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
 				Committee: committee,
@@ -96,11 +121,11 @@ func (bs *Server) ListBeaconCommittees(
 	numCommittees := len(committees)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
 	if err != nil {
-		return nil, err
-	}
-	activeIndices, err = helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		return nil, err
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"could not paginate results: %v",
+			err,
+		)
 	}
 	return &ethpb.BeaconCommittees{
 		Epoch:                helpers.SlotToEpoch(startSlot),
