@@ -102,7 +102,6 @@ func (bs *Server) ListBeaconCommittees(
 		)
 	}
 
-	// If current epoch, compute. Otherwise, fetch from archive.
 	committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
