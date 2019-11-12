@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"gopkg.in/d4l3k/messagediff.v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -76,14 +77,17 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey: pubKey[:],
-				ExitEpoch: 0,
+				PublicKey:        pubKey[:],
+				ExitEpoch:        0,
+				ActivationEpoch:  0,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
 				PublicKey:        pubKey[:],
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:  0,
 			})
 		}
 	}
@@ -120,7 +124,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
