@@ -72,7 +72,7 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	numValidators := 64
+	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
 	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
@@ -116,11 +116,24 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 			})
 		}
 	}
+	fmt.Println(len(wanted))
 
 	tests := []struct {
 		req *ethpb.ListCommitteesRequest
 		res *ethpb.BeaconCommittees
 	}{
+		{
+			req: &ethpb.ListCommitteesRequest{
+				PageSize: 2,
+			},
+			res: &ethpb.BeaconCommittees{
+				Epoch:                0,
+				Committees:           wanted[0:2],
+				ActiveValidatorCount: uint64(numValidators),
+				NextPageToken:        strconv.Itoa(1),
+				TotalSize:            int32(len(wanted)),
+			},
+		},
 		{
 			req: &ethpb.ListCommitteesRequest{
 				PageToken: strconv.Itoa(1), PageSize: 3,
@@ -133,40 +146,18 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 				TotalSize:            int32(len(wanted)),
 			},
 		},
-		//{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 3},
-		//	res: &ethpb.ValidatorBalances{
-		//		Balances: []*ethpb.ValidatorBalances_Balance{
-		//			{PublicKey: []byte{3}, Index: 3, Balance: uint64(3)},
-		//			{PublicKey: []byte{4}, Index: 4, Balance: uint64(4)},
-		//			{PublicKey: []byte{5}, Index: 5, Balance: uint64(5)}},
-		//		NextPageToken: strconv.Itoa(2),
-		//		TotalSize:     int32(count)}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(10), PageSize: 5},
-		//	res: &ethpb.ValidatorBalances{
-		//		Balances: []*ethpb.ValidatorBalances_Balance{
-		//			{PublicKey: []byte{50}, Index: 50, Balance: uint64(50)},
-		//			{PublicKey: []byte{51}, Index: 51, Balance: uint64(51)},
-		//			{PublicKey: []byte{52}, Index: 52, Balance: uint64(52)},
-		//			{PublicKey: []byte{53}, Index: 53, Balance: uint64(53)},
-		//			{PublicKey: []byte{54}, Index: 54, Balance: uint64(54)}},
-		//		NextPageToken: strconv.Itoa(11),
-		//		TotalSize:     int32(count)}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3},
-		//	res: &ethpb.ValidatorBalances{
-		//		Balances: []*ethpb.ValidatorBalances_Balance{
-		//			{PublicKey: []byte{99}, Index: 99, Balance: uint64(99)},
-		//			{PublicKey: []byte{100}, Index: 100, Balance: uint64(100)},
-		//			{PublicKey: []byte{101}, Index: 101, Balance: uint64(101)},
-		//		},
-		//		NextPageToken: strconv.Itoa(34),
-		//		TotalSize:     int32(count)}},
-		//{req: &ethpb.GetValidatorBalancesRequest{PageSize: 2},
-		//	res: &ethpb.ValidatorBalances{
-		//		Balances: []*ethpb.ValidatorBalances_Balance{
-		//			{PublicKey: []byte{0}, Index: 0, Balance: uint64(0)},
-		//			{PublicKey: []byte{1}, Index: 1, Balance: uint64(1)}},
-		//		NextPageToken: strconv.Itoa(1),
-		//		TotalSize:     int32(count)}},
+		{
+			req: &ethpb.ListCommitteesRequest{
+				PageToken: strconv.Itoa(3), PageSize: 5,
+			},
+			res: &ethpb.BeaconCommittees{
+				Epoch:                0,
+				Committees:           wanted[15:20],
+				ActiveValidatorCount: uint64(numValidators),
+				NextPageToken:        strconv.Itoa(4),
+				TotalSize:            int32(len(wanted)),
+			},
+		},
 	}
 	for _, test := range tests {
 		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
