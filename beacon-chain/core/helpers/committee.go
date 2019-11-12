@@ -255,9 +255,6 @@ func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attesta
 	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
 	}
-	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
-		return errors.Wrap(err, "failed to verify custody bitfield")
-	}
 	return nil
 }
 
