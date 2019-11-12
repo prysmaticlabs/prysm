@@ -85,7 +85,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 
 	root, err := ssz.HashTreeRoot(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to sign attestation data and custody bit")
+		log.WithError(err).Error("Failed to sign attestation data")
 		return
 	}
 	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()

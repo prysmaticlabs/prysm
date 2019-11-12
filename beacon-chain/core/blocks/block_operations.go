@@ -506,7 +506,7 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
-//    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
+//    assert len(attestation.aggregation_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
@@ -697,7 +697,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 
 	messageHash, err := ssz.HashTreeRoot(indexedAtt.Data)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash att data and custody bit 0")
+		return errors.Wrap(err, "could not tree hash att data")
 	}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
