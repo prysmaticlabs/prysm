@@ -22,6 +22,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)

@@ -23,6 +23,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestServer_ListAttestationsNoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
