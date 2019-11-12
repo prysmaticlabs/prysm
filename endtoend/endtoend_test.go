@@ -25,8 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pborman/uuid"
-	ev "github.com/prysmaticlabs/prysm/beacon-chain/endtoend/evaluators"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -69,6 +69,14 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	config.contractAddr = contractAddr
 	beaconNodes := startBeaconNodes(t, config)
 	valClients := initializeValidators(t, config, keystorePath, beaconNodes)
+	processIDs := []int{eth1PID}
+	for _, vv := range valClients {
+		processIDs = append(processIDs, vv.processID)
+	}
+	for _, bb := range beaconNodes {
+		processIDs = append(processIDs, bb.processID)
+	}
+	defer killProcesses(t, processIDs)
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 	if err != nil {
@@ -84,6 +92,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			for _, bNode := range beaconNodes {
 				if err := PeersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
 					t.Fatalf("failed to connect to peers: %v", err)
+					t.FailNow()
 				}
 			}
 		})
@@ -116,23 +125,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	if currentEpoch < config.epochsToRun {
 		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
-	}
-
-	processIDs := []int{eth1PID}
-	for _, vv := range valClients {
-		processIDs = append(processIDs, vv.processID)
-	}
-	for _, bb := range beaconNodes {
-		processIDs = append(processIDs, bb.processID)
-	}
-	for _, id := range processIDs {
-		process, err := os.FindProcess(id)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := process.Kill(); err != nil {
-			t.Fatalf("could not kill process: %v", err)
-		}
 	}
 }
 
@@ -468,6 +460,18 @@ func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 		}
 	}
 	return nil
+}
+
+func killProcesses(t *testing.T, pIDs []int) {
+	for _, id := range pIDs {
+		process, err := os.FindProcess(id)
+		if err != nil {
+			t.Fatalf("could not find process %d: %v", id, err)
+		}
+		if err := process.Kill(); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func WaitForTextInFile(file *os.File, text string) error {

@@ -3,18 +3,18 @@ package endtoend
 import (
 	"testing"
 
-	ev "github.com/prysmaticlabs/prysm/beacon-chain/endtoend/evaluators"
+	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_MinimalConfig(t *testing.T) {
+func TestEndToEnd_DemoConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseDemoBeaconConfig()
 
-	minimalConfig := &end2EndConfig{
-		minimalConfig:  true,
-		epochsToRun:    6,
+	demoConfig := &end2EndConfig{
+		minimalConfig:  false,
+		epochsToRun:    5,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
@@ -22,5 +22,5 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.FinalizationOccurs,
 		},
 	}
-	runEndToEndTest(t, minimalConfig)
+	runEndToEndTest(t, demoConfig)
 }

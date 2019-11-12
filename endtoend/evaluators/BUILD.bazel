@@ -7,8 +7,8 @@ go_library(
         "finality.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/endtoend/evaluators",
-    visibility = ["//beacon-chain/endtoend:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/endtoend/evaluators",
+    visibility = ["//endtoend:__subpackages__"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
