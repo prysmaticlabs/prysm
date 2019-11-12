@@ -30,11 +30,14 @@ func detectMin(span uint64, spans *ethpb.MinMaxSpan, source uint64) uint64 {
 func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc detect) (targetEpoch uint64, span uint64, spanMap *ethpb.EpochSpanMap, err error) {
 	span = target - source + 1
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
-		return 0, span, nil, fmt.Errorf("attestation detection supports only weak subjectivity period: %v target - source: %v > weakSubjectivityPeriod", params.BeaconConfig().WeakSubjectivityPeriod, span)
+		return 0, span, nil, fmt.Errorf("%d target - source: %d > weakSubjectivityPeriod",
+			params.BeaconConfig().WeakSubjectivityPeriod,
+			span,
+		)
 	}
 	spanMap, err = ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validatorIdx: %v", validatorIdx)
+		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validatorIdx: %d", validatorIdx)
 	}
 	if _, ok := spanMap.EpochSpanMap[source]; ok {
 		return detectionFunc(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil

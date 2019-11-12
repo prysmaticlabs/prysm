@@ -205,7 +205,7 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 			t.Fatalf("Failed to update span: %v", err)
 		}
 		if st != tt.slashingTargetEpoch {
-			t.Fatalf("Expected slashing target: %v got: %v", tt.slashingTargetEpoch, st)
+			t.Fatalf("Expected slashing target: %d got: %v", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
@@ -227,14 +227,14 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 	for _, tt := range spanTestsMin {
 		st, err := slasherServer.DetectAndUpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to update span: %v", err)
+			t.Fatalf("Failed to update span: %v", err)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %v got: %v", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
-			t.Fatalf("failed to retrieve span: %v", err)
+			t.Fatalf("Failed to retrieve span: %v", err)
 		}
 		if sm == nil || !proto.Equal(sm, tt.resultSpanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.resultSpanMap, sm)
@@ -262,10 +262,10 @@ func TestServer_FailToUpdate(t *testing.T) {
 		},
 	}
 	if _, err := slasherServer.DetectAndUpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
-		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	if _, err := slasherServer.DetectAndUpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
-		t.Fatalf("update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
+		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 
 }
