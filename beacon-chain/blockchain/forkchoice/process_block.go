@@ -440,3 +440,9 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 
 	return nil
 }
+
+// currentSlot returns the current slot based on time.
+func (s *Store) currentSlot() {
+
+}
+

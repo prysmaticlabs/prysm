@@ -43,6 +43,8 @@ type Store struct {
 	attsQueueLock        sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	genesisTime uint64
+	bestJustifiedCheckpt *ethpb.Checkpoint
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -82,6 +84,7 @@ func (s *Store) GenesisStore(
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+	s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
@@ -96,6 +99,8 @@ func (s *Store) GenesisStore(
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
+
+	s.genesisTime = justifiedState.GenesisTime
 
 	return nil
 }
