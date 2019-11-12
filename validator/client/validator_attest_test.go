@@ -22,13 +22,9 @@ import (
 
 func TestRequestAttestation_ValidatorAssignmentRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, _, finish := setup(t)
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
 	defer finish()
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
@@ -49,10 +45,6 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
-	m.attesterClient.EXPECT().RequestAttestation(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
-	).Return(nil, errors.New("something went wrong"))
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
