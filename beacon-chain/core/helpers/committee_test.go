@@ -287,13 +287,11 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	tests := []struct {
 		attestation         *ethpb.Attestation
 		stateSlot           uint64
-		invalidCustodyBits  bool
 		verificationFailure bool
 	}{
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x05},
-				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
 					Index:  5,
 					Target: &ethpb.Checkpoint{},
@@ -305,7 +303,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					Index:  10,
 					Target: &ethpb.Checkpoint{},
@@ -316,7 +313,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					Index:  20,
 					Target: &ethpb.Checkpoint{},
@@ -327,7 +323,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
 					Index:  20,
 					Target: &ethpb.Checkpoint{},
@@ -335,12 +330,10 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			},
 			stateSlot:           20,
 			verificationFailure: true,
-			invalidCustodyBits:  true,
 		},
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
-				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
 					Index:  5,
 					Target: &ethpb.Checkpoint{},
@@ -352,7 +345,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
-				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
 					Index:  20,
 					Target: &ethpb.Checkpoint{},
@@ -368,10 +360,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
-			if tt.invalidCustodyBits {
-				if !strings.Contains(err.Error(), "custody bitfield") {
-					t.Errorf("%d expected custody bits to fail: %v", i, err)
-				}
+			if !strings.Contains(err.Error(), "custody bitfield") {
+				t.Errorf("%d expected custody bits to fail: %v", i, err)
 			}
 			if err == nil {
 				t.Error("verification succeeded when it was supposed to fail")

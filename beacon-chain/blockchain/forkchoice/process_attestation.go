@@ -236,7 +236,7 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	indices := indexedAtt.AttestingIndices
 	newVoteIndices := make([]uint64, 0, len(indices))
 	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
 	for _, i := range indices {

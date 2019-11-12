@@ -1215,16 +1215,16 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		wantedAttestingIndices []uint64
 	}{
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x07},
-			wantedAttestingIndices:   []uint64{4,30},
+			aggregationBitfield:    bitfield.Bitlist{0x07},
+			wantedAttestingIndices: []uint64{4, 30},
 		},
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x03},
-			wantedAttestingIndices:   []uint64{30},
+			aggregationBitfield:    bitfield.Bitlist{0x03},
+			wantedAttestingIndices: []uint64{30},
 		},
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x01},
-			wantedAttestingIndices:   []uint64{},
+			aggregationBitfield:    bitfield.Bitlist{0x01},
+			wantedAttestingIndices: []uint64{},
 		},
 	}
 
@@ -1241,8 +1241,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		attestation.AggregationBits = tt.aggregationBitfield
 		wanted := &ethpb.IndexedAttestation{
 			AttestingIndices: tt.wantedAttestingIndices,
-			Data:                attestation.Data,
-			Signature:           attestation.Signature,
+			Data:             attestation.Data,
+			Signature:        attestation.Signature,
 		}
 		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation)
 		if err != nil {

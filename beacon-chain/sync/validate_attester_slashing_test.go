@@ -31,13 +31,8 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,13 +47,8 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
 	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {
 		t.Error(err)
 	}
