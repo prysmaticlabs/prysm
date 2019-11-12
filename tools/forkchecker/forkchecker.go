@@ -110,7 +110,9 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 
 			if (head1.BlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
-
+					QueryFilter: &pb.GetValidatorParticipationRequest_Epoch{
+						Epoch: head2.BlockSlot / params.BeaconConfig().SlotsPerEpoch,
+					},
 				})
 				if err != nil {
 					log.Fatal(err)
