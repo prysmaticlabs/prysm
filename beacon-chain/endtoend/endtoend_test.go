@@ -63,7 +63,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	config.tmpPath = tmpPath
-	t.Logf("Test Path: %s\n", tmpPath)
+	fmt.Printf("Test Path: %s\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -472,11 +472,11 @@ func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 
 func WaitForTextInFile(file *os.File, text string) error {
 	checks := 0
-	found := false
+	maxChecks := int(4 * params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 	// Put a limit on how many times we can check to prevent endless looping.
-	for !found && checks < 20 {
+	for checks < maxChecks {
 		// Pass some time to not spam file checks.
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {
@@ -487,8 +487,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 		for scanner.Scan() {
 			currentLine := scanner.Text()
 			if strings.Contains(currentLine, text) {
-				found = true
-				break
+				return nil
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -496,5 +495,5 @@ func WaitForTextInFile(file *os.File, text string) error {
 		}
 		checks++
 	}
-	return nil
+	return fmt.Errorf("could not find requested text %s in logs", text)
 }
