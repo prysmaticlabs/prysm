@@ -95,6 +95,16 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 						currentLine := scanner.Text()
 						t.Log(currentLine)
 					}
+
+					beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					scanner = bufio.NewScanner(beacon1LogFile)
+					for scanner.Scan() {
+						currentLine := scanner.Text()
+						t.Log(currentLine)
+					}
 					t.Fatalf("failed to connect to peers: %v", err)
 				}
 			}
