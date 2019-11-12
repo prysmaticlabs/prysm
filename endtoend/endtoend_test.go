@@ -351,7 +351,7 @@ func initializeValidators(
 	}
 
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Open(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
+		file, err := os.Open(path.Join(tmpPath, fmt.Sprintf("vals-%d.log", n)))
 		if err != nil {
 			t.Fatal(err)
 		}
