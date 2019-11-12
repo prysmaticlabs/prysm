@@ -1,6 +1,7 @@
 package db
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -110,7 +111,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if sm.EpochSpanMap != nil {
+		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*ethpb.MinMaxSpan{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}
