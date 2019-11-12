@@ -2,7 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["beacon_chain_server.go"],
+    srcs = [
+        "assignments.go",
+        "attestations.go",
+        "beacon_chain_server.go",
+        "blocks.go",
+        "validators.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
