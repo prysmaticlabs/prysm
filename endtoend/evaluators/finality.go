@@ -13,8 +13,13 @@ import (
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
 // Requires to be run after at least 4 epochs have passed.
 var FinalizationOccurs = Evaluator{
-	Name:       "checkpoint_finalizes",
+	Name:       "finalizes_at_epoch_%d",
+	Policy:     afterThirdEpoch,
 	Evaluation: finalizationOccurs,
+}
+
+func afterThirdEpoch(currentEpoch uint64) bool {
+	return currentEpoch > 3
 }
 
 func finalizationOccurs(client eth.BeaconChainClient) error {

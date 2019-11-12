@@ -82,17 +82,20 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
+	if err := waitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 		t.Fatal(err)
 	}
-	t.Log("Chain has started")
 
 	if config.numBeaconNodes > 1 {
 		t.Run("peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
-				if err := PeersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
+				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
+					scanner := bufio.NewScanner(beaconLogFile)
+					for scanner.Scan() {
+						currentLine := scanner.Text()
+						t.Log(currentLine)
+					}
 					t.Fatalf("failed to connect to peers: %v", err)
-					t.FailNow()
 				}
 			}
 		})
@@ -108,13 +111,17 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for currentEpoch < config.epochsToRun {
 		if currentEpoch > 0 {
 			newEpochText := fmt.Sprintf("\"Starting next epoch\" epoch=%d", currentEpoch)
-			if err := WaitForTextInFile(beaconLogFile, newEpochText); err != nil {
+			if err := waitForTextInFile(beaconLogFile, newEpochText); err != nil {
 				t.Fatal(err)
 			}
 		}
 
 		for _, evaluator := range config.evaluators {
-			t.Run(evaluator.Name, func(t *testing.T) {
+			// Only run if the policy says so.
+			if !evaluator.Policy(currentEpoch) {
+				continue
+			}
+			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
 					t.Fatal(err)
 				}
@@ -158,7 +165,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatalf("failed to start eth1 chain: %v", err)
 	}
 
-	if err = WaitForTextInFile(file, "IPC endpoint opened"); err != nil {
+	if err = waitForTextInFile(file, "IPC endpoint opened"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -185,7 +192,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatal(err)
 	}
 	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
-	if err := MineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("unable to advance chain: %v", err)
 	}
 
@@ -271,7 +278,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatalf("failed to start beacon node: %v", err)
 	}
 
-	if err = WaitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
+	if err = waitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -321,7 +328,7 @@ func initializeValidators(
 	valClients := make([]*validatorClientInfo, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals%d.log", n)))
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals-%d.log", n)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -349,7 +356,7 @@ func initializeValidators(
 			t.Fatal(err)
 		}
 
-		if err = WaitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
+		if err = waitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -400,19 +407,22 @@ func initializeValidators(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := MineBlocks(web3, keystore, 20); err != nil {
+	if err := mineBlocks(web3, keystore, 20); err != nil {
 		t.Fatal(err)
 	}
 
 	return valClients
 }
 
-func PeersConnect(port uint64, expectedPeers uint64) error {
+func peersConnect(port uint64, expectedPeers uint64) error {
 	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", port))
 	if err != nil {
 		return err
 	}
 	dataInBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
 	pageContent := string(dataInBytes)
 	if err := response.Body.Close(); err != nil {
 		return err
@@ -428,7 +438,7 @@ func PeersConnect(port uint64, expectedPeers uint64) error {
 	return nil
 }
 
-func MineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {
+func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {
 	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
 	if err != nil {
 		return err
@@ -474,7 +484,7 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-func WaitForTextInFile(file *os.File, text string) error {
+func waitForTextInFile(file *os.File, text string) error {
 	checks := 0
 	maxChecks := int(4 * params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 	// Put a limit on how many times we can check to prevent endless looping.

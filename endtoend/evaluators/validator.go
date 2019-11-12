@@ -14,13 +14,19 @@ import (
 // conduct the current beacon state during the E2E.
 type Evaluator struct {
 	Name       string
+	Policy     func(currentEpoch uint64) bool
 	Evaluation func(client eth.BeaconChainClient) error
 }
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
-	Name:       "checkpoint_finalizes",
-	Evaluation: finalizationOccurs,
+	Name:       "validators_active_epoch_%d",
+	Policy:     onGenesisEpoch,
+	Evaluation: validatorsAreActive,
+}
+
+func onGenesisEpoch(currentEpoch uint64) bool {
+	return currentEpoch < 2
 }
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
