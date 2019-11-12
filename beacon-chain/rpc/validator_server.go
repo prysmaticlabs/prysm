@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -25,7 +26,7 @@ import (
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots
-// and shards in which particular validators need to perform their responsibilities,
+// and committees in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
 	ctx                context.Context
@@ -37,6 +38,7 @@ type ValidatorServer struct {
 	depositFetcher     depositcache.DepositFetcher
 	chainStartFetcher  powchain.ChainStartFetcher
 	eth1InfoFetcher    powchain.ChainInfoFetcher
+	syncChecker        sync.Checker
 	stateFeedListener  blockchain.ChainFeeds
 	chainStartChan     chan time.Time
 }
@@ -150,6 +152,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
+	if vs.syncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	var err error
 	s := vs.headFetcher.HeadState()
 	// Advance state with empty transitions up to the requested epoch start slot.
@@ -195,17 +201,17 @@ func (vs *ValidatorServer) CommitteeAssignment(ctx context.Context, req *pb.Assi
 }
 
 func (vs *ValidatorServer) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
+	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
 	if err != nil {
 		return nil, err
 	}
 	status := vs.assignmentStatus(idx, beaconState)
 	return &pb.AssignmentResponse_ValidatorAssignment{
-		Committee:  committee,
-		Shard:      shard,
-		Slot:       slot,
-		IsProposer: isProposer,
-		Status:     status,
+		Committee:      committee,
+		CommitteeIndex: committeeIndex,
+		AttesterSlot:   aSlot,
+		ProposerSlot:   pSlot,
+		Status:         status,
 	}, nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 

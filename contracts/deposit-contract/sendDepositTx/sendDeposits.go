@@ -132,19 +132,17 @@ func main() {
 
 		client := ethclient.NewClient(rpcClient)
 		depositAmountInGwei := uint64(depositAmount)
-		depositAmount = depositAmount * 1e9
 
-		// User inputs private key, sign tx with private key
 		if privKeyString != "" {
+			// User inputs private key, sign tx with private key
 			privKey, err := crypto.HexToECDSA(privKeyString)
 			if err != nil {
 				log.Fatal(err)
 			}
 			txOps = bind.NewKeyedTransactor(privKey)
-			txOps.Value = big.NewInt(depositAmount)
-			txOps.GasLimit = 4000000
-			// User inputs keystore json file, sign tx with keystore json
+			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
 		} else {
+			// User inputs keystore json file, sign tx with keystore json
 			password := loadTextFromFile(passwordFile)
 
 			// #nosec - Inclusion of file via variable is OK for this tool.
@@ -158,8 +156,7 @@ func main() {
 			}
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
-			txOps.Value = big.NewInt(depositAmount)
-			txOps.GasLimit = 4000000
+			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
 		}
 
 		depositContract, err := contracts.NewDepositContract(common.HexToAddress(depositContractAddr), client)
@@ -186,15 +183,13 @@ func main() {
 		}
 
 		for _, validatorKey := range validatorKeys {
-			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
+			data, depositRoot, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue
 			}
-
 			for i := int64(0); i < numberOfDeposits; i++ {
-				//TODO(#2658): Use actual compressed pubkeys in G1 here
-				tx, err := depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+				tx, err := depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoot)
 				if err != nil {
 					log.Error("unable to send transaction to contract")
 				}

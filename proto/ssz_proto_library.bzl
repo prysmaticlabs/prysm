@@ -8,17 +8,13 @@ These rules allow for variable substitution for hardcoded tag values like ssz-si
 ####### Configuration #######
 
 mainnet = {
-    "block_roots.size": "8192,32",
-    "state_roots.size": "8192,32",
-    "eth1_data_votes.size": "1024",
-    "randao_mixes.size": "65536,32",
-    "active_index_roots.size": "65536,32",
-    "compact_committees_roots.size": "65536,32",
-    "previous_epoch_attestations.max": "8192",
-    "current_epoch_attestations.max": "8192",
-    "previous_crosslinks.size": "1024",
-    "current_crosslinks.size": "1024",
-    "slashings.size": "8192",
+    "block_roots.size": "8192,32",  # SLOTS_PER_HISTORICAL_ROOT, [32]byte
+    "state_roots.size": "8192,32",  # SLOTS_PER_HISTORICAL_ROOT, [32]byte
+    "eth1_data_votes.size": "1024",  # SLOTS_PER_ETH1_VOTING_PERIOD
+    "randao_mixes.size": "65536,32",  # EPOCHS_PER_HISTORICAL_VECTOR, [32]byte
+    "previous_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+    "current_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+    "slashings.size": "8192",  # EPOCHS_PER_SLASHINGS_VECTOR
 }
 
 minimal = {
@@ -26,12 +22,8 @@ minimal = {
     "state_roots.size": "64,32",
     "eth1_data_votes.size": "16",
     "randao_mixes.size": "64,32",
-    "active_index_roots.size": "64,32",
-    "compact_committees_roots.size": "64,32",
     "previous_epoch_attestations.max": "1024",
     "current_epoch_attestations.max": "1024",
-    "previous_crosslinks.size": "8",
-    "current_crosslinks.size": "8",
     "slashings.size": "64",
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"math/rand"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -24,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -41,6 +45,7 @@ type ProposerServer struct {
 	canonicalStateChan     chan *pbp2p.BeaconState
 	depositFetcher         depositcache.DepositFetcher
 	pendingDepositsFetcher depositcache.PendingDepositsFetcher
+	syncChecker            sync.Checker
 }
 
 // RequestBlock is called by a proposer during its assigned slot to request a block to sign
@@ -49,6 +54,10 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	if ps.syncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
 
 	// Retrieve the parent block as the current head of the canonical chain
 	parent := ps.headFetcher.HeadBlock()
@@ -90,7 +99,6 @@ func (ps *ProposerServer) RequestBlock(ctx context.Context, req *pb.BlockRequest
 			Attestations: atts,
 			RandaoReveal: req.RandaoReveal,
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
-			Transfers:         []*ethpb.Transfer{},
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
 			VoluntaryExits:    []*ethpb.VoluntaryExit{},
@@ -133,8 +141,12 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlo
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (ps *ProposerServer) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	if ps.mockEth1Votes || !ps.eth1InfoFetcher.IsConnectedToETH1() {
+	if ps.mockEth1Votes {
 		return ps.mockETH1DataVote(slot)
+	}
+
+	if !ps.eth1InfoFetcher.IsConnectedToETH1() {
+		return ps.randomETH1DataVote()
 	}
 
 	eth1VotingPeriodStartTime, _ := ps.eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -169,6 +181,21 @@ func (ps *ProposerServer) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error)
 	}
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
+	return &ethpb.Eth1Data{
+		DepositRoot:  depRoot[:],
+		DepositCount: headState.Eth1DepositIndex,
+		BlockHash:    blockHash[:],
+	}, nil
+}
+
+func (ps *ProposerServer) randomETH1DataVote() (*ethpb.Eth1Data, error) {
+	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
+		"ETH1 Data votes are now random.")
+	headState := ps.headFetcher.HeadState()
+	// set random roots and block hashes to prevent a majority from being
+	// built if the eth1 node is offline
+	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
+	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex,
