@@ -219,10 +219,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 
 	// We then store archived data into the DB.
 	currentEpoch := helpers.CurrentEpoch(s)
-	committeeCount, err := helpers.CommitteeCountAtSlot(s, helpers.StartSlot(currentEpoch))
-	if err != nil {
-		t.Fatal(err)
-	}
 	proposerSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		t.Fatal(err)
@@ -232,9 +228,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 		t.Fatal(err)
 	}
 	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
-		ProposerSeed:   proposerSeed[:],
-		AttesterSeed:   attesterSeed[:],
-		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
+		ProposerSeed: proposerSeed[:],
+		AttesterSeed: attesterSeed[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
