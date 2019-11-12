@@ -20,7 +20,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
+func TestRequestAttestation_ValidatorAssignmentRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
@@ -31,7 +31,7 @@ func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
+	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
 func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
@@ -55,7 +55,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	).Return(nil, errors.New("something went wrong"))
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not request attestation to sign at slot")
+	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
 }
 
 func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
