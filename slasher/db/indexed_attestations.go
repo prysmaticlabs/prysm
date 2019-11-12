@@ -5,14 +5,16 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+const PRUNING_PERIOD = 10
 
 func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	protoIdxAtt := &ethpb.IndexedAttestation{}
@@ -116,8 +118,8 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		return err
 	})
 
-	// prune history to max size every 10th epoch
-	if idxAttestation.Data.Source.Epoch%10 == 0 {
+	// prune history to max size every PRUNING_PERIOD epoch
+	if idxAttestation.Data.Source.Epoch%PRUNING_PERIOD == 0 {
 		weakSubjectivityPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 		err = db.PruneHistory(idxAttestation.Data.Source.Epoch, weakSubjectivityPeriod)
 	}
