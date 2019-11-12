@@ -73,7 +73,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -215,6 +214,13 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		reportEpochMetrics(postState)
+
+		// Update committee shuffled indices at the end of every epoch
+		if featureconfig.Get().EnableNewCache {
+			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -280,6 +286,9 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
+	}
+	if baseState == nil {
+		return errors.New("no state found in db with attestation tgt root")
 	}
 	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
 	if err != nil {

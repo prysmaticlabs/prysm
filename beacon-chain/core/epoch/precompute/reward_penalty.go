@@ -2,7 +2,6 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -30,14 +29,9 @@ func ProcessRewardsAndPenaltiesPrecompute(state *pb.BeaconState, bp *Balance, vp
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
-	clRewards, clPenalties, err := crosslinkDeltaPreCompute(state, bp, vp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get crosslink delta")
-	}
-
 	for i := 0; i < len(state.Validators); i++ {
-		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+clRewards[i]+proposerRewards[i])
-		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]+clPenalties[i])
+		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i])
+		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i])
 	}
 	return state, nil
 }
@@ -70,8 +64,7 @@ func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64,
 		r += br * bp.PrevEpochAttesters / bp.CurrentEpoch
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAtteserReward := br - proposerReward
-		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-		r += maxAtteserReward * (slotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay - v.InclusionDistance) / slotsPerEpoch
+		r += maxAtteserReward / v.InclusionDistance
 	} else {
 		p += br
 	}
@@ -117,49 +110,4 @@ func proposerDeltaPrecompute(state *pb.BeaconState, bp *Balance, vp []*Validator
 		}
 	}
 	return rewards, nil
-}
-
-// This computes the rewards and penalties differences for individual validators based on the
-// crosslink records.
-func crosslinkDeltaPreCompute(state *pb.BeaconState, bp *Balance, vp []*Validator) ([]uint64, []uint64, error) {
-	rewards := make([]uint64, len(state.Validators))
-	penalties := make([]uint64, len(state.Validators))
-	prevEpoch := helpers.PrevEpoch(state)
-	count, err := helpers.CommitteeCount(state, prevEpoch)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get epoch committee count")
-	}
-	startShard, err := helpers.StartShard(state, prevEpoch)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get epoch start shard")
-	}
-	for i := uint64(0); i < count; i++ {
-		shard := (startShard + i) % params.BeaconConfig().ShardCount
-		committee, err := helpers.CrosslinkCommittee(state, prevEpoch, shard)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get crosslink's committee")
-		}
-		_, attestingIndices, err := epoch.WinningCrosslink(state, shard, prevEpoch)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get winning crosslink")
-		}
-
-		attested := make(map[uint64]bool)
-		// Construct a map to look up validators that voted for crosslink.
-		for _, index := range attestingIndices {
-			attested[index] = true
-		}
-		committeeBalance := helpers.TotalBalance(state, committee)
-		attestingBalance := helpers.TotalBalance(state, attestingIndices)
-
-		for _, index := range committee {
-			base := vp[index].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bp.CurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
-			if _, ok := attested[index]; ok {
-				rewards[index] += base * attestingBalance / committeeBalance
-			} else {
-				penalties[index] += base
-			}
-		}
-	}
-	return rewards, penalties, nil
 }

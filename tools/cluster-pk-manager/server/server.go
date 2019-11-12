@@ -64,11 +64,11 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte) error {
+func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte, depositRoot [32]byte) error {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
-	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature)
+	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature, depositRoot)
 	if err != nil {
 		return errors.Wrap(err, "deposit failed")
 	}
@@ -141,13 +141,13 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 
 		// Make the validator deposit
 		// NOTE: This uses the validator key as the withdrawal key
-		di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/, new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64())
+		di, dr, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/, new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64())
 		if err != nil {
 			return nil, err
 		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature); err != nil {
+		if err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature, dr); err != nil {
 			return nil, err
 		}
 		// Store in database

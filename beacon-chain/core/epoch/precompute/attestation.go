@@ -40,13 +40,7 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		// Get attestation slot to find lowest inclusion delayed attestation for each attested validators.
-		aSlot, err := helpers.AttestationDataSlot(state, a.Data)
-		if err != nil {
-			return nil, nil, err
-
-		}
-		vp = UpdateValidator(vp, v, indices, a, aSlot)
+		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	}
 
 	bp = UpdateBalance(vp, bp)
@@ -112,11 +106,7 @@ func SameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool
 
 // SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
 func SameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
-	aSlot, err := helpers.AttestationDataSlot(state, a.Data)
-	if err != nil {
-		return false, err
-	}
-	r, err := helpers.BlockRootAtSlot(state, aSlot)
+	r, err := helpers.BlockRootAtSlot(state, a.Data.Slot)
 	if err != nil {
 		return false, err
 	}
