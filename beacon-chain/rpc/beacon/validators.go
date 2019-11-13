@@ -54,7 +54,7 @@ func (bs *Server) ListValidatorBalances(
 		if balances == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				0,
 			)
 		}
@@ -66,7 +66,7 @@ func (bs *Server) ListValidatorBalances(
 		if balances == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				epoch,
 			)
 		}
@@ -302,7 +302,7 @@ func (bs *Server) GetValidatorParticipation(
 		if participation == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				0,
 			)
 		}
@@ -319,7 +319,7 @@ func (bs *Server) GetValidatorParticipation(
 		if participation == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				requestedEpoch,
 			)
 		}

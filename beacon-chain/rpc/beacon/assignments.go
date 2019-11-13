@@ -93,7 +93,7 @@ func (bs *Server) ListValidatorAssignments(
 			if archivedInfo == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}
@@ -108,7 +108,7 @@ func (bs *Server) ListValidatorAssignments(
 			if archivedBalances == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}

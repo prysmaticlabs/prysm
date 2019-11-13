@@ -68,7 +68,7 @@ func (bs *Server) ListBeaconCommittees(
 		if archivedCommitteeInfo == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				helpers.SlotToEpoch(startSlot),
 			)
 		}
