@@ -6,9 +6,12 @@ import (
 	"crypto/rand"
 	"math/big"
 	"sync"
+	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -19,6 +22,7 @@ import (
 )
 
 var gasLimit = uint64(4000000)
+var blockTime = time.Duration(14)
 
 type server struct {
 	contract      *contracts.DepositContract
@@ -64,17 +68,17 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte, depositRoot [32]byte) error {
+func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte, depositRoot [32]byte) (*types.Transaction, error) {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
 	tx, err := s.contract.Deposit(txOps, pubkey, withdrawalCredentials, signature, depositRoot)
 	if err != nil {
-		return errors.Wrap(err, "deposit failed")
+		return nil, errors.Wrap(err, "deposit failed")
 	}
 	log.WithField("tx", tx.Hash().Hex()).Info("Deposit transaction sent")
 
-	return nil
+	return tx, nil
 }
 
 func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
@@ -131,7 +135,8 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 }
 
 func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys int) (*pb.PrivateKeys, error) {
-	pks := make([][]byte, numKeys)
+	pks := make([][]byte, 0, numKeys)
+	txMap := make(map[*keystore.Key]*types.Transaction)
 
 	for i := 0; i < numKeys; i++ {
 		key, err := keystore.NewKey(rand.Reader)
@@ -147,16 +152,51 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 		}
 
 		// Do the actual deposit
-		if err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature, dr); err != nil {
+		tx, err := s.makeDeposit(di.PublicKey, di.WithdrawalCredentials, di.Signature, dr)
+		if err != nil {
 			return nil, err
 		}
+		txMap[key] = tx
 		// Store in database
 		if err := s.db.AllocateNewPkToPod(ctx, key, podName); err != nil {
 			return nil, err
 		}
-		secret := key.SecretKey.Marshal()
-		pks[i] = secret
+	}
+
+	for {
+		time.Sleep(time.Second * blockTime)
+		receivedKeys, err := s.checkDepositTxs(ctx, txMap)
+		if err != nil {
+			return nil, err
+		}
+		pks = append(pks, receivedKeys...)
+		if len(txMap) == 0 {
+			break
+		}
 	}
 
 	return &pb.PrivateKeys{PrivateKeys: pks}, nil
+}
+
+func (s *server) checkDepositTxs(ctx context.Context, txMap map[*keystore.Key]*types.Transaction) ([][]byte,
+	error) {
+	pks := make([][]byte, 0, len(txMap))
+	for k, tx := range txMap {
+		receipt, err := s.client.TransactionReceipt(ctx, tx.Hash())
+		if err == ethereum.NotFound {
+			// tx still not processed yet.
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if receipt.Status == types.ReceiptStatusFailed {
+			delete(txMap, k)
+			continue
+		}
+		// append key if tx succeeded.
+		pks = append(pks, k.SecretKey.Marshal())
+		delete(txMap, k)
+	}
+	return pks, nil
 }
