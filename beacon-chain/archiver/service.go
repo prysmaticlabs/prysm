@@ -69,10 +69,6 @@ func (s *Service) Status() error {
 // We archive committee information pertaining to the head state's epoch.
 func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.BeaconState) error {
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
-	committeeCount, err := helpers.CommitteeCountAtSlot(headState, helpers.StartSlot(currentEpoch))
-	if err != nil {
-		return errors.Wrap(err, "could not get committee count")
-	}
 	proposerSeed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
@@ -83,9 +79,8 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	}
 
 	info := &ethpb.ArchivedCommitteeInfo{
-		ProposerSeed:   proposerSeed[:],
-		AttesterSeed:   attesterSeed[:],
-		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
+		ProposerSeed: proposerSeed[:],
+		AttesterSeed: attesterSeed[:],
 	}
 	if err := s.beaconDB.SaveArchivedCommitteeInfo(ctx, currentEpoch, info); err != nil {
 		return errors.Wrap(err, "could not archive committee info")
@@ -115,7 +110,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState) error {
-	participation, err := epoch.ComputeValidatorParticipation(headState)
+	participation, err := epoch.ComputeValidatorParticipation(headState, helpers.SlotToEpoch(headState.Slot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute participation")
 	}
