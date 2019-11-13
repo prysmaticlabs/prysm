@@ -59,7 +59,7 @@ func TestServer_ListBeaconCommittees_Pagination_ExceedsMaxPageSize(t *testing.T)
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf(
-		"requested page size %d can not be greater than max size %d",
+		"Requested page size %d can not be greater than max size %d",
 		exceedsMax,
 		params.BeaconConfig().MaxPageSize,
 	)
