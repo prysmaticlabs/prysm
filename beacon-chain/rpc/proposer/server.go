@@ -23,6 +23,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -141,18 +142,60 @@ func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 
+// TODO Add better godoc.
+//
+// Spec pseudocode
+//
+//   def get_eth1_vote(state: BeaconState, previous_eth1_distance: uint64) -> Eth1Data:
+//      new_eth1_data = [get_eth1_data(distance) for distance in range(ETH1_FOLLOW_DISTANCE, 2 * ETH1_FOLLOW_DISTANCE)]
+//      all_eth1_data = [get_eth1_data(distance) for distance in range(ETH1_FOLLOW_DISTANCE, previous_eth1_distance)]
+//
+//      period_tail = state.slot % SLOTS_PER_ETH1_VOTING_PERIOD >= integer_squareroot(SLOTS_PER_ETH1_VOTING_PERIOD)
+//      if period_tail:
+//          votes_to_consider = all_eth1_data
+//      else:
+//          votes_to_consider = new_eth1_data
+//
+//      valid_votes = [vote for vote in state.eth1_data_votes if vote in votes_to_consider]
+//
+//      return max(
+//          valid_votes,
+//          key=lambda v: (valid_votes.count(v), -all_eth1_data.index(v)),  # Tiebreak by smallest distance
+//          default=get_eth1_data(ETH1_FOLLOW_DISTANCE),
+//      )
+func (ps *ProposerServer) getEth1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+	if ps.mockEth1Votes { // Flag for debug / interop testing.
+		log.Warn("Serving mock eth1 data.")
+		return ps.mockETH1DataVote(slot)
+	}
+
+	if !ps.eth1InfoFetcher.IsConnectedToETH1() {
+		log.Warn("Not connected to eth1, serving random ETH1 data vote.")
+		return ps.randomETH1DataVote()
+	}
+
+	// period_tail = state.slot % SLOTS_PER_ETH1_VOTING_PERIOD >= integer_squareroot(SLOTS_PER_ETH1_VOTING_PERIOD)
+	isPeriodTail := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod  > mathutil.IntegerSquareRoot(params.BeaconConfig().SlotsPerEth1VotingPeriod)
+
+
+	return nil, nil // TODO: remove.
+}
+
 // eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
 // is as follows:
 //  - Determine the timestamp for the start slot for the eth1 voting period.
 //  - Determine the most recent eth1 block before that timestamp.
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
+//
 func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	if ps.MockEth1Votes {
+	if ps.MockEth1Votes { // Flag for debug / interop testing.
+		log.Warn("Serving mock eth1 data.")
 		return ps.mockETH1DataVote(slot)
 	}
 
 	if !ps.Eth1InfoFetcher.IsConnectedToETH1() {
+		log.Warn("Not connected to eth1, serving random ETH1 data vote.")
 		return ps.randomETH1DataVote()
 	}
 
