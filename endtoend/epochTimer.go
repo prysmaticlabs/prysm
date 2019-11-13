@@ -7,11 +7,11 @@ import (
 )
 
 // EpochTicker is a special ticker for timing epoch changes.
-// The channel emits over the slot interval, and ensures that
+// The channel emits over the epoch interval, and ensures that
 // the ticks are in line with the genesis time. This means that
 // the duration between the ticks and the genesis time are always a
-// multiple of the slot duration.
-// In addition, the channel returns the new slot number.
+// multiple of the epoch duration.
+// In addition, the channel returns the new epoch number.
 type EpochTicker struct {
 	c    chan uint64
 	done chan struct{}

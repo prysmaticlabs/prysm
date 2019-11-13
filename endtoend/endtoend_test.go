@@ -497,7 +497,7 @@ func waitForTextInFile(file *os.File, text string) error {
 	wait := 1
 	// Putting the wait cap at 16 since at this point its already been waiting
 	// for 15 seconds. Using exponential backoff.
-	maxWait := 8
+	maxWait := 16
 	for wait <= maxWait {
 		time.Sleep(time.Duration(wait) * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
