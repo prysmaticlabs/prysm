@@ -3,14 +3,13 @@ package validator
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
@@ -37,9 +36,9 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 	var assignments []*pb.AssignmentResponse_ValidatorAssignment
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
-		// Default assignment
+		// Default assignment.
 		assignment := &pb.AssignmentResponse_ValidatorAssignment{
 			PublicKey: pubKey,
 			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
@@ -47,15 +46,15 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
 		}
 		if ok {
-			status := vs.assignmentStatus(uint64(idx), s)
-			assignment.Status = status
-			if status == pb.ValidatorStatus_ACTIVE {
-				assignment, err = vs.assignment(uint64(idx), s, req.EpochStart)
+			st := vs.assignmentStatus(idx, s)
+			assignment.Status = st
+			if st == pb.ValidatorStatus_ACTIVE {
+				assignment, err = vs.assignment(idx, s, req.EpochStart)
 				if err != nil {
-					return nil, err
+					return nil, status.Errorf(codes.Internal, "Could not fetch assignment for public key %#x: %v", pubKey, err)
 				}
 				assignment.PublicKey = pubKey
 			}
@@ -73,12 +72,11 @@ func (vs *Server) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch u
 	if err != nil {
 		return nil, err
 	}
-	status := vs.assignmentStatus(idx, beaconState)
 	return &pb.AssignmentResponse_ValidatorAssignment{
 		Committee:      committee,
 		CommitteeIndex: committeeIndex,
 		AttesterSlot:   aSlot,
 		ProposerSlot:   pSlot,
-		Status:         status,
+		Status:         vs.assignmentStatus(idx, beaconState),
 	}, nil
 }
