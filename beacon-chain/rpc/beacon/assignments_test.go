@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -76,14 +75,17 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey: pubKey[:],
-				ExitEpoch: 0,
+				PublicKey:        pubKey[:],
+				ExitEpoch:        0,
+				ActivationEpoch:  0,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
 				PublicKey:        pubKey[:],
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:  0,
 			})
 		}
 	}
@@ -120,7 +122,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
 		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-		PublicKeys:  [][]byte{[]byte("311")},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +148,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		})
 	}
 
-	if !reflect.DeepEqual(res.Assignments[0], wanted[207]) {
+	if !reflect.DeepEqual(res.Assignments, wanted) {
 		t.Error("Did not receive wanted assignments")
 	}
 }
@@ -219,10 +220,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 
 	// We then store archived data into the DB.
 	currentEpoch := helpers.CurrentEpoch(s)
-	committeeCount, err := helpers.CommitteeCountAtSlot(s, helpers.StartSlot(currentEpoch))
-	if err != nil {
-		t.Fatal(err)
-	}
 	proposerSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		t.Fatal(err)
@@ -232,9 +229,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 		t.Fatal(err)
 	}
 	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
-		ProposerSeed:   proposerSeed[:],
-		AttesterSeed:   attesterSeed[:],
-		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
+		ProposerSeed: proposerSeed[:],
+		AttesterSeed: attesterSeed[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
