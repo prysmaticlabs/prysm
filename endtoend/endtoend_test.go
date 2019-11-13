@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/multiformats/go-multiaddr"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -89,7 +88,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 
 	if config.numBeaconNodes > 1 {
-		t.Run("peers_connect", func(t *testing.T) {
+		t.Run("all_peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
 				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
 					t.Fatalf("failed to connect to peers: %v", err)
@@ -282,27 +281,24 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatal(err)
 	}
 
-	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", 8080+index))
-	if err != nil {
-		t.Fatalf("failed to get p2p info: %v", err)
-	}
-	dataInBytes, err := ioutil.ReadAll(response.Body)
+	byteContent, err := ioutil.ReadFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	pageContent := string(dataInBytes)
-	if err := response.Body.Close(); err != nil {
-		t.Fatal(err)
-	}
-	addrPrefix := fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/", 13000+index)
-	startIdx := strings.Index(pageContent, addrPrefix)
+	contents := string(byteContent)
+
+	searchText := "\"Node started p2p server\" multiAddr=\""
+	startIdx := strings.Index(contents, searchText)
 	if startIdx == -1 {
-		t.Fatalf("did not find peer text in %s", pageContent)
+		t.Fatalf("did not find peer text in %s", contents)
 	}
-	multiAddr, err := multiaddr.NewMultiaddr(pageContent[startIdx : startIdx+len(addrPrefix)+53])
-	if err != nil {
-		t.Fatal(err)
+	startIdx += len(searchText)
+	endIdx := strings.Index(contents[startIdx:], "\"")
+	if endIdx == -1 {
+		t.Fatalf("did not find peer text in %s", contents)
 	}
+	multiAddr := contents[startIdx : startIdx+endIdx]
+	fmt.Println(multiAddr)
 
 	return &beaconNodeInfo{
 		processID:   cmd.Process.Pid,
@@ -310,7 +306,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		rpcPort:     (4000) + uint64(index),
 		monitorPort: 8080 + uint64(index),
 		grpcPort:    3200 + uint64(index),
-		multiAddr:   multiAddr.String(),
+		multiAddr:   multiAddr,
 	}
 }
 
