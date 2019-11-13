@@ -49,15 +49,18 @@ go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
         "//:grpc_nogogo_proto_compiler",
-        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "//:grpc_gateway_proto_compiler",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1_gateway",
     proto = ":v1alpha1_proto",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_gogo_protobuf//gogoproto:go_default_library",
-        "@com_github_golang_protobuf//descriptor:go_default_library",
-        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
+        # default_library_gen defined in
+        # https://github.com/bazelbuild/rules_go/blob/master/third_party/com_github_golang_protobuf-extras.patch
+        # fixes protobuf clashes for the common proto library
+        "@com_github_golang_protobuf//descriptor:go_default_library_gen",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
     ],

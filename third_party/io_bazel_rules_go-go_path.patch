@@ -1,0 +1,83 @@
+diff --git a/go/private/tools/path.bzl b/go/private/tools/path.bzl
+index 261b9696..27007a21 100644
+--- a/go/private/tools/path.bzl
++++ b/go/private/tools/path.bzl
+@@ -12,6 +12,14 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+
++load(
++    "@bazel_skylib//lib:paths.bzl",
++    "paths",
++)
++load(
++    "@bazel_skylib//lib:new_sets.bzl",
++    "sets",
++)
+ load(
+     "@io_bazel_rules_go//go/private:context.bzl",
+     "go_context",
+@@ -58,6 +66,7 @@ def _go_path_impl(ctx):
+                 srcs = as_list(archive.orig_srcs),
+                 data = as_list(archive.data_files),
+                 pkgs = {mode: archive.file},
++                labels = [archive.label],
+             )
+             if pkgpath in pkg_map:
+                 _merge_pkg(pkg_map[pkgpath], pkg)
+@@ -70,7 +79,14 @@ def _go_path_impl(ctx):
+     manifest_entry_map = {}
+     for pkg in pkg_map.values():
+         for f in pkg.srcs:
+-            dst = pkg.dir + "/" + f.basename
++            if f.extension in ("c", "h", "s", "S") and _is_in_pkg_subdir(pkg, f):
++                # NOTE assumes cgo=true for the pkg
++                # Maintain position of C files relative to package,
++                # if contained in a subdirectory of the pkg
++                dst = paths.normalize(paths.join(pkg.dir, _path_rel_to_pkg(pkg, f)))
++            else:
++                # Flatten into the package
++                dst = paths.join(pkg.dir, f.basename)
+             _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
+     if ctx.attr.include_pkg:
+         for pkg in pkg_map.values():
+@@ -85,8 +101,12 @@ def _go_path_impl(ctx):
+                 parts = f.path.split("/")
+                 if "testdata" in parts:
+                     i = parts.index("testdata")
+-                    dst = pkg.dir + "/" + "/".join(parts[i:])
++                    dst = paths.join(pkg.dir, *parts[i:])
++                elif _is_in_pkg_subdir(pkg, f):
++                    # Maintain relative position for data "inside" the package.
++                    dst = paths.normalize(paths.join(pkg.dir, _path_rel_to_pkg(pkg, f)))
+                 else:
++                    # Flatten for data outside the package dir
+                     dst = pkg.dir + "/" + f.basename
+                 _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
+     for f in ctx.files.data:
+@@ -181,6 +201,8 @@ def _merge_pkg(x, y):
+     x.srcs.extend([f for f in y.srcs if f.path not in x_srcs])
+     x.data.extend([f for f in y.data if f.path not in x_srcs])
+     x.pkgs.update(y.pkgs)
++    x_labels = sets.make(x.labels)
++    x.labels.extend([l for l in y.labels if not sets.contains(x_labels, l)])
+
+ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
+     if dst in entry_map:
+@@ -190,3 +212,16 @@ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
+     entries.append(struct(src = src.path, dst = dst))
+     entry_map[dst] = src.path
+     inputs.append(src)
++
++def _path_rel_to_pkg(pkg, f):
++    # if f is "contained in" a pkg, return its path
++    # relative to the pkg root
++    # otherwise return None
++    for l in pkg.labels:
++        full_pkg_path = paths.join(l.workspace_root, l.package)
++        if f.path.startswith(full_pkg_path):
++            return paths.relativize(f.path, full_pkg_path)
++    return None
++
++def _is_in_pkg_subdir(pkg, f):
++    return _path_rel_to_pkg(pkg, f) != None

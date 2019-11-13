@@ -36,6 +36,12 @@ http_archive(
     sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
     strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
     urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
+    patch_args = ["-p1"],
+    patches = [
+        # TODO remove patch once https://github.com/bazelbuild/rules_go/pull/2283 is merged
+        # needed to properly handle go_path for libsecp256k1 in bazel-go-ethereum
+        "//third_party:io_bazel_rules_go-go_path.patch",
+    ],
 )
 
 http_archive(
@@ -203,6 +209,12 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
+    patch_args = ["-p1"],
+    patches = [
+        # TODO remove patch once https://github.com/prysmaticlabs/bazel-go-ethereum/pull/13 is merged
+        # needed to allow go_path build rule to succeed
+        "//third_party:com_github_prysmaticlabs_bazel_go_ethereum-go_path_fixes.patch",
+    ],
 )
 
 go_repository(

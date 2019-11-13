@@ -1,0 +1,256 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 9f3f2512e..1531ba126 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -2,7 +2,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
+ load("@bazel_gazelle//:def.bzl", "gazelle")
+ 
+ # gazelle:prefix github.com/ethereum/go-ethereum
+-# gazelle:proto disable_global
+ gazelle(
+     name = "gazelle",
+     prefix = "github.com/ethereum/go-ethereum",
+diff --git a/WORKSPACE b/WORKSPACE
+index 775a1a40c..b34dbcb83 100644
+--- a/WORKSPACE
++++ b/WORKSPACE
+@@ -2,17 +2,26 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+ 
+ http_archive(
+     name = "io_bazel_rules_go",
++    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
+     urls = [
+-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/0.19.0/rules_go-0.19.0.tar.gz",
+-        "https://github.com/bazelbuild/rules_go/releases/download/0.19.0/rules_go-0.19.0.tar.gz",
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++    ],
++    patch_args = ["-p1"],
++    patches = [
++            # TODO remove patch once https://github.com/bazelbuild/rules_go/pull/2283 is merged
++            # needed to properly handle go_path for libsecp256k1 in bazel-go-ethereum
++            "//third_party:io_bazel_rules_go-go_path.patch"
+     ],
+-    sha256 = "9fb16af4d4836c8222142e54c9efa0bb5fc562ffc893ce2abeac3e25daead144",
+ )
+ 
+ http_archive(
+     name = "bazel_gazelle",
+-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.17.0/bazel-gazelle-0.17.0.tar.gz"],
+-    sha256 = "3c681998538231a2d24d0c07ed5a7658cb72bfb5fd4bf9911157c0e9ac6a2687",
++    sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
++    urls = [
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++        "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++    ],
+ )
+ 
+ load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+diff --git a/accounts/usbwallet/trezor/BUILD.bazel b/accounts/usbwallet/trezor/BUILD.bazel
+index 3ff3d6cbc..9d3372576 100644
+--- a/accounts/usbwallet/trezor/BUILD.bazel
++++ b/accounts/usbwallet/trezor/BUILD.bazel
+@@ -1,5 +1,12 @@
+ load("@io_bazel_rules_go//go:def.bzl", "go_library")
+ 
++#load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
++# TODO build pb.go here?
++
++# gazelle:proto disable
++# NOTE this is "disable" instead of "disable-global" to avoid proto
++# clashes for well known types
++
+ go_library(
+     name = "go_default_library",
+     srcs = [
+@@ -13,6 +20,6 @@ go_library(
+     visibility = ["//visibility:public"],
+     deps = [
+         "@com_github_golang_protobuf//proto:go_default_library",
+-        "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
++        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+     ],
+ )
+diff --git a/crypto/secp256k1/BUILD.bazel b/crypto/secp256k1/BUILD.bazel
+index d7ba579db..3a5c2ea09 100644
+--- a/crypto/secp256k1/BUILD.bazel
++++ b/crypto/secp256k1/BUILD.bazel
+@@ -6,37 +6,10 @@ go_library(
+     srcs = [
+         "curve.go",
+         "ext.h",
+-        "libsecp256k1/include/secp256k1.h",
+-        "libsecp256k1/include/secp256k1_recovery.h",
+-        "libsecp256k1/src/secp256k1.h",
+-        "libsecp256k1/src/util.h",
+-        "libsecp256k1/src/num_impl.h",
+-        "libsecp256k1/src/num.h",
+-        "libsecp256k1/src/field_impl.h",
+-        "libsecp256k1/src/field_10x26_impl.h",
+-        "libsecp256k1/src/field.h",
+-        "libsecp256k1/src/field_10x26.h",
+-        "libsecp256k1/src/scalar_impl.h",
+-        "libsecp256k1/src/group.h",
+-        "libsecp256k1/src/scalar.h",
+-        "libsecp256k1/src/scalar_8x32.h",
+-        "libsecp256k1/src/scalar_8x32_impl.h",
+-        "libsecp256k1/src/group_impl.h",
+-        "libsecp256k1/src/ecmult_impl.h",
+-        "libsecp256k1/src/ecmult.h",
+-        "libsecp256k1/src/ecmult_const_impl.h",
+-        "libsecp256k1/src/ecmult_const.h",
+-        "libsecp256k1/src/ecmult_gen_impl.h",
+-        "libsecp256k1/src/ecmult_gen.h",
+-        "libsecp256k1/src/hash_impl.h",
+-        "libsecp256k1/src/hash.h",
+-        "libsecp256k1/src/ecdsa_impl.h",
+-        "libsecp256k1/src/ecdsa.h",
+-        "libsecp256k1/src/eckey_impl.h",
+-        "libsecp256k1/src/eckey.h",
+-        "libsecp256k1/src/modules/recovery/main_impl.h",
+         "panic_cb.go",
+         "secp256.go",
++        "//crypto/secp256k1/libsecp256k1:srcs",
++        "//crypto/secp256k1/libsecp256k1:headers",
+     ],
+     cgo = True,
+     copts = [
+diff --git a/crypto/secp256k1/libsecp256k1/BUILD.bazel b/crypto/secp256k1/libsecp256k1/BUILD.bazel
+new file mode 100644
+index 000000000..9016f9dc0
+--- /dev/null
++++ b/crypto/secp256k1/libsecp256k1/BUILD.bazel
+@@ -0,0 +1,37 @@
++
++cc_library(
++    name = "secp256k1",
++    srcs = [":srcs"],
++    # TODO also asm files?
++    hdrs = [":hdrs"],
++    visibility = ["//crypto/secp256k1:__pkg__"],
++    # TODO strip include prefix? supposed to be relative to workspace
++    # TODO actually doesn't matter much if we have c opts
++    local_defines = [
++        "USE_NUM_NONE",
++        "USE_FIELD_10X26",
++        "USE_FIELD_INV_BUILTIN",
++        "USE_SCALAR_8X32",
++        "USE_SCALAR_INV_BUILTIN",
++        "NDEBUG",
++    ]
++)
++
++filegroup(
++    name = "headers",
++    srcs = glob(["include/**/*.h"]) + [
++        "src/secp256k1.h",
++        "src/modules/recovery/main_impl.h",
++    ],
++    visibility = ["//crypto/secp256k1:__pkg__"],
++)
++
++filegroup(
++    name = "srcs",
++    # NOTE: secp256k1.c is copied into secp256k1.h in this fork, so don't need to touch src/secp256k1.c
++    # Can also use version before fork, with include prefixes
++    srcs = glob(
++        ["src/*.h"], exclude=["src/test*.h", "src/bench*.h", "src/secp256k1.h"]
++    ),
++    visibility = ["//crypto/secp256k1:__pkg__"],
++)
+diff --git a/third_party/BUILD.bazel b/third_party/BUILD.bazel
+new file mode 100644
+index 000000000..d51811044
+--- /dev/null
++++ b/third_party/BUILD.bazel
+@@ -0,0 +1 @@
++exports_files(glob(["*.patch"]))
+diff --git a/third_party/io_bazel_rules_go-go_path.patch b/third_party/io_bazel_rules_go-go_path.patch
+new file mode 100644
+index 000000000..9043ef487
+--- /dev/null
++++ b/third_party/io_bazel_rules_go-go_path.patch
+@@ -0,0 +1,83 @@
++diff --git a/go/private/tools/path.bzl b/go/private/tools/path.bzl
++index 261b9696..27007a21 100644
++--- a/go/private/tools/path.bzl
+++++ b/go/private/tools/path.bzl
++@@ -12,6 +12,14 @@
++ # See the License for the specific language governing permissions and
++ # limitations under the License.
++
+++load(
+++    "@bazel_skylib//lib:paths.bzl",
+++    "paths",
+++)
+++load(
+++    "@bazel_skylib//lib:new_sets.bzl",
+++    "sets",
+++)
++ load(
++     "@io_bazel_rules_go//go/private:context.bzl",
++     "go_context",
++@@ -58,6 +66,7 @@ def _go_path_impl(ctx):
++                 srcs = as_list(archive.orig_srcs),
++                 data = as_list(archive.data_files),
++                 pkgs = {mode: archive.file},
+++                labels = [archive.label],
++             )
++             if pkgpath in pkg_map:
++                 _merge_pkg(pkg_map[pkgpath], pkg)
++@@ -70,7 +79,14 @@ def _go_path_impl(ctx):
++     manifest_entry_map = {}
++     for pkg in pkg_map.values():
++         for f in pkg.srcs:
++-            dst = pkg.dir + "/" + f.basename
+++            if f.extension in ("c", "h", "s", "S") and _is_in_pkg_subdir(pkg, f):
+++                # NOTE assumes cgo=true for the pkg
+++                # Maintain position of C files relative to package,
+++                # if contained in a subdirectory of the pkg
+++                dst = paths.normalize(paths.join(pkg.dir, _path_rel_to_pkg(pkg, f)))
+++            else:
+++                # Flatten into the package
+++                dst = paths.join(pkg.dir, f.basename)
++             _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
++     if ctx.attr.include_pkg:
++         for pkg in pkg_map.values():
++@@ -85,8 +101,12 @@ def _go_path_impl(ctx):
++                 parts = f.path.split("/")
++                 if "testdata" in parts:
++                     i = parts.index("testdata")
++-                    dst = pkg.dir + "/" + "/".join(parts[i:])
+++                    dst = paths.join(pkg.dir, *parts[i:])
+++                elif _is_in_pkg_subdir(pkg, f):
+++                    # Maintain relative position for data "inside" the package.
+++                    dst = paths.normalize(paths.join(pkg.dir, _path_rel_to_pkg(pkg, f)))
++                 else:
+++                    # Flatten for data outside the package dir
++                     dst = pkg.dir + "/" + f.basename
++                 _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
++     for f in ctx.files.data:
++@@ -181,6 +201,8 @@ def _merge_pkg(x, y):
++     x.srcs.extend([f for f in y.srcs if f.path not in x_srcs])
++     x.data.extend([f for f in y.data if f.path not in x_srcs])
++     x.pkgs.update(y.pkgs)
+++    x_labels = sets.make(x.labels)
+++    x.labels.extend([l for l in y.labels if not sets.contains(x_labels, l)])
++
++ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
++     if dst in entry_map:
++@@ -190,3 +212,16 @@ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
++     entries.append(struct(src = src.path, dst = dst))
++     entry_map[dst] = src.path
++     inputs.append(src)
+++
+++def _path_rel_to_pkg(pkg, f):
+++    # if f is "contained in" a pkg, return its path
+++    # relative to the pkg root
+++    # otherwise return None
+++    for l in pkg.labels:
+++        full_pkg_path = paths.join(l.workspace_root, l.package)
+++        if f.path.startswith(full_pkg_path):
+++            return paths.relativize(f.path, full_pkg_path)
+++    return None
+++
+++def _is_in_pkg_subdir(pkg, f):
+++    return _path_rel_to_pkg(pkg, f) != None

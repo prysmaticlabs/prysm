@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test", "go_path")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
 load("//tools:binary_targets.bzl", "binary_targets")
@@ -91,6 +91,15 @@ go_test(
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
     deps = ["@com_github_urfave_cli//:go_default_library"],
+)
+
+go_path(
+    # Useful for integrating with tools that require a GOPATH directory structure
+    # E.g. IDE integrations, wire, stringer, go-fuzz-build
+    name = "go_path",
+    deps = [":go_default_library"],
+    mode = "copy",
+    tags = ["manual"],
 )
 
 [go_binary(
