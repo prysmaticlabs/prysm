@@ -60,6 +60,7 @@ func (vs *Server) multipleValidatorStatus(
 
 	return activeValidatorExists, statusResponses, nil
 }
+
 func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
@@ -117,7 +118,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 	}
 	// Our position in the activation queue is the above index - our validator index.
-	queuePosition = uint64(idx) - lastActivatedValidatorIdx
+	queuePosition = idx - lastActivatedValidatorIdx
 	return &pb.ValidatorStatusResponse{
 		Status:                    vStatus,
 		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
@@ -139,7 +140,7 @@ func (vs *Server) retrieveStatusFromState(ctx context.Context, pubKey []byte,
 	if !ok {
 		return pb.ValidatorStatus(0), 0, errors.New("pubkey does not exist")
 	}
-	return vs.assignmentStatus(uint64(idx), headState), uint64(idx), nil
+	return vs.assignmentStatus(idx, headState), idx, nil
 }
 
 func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) pb.ValidatorStatus {
