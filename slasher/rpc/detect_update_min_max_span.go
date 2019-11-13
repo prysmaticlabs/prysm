@@ -27,15 +27,15 @@ func detectMin(span uint64, spans *ethpb.MinMaxSpan, source uint64) uint64 {
 	return 0
 }
 
-func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc detect) (targetEpoch uint64, span uint64, spanMap *ethpb.EpochSpanMap, err error) {
-	span = target - source + 1
+func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc detect) (uint64, uint64, *ethpb.EpochSpanMap, error) {
+	span := target - source + 1
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
 		return 0, span, nil, fmt.Errorf("%d target - source: %d > weakSubjectivityPeriod",
 			params.BeaconConfig().WeakSubjectivityPeriod,
 			span,
 		)
 	}
-	spanMap, err = ss.SlasherDB.ValidatorSpansMap(validatorIdx)
+	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validatorIdx: %d", validatorIdx)
 	}
@@ -48,7 +48,7 @@ func (ss *Server) detectSpan(source, target, validatorIdx uint64, detectionFunc 
 // DetectAndUpdateMaxSpan is used to detect and update the max span of an incoming attestation.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (surroundedTargetEpoch uint64, err error) {
+func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, span, spanMap, err := ss.detectSpan(source, target, validatorIdx, detectMax)
 	if err != nil {
 		return 0, err
@@ -77,7 +77,7 @@ func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, tar
 // of an incoming attestation.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (surroundTargetEpoch uint64, err error) {
+func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, _, spanMap, err := ss.detectSpan(source, target, validatorIdx, detectMin)
 	if err != nil {
 		return 0, err
@@ -87,8 +87,8 @@ func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, tar
 	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
-		if spanMap.EpochSpanMap[i] == nil {
-			spanMap.EpochSpanMap[i] = &ethpb.MinMaxSpan{MinSpan: 0, MaxSpan: 0}
+		if _, ok := spanMap.EpochSpanMap[i]; !ok {
+			spanMap.EpochSpanMap[i] = &ethpb.MinMaxSpan{}
 		}
 		if spanMap.EpochSpanMap[i].MinSpan == 0 || spanMap.EpochSpanMap[i].MinSpan > val {
 			spanMap.EpochSpanMap[i].MinSpan = val
