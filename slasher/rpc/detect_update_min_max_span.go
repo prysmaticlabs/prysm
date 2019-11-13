@@ -85,6 +85,9 @@ func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, tar
 	if targetEpoch > 0 {
 		return targetEpoch, nil
 	}
+	if source == 0 {
+		return 0, nil
+	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
 		if _, ok := spanMap.EpochSpanMap[i]; !ok {
