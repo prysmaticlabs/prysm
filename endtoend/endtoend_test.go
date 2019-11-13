@@ -480,7 +480,6 @@ func killProcesses(t *testing.T, pIDs []int) {
 
 func logOutput(t *testing.T, tmpPath string) {
 	if t.Failed() {
-		t.Log("beacon-1.log")
 		beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
 		if err != nil {
 			t.Fatal(err)
@@ -520,5 +519,9 @@ func waitForTextInFile(file *os.File, text string) error {
 		}
 		wait *= wait
 	}
-	return fmt.Errorf("could not find requested text %s in logs", text)
+	contents, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf("could not find requested text %s in logs:\n%s", text, string(contents))
 }
