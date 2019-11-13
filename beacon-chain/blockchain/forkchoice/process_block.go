@@ -487,7 +487,7 @@ func (s *Store) currentSlot() uint64 {
 
 // updates justified check point in store if a better check point is known
 func (s *Store) updateJustifiedCheckpoint() {
-	if helpers.SlotsSinceEpochStarts(s.currentSlot()) == 0 {
+	if !(helpers.SlotsSinceEpochStarts(s.currentSlot()) == 0) {
 		return
 	}
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
