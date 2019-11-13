@@ -43,7 +43,7 @@ type Store struct {
 	attsQueueLock        sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
-	genesisTime uint64
+	genesisTime          uint64
 	bestJustifiedCheckpt *ethpb.Checkpoint
 }
 
