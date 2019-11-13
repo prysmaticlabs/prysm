@@ -27,8 +27,8 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 		if _, ok := spanMap.EpochSpanMap[source+i]; !ok {
 			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxEpochSpan{}
 		}
-		if spanMap.EpochSpanMap[source+i].MinEpochSpan < val {
-			spanMap.EpochSpanMap[source+i].MinEpochSpan = val
+		if spanMap.EpochSpanMap[source+i].MaxEpochSpan < val {
+			spanMap.EpochSpanMap[source+i].MaxEpochSpan = val
 		} else {
 			break
 		}
