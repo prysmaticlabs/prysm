@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
@@ -115,9 +116,9 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		return err
 	})
 
-	// prune history to max size every 10th epoch
-	if idxAttestation.Data.Source.Epoch%10 == 0 {
-		weakSubjectivityPeriod := uint64(54000)
+	// prune history to max size every PruneSlasherStoragePeriod epoch
+	if idxAttestation.Data.Source.Epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
+		weakSubjectivityPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 		err = db.PruneHistory(idxAttestation.Data.Source.Epoch, weakSubjectivityPeriod)
 	}
 	return err

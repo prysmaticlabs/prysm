@@ -307,7 +307,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 		0,
 		2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
 		&ethpb.Checkpoint{}); !strings.Contains(err.Error(),
-			"target epoch 0 does not match current epoch 2 or prev epoch 1") {
+		"target epoch 0 does not match current epoch 2 or prev epoch 1") {
 		t.Error("Did not receive wanted error")
 	}
 }

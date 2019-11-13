@@ -19,18 +19,14 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestRequestAttestation_ValidatorIndexRequestFailure(t *testing.T) {
+func TestRequestAttestation_ValidatorAssignmentRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, _, finish := setup(t)
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
 	defer finish()
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
 func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
@@ -48,13 +44,9 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
-	m.attesterClient.EXPECT().RequestAttestation(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
-	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not request attestation to sign at slot")
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
 }
 
 func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
@@ -91,7 +83,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -136,7 +128,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBitfield.SetBitAt(4, true)
@@ -189,7 +181,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
 	timer := time.NewTimer(time.Duration(1 * time.Second))
-	go validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
+	go validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
 	<-timer.C
 }
 
@@ -241,7 +233,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
-	validator.AttestToBlockHead(context.Background(), 0, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
@@ -282,7 +274,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	if len(generatedAttestation.AggregationBits) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))
