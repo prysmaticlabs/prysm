@@ -104,9 +104,8 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	ctx := context.Background()
 	someSeed := [32]byte{1, 2, 3}
 	info := &ethpb.ArchivedCommitteeInfo{
-		ProposerSeed:   someSeed[:],
-		AttesterSeed:   someSeed[:],
-		CommitteeCount: 4096,
+		ProposerSeed: someSeed[:],
+		AttesterSeed: someSeed[:],
 	}
 	epoch := uint64(10)
 	if err := db.SaveArchivedCommitteeInfo(ctx, epoch, info); err != nil {
