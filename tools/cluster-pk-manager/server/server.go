@@ -194,7 +194,7 @@ func (s *server) checkDepositTxs(ctx context.Context, txMap map[*keystore.Key]*t
 			delete(txMap, k)
 			continue
 		}
-		// append key if tx succeeded
+		// append key if tx succeeded.
 		pks = append(pks, k.SecretKey.Marshal())
 		delete(txMap, k)
 	}
