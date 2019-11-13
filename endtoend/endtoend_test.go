@@ -103,12 +103,17 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 	beaconClient := eth.NewBeaconChainClient(conn)
 
+	if err := waitForTextInFile(beaconLogFile, "Executing state transition on block"); err != nil {
+		t.Fatal(err)
+	}
+
 	currentEpoch := uint64(0)
 	for currentEpoch < config.epochsToRun {
 		if currentEpoch > 0 {
 			newEpochText := fmt.Sprintf("\"Starting next epoch\" epoch=%d", currentEpoch)
 			if err := waitForTextInFile(beaconLogFile, newEpochText); err != nil {
-				t.Fatal(err)
+				currentEpoch++
+				continue
 			}
 		}
 
@@ -245,11 +250,9 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	}
 
 	args := []string{
-		"--bootstrap-node=\"\"",
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
-		"--p2p-host-ip=127.0.0.1",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4000+index),
@@ -433,7 +436,6 @@ func peersConnect(port uint64, expectedPeers uint64) error {
 	if err := response.Body.Close(); err != nil {
 		return err
 	}
-	fmt.Println(pageContent)
 	startIdx := strings.Index(pageContent, "peers") - 2
 	peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
 	if err != nil {
@@ -503,22 +505,12 @@ func logOutput(t *testing.T, tmpPath string) {
 			currentLine := scanner.Text()
 			t.Log(currentLine)
 		}
-		t.Log("vals-1.log")
-		vals1LogFile, err := os.Open(path.Join(tmpPath, "vals-1.log"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		scanner = bufio.NewScanner(vals1LogFile)
-		for scanner.Scan() {
-			currentLine := scanner.Text()
-			t.Log(currentLine)
-		}
 	}
 }
 
 func waitForTextInFile(file *os.File, text string) error {
 	checks := 0
-	maxChecks := int(4 * params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+	maxChecks := int(params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 	// Put a limit on how many times we can check to prevent endless looping.
 	for checks < maxChecks {
 		// Pass some time to not spam file checks.
