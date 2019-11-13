@@ -1,37 +1,36 @@
-# Prysm: Ethereum 'Serenity' 2.0 Go Implementation
+# Prysm: An Ethereum 2.0 Client Written in Go
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
 [![ETH2.0_Spec_Version 0.8.1](https://img.shields.io/badge/ETH2.0%20Spec%20Version-v0.8.1-blue.svg)](https://github.com/ethereum/eth2.0-specs/commit/452ecf8e27c7852c7854597f2b1bb4a62b80c7ec)
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-This is the Core repository for Prysm, [Prysmatic Labs](https://prysmaticlabs.com)' [Go](https://golang.org/) implementation of the Ethereum protocol 2.0 (Serenity).
+This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the Ethereum 2.0 client specifications developed by [Prysmatic Labs](https://prysmaticlabs.com).
 
 ### Need assistance?
-A more detailed set of installation and usage instructions as well as explanations of each component are available on our [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
+A more detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
 
 **Interested in what's next?** Be sure to read our [Roadmap Reference Implementation](https://github.com/prysmaticlabs/prysm/blob/master/docs/ROADMAP.md) document. This page outlines the basics of sharding as well as the various short-term milestones that we hope to achieve over the coming year.
 
 ### Come join the testnet!
-Participation is now open to the public in our testnet release for Ethereum 2.0 phase 0. Visit [prylabs.net](https://prylabs.net) for more information on the project itself or to sign  up as a validator on the network.
+Participation is now open to the public for our Ethereum 2.0 phase 0 testnet release. Visit [prylabs.net](https://prylabs.net) for more information on the project or to sign up as a validator on the network.
 
 # Table of Contents
 
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-    - [Build Via Docker](#build-via-docker)
-    - [Build Via Bazel](#build-via-bazel)
-- [Running an Ethereum 2.0 Beacon Node](#running-a-beacon-node)
+    - [Build via Docker](#build-via-docker)
+    - [Build via Bazel](#build-via-bazel)
+- [Running a beacon node](#running-a-beacon-node)
     - [Running via Docker](#build-via-docker)
     - [Running via Bazel](#build-via-bazel)
-- [Staking ETH: Running a Validator Client](#staking-eth-running-a-validator-client)
+- [Staking ETH: Running a validator client](#staking-eth-running-a-validator-client)
     - [Activating your validator: Depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-goerli-eth)
     - [Starting the validator with Bazel](#starting-the-validator-with-bazel)
-- [Setting up an interop development chain](#setting-up-an-interop-development-chain)
-    - [Preparing an environment](#preparing-an-environment)
-    - [Usage](#usage)    
+- [Setting up a local ETH2 development chain](#setting-up-a-local-eth2-development-chain)
+    - [Installation and dependencies](#installation-and-dependencies)
+    - [Genesis parameters](#genesis-parameters)    
     - [Generating a genesis state](#generating-a-genesis-state)   
-    - [Launching a beacon node and validator client](#launching-a-beacon-node-and-validator-client)   
 -   [Testing Prysm](#testing-prysm)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -198,65 +197,24 @@ bazel run //validator
 ```
 **Congratulations, you are now running Ethereum 2.0 Phase 0!**
 
-## Setting up an interop development chain
+## Setting up a local ETH2 development chain
 
-This section outlines the process of setting up Prysm for [interop](https://blog.ethereum.org/2019/09/19/eth2-interop-in-review/) connectivity with other Ethereum 2.0 client implementations.
+This section outlines the process of setting up Prysm for local interop testing with other Ethereum 2.0 client implementations. See the [INTEROP.md](https://github.com/prysmaticlabs/prysm/blob/master/INTEROP.md) file for advanced configuration options. For more background information on interoperability development, see [this blog post](https://blog.ethereum.org/2019/09/19/eth2-interop-in-review/).
 
-### Preparing an environment
+### Installation and Dependencies
 
-1. Install Bazel as described in the installation section of this document
-2. Issue the command `git clone https://github.com/prysmaticlabs/prysm && cd prysm`
-3. Issue the command `bazel build //...`
+To begin setting up a local ETH2 development chain, follow the **Bazel** instructions found in the [dependencies](#dependencies) and [installation](#installation) sections respectively. After completion, continue on to [generating a genesis state](#generating-a-genesis-state).
 
-### Usage
+### Genesis parameters
+
 - **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state (defaults to now)
 - **--mainnet-config** bool: Select whether genesis state should be generated with mainnet or minimal (default) params
 - **--num-validators** int: Number of validators to deterministically include in the generated genesis state
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
 
 ### Generating a genesis state
-Prysm supports a couple different methods to quickly launch a beacon node from basic configurations:
 
-- `NumValidators + GenesisTime`: Launches a beacon node by deterministically generating a state from a `num-validators` flag along with a genesis time. This is recommended for first runs.
-- `SSZ Genesis`: Launches a beacon node from a `.ssz` file containing a SSZ-encoded, genesis beacon state. This is recommended for restarting a configured beacon node.
-
-To setup the necessary files for the `SSZ Genesis` option, Prysm provides a tool to create a `genesis.ssz` from
-a deterministically generated set of validator private keys. These keys follow the official interop YAML format [specified
-here](https://github.com/ethereum/eth2.0-pm/blob/master/interop/mocked_start).
-
-The command below creates 64 validator keys, and then instantiates a genesis state with the 64 validators and a genesis unix timestamp `1567542540`. Finally, it writes a ssz encoded output to `~/Desktop/genesis.ssz`. 
-
-```
-bazel run //tools/genesis-state-gen -- --output-ssz ~/Desktop/genesis.ssz --num-validators 64 --genesis-time 1567542540
-```
-
-This newly generated `.ssz` file can be used to kickstart the beacon chain in the following section.
-
-### Launching a beacon node and validator client
-
-#### Launching from `genesis.ssz`
-
-1. Open up two terminal windows. In the first, issue the command:
-
-```
- bazel run //beacon-chain -- \
---no-genesis-delay \
---bootstrap-node= \
---deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
---clear-db \
---interop-genesis-state /path/to/genesis.ssz \
---interop-eth1data-votes
-```
-
-2. Wait a moment for the beacon chain to start. In the other terminal, issue the command:
-
-```
-bazel run //validator -- --interop-num-validators 64
-```
-
-This will launch and kickstart the system with your 64 validators performing their duties accordingly.
-
-#### Launching from Pure CLI Flags
+The example below will deterministically generate a beacon genesis state, initiate Prysm with 64 validators and set the genesis time to your local machines current UNIX time.
 
 1. Open up two terminal windows. In the first, issue the command:
 
@@ -269,9 +227,6 @@ bazel run //beacon-chain -- \
 --interop-num-validators 64 \
 --interop-eth1data-votes
 ```
-
-This will deterministically generate a beacon genesis state, starting
-the system with 64 validators and the genesis time set to the current UNIX time.
 
 2. Wait a moment for the beacon chain to start. In the other terminal, issue the command:
 
@@ -288,13 +243,13 @@ To run the unit tests of our system, issue the command:
 bazel test //...
 ```
 
-To run the linter, make sure you have [golangci-lint](https://github.com/golangci/golangci-lint) installed and then issue the command:
+To run the linter, ensure you have [golangci-lint](https://github.com/golangci/golangci-lint) installed, then issue the command:
 ```
 golangci-lint run
 ```
 
 ## Contributing
-We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/prysm/blob/master/CONTRIBUTING.md)! Check it out to get started.
+Want to get involved? Check out our [Contribution Guide](https://prysmaticlabs.gitbook.io/prysm/getting-involved/contribution-guidelines) to learn more!
 
 ## License
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
