@@ -486,6 +486,7 @@ func (s *Store) currentSlot() uint64 {
 
 // updates justified check point in store if a better check point is known
 func (s *Store) updateJustifiedCheckpoint() {
+	// only need to perform this update at epoch boundary slot
 	if s.currentSlot() % params.BeaconConfig().SlotsPerEpoch != 0 {
 		return
 	}
