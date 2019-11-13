@@ -19,6 +19,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,
+			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
 		},
 	}

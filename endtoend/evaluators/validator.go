@@ -25,8 +25,19 @@ var ValidatorsAreActive = Evaluator{
 	Evaluation: validatorsAreActive,
 }
 
+// ValidatorsParticipating ensures the expected amount of validators are active.
+var ValidatorsParticipating = Evaluator{
+	Name:       "validators_participating_epoch_%d",
+	Policy:     everyEpochAfterGenesis,
+	Evaluation: validatorsParticipating,
+}
+
 func onGenesisEpoch(currentEpoch uint64) bool {
 	return currentEpoch < 2
+}
+
+func everyEpochAfterGenesis(currentEpoch uint64) bool {
+	return currentEpoch > 0
 }
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
@@ -74,7 +85,6 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-// TODO(#3971) - Fix validator participation API to calculate based on previous epoch.
 func validatorsParticipating(client eth.BeaconChainClient) error {
 	in := new(ptypes.Empty)
 	chainHead, err := client.GetChainHead(context.Background(), in)
@@ -82,10 +92,6 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
-	if currentEpoch > 0 {
-		return fmt.Errorf("current epoch must be greater than 0, received %d", currentEpoch)
-	}
-
 	validatorRequest := &eth.GetValidatorParticipationRequest{
 		QueryFilter: &eth.GetValidatorParticipationRequest_Epoch{
 			Epoch: currentEpoch - 1,
