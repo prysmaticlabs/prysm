@@ -1,4 +1,4 @@
-package rpc
+package attester
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -21,18 +22,23 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestSubmitAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	attesterServer := &AttesterServer{
-		headFetcher:       &mock.ChainService{},
-		attReceiver:       &mock.ChainService{},
-		operationsHandler: &mockOps.Operations{},
-		p2p:               &mockp2p.MockBroadcaster{},
-		beaconDB:          db,
-		attestationCache:  cache.NewAttestationCache(),
+	attesterServer := &Server{
+		HeadFetcher:       &mock.ChainService{},
+		AttReceiver:       &mock.ChainService{},
+		OperationsHandler: &mockOps.Operations{},
+		P2p:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
 	}
 	head := &ethpb.BeaconBlock{
 		Slot:       999,
@@ -113,12 +119,12 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	attesterServer := &AttesterServer{
-		p2p:              &mockp2p.MockBroadcaster{},
-		syncChecker:      &mockSyncChecker{false},
-		attestationCache: cache.NewAttestationCache(),
-		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+	attesterServer := &Server{
+		P2p:              &mockp2p.MockBroadcaster{},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttestationCache: cache.NewAttestationCache(),
+		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		AttReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
 	req := &pb.AttestationRequest{
@@ -148,8 +154,8 @@ func TestRequestAttestation_OK(t *testing.T) {
 }
 
 func TestRequestAttestation_SyncNotReady(t *testing.T) {
-	as := &AttesterServer{
-		syncChecker: &mockSyncChecker{syncing: true},
+	as := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := as.RequestAttestation(context.Background(), &pb.AttestationRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
@@ -206,12 +212,12 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	attesterServer := &AttesterServer{
-		p2p:              &mockp2p.MockBroadcaster{},
-		attestationCache: cache.NewAttestationCache(),
-		headFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		attReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		syncChecker:      &mockSyncChecker{false},
+	attesterServer := &Server{
+		P2p:              &mockp2p.MockBroadcaster{},
+		AttestationCache: cache.NewAttestationCache(),
+		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		AttReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
 	req := &pb.AttestationRequest{
@@ -250,9 +256,9 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	}()
 
 	ctx := context.Background()
-	server := &AttesterServer{
-		attestationCache: cache.NewAttestationCache(),
-		syncChecker:      &mockSyncChecker{false},
+	server := &Server{
+		AttestationCache: cache.NewAttestationCache(),
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
 	req := &pb.AttestationRequest{
@@ -264,7 +270,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
-	if err := server.attestationCache.MarkInProgress(req); err != nil {
+	if err := server.AttestationCache.MarkInProgress(req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,10 +292,10 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		if err := server.attestationCache.Put(ctx, req, res); err != nil {
+		if err := server.AttestationCache.Put(ctx, req, res); err != nil {
 			t.Error(err)
 		}
-		if err := server.attestationCache.MarkNotInProgress(req); err != nil {
+		if err := server.AttestationCache.MarkNotInProgress(req); err != nil {
 			t.Error(err)
 		}
 	}()
