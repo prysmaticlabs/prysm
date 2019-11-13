@@ -10,8 +10,6 @@ This is the core repository for Prysm, a [Golang](https://golang.org/) implement
 ### Need assistance?
 A more detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
 
-**Interested in what's next?** Be sure to read our [Roadmap Reference Implementation](https://github.com/prysmaticlabs/prysm/blob/master/docs/ROADMAP.md) document. This page outlines the basics of sharding as well as the various short-term milestones that we hope to achieve over the coming year.
-
 ### Come join the testnet!
 Participation is now open to the public for our Ethereum 2.0 phase 0 testnet release. Visit [prylabs.net](https://prylabs.net) for more information on the project or to sign up as a validator on the network.
 
@@ -21,16 +19,15 @@ Participation is now open to the public for our Ethereum 2.0 phase 0 testnet rel
 - [Installation](#installation)
     - [Build via Docker](#build-via-docker)
     - [Build via Bazel](#build-via-bazel)
-- [Running a beacon node](#running-a-beacon-node)
+- [Connecting to the public testnet: running a beacon node](#connecting-to-the-testnet-running-a-beacon-node)
     - [Running via Docker](#build-via-docker)
     - [Running via Bazel](#build-via-bazel)
-- [Staking ETH: Running a validator client](#staking-eth-running-a-validator-client)
-    - [Activating your validator: Depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-goerli-eth)
+- [Staking ETH: running a validator client](#staking-eth-running-a-validator-client)
+    - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-goerli-eth)
     - [Starting the validator with Bazel](#starting-the-validator-with-bazel)
 - [Setting up a local ETH2 development chain](#setting-up-a-local-eth2-development-chain)
-    - [Installation and dependencies](#installation-and-dependencies)
-    - [Genesis parameters](#genesis-parameters)    
-    - [Generating a genesis state](#generating-a-genesis-state)   
+    - [Installation and dependencies](#installation-and-dependencies) 
+    - [Running a local beacon node and validator client](#running-a-local-beacon-node-and-validator-client)   
 -   [Testing Prysm](#testing-prysm)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -96,9 +93,9 @@ Target //beacon-chain:beacon-chain up-to-date:
 
 In the example above, the beacon chain binary has been created in `bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain`.
 
-## Running a beacon node
+## Connecting to the testnet: running a beacon node
 
-To understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical).
+This section contains instructions for initialising a beacon node and connecting to the public testnet. To further understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical).
 
 ### Running via Docker
 
@@ -176,13 +173,13 @@ bazel run //beacon-chain -- --datadir=/tmp/prysm-data
 This will sync up the Beacon Node with the latest head block in the network. Note that the beacon node must be **completely synced** before attempting to initialise a validator client, otherwise the validator will not be able to complete the deposit and funds will be lost.
 
 
-## Staking ETH: Running a validator client
+## Staking ETH: running a validator client
 
 Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a validator client to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system, and it is possible to spin up as many as you desire in order to have more stake in the network.
 
 For more information on the functionality of validator clients, see [this section](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/validator-clients) of our official documentation.
 
-### Activating your validator: Depositing 3.2 Goerli ETH
+### Activating your validator: depositing 3.2 Goerli ETH
 
 Using your validator deposit data from the previous step, follow the instructions found on https://prylabs.net/participate to make a deposit.
 
@@ -201,18 +198,11 @@ bazel run //validator
 
 This section outlines the process of setting up Prysm for local interop testing with other Ethereum 2.0 client implementations. See the [INTEROP.md](https://github.com/prysmaticlabs/prysm/blob/master/INTEROP.md) file for advanced configuration options. For more background information on interoperability development, see [this blog post](https://blog.ethereum.org/2019/09/19/eth2-interop-in-review/).
 
-### Installation and Dependencies
+### Installation and dependencies
 
-To begin setting up a local ETH2 development chain, follow the **Bazel** instructions found in the [dependencies](#dependencies) and [installation](#installation) sections respectively. After completion, continue on to [generating a genesis state](#generating-a-genesis-state).
+To begin setting up a local ETH2 development chain, follow the **Bazel** instructions found in the [dependencies](#dependencies) and [installation](#installation) sections respectively. 
 
-### Genesis parameters
-
-- **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state (defaults to now)
-- **--mainnet-config** bool: Select whether genesis state should be generated with mainnet or minimal (default) params
-- **--num-validators** int: Number of validators to deterministically include in the generated genesis state
-- **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
-
-### Generating a genesis state
+### Running a local beacon node and validator client
 
 The example below will deterministically generate a beacon genesis state, initiate Prysm with 64 validators and set the genesis time to your local machines current UNIX time.
 
