@@ -56,7 +56,7 @@ func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf(
-		"requested page size %d can not be greater than max size %d",
+		"Requested page size %d can not be greater than max size %d",
 		exceedsMax,
 		params.BeaconConfig().MaxPageSize,
 	)
@@ -451,7 +451,7 @@ func TestServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
 	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)

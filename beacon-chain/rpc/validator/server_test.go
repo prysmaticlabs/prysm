@@ -105,7 +105,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
-		want := "Context canceled"
+		want := "context canceled"
 		if err := vs.WaitForActivation(req, mockChainStream); !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
