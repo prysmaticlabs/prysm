@@ -3,14 +3,14 @@ package validator
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
@@ -21,7 +21,7 @@ import (
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	if vs.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
 	var err error
@@ -30,7 +30,7 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", epochStartSlot)
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
 

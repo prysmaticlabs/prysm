@@ -44,7 +44,7 @@ type Server struct {
 func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to hash tree root attestation: %v", err)
+		return nil, status.Errorf(codes.Internal, "Failed to tree hash attestation: %v", err)
 	}
 
 	go func() {
@@ -74,12 +74,12 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	)
 
 	if as.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "syncing to latest head, not ready to respond")
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
 	res, err := as.AttestationCache.Get(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve data from attestation cache: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 	}
 	if res != nil {
 		return res, nil
@@ -89,14 +89,14 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 		if err == cache.ErrAlreadyInProgress {
 			res, err := as.AttestationCache.Get(ctx, req)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve data from attestation cache: %v", err)
+				return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 			}
 			if res == nil {
-				return nil, status.Error(codes.DataLoss, "a request was in progress and resolved to nil")
+				return nil, status.Error(codes.DataLoss, "A request was in progress and resolved to nil")
 			}
 			return res, nil
 		}
-		return nil, status.Errorf(codes.Internal, "could not mark attestation as in-progress: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not mark attestation as in-progress: %v", err)
 	}
 	defer func() {
 		if err := as.AttestationCache.MarkNotInProgress(req); err != nil {
@@ -111,13 +111,13 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	if headState == nil {
 		headState, err = as.BeaconDB.HeadState(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve head state: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 		}
 	}
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not process slots up to %d: %v", req.Slot, err)
+		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
@@ -128,7 +128,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not get target block for slot %d: %v", epochStartSlot, err)
+			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	}
 
 	if err := as.AttestationCache.Put(ctx, req, res); err != nil {
-		return nil, status.Errorf(codes.Internal, "could not store attestation data in cache: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not store attestation data in cache: %v", err)
 	}
 
 	return res, nil
