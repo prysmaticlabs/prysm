@@ -20,7 +20,6 @@ type spanMapTestStruct struct {
 
 var spanTestsMax []spanMapTestStruct
 var spanTestsMin []spanMapTestStruct
-var spanTestsFail []spanMapTestStruct
 
 func init() {
 	// Test data following example of a max span by https://github.com/protolambda
@@ -32,9 +31,9 @@ func init() {
 			targetEpoch:         6,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					4: {MinSpan: 0, MaxSpan: 2},
-					5: {MinSpan: 0, MaxSpan: 1},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					4: {MinEpochSpan: 0, MaxEpochSpan: 2},
+					5: {MinEpochSpan: 0, MaxEpochSpan: 1},
 				},
 			},
 		},
@@ -44,18 +43,18 @@ func init() {
 			targetEpoch:         18,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					4:  {MinSpan: 0, MaxSpan: 2},
-					5:  {MinSpan: 0, MaxSpan: 1},
-					9:  {MinSpan: 0, MaxSpan: 9},
-					10: {MinSpan: 0, MaxSpan: 8},
-					11: {MinSpan: 0, MaxSpan: 7},
-					12: {MinSpan: 0, MaxSpan: 6},
-					13: {MinSpan: 0, MaxSpan: 5},
-					14: {MinSpan: 0, MaxSpan: 4},
-					15: {MinSpan: 0, MaxSpan: 3},
-					16: {MinSpan: 0, MaxSpan: 2},
-					17: {MinSpan: 0, MaxSpan: 1},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
+					5:  {MinEpochSpan: 0, MaxEpochSpan: 1},
+					9:  {MinEpochSpan: 0, MaxEpochSpan: 9},
+					10: {MinEpochSpan: 0, MaxEpochSpan: 8},
+					11: {MinEpochSpan: 0, MaxEpochSpan: 7},
+					12: {MinEpochSpan: 0, MaxEpochSpan: 6},
+					13: {MinEpochSpan: 0, MaxEpochSpan: 5},
+					14: {MinEpochSpan: 0, MaxEpochSpan: 4},
+					15: {MinEpochSpan: 0, MaxEpochSpan: 3},
+					16: {MinEpochSpan: 0, MaxEpochSpan: 2},
+					17: {MinEpochSpan: 0, MaxEpochSpan: 1},
 				},
 			},
 		},
@@ -65,21 +64,21 @@ func init() {
 			targetEpoch:         12,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					4:  {MinSpan: 0, MaxSpan: 2},
-					5:  {MinSpan: 0, MaxSpan: 7},
-					6:  {MinSpan: 0, MaxSpan: 6},
-					7:  {MinSpan: 0, MaxSpan: 5},
-					8:  {MinSpan: 0, MaxSpan: 4},
-					9:  {MinSpan: 0, MaxSpan: 9},
-					10: {MinSpan: 0, MaxSpan: 8},
-					11: {MinSpan: 0, MaxSpan: 7},
-					12: {MinSpan: 0, MaxSpan: 6},
-					13: {MinSpan: 0, MaxSpan: 5},
-					14: {MinSpan: 0, MaxSpan: 4},
-					15: {MinSpan: 0, MaxSpan: 3},
-					16: {MinSpan: 0, MaxSpan: 2},
-					17: {MinSpan: 0, MaxSpan: 1},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
+					5:  {MinEpochSpan: 0, MaxEpochSpan: 7},
+					6:  {MinEpochSpan: 0, MaxEpochSpan: 6},
+					7:  {MinEpochSpan: 0, MaxEpochSpan: 5},
+					8:  {MinEpochSpan: 0, MaxEpochSpan: 4},
+					9:  {MinEpochSpan: 0, MaxEpochSpan: 9},
+					10: {MinEpochSpan: 0, MaxEpochSpan: 8},
+					11: {MinEpochSpan: 0, MaxEpochSpan: 7},
+					12: {MinEpochSpan: 0, MaxEpochSpan: 6},
+					13: {MinEpochSpan: 0, MaxEpochSpan: 5},
+					14: {MinEpochSpan: 0, MaxEpochSpan: 4},
+					15: {MinEpochSpan: 0, MaxEpochSpan: 3},
+					16: {MinEpochSpan: 0, MaxEpochSpan: 2},
+					17: {MinEpochSpan: 0, MaxEpochSpan: 1},
 				},
 			},
 		},
@@ -89,21 +88,21 @@ func init() {
 			targetEpoch:         15,
 			slashingTargetEpoch: 18,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					4:  {MinSpan: 0, MaxSpan: 2},
-					5:  {MinSpan: 0, MaxSpan: 7},
-					6:  {MinSpan: 0, MaxSpan: 6},
-					7:  {MinSpan: 0, MaxSpan: 5},
-					8:  {MinSpan: 0, MaxSpan: 4},
-					9:  {MinSpan: 0, MaxSpan: 9},
-					10: {MinSpan: 0, MaxSpan: 8},
-					11: {MinSpan: 0, MaxSpan: 7},
-					12: {MinSpan: 0, MaxSpan: 6},
-					13: {MinSpan: 0, MaxSpan: 5},
-					14: {MinSpan: 0, MaxSpan: 4},
-					15: {MinSpan: 0, MaxSpan: 3},
-					16: {MinSpan: 0, MaxSpan: 2},
-					17: {MinSpan: 0, MaxSpan: 1},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
+					5:  {MinEpochSpan: 0, MaxEpochSpan: 7},
+					6:  {MinEpochSpan: 0, MaxEpochSpan: 6},
+					7:  {MinEpochSpan: 0, MaxEpochSpan: 5},
+					8:  {MinEpochSpan: 0, MaxEpochSpan: 4},
+					9:  {MinEpochSpan: 0, MaxEpochSpan: 9},
+					10: {MinEpochSpan: 0, MaxEpochSpan: 8},
+					11: {MinEpochSpan: 0, MaxEpochSpan: 7},
+					12: {MinEpochSpan: 0, MaxEpochSpan: 6},
+					13: {MinEpochSpan: 0, MaxEpochSpan: 5},
+					14: {MinEpochSpan: 0, MaxEpochSpan: 4},
+					15: {MinEpochSpan: 0, MaxEpochSpan: 3},
+					16: {MinEpochSpan: 0, MaxEpochSpan: 2},
+					17: {MinEpochSpan: 0, MaxEpochSpan: 1},
 				},
 			},
 		},
@@ -116,10 +115,10 @@ func init() {
 			targetEpoch:         6,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1: {MinSpan: 5, MaxSpan: 0},
-					2: {MinSpan: 4, MaxSpan: 0},
-					3: {MinSpan: 3, MaxSpan: 0},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1: {MinEpochSpan: 5, MaxEpochSpan: 0},
+					2: {MinEpochSpan: 4, MaxEpochSpan: 0},
+					3: {MinEpochSpan: 3, MaxEpochSpan: 0},
 				},
 			},
 		},
@@ -129,19 +128,19 @@ func init() {
 			targetEpoch:         18,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1:  {MinSpan: 5, MaxSpan: 0},
-					2:  {MinSpan: 4, MaxSpan: 0},
-					3:  {MinSpan: 3, MaxSpan: 0},
-					4:  {MinSpan: 14, MaxSpan: 0},
-					5:  {MinSpan: 13, MaxSpan: 0},
-					6:  {MinSpan: 12, MaxSpan: 0},
-					7:  {MinSpan: 11, MaxSpan: 0},
-					8:  {MinSpan: 10, MaxSpan: 0},
-					9:  {MinSpan: 9, MaxSpan: 0},
-					10: {MinSpan: 8, MaxSpan: 0},
-					11: {MinSpan: 7, MaxSpan: 0},
-					12: {MinSpan: 6, MaxSpan: 0},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
+					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
+					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
+					4:  {MinEpochSpan: 14, MaxEpochSpan: 0},
+					5:  {MinEpochSpan: 13, MaxEpochSpan: 0},
+					6:  {MinEpochSpan: 12, MaxEpochSpan: 0},
+					7:  {MinEpochSpan: 11, MaxEpochSpan: 0},
+					8:  {MinEpochSpan: 10, MaxEpochSpan: 0},
+					9:  {MinEpochSpan: 9, MaxEpochSpan: 0},
+					10: {MinEpochSpan: 8, MaxEpochSpan: 0},
+					11: {MinEpochSpan: 7, MaxEpochSpan: 0},
+					12: {MinEpochSpan: 6, MaxEpochSpan: 0},
 				},
 			},
 		},
@@ -151,19 +150,19 @@ func init() {
 			targetEpoch:         15,
 			slashingTargetEpoch: 0,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1:  {MinSpan: 5, MaxSpan: 0},
-					2:  {MinSpan: 4, MaxSpan: 0},
-					3:  {MinSpan: 3, MaxSpan: 0},
-					4:  {MinSpan: 11, MaxSpan: 0},
-					5:  {MinSpan: 10, MaxSpan: 0},
-					6:  {MinSpan: 9, MaxSpan: 0},
-					7:  {MinSpan: 8, MaxSpan: 0},
-					8:  {MinSpan: 7, MaxSpan: 0},
-					9:  {MinSpan: 6, MaxSpan: 0},
-					10: {MinSpan: 5, MaxSpan: 0},
-					11: {MinSpan: 7, MaxSpan: 0},
-					12: {MinSpan: 6, MaxSpan: 0},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
+					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
+					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
+					4:  {MinEpochSpan: 11, MaxEpochSpan: 0},
+					5:  {MinEpochSpan: 10, MaxEpochSpan: 0},
+					6:  {MinEpochSpan: 9, MaxEpochSpan: 0},
+					7:  {MinEpochSpan: 8, MaxEpochSpan: 0},
+					8:  {MinEpochSpan: 7, MaxEpochSpan: 0},
+					9:  {MinEpochSpan: 6, MaxEpochSpan: 0},
+					10: {MinEpochSpan: 5, MaxEpochSpan: 0},
+					11: {MinEpochSpan: 7, MaxEpochSpan: 0},
+					12: {MinEpochSpan: 6, MaxEpochSpan: 0},
 				},
 			},
 		},
@@ -173,26 +172,26 @@ func init() {
 			targetEpoch:         20,
 			slashingTargetEpoch: 15,
 			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1:  {MinSpan: 5, MaxSpan: 0},
-					2:  {MinSpan: 4, MaxSpan: 0},
-					3:  {MinSpan: 3, MaxSpan: 0},
-					4:  {MinSpan: 11, MaxSpan: 0},
-					5:  {MinSpan: 10, MaxSpan: 0},
-					6:  {MinSpan: 9, MaxSpan: 0},
-					7:  {MinSpan: 8, MaxSpan: 0},
-					8:  {MinSpan: 7, MaxSpan: 0},
-					9:  {MinSpan: 6, MaxSpan: 0},
-					10: {MinSpan: 5, MaxSpan: 0},
-					11: {MinSpan: 7, MaxSpan: 0},
-					12: {MinSpan: 6, MaxSpan: 0},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
+					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
+					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
+					4:  {MinEpochSpan: 11, MaxEpochSpan: 0},
+					5:  {MinEpochSpan: 10, MaxEpochSpan: 0},
+					6:  {MinEpochSpan: 9, MaxEpochSpan: 0},
+					7:  {MinEpochSpan: 8, MaxEpochSpan: 0},
+					8:  {MinEpochSpan: 7, MaxEpochSpan: 0},
+					9:  {MinEpochSpan: 6, MaxEpochSpan: 0},
+					10: {MinEpochSpan: 5, MaxEpochSpan: 0},
+					11: {MinEpochSpan: 7, MaxEpochSpan: 0},
+					12: {MinEpochSpan: 6, MaxEpochSpan: 0},
 				},
 			},
 		},
 	}
 }
 
-func TestServer_UpdateMaxSpan(t *testing.T) {
+func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
@@ -200,7 +199,7 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
-		st, err := slasherServer.DetectAndUpdateMaxSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		st, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
@@ -217,7 +216,7 @@ func TestServer_UpdateMaxSpan(t *testing.T) {
 	}
 }
 
-func TestServer_UpdateMinSpan(t *testing.T) {
+func TestServer_UpdateMinEpochSpan(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
@@ -225,7 +224,7 @@ func TestServer_UpdateMinSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
-		st, err := slasherServer.DetectAndUpdateMinSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		st, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
@@ -255,16 +254,16 @@ func TestServer_FailToUpdate(t *testing.T) {
 		slashingTargetEpoch: 0,
 		targetEpoch:         params.BeaconConfig().WeakSubjectivityPeriod + 1,
 		resultSpanMap: &ethpb.EpochSpanMap{
-			EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-				4: {MinSpan: 0, MaxSpan: 2},
-				5: {MinSpan: 0, MaxSpan: 1},
+			EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+				4: {MinEpochSpan: 0, MaxEpochSpan: 2},
+				5: {MinEpochSpan: 0, MaxEpochSpan: 1},
 			},
 		},
 	}
-	if _, err := slasherServer.DetectAndUpdateMinSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	if _, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	if _, err := slasherServer.DetectAndUpdateMaxSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	if _, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 

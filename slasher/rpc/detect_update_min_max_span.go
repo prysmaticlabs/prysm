@@ -9,12 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-type detect func(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxSpan, attestationSourceEpoch uint64) uint64
+type detect func(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64
 
-// DetectAndUpdateMaxSpan is used to detect and update the max span of an incoming attestation.
+// DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectEpochMaxSpan)
 	if err != nil {
 		return 0, err
@@ -25,10 +25,10 @@ func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, tar
 	for i := uint64(1); i < target-source; i++ {
 		val := uint32(span - i - 1)
 		if _, ok := spanMap.EpochSpanMap[source+i]; !ok {
-			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxSpan{}
+			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxEpochSpan{}
 		}
-		if spanMap.EpochSpanMap[source+i].MaxSpan < val {
-			spanMap.EpochSpanMap[source+i].MaxSpan = val
+		if spanMap.EpochSpanMap[source+i].MinEpochSpan < val {
+			spanMap.EpochSpanMap[source+i].MinEpochSpan = val
 		} else {
 			break
 		}
@@ -39,11 +39,11 @@ func (ss *Server) DetectAndUpdateMaxSpan(ctx context.Context, source uint64, tar
 	return 0, nil
 }
 
-// DetectAndUpdateMinSpan is used to detect surround and update the min span
+// DetectAndUpdateMinEpochSpan is used to detect surround and update the min span
 // of an incoming attestation.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectEpochMinSpan)
 	if err != nil {
 		return 0, err
@@ -57,10 +57,10 @@ func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, tar
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
 		if _, ok := spanMap.EpochSpanMap[i]; !ok {
-			spanMap.EpochSpanMap[i] = &ethpb.MinMaxSpan{}
+			spanMap.EpochSpanMap[i] = &ethpb.MinMaxEpochSpan{}
 		}
-		if spanMap.EpochSpanMap[i].MinSpan == 0 || spanMap.EpochSpanMap[i].MinSpan > val {
-			spanMap.EpochSpanMap[i].MinSpan = val
+		if spanMap.EpochSpanMap[i].MinEpochSpan == 0 || spanMap.EpochSpanMap[i].MinEpochSpan > val {
+			spanMap.EpochSpanMap[i].MinEpochSpan = val
 		} else {
 			break
 		}
@@ -71,16 +71,16 @@ func (ss *Server) DetectAndUpdateMinSpan(ctx context.Context, source uint64, tar
 	return 0, nil
 }
 
-func detectEpochMaxSpan(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxSpan, attestationSourceEpoch uint64) uint64 {
-	maxSpan := uint64(recorderEpochSpans.MaxSpan)
+func detectEpochMaxSpan(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
+	maxSpan := uint64(recorderEpochSpans.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
 		return maxSpan + attestationSourceEpoch
 	}
 	return 0
 }
 
-func detectEpochMinSpan(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxSpan, attestationSourceEpoch uint64) uint64 {
-	minSpan := uint64(recorderEpochSpans.MinSpan)
+func detectEpochMinSpan(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
+	minSpan := uint64(recorderEpochSpans.MinEpochSpan)
 	if minSpan < attestationEpochSpan {
 		return minSpan + attestationSourceEpoch
 	}
