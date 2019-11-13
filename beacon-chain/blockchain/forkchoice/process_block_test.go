@@ -39,16 +39,16 @@ func TestStore_OnBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	randomParentRoot := []byte{'a'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot)); err != nil {
+	randomParentRoot := [32]byte{'a'}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
 	randomParentRoot2 := roots[1]
 	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
-	validGenesisRoot := []byte{'g'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(validGenesisRoot)); err != nil {
+	validGenesisRoot := [32]byte{'g'}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,13 +67,13 @@ func TestStore_OnBlock(t *testing.T) {
 		},
 		{
 			name:          "block is from the feature",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot, Slot: params.BeaconConfig().FarFutureEpoch},
+			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             &pb.BeaconState{},
 			wantErrString: "could not process slot from the future",
 		},
 		{
 			name:          "could not get finalized block",
-			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot},
+			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:]},
 			s:             &pb.BeaconState{},
 			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
 		},
@@ -87,7 +87,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: validGenesisRoot[:]}, &ethpb.Checkpoint{Root: validGenesisRoot[:]}); err != nil {
 				t.Fatal(err)
 			}
 			store.finalizedCheckpt.Root = roots[0]
@@ -146,26 +146,20 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
 		},
 		AggregationBits: []byte{255},
-		CustodyBits:     []byte{255},
 	}
 	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
 
-	indices, err := blocks.ConvertToIndexed(ctx, beaconState, att)
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, beaconState, att)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	var attestedIndices []uint64
-	for _, k := range append(indices.CustodyBit_0Indices, indices.CustodyBit_1Indices...) {
-		attestedIndices = append(attestedIndices, k)
 	}
 
 	if err := store.updateBlockAttestationVote(ctx, att); err != nil {
 		t.Fatal(err)
 	}
-	for _, i := range attestedIndices {
+	for _, i := range indexedAtt.AttestingIndices {
 		v, err := store.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			t.Fatal(err)
@@ -199,7 +193,6 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
 			},
 			AggregationBits: []byte{255},
-			CustodyBits:     []byte{255},
 		}
 		h, _ := hashutil.HashProto(atts[i])
 		hashes[i] = h
@@ -226,8 +219,8 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}, CustodyBits: bitfield.NewBitlist(2)}
-	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b110}, CustodyBits: bitfield.NewBitlist(2)}
+	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}}
+	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b110}}
 	r1, _ := ssz.HashTreeRoot(a1.Data)
 	r2, _ := ssz.HashTreeRoot(a2.Data)
 
@@ -251,8 +244,8 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 		t.Error("did not retrieve saved attestation")
 	}
 
-	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
-	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b111}, CustodyBits: bitfield.NewBitlist(2)}
+	a1 = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b111}}
+	a2 = &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b111}}
 
 	if err := store.saveNewBlockAttestations(ctx, []*ethpb.Attestation{a1, a2}); err != nil {
 		t.Fatal(err)

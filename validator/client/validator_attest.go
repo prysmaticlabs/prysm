@@ -9,7 +9,6 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -62,12 +61,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 	attestation := &ethpb.Attestation{
 		Data:            data,
-		CustodyBits:     custodyBitfield,
 		AggregationBits: aggregationBitfield,
 		Signature:       sig,
 	}
@@ -150,13 +147,8 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	if err != nil {
 		return nil, err
 	}
-	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data: data,
-		// Default is false until phase 1 where proof of custody gets implemented.
-		CustodyBit: false,
-	}
 
-	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
+	root, err := ssz.HashTreeRoot(data)
 	if err != nil {
 		return nil, err
 	}

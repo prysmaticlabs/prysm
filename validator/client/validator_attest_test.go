@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -133,7 +132,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBitfield.SetBitAt(4, true)
-	custodyBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -141,14 +139,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 		},
 		AggregationBits: aggregationBitfield,
-		CustodyBits:     custodyBitfield,
 	}
 
-	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data:       expectedAttestation.Data,
-		CustodyBit: false,
-	}
-	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
+	root, err := ssz.HashTreeRoot(expectedAttestation.Data)
 	if err != nil {
 		t.Fatal(err)
 	}

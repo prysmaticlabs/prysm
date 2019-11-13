@@ -212,16 +212,11 @@ func generateAttesterSlashings(
 		}
 		aggregationBits := bitfield.NewBitlist(committeeSize)
 		aggregationBits.SetBitAt(i, true)
-		custodyBits := bitfield.NewBitlist(committeeSize)
 		att1 := &ethpb.Attestation{
 			Data:            attData1,
-			CustodyBits:     custodyBits,
 			AggregationBits: aggregationBits,
 		}
-		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-			Data:       att1.Data,
-			CustodyBit: false,
-		})
+		dataRoot, err := ssz.HashTreeRoot(attData1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -241,13 +236,9 @@ func generateAttesterSlashings(
 		}
 		att2 := &ethpb.Attestation{
 			Data:            attData2,
-			CustodyBits:     custodyBits,
 			AggregationBits: aggregationBits,
 		}
-		dataRoot, err = ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-			Data:       att2.Data,
-			CustodyBit: false,
-		})
+		dataRoot, err = ssz.HashTreeRoot(att2.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -312,7 +303,6 @@ func generateAttestations(
 	}
 
 	committeeSize := uint64(len(committee))
-	custodyBits := bitfield.NewBitlist(committeeSize)
 	attestingSlot := uint64(0)
 	if bState.Slot > 0 {
 		attestingSlot = bState.Slot - 1
@@ -328,13 +318,9 @@ func generateAttestations(
 				Root:  targetRoot,
 			},
 		},
-		CustodyBits: custodyBits,
 	}
 
-	dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	})
+	dataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
