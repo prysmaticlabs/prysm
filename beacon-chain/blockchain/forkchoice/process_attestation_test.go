@@ -93,7 +93,10 @@ func TestStore_OnAttestation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+			if err := store.GenesisStore(
+				ctx,
+				&ethpb.Checkpoint{Root: BlkWithValidStateRoot[:]},
+				&ethpb.Checkpoint{Root: BlkWithValidStateRoot[:]}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -131,7 +134,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
-	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	r := [32]byte{'g'}
+	if err := store.db.SaveState(ctx, s, r); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -178,7 +185,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
-	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}

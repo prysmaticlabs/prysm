@@ -137,6 +137,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
+	s.updateJustifiedCheckpoint()
+
 	return tgtSlot, nil
 }
 

@@ -44,6 +44,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
+		t.Fatal(err)
+	}
 	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 	if err := chainService.forkChoiceStore.GenesisStore(ctx, cp, cp); err != nil {
 		t.Fatal(err)
@@ -203,7 +206,14 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{Root: parentRoot[:]}, &ethpb.Checkpoint{Root: parentRoot[:]}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -215,10 +225,6 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
-	}
-	parentRoot, err := ssz.SigningRoot(genesis)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
