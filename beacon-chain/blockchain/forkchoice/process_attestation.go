@@ -72,6 +72,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
+	// Verify attestation is from current epoch or previous epoch.
+	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime, uint64(time.Now().Unix()), tgt); err != nil {
+		return 0, err
+	}
+
 	// Verify Attestations cannot be from future epochs.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
 		return 0, errors.Wrap(err, "could not verify attestation target slot")
@@ -147,6 +152,21 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 	return baseState, nil
+}
+
+// verifyAttTargetEpoch validates attestation is from the current or previous epoch.
+func (s *Store) verifyAttTargetEpoch(ctx context.Context, genesisTime uint64, nowTime uint64, c *ethpb.Checkpoint) error {
+	currentSlot := (nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	var prevEpoch uint64
+	// Prevents previous epoch under flow
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return fmt.Errorf("target epoch %d does not match current epoch %d or prev epoch %d", c.Epoch, currentEpoch, prevEpoch)
+	}
+	return nil
 }
 
 // saveCheckpointState saves and returns the processed state with the associated check point.
