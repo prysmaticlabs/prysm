@@ -60,6 +60,7 @@ func (vs *Server) multipleValidatorStatus(
 
 	return activeValidatorExists, statusResponses, nil
 }
+
 func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
