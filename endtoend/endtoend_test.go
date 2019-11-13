@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pborman/uuid"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
@@ -79,14 +80,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	defer logOutput(t, tmpPath)
 	defer killProcesses(t, processIDs)
 
-	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := waitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-		t.Fatal(err)
-	}
-
 	if config.numBeaconNodes > 1 {
 		t.Run("all_peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
@@ -97,38 +90,47 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		})
 	}
 
+	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
+		t.Fatal(err)
+	}
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("fail to dial: %v", err)
 	}
 	beaconClient := eth.NewBeaconChainClient(conn)
+	nodeClient := eth.NewNodeClient(conn)
 
-	if err := waitForTextInFile(beaconLogFile, "Executing state transition on block"); err != nil {
+	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
+	if err != nil {
 		t.Fatal(err)
 	}
-
+	// Small offset so evaluators perform in the middle of an epoch.
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(params.BeaconConfig().SlotsPerEpoch/2), 0)
+	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := uint64(0)
-	for currentEpoch < config.epochsToRun {
-		if currentEpoch > 0 {
-			newEpochText := fmt.Sprintf("\"Starting next epoch\" epoch=%d", currentEpoch)
-			if err := waitForTextInFile(beaconLogFile, newEpochText); err != nil {
-				currentEpoch++
-				continue
-			}
-		}
-
-		for _, evaluator := range config.evaluators {
-			// Only run if the policy says so.
-			if !evaluator.Policy(currentEpoch) {
-				continue
-			}
-			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatal(err)
+	ticker := GetEpochTicker(genesisTime, epochSeconds)
+	for c := range ticker.C() {
+		if c < config.epochsToRun {
+			for _, evaluator := range config.evaluators {
+				// Only run if the policy says so.
+				if !evaluator.Policy(currentEpoch) {
+					continue
 				}
-			})
+				t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+					if err := evaluator.Evaluation(beaconClient); err != nil {
+						t.Fatal(err)
+					}
+				})
+			}
+			currentEpoch++
+		} else {
+			ticker.Done()
+			break
 		}
-		currentEpoch++
 	}
 
 	if currentEpoch < config.epochsToRun {
@@ -301,7 +303,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatalf("did not find peer text in %s", contents)
 	}
 	multiAddr := contents[startIdx : startIdx+endIdx]
-	fmt.Println(multiAddr)
 
 	return &beaconNodeInfo{
 		processID:   cmd.Process.Pid,
@@ -514,7 +515,7 @@ func waitForTextInFile(file *os.File, text string) error {
 	// Put a limit on how many times we can check to prevent endless looping.
 	for checks < maxChecks {
 		// Pass some time to not spam file checks.
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {

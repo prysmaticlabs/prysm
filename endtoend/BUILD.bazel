@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_test(
     name = "go_default_test",
@@ -13,6 +13,7 @@ go_test(
         "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
+    embed = [":go_default_library"],
     shard_count = 2,
     tags = [
         "block-network",
@@ -32,8 +33,17 @@ go_test(
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["epochTimer.go"],
+    importpath = "github.com/prysmaticlabs/prysm/endtoend",
+    visibility = ["//visibility:public"],
+    deps = ["//shared/roughtime:go_default_library"],
 )
