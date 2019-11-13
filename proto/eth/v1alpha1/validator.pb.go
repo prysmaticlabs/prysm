@@ -7,14 +7,13 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -625,7 +624,7 @@ func (c *beaconNodeValidatorClient) GetAttestationData(ctx context.Context, in *
 
 func (c *beaconNodeValidatorClient) ProposeAttestation(ctx context.Context, in *Attestation, opts ...grpc.CallOption) (*types.Empty, error) {
 	out := new(types.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitAttestation", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconNodeValidator/ProposeAttestation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +726,7 @@ func _BeaconNodeValidator_ProposeAttestation_Handler(srv interface{}, ctx contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitAttestation",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconNodeValidator/ProposeAttestation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BeaconNodeValidatorServer).ProposeAttestation(ctx, req.(*Attestation))
@@ -756,7 +755,7 @@ var _BeaconNodeValidator_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconNodeValidator_GetAttestationData_Handler,
 		},
 		{
-			MethodName: "SubmitAttestation",
+			MethodName: "ProposeAttestation",
 			Handler:    _BeaconNodeValidator_ProposeAttestation_Handler,
 		},
 	},
