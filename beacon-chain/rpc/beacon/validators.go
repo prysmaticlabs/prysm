@@ -252,6 +252,7 @@ func (bs *Server) GetValidatorParticipation(
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	headState := bs.HeadFetcher.HeadState()
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	prevEpoch := helpers.PrevEpoch(headState)
 
 	var requestedEpoch uint64
 	var isGenesis bool
@@ -261,7 +262,7 @@ func (bs *Server) GetValidatorParticipation(
 	case *ethpb.GetValidatorParticipationRequest_Epoch:
 		requestedEpoch = q.Epoch
 	default:
-		requestedEpoch = currentEpoch
+		requestedEpoch = prevEpoch
 	}
 
 	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {
@@ -285,7 +286,7 @@ func (bs *Server) GetValidatorParticipation(
 			Finalized:     true,
 			Participation: participation,
 		}, nil
-	} else if requestedEpoch < helpers.SlotToEpoch(headState.Slot) {
+	} else if requestedEpoch < prevEpoch {
 		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
@@ -304,7 +305,7 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	// Else if the request is for the current epoch, we compute validator participation
 	// right away and return the result based on the head state.
-	participation, err := epoch.ComputeValidatorParticipation(headState)
+	participation, err := epoch.ComputeValidatorParticipation(headState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
 	}

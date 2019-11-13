@@ -811,7 +811,7 @@ func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
 		VotedEther:              20,
 		EligibleEther:           20,
 	}
-	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch-2, part); err != nil {
 		t.Fatal(err)
 	}
 
@@ -843,13 +843,13 @@ func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorParticipationResponse{
-		Epoch:         epoch,
+		Epoch:         epoch - 2,
 		Finalized:     true,
 		Participation: part,
 	}
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
 		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch,
+			Epoch: epoch - 2,
 		},
 	})
 	if err != nil {
@@ -900,7 +900,11 @@ func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
