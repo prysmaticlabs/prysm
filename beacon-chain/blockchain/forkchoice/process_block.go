@@ -486,7 +486,7 @@ func (s *Store) currentSlot() uint64 {
 
 // updates justified check point in store if a better check point is known
 func (s *Store) updateJustifiedCheckpoint() {
-	if s.currentSlot() % params.BeaconConfig().SlotsPerEpoch != 0 {
+	if !helpers.IsEpochStart(s.currentSlot()) {
 		return
 	}
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
