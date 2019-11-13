@@ -144,8 +144,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "3b5f0168af4331d09da52bebc26609def9d11be3e6c784ce7c3df3596617808d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.1/minimal.tar.gz",
 )
 
 http_archive(
