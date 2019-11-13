@@ -82,10 +82,12 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 
-	slotsPerEpoch := float32(params.BeaconConfig().SlotsPerEpoch)
+	slotsPerEpoch := float64(params.BeaconConfig().SlotsPerEpoch)
+	totalBalance := float64(participation.Participation.EligibleEther)
 	partRate := participation.Participation.GlobalParticipationRate
-	if partRate < (slotsPerEpoch-1)/slotsPerEpoch {
-		return fmt.Errorf("validator participation not as high as expected, received: %f", partRate)
+	expected := float32((totalBalance - totalBalance/slotsPerEpoch) / totalBalance)
+	if partRate < expected {
+		return fmt.Errorf("validator participation was below expected %f, received: %f", expected, partRate)
 	}
 	return nil
 }

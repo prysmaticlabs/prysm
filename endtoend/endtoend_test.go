@@ -189,7 +189,6 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key := bytes.NewReader(jsonBytes)
 	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
@@ -199,11 +198,10 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatalf("unable to advance chain: %v", err)
 	}
 
-	txOpts, err := bind.NewTransactor(key, "" /*password*/)
+	txOpts, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
 	if err != nil {
 		t.Fatal(err)
@@ -370,8 +368,7 @@ func initializeValidators(
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := bytes.NewReader(jsonBytes)
-	txOps, err := bind.NewTransactor(r, "" /*password*/)
+	txOps, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,6 +393,8 @@ func initializeValidators(
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Picked 20 for this as a "safe" number of blocks to mine so the deposits
+	// are detected.
 	if err := mineBlocks(web3, keystore, 20); err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +415,13 @@ func peersConnect(port uint64, expectedPeers uint64) error {
 	if err := response.Body.Close(); err != nil {
 		return err
 	}
+	// Subtracting by 2 here since the libp2p page has "3 peers" as text.
+	// With a starting index before the "p", going two characters back should give us
+	// the number we need.
 	startIdx := strings.Index(pageContent, "peers") - 2
+	if startIdx == -3 {
+		return fmt.Errorf("could not find needed text in %s", pageContent)
+	}
 	peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
 	if err != nil {
 		return err

@@ -29,11 +29,6 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 	}
 	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
 	finalizedEpoch := chainHead.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch
-	// Making sure currentEpoch > 2 since it's easier to tell
-	// when finalization is occuring after the third epoch.
-	if finalizedEpoch == 0 && currentEpoch <= 3 {
-		return nil
-	}
 
 	expectedFinalizedEpoch := currentEpoch - 2
 	if expectedFinalizedEpoch != finalizedEpoch {
