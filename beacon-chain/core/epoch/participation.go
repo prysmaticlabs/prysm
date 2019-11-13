@@ -11,6 +11,8 @@ import (
 
 // ComputeValidatorParticipation by matching validator attestations from the previous epoch,
 // computing the attesting balance, and how much attested compared to the total balance.
+// The previous epoch is used because it is deterministic, as the current epoch may not
+// have completed yet and will not give accurate results.
 func ComputeValidatorParticipation(state *pb.BeaconState, epoch uint64) (*ethpb.ValidatorParticipation, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	previousEpoch := helpers.PrevEpoch(state)
