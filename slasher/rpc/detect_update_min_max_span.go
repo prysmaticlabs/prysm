@@ -12,6 +12,9 @@ import (
 type detect func(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64
 
 // DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
+// max span is the span between the current attestation source epoch and the furthest attestation
+// target that its source epoch is lower then it.
+// distance.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
@@ -39,8 +42,10 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 	return 0, nil
 }
 
-// DetectAndUpdateMinEpochSpan is used to detect surround and update the min span
+// DetectAndUpdateMinEpochSpan is used to detect surround and update the min epoch span
 // of an incoming attestation.
+// min span is the span between the current attestation and the closest attestation target
+// distance.
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
