@@ -109,8 +109,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	// Small offset so evaluators perform in the middle of an epoch.
-	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(params.BeaconConfig().SlotsPerEpoch/2), 0)
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
 	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for c := range ticker.C() {
@@ -280,7 +280,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatalf("failed to start beacon node: %v", err)
 	}
 
-	if err = waitForTextInFile(file, "Connected to eth1 proof-of-work"); err != nil {
+	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -494,12 +494,12 @@ func logOutput(t *testing.T, tmpPath string) {
 }
 
 func waitForTextInFile(file *os.File, text string) error {
-	checks := 0
-	maxChecks := int(params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
-	// Put a limit on how many times we can check to prevent endless looping.
-	for checks < maxChecks {
-		// Pass some time to not spam file checks.
-		time.Sleep(1 * time.Second)
+	wait := 1
+	// Putting the wait cap at 16 since at this point its already been waiting
+	// for 15 seconds. Using exponential backoff.
+	maxWait := 8
+	for wait <= maxWait {
+		time.Sleep(time.Duration(wait) * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {
@@ -508,15 +508,17 @@ func waitForTextInFile(file *os.File, text string) error {
 
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
-			currentLine := scanner.Text()
-			if strings.Contains(currentLine, text) {
+			if strings.Contains(scanner.Text(), text) {
 				return nil
 			}
 		}
 		if err := scanner.Err(); err != nil {
 			return err
 		}
-		checks++
+		if wait == 1 {
+			wait++
+		}
+		wait *= wait
 	}
 	return fmt.Errorf("could not find requested text %s in logs", text)
 }

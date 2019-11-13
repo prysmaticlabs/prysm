@@ -27,7 +27,7 @@ var ValidatorsAreActive = Evaluator{
 // ValidatorsParticipating ensures the expected amount of validators are active.
 var ValidatorsParticipating = Evaluator{
 	Name:       "validators_participating_epoch_%d",
-	Policy:     everyEpochAfterGenesis,
+	Policy:     afterNthEpoch(1),
 	Evaluation: validatorsParticipating,
 }
 
@@ -35,8 +35,11 @@ func onGenesisEpoch(currentEpoch uint64) bool {
 	return currentEpoch < 2
 }
 
-func everyEpochAfterGenesis(currentEpoch uint64) bool {
-	return currentEpoch > 0
+// Not including first epoch because of issues with genesis.
+func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
+	return func(currentEpoch uint64) bool {
+		return currentEpoch > afterEpoch
+	}
 }
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
@@ -83,9 +86,8 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 	}
 
 	slotsPerEpoch := float64(params.BeaconConfig().SlotsPerEpoch)
-	totalBalance := float64(participation.Participation.EligibleEther)
 	partRate := participation.Participation.GlobalParticipationRate
-	expected := float32((totalBalance - totalBalance/slotsPerEpoch) / totalBalance)
+	expected := float32((slotsPerEpoch - 1) / slotsPerEpoch)
 	if partRate < expected {
 		return fmt.Errorf("validator participation was below expected %f, received: %f", expected, partRate)
 	}
