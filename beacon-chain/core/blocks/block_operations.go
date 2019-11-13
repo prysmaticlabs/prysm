@@ -682,7 +682,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return indices[i] < indices[j]
 	})
 	if !sorted {
-		return fmt.Errorf("attestingindices are not sorted, got %v", sorted)
+		return fmt.Errorf("attesting indices are not sorted, got %v", sorted)
 	}
 
 	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
