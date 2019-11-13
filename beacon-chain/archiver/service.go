@@ -115,7 +115,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState) error {
-	participation, err := epoch.ComputeValidatorParticipation(headState)
+	participation, err := epoch.ComputeValidatorParticipation(headState, helpers.SlotToEpoch(headState.Slot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute participation")
 	}
