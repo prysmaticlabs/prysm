@@ -99,7 +99,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 		if canUpdate {
 			s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-
 		}
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
