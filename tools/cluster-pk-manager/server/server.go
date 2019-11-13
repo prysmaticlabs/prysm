@@ -184,6 +184,7 @@ func (s *server) checkDepositTxs(ctx context.Context, txMap map[*keystore.Key]*t
 	for k, tx := range txMap {
 		receipt, err := s.client.TransactionReceipt(ctx, tx.Hash())
 		if err == ethereum.NotFound {
+			// tx still not processed yet
 			continue
 		}
 		if err != nil {
