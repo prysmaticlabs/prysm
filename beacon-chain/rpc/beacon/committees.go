@@ -44,6 +44,8 @@ func (bs *Server) ListBeaconCommittees(
 	var attesterSeed [32]byte
 	var activeIndices []uint64
 	var err error
+	// This is the archival condition, if the requested epoch is < current epoch or if we are
+	// requesting data from the genesis epoch.
 	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headState.Slot) {
 		activeIndices, err = helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
 		if err != nil {
