@@ -678,6 +678,13 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
 
+	sorted := sort.SliceIsSorted(indices, func(i, j int) bool {
+		return indices[i] < indices[j]
+	})
+	if !sorted {
+		return fmt.Errorf("attestingindices are not sorted, got %v", sorted)
+	}
+
 	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
@@ -705,7 +712,8 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 
-	if !sig.Verify(messageHash[:], pubkey, domain) {
+	voted := len(indices) > 0
+	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
 		return fmt.Errorf("attestation aggregation signature did not verify")
 	}
 	return nil
