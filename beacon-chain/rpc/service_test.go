@@ -42,30 +42,6 @@ func TestLifecycle_OK(t *testing.T) {
 
 }
 
-func TestRPC_BadEndpoint(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	rpcService := NewService(context.Background(), &Config{
-		Port:                "ralph merkle!!!",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &mock.ChainService{},
-		AttestationReceiver: &mock.ChainService{},
-		HeadFetcher:         &mock.ChainService{},
-		POWChainService:     &mockPOW.POWChain{},
-		StateFeedListener:   &mock.ChainService{},
-	})
-
-	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
-
-	rpcService.Start()
-
-	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
-
-	rpcService.Stop()
-}
-
 func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{credentialError: credentialErr}
