@@ -128,10 +128,6 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
 	currentEpoch := helpers.CurrentEpoch(headState)
-	committeeCount, err := helpers.CommitteeCountAtSlot(headState, helpers.StartSlot(currentEpoch))
-	if err != nil {
-		t.Fatal(err)
-	}
 	proposerSeed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		t.Fatal(err)
@@ -141,9 +137,8 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	wanted := &ethpb.ArchivedCommitteeInfo{
-		ProposerSeed:   proposerSeed[:],
-		AttesterSeed:   attesterSeed[:],
-		CommitteeCount: committeeCount * params.BeaconConfig().SlotsPerEpoch,
+		ProposerSeed: proposerSeed[:],
+		AttesterSeed: attesterSeed[:],
 	}
 
 	retrieved, err := svc.beaconDB.ArchivedCommitteeInfo(svc.ctx, helpers.CurrentEpoch(headState))

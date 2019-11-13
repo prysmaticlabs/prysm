@@ -42,7 +42,4 @@ message ArchivedCommitteeInfo {
 
     // Attester seed represents the random seed used in shuffling attesters.
     bytes attester_seed = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-
-    // Committee count is the size the committees during epoch N.
-    uint64 committee_count = 3;
 }
