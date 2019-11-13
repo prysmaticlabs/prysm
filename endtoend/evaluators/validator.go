@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,16 +40,7 @@ func everyEpochAfterGenesis(currentEpoch uint64) bool {
 }
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
-	in := new(ptypes.Empty)
-	chainHead, err := client.GetChainHead(context.Background(), in)
-	if err != nil {
-		return errors.Wrap(err, "failed to get chain head")
-	}
 	// Balances actually fluctuate but we just want to check initial balance.
-	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
-	if currentEpoch > 1 {
-		return nil
-	}
 	validatorRequest := &eth.GetValidatorsRequest{}
 	validators, err := client.GetValidators(context.Background(), validatorRequest)
 	if err != nil {
@@ -86,17 +76,7 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
 func validatorsParticipating(client eth.BeaconChainClient) error {
-	in := new(ptypes.Empty)
-	chainHead, err := client.GetChainHead(context.Background(), in)
-	if err != nil {
-		return errors.Wrap(err, "failed to get chain head")
-	}
-	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
-	validatorRequest := &eth.GetValidatorParticipationRequest{
-		QueryFilter: &eth.GetValidatorParticipationRequest_Epoch{
-			Epoch: currentEpoch - 1,
-		},
-	}
+	validatorRequest := &eth.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")

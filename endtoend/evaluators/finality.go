@@ -23,8 +23,7 @@ func afterThirdEpoch(currentEpoch uint64) bool {
 }
 
 func finalizationOccurs(client eth.BeaconChainClient) error {
-	in := new(ptypes.Empty)
-	chainHead, err := client.GetChainHead(context.Background(), in)
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}

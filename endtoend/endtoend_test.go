@@ -64,7 +64,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	config.tmpPath = tmpPath
-	fmt.Printf("Test Path: %s\n", tmpPath)
+	t.Logf("Test Path: %s\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -321,15 +321,15 @@ func initializeValidators(
 	keystorePath string,
 	beaconNodes []*beaconNodeInfo,
 ) []*validatorClientInfo {
-	tmpPath := config.tmpPath
-	contractAddress := config.contractAddr
-	validatorNum := config.numValidators
-	beaconNodeNum := config.numBeaconNodes
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
 	}
 
+	tmpPath := config.tmpPath
+	contractAddress := config.contractAddr
+	validatorNum := config.numValidators
+	beaconNodeNum := config.numBeaconNodes
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
@@ -360,17 +360,6 @@ func initializeValidators(
 		}
 	}
 
-	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Open(path.Join(tmpPath, fmt.Sprintf("vals-%d.log", n)))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err = waitForTextInFile(file, "Waiting for beacon chain start log"); err != nil {
-			t.Fatal(err)
-		}
-	}
-
 	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
 	if err != nil {
 		t.Fatal(err)
@@ -386,8 +375,8 @@ func initializeValidators(
 	if err != nil {
 		t.Fatal(err)
 	}
-	minDeposit := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
-	txOps.Value = minDeposit.Mul(minDeposit, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
+	depositInGwei := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
+	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = 4000000
 
 	contract, err := contracts.NewDepositContract(contractAddress, web3)
@@ -396,21 +385,11 @@ func initializeValidators(
 	}
 
 	deposits, roots, _ := testutil.SetupInitialDeposits(t, validatorNum)
-	var tx *types.Transaction
 	for index, dd := range deposits {
-		tx, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
+		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {
 			t.Error("unable to send transaction to contract")
-			continue
 		}
-	}
-
-	// Wait for last tx to mine.
-	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
-		if err != nil {
-			t.Fatal(err)
-		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
