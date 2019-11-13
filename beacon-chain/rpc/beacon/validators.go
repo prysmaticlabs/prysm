@@ -5,7 +5,9 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -13,8 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
@@ -25,7 +25,7 @@ func (bs *Server) ListValidatorBalances(
 	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
@@ -50,12 +50,12 @@ func (bs *Server) ListValidatorBalances(
 	if requestingGenesis {
 		balances, err = bs.BeaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
 		}
 	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
 		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "could not retrieve balances for epoch %d", epoch)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
 		}
 	} else {
 		balances = headState.Balances
@@ -69,16 +69,16 @@ func (bs *Server) ListValidatorBalances(
 
 		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.Internal, "could not find validator index for public key  %#x not found", pubKey)
+			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
 		}
 
 		filtered[index] = true
 
 		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -92,10 +92,10 @@ func (bs *Server) ListValidatorBalances(
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
 			if epoch <= helpers.CurrentEpoch(headState) {
-				return nil, status.Errorf(codes.OutOfRange, "validator index %d does not exist in historical balances",
+				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
 					index)
 			}
-			return nil, status.Errorf(codes.OutOfRange, "validator index %d >= balance list %d",
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
 
@@ -122,7 +122,11 @@ func (bs *Server) ListValidatorBalances(
 	balancesCount := len(res)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not paginate results: %v",
+			err,
+		)
 	}
 	return &ethpb.ValidatorBalances{
 		Epoch:         epoch,
@@ -139,7 +143,7 @@ func (bs *Server) GetValidators(
 	req *ethpb.GetValidatorsRequest,
 ) (*ethpb.Validators, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
@@ -172,7 +176,11 @@ func (bs *Server) GetValidators(
 	validatorCount := len(validators)
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not paginate results: %v",
+			err,
+		)
 	}
 
 	return &ethpb.Validators{
@@ -267,8 +275,8 @@ func (bs *Server) GetValidatorParticipation(
 
 	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {
 		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", requestedEpoch, currentEpoch,
+			codes.InvalidArgument,
+			"Cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", requestedEpoch, currentEpoch,
 		)
 	}
 	// If the request is from genesis or another past epoch, we look into our archived
@@ -276,10 +284,10 @@ func (bs *Server) GetValidatorParticipation(
 	if isGenesis {
 		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, 0)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
-			return nil, status.Error(codes.NotFound, "could not find archival data for epoch 0")
+			return nil, status.Error(codes.NotFound, "Could not find archival data for epoch 0")
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         0,
@@ -289,10 +297,10 @@ func (bs *Server) GetValidatorParticipation(
 	} else if requestedEpoch < prevEpoch {
 		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch archived participation: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
-			return nil, status.Errorf(codes.NotFound, "could not find archival data for epoch %d", requestedEpoch)
+			return nil, status.Errorf(codes.NotFound, "Could not find archival data for epoch %d", requestedEpoch)
 		}
 		finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
@@ -307,7 +315,7 @@ func (bs *Server) GetValidatorParticipation(
 	// right away and return the result based on the head state.
 	participation, err := epoch.ComputeValidatorParticipation(headState, requestedEpoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not compute participation: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not compute participation: %v", err)
 	}
 	return &ethpb.ValidatorParticipationResponse{
 		Epoch:         currentEpoch,
@@ -348,7 +356,7 @@ func (bs *Server) GetValidatorQueue(
 	activationQueueChurn := len(activationQ)
 	churnLimit, err := helpers.ValidatorChurnLimit(headState)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
+		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
 	}
 
 	exitQueueEpoch := uint64(0)

@@ -23,7 +23,7 @@ func (bs *Server) ListBeaconCommittees(
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"requested page size %d can not be greater than max size %d",
+			"Requested page size %d can not be greater than max size %d",
 			req.PageSize,
 			params.BeaconConfig().MaxPageSize,
 		)
@@ -51,7 +51,7 @@ func (bs *Server) ListBeaconCommittees(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"could not retrieve active indices for epoch %d: %v",
+				"Could not retrieve active indices for epoch %d: %v",
 				helpers.SlotToEpoch(startSlot),
 				err,
 			)
@@ -60,7 +60,7 @@ func (bs *Server) ListBeaconCommittees(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"could not request archival data for epoch %d: %v",
+				"Could not request archival data for epoch %d: %v",
 				helpers.SlotToEpoch(startSlot),
 				err,
 			)
@@ -68,7 +68,7 @@ func (bs *Server) ListBeaconCommittees(
 		if archivedCommitteeInfo == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				helpers.SlotToEpoch(startSlot),
 			)
 		}
@@ -80,7 +80,7 @@ func (bs *Server) ListBeaconCommittees(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"could not retrieve active indices for current epoch %d: %v",
+				"Could not retrieve active indices for current epoch %d: %v",
 				currentEpoch,
 				err,
 			)
@@ -89,7 +89,7 @@ func (bs *Server) ListBeaconCommittees(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"could not retrieve attester seed for current epoch %d: %v",
+				"Could not retrieve attester seed for current epoch %d: %v",
 				currentEpoch,
 				err,
 			)
@@ -97,8 +97,8 @@ func (bs *Server) ListBeaconCommittees(
 	} else {
 		// Otherwise, we are requesting data from the future and we return an error.
 		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
 			helpers.SlotToEpoch(headState.Slot),
 			helpers.StartSlot(startSlot),
 		)
@@ -120,7 +120,7 @@ func (bs *Server) ListBeaconCommittees(
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"could not compute committee for slot %d: %v",
+					"Could not compute committee for slot %d: %v",
 					slot,
 					err,
 				)
@@ -136,8 +136,8 @@ func (bs *Server) ListBeaconCommittees(
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
 	if err != nil {
 		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"could not paginate results: %v",
+			codes.Internal,
+			"Could not paginate results: %v",
 			err,
 		)
 	}
