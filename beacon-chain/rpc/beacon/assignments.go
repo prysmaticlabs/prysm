@@ -47,7 +47,7 @@ func (bs *Server) ListValidatorAssignments(
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key  %#x not found", pubKey)
+			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
 		}
 		filtered[index] = true
 		filteredIndices = append(filteredIndices, index)
@@ -71,14 +71,14 @@ func (bs *Server) ListValidatorAssignments(
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(filteredIndices))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not paginate items: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not paginate results: %v", err)
 	}
 
 	shouldFetchFromArchive := requestedEpoch < bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= len(headState.Validators) {
-			return nil, status.Errorf(codes.InvalidArgument, "Validator index %d >= validator count %d",
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
 		if shouldFetchFromArchive {
@@ -93,7 +93,7 @@ func (bs *Server) ListValidatorAssignments(
 			if archivedInfo == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"No archival committee info found for epoch %d",
+					"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}
@@ -108,7 +108,7 @@ func (bs *Server) ListValidatorAssignments(
 			if archivedBalances == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"No archival balances found for epoch %d",
+					"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}

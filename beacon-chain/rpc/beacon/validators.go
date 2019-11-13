@@ -5,9 +5,6 @@ import (
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -15,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
@@ -52,10 +51,24 @@ func (bs *Server) ListValidatorBalances(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
 		}
+		if balances == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				0,
+			)
+		}
 	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
 		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
+		}
+		if balances == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				epoch,
+			)
 		}
 	} else {
 		balances = headState.Balances
@@ -217,7 +230,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if requestedEpoch < finalizedEpoch {
 		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch archived active validator changes: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch archived active validator changes: %v", err)
 		}
 		activatedIndices = archivedChanges.Activated
 		slashedIndices = archivedChanges.Slashed
@@ -227,7 +240,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = validators.SlashedValidatorIndices(headState)
 		exitedIndices, err = validators.ExitedValidatorIndices(headState)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not determine exited validator indices: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
 	}
 
@@ -287,7 +300,11 @@ func (bs *Server) GetValidatorParticipation(
 			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
-			return nil, status.Error(codes.NotFound, "Could not find archival data for epoch 0")
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				0,
+			)
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         0,
@@ -300,7 +317,11 @@ func (bs *Server) GetValidatorParticipation(
 			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
 		}
 		if participation == nil {
-			return nil, status.Errorf(codes.NotFound, "Could not find archival data for epoch %d", requestedEpoch)
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not request data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				requestedEpoch,
+			)
 		}
 		finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
