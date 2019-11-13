@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -89,8 +90,16 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
+	s.updateJustifiedCheckpoint()
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		s.bestJustifiedCheckpt = s.justifiedCheckpt
+		canUpdate, err := s.shouldUpdateJustified(ctx, postState.CurrentJustifiedCheckpoint)
+		if err != nil {
+			return err
+		}
+		if canUpdate {
+			s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		}
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
 		}
@@ -294,7 +303,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	for _, i := range indexedAtt.AttestingIndices {
 		vote, err := s.db.ValidatorLatestVote(ctx, i)
 		if err != nil {
 			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
@@ -439,4 +448,48 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	}
 
 	return nil
+}
+
+// shouldUpdateJustified prevents bouncing attack, by only update conflicting justified
+// checkpoints in the fork choice if in the early slots of the epoch.
+// Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
+// See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+func (s *Store) shouldUpdateJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+		return true, nil
+	}
+	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+		return false, nil
+	}
+	justifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	if err != nil {
+		return false, err
+	}
+	if !bytes.Equal(b, s.justifiedCheckpt.Root) {
+		return false, nil
+	}
+	return true, nil
+}
+
+// currentSlot returns the current slot based on time.
+func (s *Store) currentSlot() uint64 {
+	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+}
+
+// updates justified check point in store if a better check point is known
+func (s *Store) updateJustifiedCheckpoint() {
+	if helpers.SlotsSinceEpochStarts(s.currentSlot()) == 0 {
+		return
+	}
+	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+		s.justifiedCheckpt = s.bestJustifiedCheckpt
+	}
 }

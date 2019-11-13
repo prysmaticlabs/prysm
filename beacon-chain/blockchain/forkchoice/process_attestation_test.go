@@ -82,18 +82,21 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErrString: "pre state of target block 0 does not exist",
 		},
 		{
-			name: "process attestation from future epoch",
+			name: "process attestation doesn't match current epoch",
 			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: params.BeaconConfig().FarFutureEpoch,
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not process slot from the future",
+			wantErrString: "does not match current epoch",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+			if err := store.GenesisStore(
+				ctx,
+				&ethpb.Checkpoint{Root: BlkWithValidStateRoot[:]},
+				&ethpb.Checkpoint{Root: BlkWithValidStateRoot[:]}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -131,7 +134,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
-	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	r := [32]byte{'g'}
+	if err := store.db.SaveState(ctx, s, r); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -178,7 +185,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
-	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
@@ -256,5 +263,51 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 
 	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
+	}
+}
+
+func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	if err := store.verifyAttTargetEpoch(
+		ctx,
+		0,
+		params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
+		&ethpb.Checkpoint{}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	if err := store.verifyAttTargetEpoch(
+		ctx,
+		0,
+		params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
+		&ethpb.Checkpoint{Epoch: 1}); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestAttEpoch_NotMatch(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	if err := store.verifyAttTargetEpoch(
+		ctx,
+		0,
+		2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
+		&ethpb.Checkpoint{}); !strings.Contains(err.Error(),
+		"target epoch 0 does not match current epoch 2 or prev epoch 1") {
+		t.Error("Did not receive wanted error")
 	}
 }

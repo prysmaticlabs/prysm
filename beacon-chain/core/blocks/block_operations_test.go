@@ -646,26 +646,6 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
-	slashings := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 0},
-				},
-				CustodyBit_0Indices: []uint64{0, 1, 2},
-				CustodyBit_1Indices: []uint64{0, 1, 2},
-			},
-			Attestation_2: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 0},
-				},
-				CustodyBit_0Indices: []uint64{0, 1, 2},
-				CustodyBit_1Indices: []uint64{0, 1, 2},
-			},
-		},
-	}
 	registry := []*ethpb.Validator{}
 	currentSlot := uint64(0)
 
@@ -673,39 +653,33 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		Validators: registry,
 		Slot:       currentSlot,
 	}
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			AttesterSlashings: slashings,
-		},
-	}
-	want := fmt.Sprint("expected no bit 1 indices")
 
-	if _, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-
-	slashings = []*ethpb.AttesterSlashing{
+	slashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
+				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 0},
 					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
-				CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
+				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			},
 		},
 	}
 
-	block.Body.AttesterSlashings = slashings
-	want = fmt.Sprint("over max number of allowed indices")
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			AttesterSlashings: slashings,
+		},
+	}
 
+	want := fmt.Sprint("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE")
 	if _, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -723,13 +697,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -744,13 +714,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -865,7 +831,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
 	aggBits := bitfield.NewBitlist(3)
-	custodyBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -873,7 +838,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 				Source: &ethpb.Checkpoint{Epoch: 1},
 			},
 			AggregationBits: aggBits,
-			CustodyBits:     custodyBits,
 		},
 	}
 	block := &ethpb.BeaconBlock{
@@ -923,7 +887,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
@@ -932,7 +895,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 				Slot:   1,
 			},
 			AggregationBits: aggBits,
-			CustodyBits:     custodyBits,
 		},
 	}
 	block := &ethpb.BeaconBlock{
@@ -979,13 +941,11 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	}
 
 	aggBits := bitfield.NewBitlist(4)
-	custodyBits := bitfield.NewBitlist(4)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	block := &ethpb.BeaconBlock{
@@ -1016,14 +976,12 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(3)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
@@ -1033,11 +991,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1079,11 +1033,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
 	aggBits1.SetBitAt(2, true)
-	custodyBits1 := bitfield.NewBitlist(4)
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
-		CustodyBits:     custodyBits1,
 	}
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
@@ -1093,11 +1045,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataAndCustodyBit1 := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit1)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1112,22 +1060,16 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	aggBits2.SetBitAt(1, true)
 	aggBits2.SetBitAt(2, true)
 	aggBits2.SetBitAt(3, true)
-	custodyBits2 := bitfield.NewBitlist(4)
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
-		CustodyBits:     custodyBits2,
 	}
 
 	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataAndCustodyBit2 := &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit2)
+	hashTreeRoot, err = ssz.HashTreeRoot(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1159,11 +1101,9 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
-	custodyBits1 := bitfield.NewBitlist(9)
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
-		CustodyBits:     custodyBits1,
 	}
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
@@ -1173,11 +1113,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataAndCustodyBit1 := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit1)
+	hashTreeRoot, err := ssz.HashTreeRoot(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1191,22 +1127,16 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	aggBits2 := bitfield.NewBitlist(9)
 	aggBits2.SetBitAt(2, true)
 	aggBits2.SetBitAt(3, true)
-	custodyBits2 := bitfield.NewBitlist(9)
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
-		CustodyBits:     custodyBits2,
 	}
 
 	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataAndCustodyBit2 := &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit2)
+	hashTreeRoot, err = ssz.HashTreeRoot(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1245,14 +1175,12 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(3)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	zeroSig := [96]byte{}
@@ -1283,28 +1211,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
-		aggregationBitfield      bitfield.Bitlist
-		custodyBitfield          bitfield.Bitlist
-		wantedCustodyBit0Indices []uint64
-		wantedCustodyBit1Indices []uint64
+		aggregationBitfield    bitfield.Bitlist
+		wantedAttestingIndices []uint64
 	}{
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x07},
-			custodyBitfield:          bitfield.Bitlist{0x05},
-			wantedCustodyBit0Indices: []uint64{4},
-			wantedCustodyBit1Indices: []uint64{30},
+			aggregationBitfield:    bitfield.Bitlist{0x07},
+			wantedAttestingIndices: []uint64{4, 30},
 		},
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x07},
-			custodyBitfield:          bitfield.Bitlist{0x06},
-			wantedCustodyBit0Indices: []uint64{30},
-			wantedCustodyBit1Indices: []uint64{4},
+			aggregationBitfield:    bitfield.Bitlist{0x03},
+			wantedAttestingIndices: []uint64{30},
 		},
 		{
-			aggregationBitfield:      bitfield.Bitlist{0x07},
-			custodyBitfield:          bitfield.Bitlist{0x07},
-			wantedCustodyBit0Indices: []uint64{},
-			wantedCustodyBit1Indices: []uint64{4, 30},
+			aggregationBitfield:    bitfield.Bitlist{0x01},
+			wantedAttestingIndices: []uint64{},
 		},
 	}
 
@@ -1319,12 +1239,10 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		helpers.ClearAllCaches()
 
 		attestation.AggregationBits = tt.aggregationBitfield
-		attestation.CustodyBits = tt.custodyBitfield
 		wanted := &ethpb.IndexedAttestation{
-			CustodyBit_0Indices: tt.wantedCustodyBit0Indices,
-			CustodyBit_1Indices: tt.wantedCustodyBit1Indices,
-			Data:                attestation.Data,
-			Signature:           attestation.Signature,
+			AttestingIndices: tt.wantedAttestingIndices,
+			Data:             attestation.Data,
+			Signature:        attestation.Signature,
 		}
 		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation)
 		if err != nil {
@@ -1370,7 +1288,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 2,
 				},
 			},
-			CustodyBit_0Indices: []uint64{1},
+			AttestingIndices: []uint64{1},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1378,7 +1296,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 1,
 				},
 			},
-			CustodyBit_0Indices: []uint64{47, 99},
+			AttestingIndices: []uint64{47, 99},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1386,7 +1304,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 4,
 				},
 			},
-			CustodyBit_0Indices: []uint64{21, 72},
+			AttestingIndices: []uint64{21, 72},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1394,27 +1312,22 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 7,
 				},
 			},
-			CustodyBit_0Indices: []uint64{100, 121},
+			AttestingIndices: []uint64{100, 121},
 		}},
 	}
 
 	for _, tt := range tests {
 		helpers.ClearAllCaches()
 
-		attDataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-			Data:       tt.attestation.Data,
-			CustodyBit: false,
-		}
-
 		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
-		root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
+		root, err := ssz.HashTreeRoot(tt.attestation.Data)
 		if err != nil {
 			t.Errorf("Could not find the ssz root: %v", err)
 			continue
 		}
 		var sig []*bls.Signature
-		for _, idx := range tt.attestation.CustodyBit_0Indices {
+		for _, idx := range tt.attestation.AttestingIndices {
 			validatorSig := keys[idx].Sign(root[:], domain)
 			sig = append(sig, validatorSig)
 		}
@@ -1432,15 +1345,14 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 
 func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	indexedAtt1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+5),
-		CustodyBit_1Indices: []uint64{},
+		AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+5),
 	}
 
 	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee+5; i++ {
-		indexedAtt1.CustodyBit_0Indices[i] = i
+		indexedAtt1.AttestingIndices[i] = i
 	}
 
-	want := "over max number of allowed indices"
+	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
 	if err := blocks.VerifyIndexedAttestation(context.Background(), &pb.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected verification to fail return false, received: %v", err)
 	}

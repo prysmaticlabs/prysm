@@ -51,7 +51,7 @@ import (
 //    assert is_valid_indexed_attestation(target_state, indexed_attestation)
 //
 //    # Update latest messages
-//    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
+//    for i in indexed_attestation.attesting_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
 func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
@@ -69,6 +69,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 	// Verify attestation target has had a valid pre state produced by the target block.
 	baseState, err := s.verifyAttPreState(ctx, tgt)
 	if err != nil {
+		return 0, err
+	}
+
+	// Verify attestation is from current epoch or previous epoch.
+	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime, uint64(time.Now().Unix()), tgt); err != nil {
 		return 0, err
 	}
 
@@ -132,6 +137,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 		return 0, err
 	}
 
+	s.updateJustifiedCheckpoint()
+
 	return tgtSlot, nil
 }
 
@@ -145,6 +152,21 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 	return baseState, nil
+}
+
+// verifyAttTargetEpoch validates attestation is from the current or previous epoch.
+func (s *Store) verifyAttTargetEpoch(ctx context.Context, genesisTime uint64, nowTime uint64, c *ethpb.Checkpoint) error {
+	currentSlot := (nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	var prevEpoch uint64
+	// Prevents previous epoch under flow
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return fmt.Errorf("target epoch %d does not match current epoch %d or prev epoch %d", c.Epoch, currentEpoch, prevEpoch)
+	}
+	return nil
 }
 
 // saveCheckpointState saves and returns the processed state with the associated check point.
@@ -236,7 +258,7 @@ func (s *Store) updateAttVotes(
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
 
-	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
+	indices := indexedAtt.AttestingIndices
 	newVoteIndices := make([]uint64, 0, len(indices))
 	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
 	for _, i := range indices {

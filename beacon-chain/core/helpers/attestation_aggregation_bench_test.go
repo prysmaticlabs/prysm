@@ -89,7 +89,6 @@ func BenchmarkAggregateAttestations(b *testing.B) {
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
 				Data:            nil,
-				CustodyBits:     nil,
 				Signature:       bls.NewAggregateSignature().Marshal(),
 			}
 		}
