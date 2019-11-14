@@ -2,6 +2,7 @@ package bls_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	b := bls.RandKey().Marshal()
+	b := []byte("hi")
 	b32 := bytesutil.ToBytes32(b)
 	pk, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
@@ -25,7 +26,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 }
 
 func TestSignVerify(t *testing.T) {
-	priv := bls.RandKey()
+	priv, _ := bls.RandKey(rand.Reader)
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg, 0)
@@ -40,7 +41,7 @@ func TestVerifyAggregate(t *testing.T) {
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := bls.RandKey()
+		priv, _ := bls.RandKey(rand.Reader)
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:], 0)
 		pubkeys = append(pubkeys, pub)
@@ -56,11 +57,11 @@ func TestVerifyAggregate(t *testing.T) {
 func TestVerifyAggregateCommon(t *testing.T) {
 	pubkeys := make([]*bls.PublicKey, 0, 100)
 	sigs := make([]*bls.Signature, 0, 100)
-	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
-		priv := bls.RandKey()
+		priv, _ := bls.RandKey(rand.Reader)
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:], 0)
+		sig := priv.Sign(msg, 0)
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 	}
@@ -73,7 +74,7 @@ func TestVerifyAggregateCommon(t *testing.T) {
 func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	var pubkeys []*bls.PublicKey
 	sigs := make([]*bls.Signature, 0, 100)
-	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	msg := []byte("hello")
 
 	aggSig := bls.AggregateSignatures(sigs)
 	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0 /*domain*/) != false {

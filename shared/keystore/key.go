@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
@@ -152,7 +153,10 @@ func NewKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 
 // NewKey generates a new random key.
 func NewKey(rand io.Reader) (*Key, error) {
-	secretKey := bls.RandKey()
+	secretKey, err := bls.RandKey(rand)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate random key")
+	}
 	return NewKeyFromBLS(secretKey)
 }
 
