@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/karlseguin/ccache"
-	bls12 "github.com/kilic/bls12-381"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 )
