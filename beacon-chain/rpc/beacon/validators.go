@@ -232,6 +232,13 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch archived active validator changes: %v", err)
 		}
+		if archivedChanges == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				requestedEpoch,
+			)
+		}
 		activatedIndices = archivedChanges.Activated
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
