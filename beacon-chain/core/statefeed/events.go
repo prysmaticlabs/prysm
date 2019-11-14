@@ -29,7 +29,7 @@ type Event struct {
 // BlockReceivedData is the data sent with BlockReceived events.
 type BlockReceivedData struct {
 	// BlockHash is the hash of the received block.
-	BlockHash [32]byte
+	BlockRoot [32]byte
 }
 
 // BlockProcessedData is the data sent with BlockProcessed events.
