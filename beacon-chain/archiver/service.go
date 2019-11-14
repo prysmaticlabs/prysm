@@ -136,7 +136,7 @@ func (s *Service) run(ctx context.Context) {
 			switch event.Type {
 			case statefeed.BlockProcessed:
 				data := event.Data.(*statefeed.BlockProcessedData)
-				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockHash)).Debug("New chain head event")
+				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockHash)).Debug("Received block processed event")
 				headState := s.headFetcher.HeadState()
 				if !helpers.IsEpochEnd(headState.Slot) {
 					continue

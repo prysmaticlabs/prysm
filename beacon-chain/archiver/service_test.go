@@ -43,7 +43,7 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	}
 	triggerStateEvent(t, svc, event)
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", event.Data.(*statefeed.BlockProcessedData).BlockHash))
-	testutil.AssertLogsContain(t, hook, "New chain head event")
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
 }
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
@@ -66,7 +66,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	if svc.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "New chain head event")
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
 	// The service should ONLY log any archival logs if we receive a
 	// head slot that is an epoch end.
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived")
