@@ -72,6 +72,31 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 
+	beaconState := beaconState2Epochs(b)
+	cleanStates := createCleanStates(beaconState)
+	block := fullBlock(b)
+
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		fmt.Println(i)
+		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkGenerateMarshalledFullStateAndBlock(b *testing.B) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	attsPerEpoch := uint64(benchmarkConfig().MaxAttestations)
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (attsPerEpoch / slotsPerEpoch)
+	c := params.BeaconConfig()
+	c.PersistentCommitteePeriod = 0
+	c.MinValidatorWithdrawabilityDelay = 0
+	c.TargetCommitteeSize = committeeSize
+	c.MaxAttestations = benchmarkConfig().MaxAttestations
+	params.OverrideBeaconConfig(c)
+
 	beaconState := genesisBeaconState(b)
 
 	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
@@ -86,7 +111,6 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 
 	// Process beacon state to mid-epoch to prevent epoch calculations from manipulating benchmarks.
 	for i := uint64(0); i < 2; i++ {
-		fmt.Printf("state at slot %d\n", beaconState.Slot)
 		block := testutil.GenerateFullBlock(b, beaconState, privs, conf, i)
 		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
 		if err != nil {
@@ -94,13 +118,13 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 		}
 	}
 
+	attConfig := &testutil.BlockGenConfig{
+		MaxAttestations: 2,
+		Signatures:      true,
+	}
 	atts := []*ethpb.Attestation{}
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch-1; i++ {
 		fmt.Printf("state at slot %d\n", beaconState.Slot)
-		attConfig := &testutil.BlockGenConfig{
-			MaxAttestations: 2,
-			Signatures:      true,
-		}
 		attsForSlot := testutil.GenerateAttestations(b, beaconState, privs, attConfig)
 		atts = append(atts, attsForSlot...)
 		block := testutil.GenerateFullBlock(b, beaconState, privs, conf, beaconState.Slot)
@@ -110,11 +134,7 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 		}
 	}
 
-	conf = &testutil.BlockGenConfig{
-		MaxAttestations: 2,
-		Signatures:      true,
-	}
-	block := testutil.GenerateFullBlock(b, beaconState, privs, conf, beaconState.Slot)
+	block := testutil.GenerateFullBlock(b, beaconState, privs, attConfig, beaconState.Slot)
 	block.Body.Attestations = append(atts, block.Body.Attestations[0])
 	fmt.Println(len(block.Body.Attestations))
 
@@ -142,15 +162,20 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 
-	cleanStates := createCleanStates(beaconState)
+	beaconBytes, err := proto.Marshal(beaconState)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := ioutil.WriteFile("beaconState2Epochs.bytes", beaconBytes); err != nil {
+		b.Fatal(err)
+	}
 
-	b.N = runAmount
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		fmt.Println(i)
-		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
-			b.Fatal(err)
-		}
+	blockBytes, err := proto.Marshal(block)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := ioutil.WriteFile("block127Atts.bytes", blockBytes); err != nil {
+		b.Fatal(err)
 	}
 }
 
@@ -243,20 +268,32 @@ func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
 	}
 }
 
+func BenchmarkSaveGenesisBeaconState(b *testing.B) {
+	testutil.SetupInitialDeposits(b, validatorCount)
+	genesisState := state.GenesisBeaconState()
+	beaconBytes, err := proto.Marshal(genesisState)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := ioutil.WriteFile("genesisState.bytes", beaconBytes); err != nil {
+		b.Fatal(err)
+	}
+}
+
 func genesisBeaconState(b testing.TB) *pb.BeaconState {
-	beaconBytes, err := ioutil.ReadFile("genesisState.ssz")
+	beaconBytes, err := ioutil.ReadFile("genesisState.bytes")
 	if err != nil {
 		b.Fatal(err)
 	}
 	genesisState := &pb.BeaconState{}
-	if err := ssz.Unmarshal(beaconBytes, genesisState); err != nil {
+	if err := proto.Unmarshal(beaconBytes, genesisState); err != nil {
 		b.Fatal(err)
 	}
 	return genesisState
 }
 
 func beaconState2Epochs(b testing.TB) *pb.BeaconState {
-	beaconBytes, err := ioutil.ReadFile("beaconState2Epochs.ssz")
+	beaconBytes, err := ioutil.ReadFile("beaconState2Epochs.bytes")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -267,7 +304,19 @@ func beaconState2Epochs(b testing.TB) *pb.BeaconState {
 	return beaconState
 }
 
-func createCleanStates(beaconState *pb.BeaconState) []*pb.BeaconState {
+func fullBlock(b testing.TB) *pb.BeaconState {
+	beaconBytes, err := ioutil.ReadFile("block127Atts.bytes")
+	if err != nil {
+		b.Fatal(err)
+	}
+	beaconState := &pb.BeaconState{}
+	if err := proto.Unmarshal(beaconBytes, beaconState); err != nil {
+		b.Fatal(err)
+	}
+	return beaconState
+}
+
+func cloneState(beaconState *pb.BeaconState) []*pb.BeaconState {
 	cleanStates := make([]*pb.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
 		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
