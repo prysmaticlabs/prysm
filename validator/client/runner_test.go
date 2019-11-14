@@ -124,10 +124,10 @@ func TestAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	if !v.AttestToBlockHeadCalled {
-		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
+		t.Fatalf("SubmitAttestation(%d) was not called", slot)
 	}
 	if v.AttestToBlockHeadArg1 != slot {
-		t.Errorf("AttestToBlockHead was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
+		t.Errorf("SubmitAttestation was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RoleAtRet = pb.ValidatorRole_PROPOSER
+	v.RoleAtRet = pb.ValidatorRole_BOTH
 	go func() {
 		ticker <- slot
 
@@ -172,10 +172,10 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	if !v.AttestToBlockHeadCalled {
-		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
+		t.Fatalf("SubmitAttestation(%d) was not called", slot)
 	}
 	if v.AttestToBlockHeadArg1 != slot {
-		t.Errorf("AttestToBlockHead was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
+		t.Errorf("SubmitAttestation was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
 	}
 	if !v.ProposeBlockCalled {
 		t.Fatalf("ProposeBlock(%d) was not called", slot)

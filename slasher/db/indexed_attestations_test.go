@@ -19,27 +19,18 @@ func init() {
 			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0},
 				Target: &ethpb.Checkpoint{Epoch: 1},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 4,
-				},
 			}},
 		},
 		{
 			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 2nd"), CustodyBit_0Indices: []uint64{1, 2}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0},
 				Target: &ethpb.Checkpoint{Epoch: 2},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 4,
-				},
 			}},
 		},
 		{
 			iA: &ethpb.IndexedAttestation{Signature: []byte("let me in 3rd"), CustodyBit_0Indices: []uint64{0}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 2},
-				Crosslink: &ethpb.Crosslink{
-					Shard: 4,
-				},
 			}},
 		},
 	}

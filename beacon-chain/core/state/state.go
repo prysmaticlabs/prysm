@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -26,6 +25,7 @@ import (
 //	    genesis_time=eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
 //	    eth1_data=Eth1Data(block_hash=eth1_block_hash, deposit_count=len(deposits)),
 //	    latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
+//        randao_mixes=[eth1_block_hash] * EPOCHS_PER_HISTORICAL_VECTOR,  # Seed RANDAO with Eth1 entropy
 //	  )
 //
 //	  # Process deposits
@@ -52,9 +52,15 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
+		h := make([]byte, 32)
+		copy(h, eth1Data.BlockHash)
+		randaoMixes[i] = h
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
@@ -62,16 +68,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
-	}
-
-	compactRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
 	}
 
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
@@ -85,10 +81,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
 
 	eth1Data.DepositCount = uint64(len(deposits))
 
@@ -125,11 +117,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		// Recent state.
-		CurrentCrosslinks:         crosslinks,
-		PreviousCrosslinks:        crosslinks,
-		ActiveIndexRoots:          activeIndexRoots,
-		CompactCommitteesRoots:    compactRoots,
 		HistoricalRoots:           [][]byte{},
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
@@ -197,23 +184,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		}
 	}
 
-	// Populate latest_active_index_roots
-	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active validator indices")
-	}
-	genesisActiveIndexRoot, err := ssz.HashTreeRootWithCapacity(activeIndices, params.BeaconConfig().ValidatorRegistryLimit)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root active indices")
-	}
-	genesisCompactCommRoot, err := helpers.CompactCommitteesRoot(state, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get compact committee root")
-	}
-	for i := uint64(0); i < params.BeaconConfig().EpochsPerHistoricalVector; i++ {
-		state.ActiveIndexRoots[i] = genesisActiveIndexRoot[:]
-		state.CompactCommitteesRoots[i] = genesisCompactCommRoot[:]
-	}
 	return state, nil
 }
 

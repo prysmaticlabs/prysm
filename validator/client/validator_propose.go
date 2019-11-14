@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -30,39 +32,33 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
+	// Sign randao reveal, it's used to request block from beacon node
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
 	if err != nil {
-		log.WithError(err).Error("Failed to get domain data from beacon node")
+		log.WithError(err).Error("Failed to sign randao reveal")
 		return
 	}
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	randaoReveal := v.keys[pubKey].SecretKey.Sign(buf, domain.SignatureDomain)
 
+	// Request block from beacon node
 	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
-		RandaoReveal: randaoReveal.Marshal(),
+		RandaoReveal: randaoReveal,
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to request block from beacon node")
 		return
 	}
 
-	domain, err = v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
-	if err != nil {
-		log.WithError(err).Error("Failed to get domain data from beacon node")
-		return
-	}
-	root, err := ssz.SigningRoot(b)
+	// Sign returned block from beacon node
+	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
-	signature := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
-	b.Signature = signature.Marshal()
+	b.Signature = sig
 
-	// Broadcast network the signed block via beacon chain node.
+	// Propose and broadcast block via beacon node
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
@@ -82,4 +78,30 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 	}).Info("Submitted new block")
+}
+
+// Sign randao reveal with randao domain and private key.
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get domain data")
+	}
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	randaoReveal := v.keys[pubKey].SecretKey.Sign(buf, domain.SignatureDomain)
+	return randaoReveal.Marshal(), nil
+}
+
+// Sign block with proposer domain and private key.
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get domain data")
+	}
+	root, err := ssz.SigningRoot(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get signing root")
+	}
+	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
+	return sig.Marshal(), nil
 }

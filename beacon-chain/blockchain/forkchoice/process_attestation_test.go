@@ -55,8 +55,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -118,30 +117,19 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
-	}
 	s := &pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
-		JustificationBits:          []byte{0},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-		CurrentCrosslinks:          crosslinks,
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		RandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
+		JustificationBits:   []byte{0},
+		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
@@ -210,7 +198,7 @@ func TestStore_AggregateAttestation(t *testing.T) {
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		Epoch:           0,
 	}
-	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(f, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig := privKeys[0].Sign([]byte{}, domain)
 
 	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}

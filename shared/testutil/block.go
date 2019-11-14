@@ -202,18 +202,12 @@ func generateAttesterSlashings(
 ) []*ethpb.AttesterSlashing {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, maxSlashings)
 	for i := uint64(0); i < maxSlashings; i++ {
-		crosslink := &ethpb.Crosslink{
-			Shard:      i % params.BeaconConfig().ShardCount,
-			StartEpoch: i,
-			EndEpoch:   i + 1,
-		}
-		committee, err := helpers.CrosslinkCommittee(bState, i, crosslink.Shard)
+		committee, err := helpers.BeaconCommittee(bState, i, i%params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		committeeSize := uint64(len(committee))
 		attData1 := &ethpb.AttestationData{
-			Crosslink: crosslink,
 			Target: &ethpb.Checkpoint{
 				Epoch: i,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -238,12 +232,11 @@ func generateAttesterSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainAttestation)
+		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
 		sig := privs[committee[i]].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		attData2 := &ethpb.AttestationData{
-			Crosslink: crosslink,
 			Target: &ethpb.Checkpoint{
 				Epoch: i,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -304,122 +297,12 @@ func GenerateAttestations(
 	}
 
 	currentEpoch := helpers.CurrentEpoch(bState)
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	shardCount := params.BeaconConfig().ShardCount
-	committeeCount, err := helpers.CommitteeCount(bState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committeesPerSlot := committeeCount / slotsPerEpoch
-	if maxAttestations < committeesPerSlot {
-		t.Fatalf(
-			"requested %d attestations per block but there are %d committees attesting for this slot",
-			maxAttestations,
-			committeesPerSlot,
-		)
-	}
-	if maxAttestations%committeesPerSlot != 0 {
-		t.Fatalf(
-			"requested %d attestations but this is not cleanly divisble with the %d committees for this slot",
-			maxAttestations,
-			committeesPerSlot,
-		)
-	}
-	attsPerCommittee := maxAttestations / committeesPerSlot
-
-	offset := committeesPerSlot * (bState.Slot % params.BeaconConfig().SlotsPerEpoch)
-	startShard, err := helpers.StartShard(bState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	slotStartShard := (startShard + offset) % shardCount
-
-	attCounter := 0
 	attestations := make([]*ethpb.Attestation, maxAttestations)
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		shard := (slotStartShard + i) % shardCount
-		committee, err := helpers.CrosslinkCommittee(bState, currentEpoch, shard)
-		if err != nil {
-			t.Fatal(err)
-		}
-		committeeSize := uint64(len(committee))
 
-		if maxAttestations > committeeSize*committeesPerSlot {
-			t.Fatalf(
-				"requested %d attestations per block but there are only %d attesting validators this slot",
-				maxAttestations,
-				len(committee),
-			)
-		}
-
-		att := generateAttestation(t, bState, headState, shard)
-
-		custodyBits := bitfield.NewBitlist(committeeSize)
-		att.CustodyBits = custodyBits
-		dataRoot := [32]byte{}
-		if conf.Signatures {
-			dataRoot, err = ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-				Data:       att.Data,
-				CustodyBit: false,
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		domain := helpers.Domain(bState.Fork, att.Data.Crosslink.StartEpoch+1, params.BeaconConfig().DomainAttestation)
-
-		bitsPerAtt := committeeSize / attsPerCommittee
-		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
-			aggregationBits := bitfield.NewBitlist(committeeSize)
-			sigs := []*bls.Signature{}
-			for b := i; b < i+bitsPerAtt; b++ {
-				aggregationBits.SetBitAt(b, true)
-				if conf.Signatures {
-					sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
-				}
-			}
-			att.AggregationBits = aggregationBits
-
-			if conf.Signatures {
-				att.Signature = bls.AggregateSignatures(sigs).Marshal()
-			}
-			attestations[attCounter] = att
-			attCounter++
-		}
-	}
-
-	return attestations
-}
-
-func generateAttestation(
-	t testing.TB,
-	bState *pb.BeaconState,
-	headState *pb.BeaconState,
-	shard uint64,
-) *ethpb.Attestation {
-	currentEpoch := helpers.CurrentEpoch(bState)
-	parentCrosslink := bState.CurrentCrosslinks[shard]
-
-	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if currentEpoch < endEpoch {
-		endEpoch = currentEpoch
-	}
-	parentRoot, err := ssz.HashTreeRoot(parentCrosslink)
+	committee, err := helpers.BeaconCommittee(bState, currentEpoch, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	crosslink := &ethpb.Crosslink{
-		Shard:      shard,
-		StartEpoch: parentCrosslink.EndEpoch,
-		EndEpoch:   endEpoch,
-		ParentRoot: parentRoot[:],
-		DataRoot:   params.BeaconConfig().ZeroHash[:],
-	}
-	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
-	if err != nil {
-		panic(err)
-	}
-	crosslink.ParentRoot = crosslinkParentRoot[:]
 
 	headRoot, err := helpers.BlockRootAtSlot(headState, bState.Slot)
 	if err != nil {
@@ -437,10 +320,17 @@ func generateAttestation(
 		}
 	}
 
+	committeeSize := uint64(len(committee))
+	custodyBits := bitfield.NewBitlist(committeeSize)
+	attestingSlot := uint64(0)
+	if bState.Slot > 0 {
+		attestingSlot = bState.Slot - 1
+	}
+
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Slot:            attestingSlot,
 			BeaconBlockRoot: headRoot,
-			Crosslink:       crosslink,
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
@@ -449,7 +339,37 @@ func generateAttestation(
 		},
 	}
 
-	return att
+	dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if maxAttestations > committeeSize {
+		t.Fatalf(
+			"requested %d attestations per block but there are only %d committee members",
+			maxAttestations,
+			len(committee),
+		)
+	}
+
+	bitsPerAtt := committeeSize / maxAttestations
+	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	for i := uint64(0); i < committeeSize; i += bitsPerAtt {
+		aggregationBits := bitfield.NewBitlist(committeeSize)
+		sigs := []*bls.Signature{}
+		for b := i; b < i+bitsPerAtt; b++ {
+			aggregationBits.SetBitAt(b, true)
+			sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+		}
+		att.AggregationBits = aggregationBits
+
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()
+		attestations[i/bitsPerAtt] = att
+	}
+	return attestations
 }
 
 func generateDepositsAndEth1Data(

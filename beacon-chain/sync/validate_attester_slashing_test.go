@@ -21,7 +21,7 @@ import (
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 5)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	for _, vv := range state.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
@@ -30,9 +30,6 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
@@ -44,7 +41,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -54,9 +51,6 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
-			Crosslink: &ethpb.Crosslink{
-				Shard: 4,
-			},
 		},
 		CustodyBit_0Indices: []uint64{0, 1},
 	}
