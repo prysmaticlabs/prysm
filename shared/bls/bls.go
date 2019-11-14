@@ -30,6 +30,9 @@ var pubkeyCache = ccache.New(ccache.Configure())
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 
+// The size would be a combination of both the message(32 bytes) and domain(8 bytes) size.
+const concatMsgDomainSize = 40
+
 var curveOrder, _ = new(big.Int).SetString(CurveOrder, 10)
 
 // Signature used in the BLS signature scheme.
@@ -103,7 +106,7 @@ func (s *SecretKey) PublicKey() *PublicKey {
 }
 
 func concatMsgAndDomain(msg []byte, domain uint64) []byte {
-	b := [40]byte{}
+	b := [concatMsgDomainSize]byte{}
 	binary.LittleEndian.PutUint64(b[32:], domain)
 	copy(b[0:32], msg)
 	return b[:]
@@ -175,11 +178,10 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	}
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
-	hashWithDomains := make([]byte, size*40)
+	hashWithDomains := make([]byte, 0, size*concatMsgDomainSize)
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
-		copy(hashWithDomains[i*40:i*40+32], msg[i][:])
-		copy(hashWithDomains[i*40+32:], b[:])
+		hashWithDomains = append(hashWithDomains, concatMsgAndDomain(msg[i][:], domain)...)
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
 	return s.s.VerifyAggregateHashWithDomain(rawKeys, hashWithDomains)
