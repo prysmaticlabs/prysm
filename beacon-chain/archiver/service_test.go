@@ -39,6 +39,7 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -58,6 +59,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -85,6 +87,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -121,6 +124,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -153,6 +157,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -203,6 +208,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -236,6 +242,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -269,6 +276,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
 		},
 	}
 	triggerStateEvent(t, svc, event)

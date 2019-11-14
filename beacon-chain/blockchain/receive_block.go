@@ -103,6 +103,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,
+			Verified:  true,
 		},
 	})
 
@@ -156,6 +157,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,
+			Verified:  true,
 		},
 	})
 
@@ -199,6 +201,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,
+			Verified:  false,
 		},
 	})
 

@@ -30,6 +30,8 @@ type Event struct {
 type BlockProcessedData struct {
 	// BlockHash is the hash of the processed block.
 	BlockRoot [32]byte
+	// Verified is true if the block's BLS contents have been verified.
+	Verified bool
 }
 
 // ChainStartedData is the data sent with ChainStarted events.
