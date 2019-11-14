@@ -28,6 +28,16 @@ message ShardState {
   bytes latest_block_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
+message ShardTransition {
+  uint64 start_slot = 1;
+  repeated uint64 shard_block_lengths = 2  [(gogoproto.moretags) = "ssz-max:\"2048\""];
+  // Add proper tag
+  repeated bytes shard_data_roots = 3;
+  // Add proper tag
+  repeated ShardState shard_states = 4;
+  bytes proposer_signature_aggregate = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
+}
+
 message AttestationData {
   uint64 slot = 1;
   uint64 index = 2;
@@ -43,4 +53,29 @@ message Attestation {
   AttestationData data = 2;
   bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+}
+
+message AttestationAndCommittee {
+  repeated uint64 shard_block_lengths = 1  [(gogoproto.moretags) = "ssz-max:\"2048\""];
+  Attestation attestation = 2;
+}
+
+message AttestationAndCommittee {
+  bytes attestation_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 block_index = 2;
+  bool bit = 3;
+}
+
+message PendingAttestation {
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  AttestationData data = 2;
+  uint64 inclusion_delay = 3;
+  uint64 proposer_index = 4;
+  bool crosslink_success = 5;
+}
+
+message CompactCommittee {
+  // Add proper tag
+  repeated bytes pubkeys = 1;
+  repeated uint64 compact_validators = 2;
 }
