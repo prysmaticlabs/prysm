@@ -77,6 +77,8 @@ type BeaconChainConfig struct {
 	DomainBeaconAttester []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
 	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainShardCommittee []byte // DomainShardCommittee defines the BLS signature domain for shard committee.
+	DomainShardProposal  []byte // DomainShardProposal defines the BLS signature domain for shard proposal.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -96,6 +98,10 @@ type BeaconChainConfig struct {
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+
+	// Shard chain constants.
+	ActiveShards         uint64 // ActiveShards defines the number of shards in play.
+	ShardCommitteePeriod uint64 // ShardCommitteePeriod defines the shard committee shuffling time.
 }
 
 // DepositContractConfig contains the deposits for
@@ -172,6 +178,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DomainRandao:         bytesutil.Bytes4(2),
 	DomainDeposit:        bytesutil.Bytes4(3),
 	DomainVoluntaryExit:  bytesutil.Bytes4(4),
+	DomainShardCommittee: bytesutil.Bytes4(192),
+	DomainShardProposal:  bytesutil.Bytes4(193),
+
+	// Shard chain values.
+	ActiveShards:         64,
+	ShardCommitteePeriod: 256,
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
