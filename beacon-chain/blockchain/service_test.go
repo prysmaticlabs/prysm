@@ -35,7 +35,7 @@ import (
 
 // Ensure Service implements interfaces.
 var _ = ChainFeeds(&Service{})
-var _ = NewHeadNotifier(&Service{})
+var _ = StateFeeder(&Service{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -214,6 +214,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    &mockOperationService{},
 		P2p:               &mockBroadcaster{},
+		StateFeed:         new(event.Feed),
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)

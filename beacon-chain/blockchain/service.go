@@ -36,10 +36,9 @@ type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
 }
 
-// NewHeadNotifier defines a struct which can notify many consumers of a new,
-// canonical chain head event occuring in the node.
-type NewHeadNotifier interface {
-	HeadUpdatedFeed() *event.Feed
+// StateFeeder interface defines the methods of the service that provides state updates to consumers.
+type StateFeeder interface {
+	StateFeed() *event.Feed
 }
 
 // Service represents a service that handles the internal
@@ -55,7 +54,6 @@ type Service struct {
 	chainStartChan       chan time.Time
 	genesisTime          time.Time
 	stateInitializedFeed *event.Feed
-	headUpdatedFeed      *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
 	headSlot             uint64
@@ -63,6 +61,7 @@ type Service struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	headLock             sync.RWMutex
+	stateFeed            *event.Feed
 }
 
 // Config options for the service.
@@ -74,6 +73,7 @@ type Config struct {
 	OpsPoolService    operations.OperationFeeds
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
+	StateFeed         *event.Feed
 }
 
 // NewService instantiates a new block service instance that will
@@ -91,10 +91,10 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		forkChoiceStore:      store,
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
-		headUpdatedFeed:      new(event.Feed),
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
+		stateFeed:            cfg.StateFeed,
 	}, nil
 }
 
@@ -204,10 +204,9 @@ func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
 }
 
-// HeadUpdatedFeed is a feed containing the head block root and
-// is written to when a new head block is saved to DB.
-func (s *Service) HeadUpdatedFeed() *event.Feed {
-	return s.headUpdatedFeed
+// StateFeed is a feed that is written to when beacon chain state is updated.
+func (s *Service) StateFeed() *event.Feed {
+	return s.stateFeed
 }
 
 // This gets called to update canonical root mapping.
