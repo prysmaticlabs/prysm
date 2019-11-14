@@ -30,6 +30,8 @@ import (
 // ETH1 at the end of the voting period. This additional complexity has not been added here yet.
 func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getEth1Data")
+	defer span.End()
+
 	// We cannot compute new eth1 votes in the early slots of ETH2.
 	if slot < params.BeaconConfig().SlotsPerEth1VotingPeriod {
 		return ps.ChainStartFetcher.ChainStartEth1Data(), nil
