@@ -175,7 +175,7 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	}
 	b := [8]byte{}
 	binary.LittleEndian.PutUint64(b[:], domain)
-	hashWithDomains := make([]byte, size * 40)
+	hashWithDomains := make([]byte, size*40)
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
 		copy(hashWithDomains[i*40:i*40+32], msg[i][:])

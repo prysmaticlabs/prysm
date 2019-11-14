@@ -353,7 +353,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 32)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
@@ -374,11 +374,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+
 	sigs := make([]*bls.Signature, len(attestingIndices))
 
 	zeroSig := [96]byte{}
