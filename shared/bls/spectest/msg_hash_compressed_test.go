@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	bls2 "github.com/herumi/bls-eth-go-binary/bls"
+	bls12 "github.com/kilic/bls12-381"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -37,21 +37,13 @@ func TestMsgHashCompressed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
+			g2 := bls12.NewG2(nil)
 			hash := bls.HashWithDomain(
 				bytesutil.ToBytes32(msgBytes),
 				bytesutil.ToBytes8(domain),
 			)
-			g2Point := &bls2.G2{}
-			fp2Point := &bls2.Fp2{}
-			err = fp2Point.Deserialize(hash)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = bls2.MapToG2(g2Point, fp2Point)
-			if err != nil {
-				t.Fatal(err)
-			}
-			compressedHash := g2Point.Serialize()
+			g2Point := g2.MapToPoint(hash)
+			compressedHash := g2.ToCompressed(g2Point)
 
 			var buf []byte
 			for _, innerString := range test.Output {
