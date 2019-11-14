@@ -3,7 +3,7 @@ package statefeed
 import "time"
 
 // How to add a new event to the feed:
-//   1. Add a constant describing the event to the list below
+//   1. Add a constant describing the event to the list below.
 //   2. Add a structure with the name `<event>Data` containing any data fields that should be supplied with the event.
 //
 // Note that the same event is supplied to all subscribers, so the event received by subscribers should be considered read-only.
@@ -18,11 +18,11 @@ const (
 	ChainStarted
 )
 
-// Event is the event that is sent with state feed updates
+// Event is the event that is sent with state feed updates.
 type Event struct {
-	// Type is the type of event
+	// Type is the type of event.
 	Type EventType
-	// Data is event-specific data
+	// Data is event-specific data.
 	Data interface{}
 }
 
