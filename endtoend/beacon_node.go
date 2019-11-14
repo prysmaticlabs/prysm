@@ -97,32 +97,39 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatal(err)
 	}
 
-	byteContent, err := ioutil.ReadFile(file.Name())
+	multiAddr, err := getMultiAddrFromLogFile(file.Name())
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	return &beaconNodeInfo{
+		processID:   cmd.Process.Pid,
+		datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
+		rpcPort:     4000 + uint64(index),
+		monitorPort: 8080 + uint64(index),
+		grpcPort:    3200 + uint64(index),
+		multiAddr:   multiAddr,
+	}
+}
+
+func getMultiAddrFromLogFile(name string) (string, error) {
+	byteContent, err := ioutil.ReadFile(name)
+	if err != nil {
+		return "", err
 	}
 	contents := string(byteContent)
 
 	searchText := "\"Node started p2p server\" multiAddr=\""
 	startIdx := strings.Index(contents, searchText)
 	if startIdx == -1 {
-		t.Fatalf("did not find peer text in %s", contents)
+		return "", fmt.Errorf("did not find peer text in %s", contents)
 	}
 	startIdx += len(searchText)
 	endIdx := strings.Index(contents[startIdx:], "\"")
 	if endIdx == -1 {
-		t.Fatalf("did not find peer text in %s", contents)
+		return "", fmt.Errorf("did not find peer text in %s", contents)
 	}
-	multiAddr := contents[startIdx : startIdx+endIdx]
-
-	return &beaconNodeInfo{
-		processID:   cmd.Process.Pid,
-		datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
-		rpcPort:     (4000) + uint64(index),
-		monitorPort: 8080 + uint64(index),
-		grpcPort:    3200 + uint64(index),
-		multiAddr:   multiAddr,
-	}
+	return contents[startIdx : startIdx+endIdx], nil
 }
 
 func waitForTextInFile(file *os.File, text string) error {

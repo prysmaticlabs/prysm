@@ -42,6 +42,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		"--wsorigins=\"*\"",
 		"--dev",
 		"--dev.period=0",
+		"--ipcdisable",
 	}
 	cmd := exec.Command(binaryPath, args...)
 	file, err := os.Create(path.Join(tmpPath, "eth1.log"))
@@ -54,12 +55,12 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatalf("failed to start eth1 chain: %v", err)
 	}
 
-	if err = waitForTextInFile(file, "IPC endpoint opened"); err != nil {
+	if err = waitForTextInFile(file, "Commit new mining work"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
+	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
 	if err != nil {
 		t.Fatalf("failed to connect to ipc: %v", err)
 	}

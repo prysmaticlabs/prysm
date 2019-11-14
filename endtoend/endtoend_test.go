@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -14,17 +15,13 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
 
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
-	tmpPath := path.Join("/tmp/e2e/", uuid.NewRandom().String()[:18])
-	if err := os.MkdirAll(tmpPath, os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
+	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
 	t.Logf("Test Path: %s\n", tmpPath)
 

@@ -39,7 +39,6 @@ func initializeValidators(
 	}
 
 	tmpPath := config.tmpPath
-	contractAddress := config.contractAddr
 	validatorNum := config.numValidators
 	beaconNodeNum := config.numBeaconNodes
 	if validatorNum%beaconNodeNum != 0 {
@@ -72,7 +71,7 @@ func initializeValidators(
 		}
 	}
 
-	client, err := rpc.Dial(path.Join(tmpPath, "eth1data/geth.ipc"))
+	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +89,7 @@ func initializeValidators(
 	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = 4000000
 
-	contract, err := contracts.NewDepositContract(contractAddress, web3)
+	contract, err := contracts.NewDepositContract(config.contractAddr, web3)
 	if err != nil {
 		t.Fatal(err)
 	}
