@@ -38,11 +38,11 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", event.Data.(*statefeed.BlockProcessedData).BlockHash))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", event.Data.(*statefeed.BlockProcessedData).BlockRoot))
 	testutil.AssertLogsContain(t, hook, "Received block processed event")
 }
 
@@ -57,7 +57,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -84,7 +84,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -120,7 +120,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -152,7 +152,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -202,7 +202,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -235,7 +235,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -268,7 +268,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: [32]byte{1, 2, 3},
+			BlockRoot: [32]byte{1, 2, 3},
 		},
 	}
 	triggerStateEvent(t, svc, event)
@@ -320,10 +320,10 @@ func setupService(t *testing.T) (*Service, db.Database) {
 	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		beaconDB:    beaconDB,
-		ctx:         ctx,
-		cancel:      cancel,
-		stateFeeder: &mock.ChainService{},
+		beaconDB:      beaconDB,
+		ctx:           ctx,
+		cancel:        cancel,
+		stateNotifier: &mock.ChainService{},
 	}, beaconDB
 }
 
@@ -336,7 +336,7 @@ func triggerStateEvent(t *testing.T, svc *Service, event *statefeed.Event) {
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed)
 	for sent := 0; sent == 0; {
-		sent = svc.stateFeeder.StateFeed().Send(event)
+		sent = svc.stateNotifier.StateFeed().Send(event)
 	}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)

@@ -22,29 +22,29 @@ var log = logrus.WithField("prefix", "archiver")
 // Service defining archiver functionality for persisting checkpointed
 // beacon chain information to a database backend for historical purposes.
 type Service struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	beaconDB    db.Database
-	headFetcher blockchain.HeadFetcher
-	stateFeeder blockchain.StateFeeder
+	ctx           context.Context
+	cancel        context.CancelFunc
+	beaconDB      db.Database
+	headFetcher   blockchain.HeadFetcher
+	stateNotifier blockchain.StateNotifier
 }
 
 // Config options for the archiver service.
 type Config struct {
-	BeaconDB    db.Database
-	HeadFetcher blockchain.HeadFetcher
-	StateFeeder blockchain.StateFeeder
+	BeaconDB      db.Database
+	HeadFetcher   blockchain.HeadFetcher
+	StateNotifier blockchain.StateNotifier
 }
 
 // NewArchiverService initializes the service from configuration options.
 func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:         ctx,
-		cancel:      cancel,
-		beaconDB:    cfg.BeaconDB,
-		headFetcher: cfg.HeadFetcher,
-		stateFeeder: cfg.StateFeeder,
+		ctx:           ctx,
+		cancel:        cancel,
+		beaconDB:      cfg.BeaconDB,
+		headFetcher:   cfg.HeadFetcher,
+		stateNotifier: cfg.StateNotifier,
 	}
 }
 
@@ -128,7 +128,7 @@ func (s *Service) archiveBalances(ctx context.Context, headState *pb.BeaconState
 
 func (s *Service) run(ctx context.Context) {
 	subChannel := make(chan *statefeed.Event, 1)
-	sub := s.stateFeeder.StateFeed().Subscribe(subChannel)
+	sub := s.stateNotifier.StateFeed().Subscribe(subChannel)
 	defer sub.Unsubscribe()
 	for {
 		select {

@@ -36,8 +36,8 @@ type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
 }
 
-// StateFeeder interface defines the methods of the service that provides state updates to consumers.
-type StateFeeder interface {
+// StateNotifier interface defines the methods of the service that provides state updates to consumers.
+type StateNotifier interface {
 	StateFeed() *event.Feed
 }
 
@@ -204,7 +204,7 @@ func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
 }
 
-// StateFeed is a feed that is written to when beacon chain state is updated.
+// StateFeed provides the feed that notifies subscribers when the beacon chain state is updated.
 func (s *Service) StateFeed() *event.Feed {
 	return s.stateFeed
 }

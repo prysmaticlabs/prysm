@@ -35,7 +35,7 @@ import (
 
 // Ensure Service implements interfaces.
 var _ = ChainFeeds(&Service{})
-var _ = StateFeeder(&Service{})
+var _ = StateNotifier(&Service{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)

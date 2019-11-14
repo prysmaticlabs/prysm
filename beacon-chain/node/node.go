@@ -519,9 +519,9 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		return err
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:    b.db,
-		HeadFetcher: chainService,
-		StateFeeder: chainService,
+		BeaconDB:      b.db,
+		HeadFetcher:   chainService,
+		StateNotifier: chainService,
 	})
 	return b.services.RegisterService(svc)
 }
