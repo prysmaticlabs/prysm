@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"math/rand"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -22,8 +20,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -74,9 +72,10 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 		return nil, errors.Wrap(err, "could not get parent block signing root")
 	}
 
-	eth1Data, err := ps.eth1Data(ctx, req.Slot)
+	eth1Data, err := ps.getEth1Data(ctx, req.Slot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ETH1 data")
+		traceutil.AnnotateError(span, err)
+		return nil, status.Error(codes.Internal, errors.Wrap(err, "could not get ETH1 data").Error())
 	}
 
 	// Pack ETH1 deposits which have not been included in the beacon chain.
@@ -139,75 +138,6 @@ func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb
 	}
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
-}
-
-// eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
-// is as follows:
-//  - Determine the timestamp for the start slot for the eth1 voting period.
-//  - Determine the most recent eth1 block before that timestamp.
-//  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
-//  - This is the eth1block to use for the block proposal.
-func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	if ps.MockEth1Votes {
-		return ps.mockETH1DataVote(slot)
-	}
-
-	if !ps.Eth1InfoFetcher.IsConnectedToETH1() {
-		return ps.randomETH1DataVote()
-	}
-
-	eth1VotingPeriodStartTime, _ := ps.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
-
-	// Look up most recent block up to timestamp
-	blockNumber, err := ps.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get block number from timestamp")
-	}
-
-	return ps.defaultEth1DataResponse(ctx, blockNumber)
-}
-
-func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
-	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
-		"ETH1 Data votes are now mocked.")
-	// If a mock eth1 data votes is specified, we use the following for the
-	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
-	//
-	// slot_in_voting_period = current_slot % SLOTS_PER_ETH1_VOTING_PERIOD
-	// Eth1Data(
-	//   DepositRoot = hash(current_epoch + slot_in_voting_period),
-	//   DepositCount = state.eth1_deposit_index,
-	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
-	// )
-	slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-	headState := ps.HeadFetcher.HeadState()
-	enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
-	if err != nil {
-		return nil, err
-	}
-	depRoot := hashutil.Hash(enc)
-	blockHash := hashutil.Hash(depRoot[:])
-	return &ethpb.Eth1Data{
-		DepositRoot:  depRoot[:],
-		DepositCount: headState.Eth1DepositIndex,
-		BlockHash:    blockHash[:],
-	}, nil
-}
-
-func (ps *Server) randomETH1DataVote() (*ethpb.Eth1Data, error) {
-	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
-		"ETH1 Data votes are now random.")
-	headState := ps.HeadFetcher.HeadState()
-	// set random roots and block hashes to prevent a majority from being
-	// built if the eth1 node is offline
-	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
-	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
-	return &ethpb.Eth1Data{
-		DepositRoot:  depRoot[:],
-		DepositCount: headState.Eth1DepositIndex,
-		BlockHash:    blockHash[:],
-	}, nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
@@ -320,29 +250,6 @@ func (ps *Server) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.Beac
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
 	return canonicalEth1Data, latestEth1DataHeight, nil
-}
-
-// in case no vote for new eth1data vote considered best vote we
-// default into returning the latest deposit root and the block
-// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
-// latest block.
-func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := ps.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := ps.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	if depositsTillHeight == 0 {
-		return ps.ChainStartFetcher.ChainStartEth1Data(), nil
-	}
-	return &ethpb.Eth1Data{
-		DepositRoot:  depositRoot[:],
-		BlockHash:    blockHash[:],
-		DepositCount: depositsTillHeight,
-	}, nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {

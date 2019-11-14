@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["server.go"],
+    srcs = [
+        "eth1_data.go",
+        "server.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -22,6 +25,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/traceutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -34,7 +38,11 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["server_test.go"],
+    size = "small",
+    srcs = [
+        "eth1_data_test.go",
+        "server_test.go",
+    ],
     embed = [":go_default_library"],
     shard_count = 4,
     deps = [

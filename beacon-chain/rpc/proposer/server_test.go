@@ -866,76 +866,8 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState},
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
+	if _, err := proposerServer.getEth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
-	}
-}
-
-func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
-	ctx := context.Background()
-
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*depositcache.DepositContainer{
-		{
-			Index: 0,
-			Block: big.NewInt(1000),
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-		{
-			Index: 1,
-			Block: big.NewInt(1200),
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
-	depositCache := depositcache.NewDepositCache()
-	for _, dp := range deps {
-		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
-	}
-
-	p := &mockPOW.POWChain{
-		LatestBlockNumber: height,
-		HashesByHeight: map[int][]byte{
-			0:   []byte("hash0"),
-			476: []byte("hash1024"),
-		},
-	}
-	proposerServer := &Server{
-		ChainStartFetcher:      p,
-		Eth1InfoFetcher:        p,
-		Eth1BlockFetcher:       p,
-		DepositFetcher:         depositCache,
-		PendingDepositsFetcher: depositCache,
-	}
-
-	defEth1Data := &ethpb.Eth1Data{
-		DepositCount: 10,
-		BlockHash:    []byte{'t', 'e', 's', 't'},
-		DepositRoot:  []byte{'r', 'o', 'o', 't'},
-	}
-
-	p.Eth1Data = defEth1Data
-
-	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(1500))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !proto.Equal(result, defEth1Data) {
-		t.Errorf("Did not receive default eth1data. Wanted %v but Got %v", defEth1Data, result)
 	}
 }
 
@@ -963,7 +895,7 @@ func TestEth1Data(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	eth1Data, err := ps.eth1Data(ctx, slot)
+	eth1Data, err := ps.getEth1Data(ctx, slot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1002,7 +934,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	eth1Data, err := ps.eth1Data(ctx, 100)
+	eth1Data, err := ps.getEth1Data(ctx, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1099,7 +1031,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
+		_, err := proposerServer.getEth1Data(context.Background(), beaconState.Slot+1)
 		if err != nil {
 			b.Fatal(err)
 		}
