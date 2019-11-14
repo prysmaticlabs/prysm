@@ -102,7 +102,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	s.stateFeed.Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockRoot: bytesutil.ToBytes32(headRoot),
+			BlockRoot: root,
 		},
 	})
 
