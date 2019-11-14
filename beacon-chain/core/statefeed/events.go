@@ -2,12 +2,17 @@ package statefeed
 
 import "time"
 
+// How to add a new event to the feed:
+//   1. Add a constant describing the event to the list below
+//   2. Add a structure with the name `<event>Data` containing any data fields that should be supplied with the event.
+//
+// Note that the same event is supplied to all subscribers, so the event received by subscribers should be considered read-only.
+
 // EventType is the type that defines the type of event.
 type EventType int
 
 const (
 	// BlockProcessed is sent after a block has been processed and updated the state database.
-	// It is commonly used to provide
 	BlockProcessed = iota + 1
 	// ChainStarted is sent when enough validators are active to start proposing blocks.
 	ChainStarted
