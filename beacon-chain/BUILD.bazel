@@ -81,7 +81,7 @@ go_binary(
     embed = [":go_default_library"],
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//endtoend:__subpackages__",
+        "//endtoend:__pkg__",
     ],
 )
 
