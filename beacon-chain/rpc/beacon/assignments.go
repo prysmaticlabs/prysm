@@ -21,7 +21,7 @@ func (bs *Server) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
@@ -44,10 +44,10 @@ func (bs *Server) ListValidatorAssignments(
 	for _, pubKey := range req.PublicKeys {
 		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
 		}
 		if !ok {
-			return nil, status.Errorf(codes.NotFound, "could not find validator index for public key  %#x not found", pubKey)
+			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
 		}
 		filtered[index] = true
 		filteredIndices = append(filteredIndices, index)
@@ -62,7 +62,7 @@ func (bs *Server) ListValidatorAssignments(
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve active validator indices: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
 	if len(filteredIndices) == 0 {
 		// If no filter was specified, return assignments from active validator indices with pagination.
@@ -71,14 +71,14 @@ func (bs *Server) ListValidatorAssignments(
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(filteredIndices))
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not paginate results: %v", err)
 	}
 
 	shouldFetchFromArchive := requestedEpoch < bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= len(headState.Validators) {
-			return nil, status.Errorf(codes.InvalidArgument, "validator index %d >= validator count %d",
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
 		if shouldFetchFromArchive {
@@ -86,14 +86,14 @@ func (bs *Server) ListValidatorAssignments(
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"could not retrieve archived committee info for epoch %d",
+					"Could not retrieve archived committee info for epoch %d",
 					requestedEpoch,
 				)
 			}
 			if archivedInfo == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"no archival committee info found for epoch %d",
+					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}
@@ -101,14 +101,14 @@ func (bs *Server) ListValidatorAssignments(
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"could not retrieve archived balances for epoch %d",
+					"Could not retrieve archived balances for epoch %d",
 					requestedEpoch,
 				)
 			}
 			if archivedBalances == nil {
 				return nil, status.Errorf(
 					codes.NotFound,
-					"no archival balances found for epoch %d",
+					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 					requestedEpoch,
 				)
 			}
@@ -120,7 +120,7 @@ func (bs *Server) ListValidatorAssignments(
 				archivedBalances,
 			)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not retrieve archived assignment for validator %d: %v", index, err)
+				return nil, status.Errorf(codes.Internal, "Could not retrieve archived assignment for validator %d: %v", index, err)
 			}
 			assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 				BeaconCommittees: committee,
@@ -134,7 +134,7 @@ func (bs *Server) ListValidatorAssignments(
 		}
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(headState, requestedEpoch, index)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve assignment for validator %d: %v", index, err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve assignment for validator %d: %v", index, err)
 		}
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
