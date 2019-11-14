@@ -102,7 +102,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	s.stateFeed.Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: bytesutil.ToBytes32(headRoot),
+			BlockRoot: bytesutil.ToBytes32(headRoot),
 		},
 	})
 
@@ -155,7 +155,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	s.stateFeed.Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: root,
+			BlockRoot: root,
 		},
 	})
 
@@ -198,7 +198,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	s.stateFeed.Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			BlockHash: root,
+			BlockRoot: root,
 		},
 	})
 
