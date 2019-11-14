@@ -35,7 +35,7 @@ type BlockReceivedData struct {
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// BlockHash is the hash of the processed block.
-	BlockHash [32]byte
+	BlockRoot [32]byte
 }
 
 // ChainStartedData is the data sent with ChainStarted events.
