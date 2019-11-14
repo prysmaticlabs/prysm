@@ -100,6 +100,8 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.AttestationDataAndCustodyBit{}
 	case "AttesterSlashing":
 		obj = &ethpb.AttesterSlashing{}
+	case "AggregateAndProof":
+		obj = &pb.AggregateAndProof{}
 	case "BeaconBlock":
 		obj = &ethpb.BeaconBlock{}
 	case "BeaconBlockBody":
@@ -110,10 +112,6 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.BeaconState{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
-	case "CompactCommittee":
-		obj = &pb.CompactCommittee{}
-	case "Crosslink":
-		obj = &ethpb.Crosslink{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
 	case "DepositData":
@@ -130,8 +128,6 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
-	case "Transfer":
-		obj = &ethpb.Transfer{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":

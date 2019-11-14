@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestUpdateValidator(t *testing.T) {
+func TestUpdateValidator_Works(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
@@ -28,6 +28,21 @@ func TestUpdateValidator(t *testing.T) {
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
 		ProposerIndex: 2, InclusionDistance: 1, InclusionSlot: 101}
 	wantedVp := []*precompute.Validator{{}, wanted, {}, wanted, {}, wanted}
+	if !reflect.DeepEqual(vp, wantedVp) {
+		t.Error("Incorrect attesting validator calculations")
+	}
+}
+
+func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
+	e := params.BeaconConfig().FarFutureEpoch
+	vp := []*precompute.Validator{{InclusionSlot: e}}
+	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
+	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
+
+	// Verify inclusion info doesnt get updated.
+	vp = precompute.UpdateValidator(vp, record, []uint64{0}, a, 100)
+	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
+	wantedVp := []*precompute.Validator{wanted}
 	if !reflect.DeepEqual(vp, wantedVp) {
 		t.Error("Incorrect attesting validator calculations")
 	}
@@ -60,20 +75,15 @@ func TestUpdateBalance(t *testing.T) {
 func TestSameHead(t *testing.T) {
 	helpers.ClearAllCaches()
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 0}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.BeaconBlockRoot = r
 	same, err := precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
@@ -94,20 +104,15 @@ func TestSameHead(t *testing.T) {
 
 func TestSameTarget(t *testing.T) {
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 0}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.Target.Root = r
 	same, err := precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
@@ -128,20 +133,15 @@ func TestSameTarget(t *testing.T) {
 
 func TestAttestedPrevEpoch(t *testing.T) {
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 960}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[0] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
 	votedEpoch, votedTarget, votedHead, err := precompute.AttestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -161,20 +161,15 @@ func TestAttestedPrevEpoch(t *testing.T) {
 
 func TestAttestedCurrentEpoch(t *testing.T) {
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 1},
-		Crosslink: &ethpb.Crosslink{}}}
-	attSlot, err := helpers.AttestationDataSlot(beaconState, att.Data)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Target: &ethpb.Checkpoint{Epoch: 1}}}
 	r := []byte{'A'}
-	beaconState.BlockRoots[attSlot] = r
+	beaconState.BlockRoots[params.BeaconConfig().SlotsPerEpoch] = r
 	att.Data.Target.Root = r
 	att.Data.BeaconBlockRoot = r
 	votedEpoch, votedTarget, err := precompute.AttestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -197,7 +192,7 @@ func TestProcessAttestations(t *testing.T) {
 
 	validators := uint64(64)
 	deposits, _, _ := testutil.SetupInitialDeposits(t, validators)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,11 +200,11 @@ func TestProcessAttestations(t *testing.T) {
 
 	bf := []byte{0xff}
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 960}}, AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target:    &ethpb.Checkpoint{Epoch: 0},
-		Crosslink: &ethpb.Crosslink{Shard: 961}}, AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
 	beaconState.BlockRoots[0] = []byte{'A'}
 	att1.Data.Target.Root = []byte{'A'}
 	att1.Data.BeaconBlockRoot = []byte{'A'}

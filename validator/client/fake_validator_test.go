@@ -13,6 +13,7 @@ type fakeValidator struct {
 	DoneCalled                       bool
 	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
+	WaitForSyncCalled                bool
 	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
@@ -42,6 +43,11 @@ func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 
 func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled = true
+	return nil
+}
+
+func (fv *fakeValidator) WaitForSync(_ context.Context) error {
+	fv.WaitForSyncCalled = true
 	return nil
 }
 
@@ -79,7 +85,7 @@ func (fv *fakeValidator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 	return vr
 }
 
-func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }

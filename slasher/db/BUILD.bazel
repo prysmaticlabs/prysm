@@ -6,8 +6,10 @@ go_library(
         "block_header.go",
         "db.go",
         "indexed_attestations.go",
+        "min_max_span.go",
         "schema.go",
         "setup_db.go",
+        "validator_id_pubkey.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db",
     visibility = ["//slasher:__subpackages__"],
@@ -28,8 +30,13 @@ go_test(
     srcs = [
         "block_header_test.go",
         "indexed_attestations_test.go",
+        "min_max_span_test.go",
         "setup_db_test.go",
+        "validator_id_pubkey_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//proto/eth/v1alpha1:go_default_library"],
+    deps = [
+        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
 )

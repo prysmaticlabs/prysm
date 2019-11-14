@@ -37,15 +37,9 @@ message ArchivedActiveSetChanges {
 // ArchivedCommitteeInfo representing the minimal data required to reconstruct
 // validator committee assignments for an epoch N.
 message ArchivedCommitteeInfo {
-    // Seed represents the random seed used in shuffling validators.
-    bytes seed = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    // Proposer seed represents the random seed used in shuffling proposers.
+    bytes proposer_seed = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
-    // Start shard for the shuffling at epoch N.
-    uint64 start_shard = 2;
-
-    // Committee count is the size the committees during epoch N.
-    uint64 committee_count = 3;
-
-    // Proposer index assigned to propose a beacon block during epoch N.
-    uint64 proposer_index = 4;
+    // Attester seed represents the random seed used in shuffling attesters.
+    bytes attester_seed = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }

@@ -43,9 +43,9 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		Slashings:         make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes:       make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+
 		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},

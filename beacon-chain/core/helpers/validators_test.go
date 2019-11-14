@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -31,10 +30,6 @@ func TestIsActiveValidator_OK(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Active(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	activeValidator := &ethpb.Validator{
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
@@ -46,10 +41,6 @@ func TestIsSlashableValidator_Active(t *testing.T) {
 }
 
 func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	beforeWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 5,
 	}
@@ -61,10 +52,6 @@ func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Inactive(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	inactiveValidator := &ethpb.Validator{
 		ActivationEpoch:   5,
 		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -77,10 +64,6 @@ func TestIsSlashableValidator_Inactive(t *testing.T) {
 }
 
 func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	afterWithdrawableValidator := &ethpb.Validator{
 		WithdrawableEpoch: 3,
 	}
@@ -92,9 +75,6 @@ func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
 }
 
 func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
 	slashedValidator := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -108,10 +88,6 @@ func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
 }
 
 func TestIsSlashableValidator_Slashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -125,10 +101,6 @@ func TestIsSlashableValidator_Slashed(t *testing.T) {
 }
 
 func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	slashedValidator2 := &ethpb.Validator{
 		Slashed:           true,
 		ActivationEpoch:   4,
@@ -144,11 +116,6 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	ClearAllCaches()
-
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -160,10 +127,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Validators:       validators,
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
@@ -172,23 +138,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 254,
+			index: 505,
 		},
 		{
 			slot:  5,
-			index: 391,
+			index: 798,
 		},
 		{
 			slot:  19,
-			index: 204,
+			index: 1956,
 		},
 		{
 			slot:  30,
-			index: 1051,
+			index: 991,
 		},
 		{
 			slot:  43,
-			index: 1047,
+			index: 1751,
 		},
 	}
 
@@ -209,24 +175,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 }
 
-func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	ClearAllCaches()
-	beaconState := &pb.BeaconState{
-		Slot:             0,
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	_, err := BeaconProposerIndex(beaconState)
-	expected := fmt.Sprintf("empty first committee at slot %d", 0)
-	if err.Error() != expected {
-		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
-	}
-}
-
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
 	got := DelayedActivationExitEpoch(epoch)
-	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay
+	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookhead
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
 	}
@@ -252,10 +204,9 @@ func TestChurnLimit_OK(t *testing.T) {
 		}
 
 		beaconState := &pb.BeaconState{
-			Slot:             1,
-			Validators:       validators,
-			RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-			ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+			Slot:        1,
+			Validators:  validators,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
 		resultChurn, err := ValidatorChurnLimit(beaconState)
 		if err != nil {

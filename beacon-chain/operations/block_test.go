@@ -8,7 +8,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
@@ -19,13 +18,9 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	attestations := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(attestations); i++ {
 		attestations[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Crosslink: &ethpb.Crosslink{
-					Shard: uint64(i),
-				},
+			Data: &ethpb.AttestationData{Slot: uint64(i),
 				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
-			},
+				Target: &ethpb.Checkpoint{}},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
@@ -37,11 +32,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
-		Slot: 15,
-		CurrentCrosslinks: []*ethpb.Crosslink{{
-			StartEpoch: 0,
-			DataRoot:   params.BeaconConfig().ZeroHash[:]}}}, headBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 

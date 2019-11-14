@@ -13,6 +13,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/client",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
@@ -24,6 +25,7 @@ go_library(
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
+        "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -60,7 +62,6 @@ go_test(
         "//shared/testutil:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/internal:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

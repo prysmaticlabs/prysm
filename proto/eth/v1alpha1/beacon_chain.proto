@@ -20,7 +20,7 @@ service BeaconChain {
     // TODO(preston): Batch requests?
 
     // Retrieve attestations by block root, slot, or epoch. 
-    // Attestations are sorted by crosslink shard by default.
+    // Attestations are sorted by slot by default.
     // 
     // The server may return an empty list when no attestations match the given 
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter 
@@ -66,6 +66,16 @@ service BeaconChain {
     rpc GetChainHead(google.protobuf.Empty) returns (ChainHead) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/chainhead"
+        };
+    }
+
+    // Retrieve the beacon chain committees for a given epoch.
+    //
+    // If no filter criteria is specified, the response returns
+    // all beacon committees for the current epoch. The results are paginated by default.
+    rpc ListBeaconCommittees(ListCommitteesRequest) returns (BeaconCommittees) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/committees"
         };
     }
 
@@ -237,6 +247,50 @@ message ChainHead {
     bytes previous_justified_block_root = 8 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
+message ListCommitteesRequest {
+    oneof query_filter {
+        // Optional criteria to retrieve data at a specific epoch.
+        uint64 epoch = 1;
+
+        // Optional criteria to retrieve genesis data.
+        bool genesis = 2;
+    }
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 3;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 4;
+}
+
+message BeaconCommittees {
+    message CommitteeItem {
+        // A committee of validator indices that need to attest to beacon blocks.
+        repeated uint64 committee = 1;
+
+        // The slot at which the committee is assigned to.
+        uint64 slot = 2;
+    }
+    // The epoch for which the committees in the response belong to.
+    uint64 epoch = 1;
+
+    // A list of committees of validators for given  epoch.
+    repeated CommitteeItem committees = 2;
+
+    // The number of active validators at the given epoch.
+    uint64 active_validator_count = 3;
+
+    // A pagination token returned from a previous call
+    // that indicates from where the listing should continue.
+    string next_page_token = 4;
+
+    // Total count of committees matching the request filter.
+    int32 total_size = 5;
+}
+
 message GetValidatorBalancesRequest {
     oneof query_filter {
         // Optional criteria to retrieve balances at a specific epoch.
@@ -248,12 +302,24 @@ message GetValidatorBalancesRequest {
     // Validator 48 byte BLS public keys to filter validators for the given
     // epoch.
     repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
-        
+
     // Validator indices to filter validators for the given epoch.
     repeated uint64 indices = 4;
+
+    // The maximum number of Validators to return in the response.
+    // This field is optional.
+    int32 page_size = 5;
+
+    // A pagination token returned from a previous call to `GetValidators`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 6;
 }
 
 message ValidatorBalances {
+    // Epoch which the state was considered to determine the validator balances.
+    uint64 epoch = 1;
+
     message Balance {
         // Validator's 48 byte BLS public key. 
         bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
@@ -265,7 +331,14 @@ message ValidatorBalances {
         uint64 balance = 3;
     }
 
-    repeated Balance balances = 1;
+    repeated Balance balances = 2;
+
+    // A pagination token returned from a previous call to `GetListValidatorBalances`
+    // that indicates from where listing should continue.
+    string next_page_token = 3;
+
+    // Total count of Validators matching the request filter.
+    int32 total_size = 4;
 }
 
 message GetValidatorsRequest {
@@ -375,24 +448,23 @@ message ListValidatorAssignmentsRequest {
 
 message ValidatorAssignments {
     message CommitteeAssignment {
-        // Crosslink committees is responsible for crosslinking shard data back to the beacon chain,
+        // Beacon committees is responsible for crosslinking committee data back to the beacon chain,
         // they also attest and produce beacon chain blocks. This is a list of validator indices that
         // are in the same committee as requested validator, everyone in the committee is assigned to the
-        // same slot and same shard.
-        repeated uint64 crosslink_committees = 1;
+        // same slot and same committee.
+        repeated uint64 beacon_committees = 1;
         
-        // The shard index of which the validator must perform the attestation
+        // The committee index of which the validator must perform the attestation
         // or block proposal.
-        uint64 shard = 2;
+        uint64 committee_index = 2;
 
         // Beacon chain slot in which the validator must perform its assigned 
-        // duty.
-        uint64 slot = 3;
+        // duty as an attester.
+        uint64 attester_slot = 3;
 
-        // Whether or not the validator is assigned to propose at this slot. If
-        // This field is false, then they are only to attest during the
-        // assignment time.
-        bool proposer = 4;
+        // Beacon chain slot in which the validator must perform its assigned
+        // duty as an attester.
+        uint64 proposer_slot = 4;
 
         // 48 byte BLS public key 
         bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];

@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
@@ -33,15 +34,14 @@ var (
 	})
 )
 
-// Committee defines the committee per epoch and shard.
+// Committee defines the committee per epoch and index.
 type Committee struct {
-	StartShard     uint64
 	CommitteeCount uint64
 	Epoch          uint64
 	Committee      []uint64
 }
 
-// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and shard.
+// CommitteeCache is a struct with 1 queue for looking up shuffled indices list by epoch and committee index.
 type CommitteeCache struct {
 	CommitteeCache *cache.FIFO
 	lock           sync.RWMutex
@@ -64,12 +64,17 @@ func NewCommitteeCache() *CommitteeCache {
 	}
 }
 
-// ShuffledIndices fetches the shuffled indices by epoch and shard. Every list of indices
-// represent one committee. Returns true if the list exists with epoch and shard. Otherwise returns false, nil.
-func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, error) {
+// ShuffledIndices fetches the shuffled indices by slot and committee index. Every list of indices
+// represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
+func (c *CommitteeCache) ShuffledIndices(slot uint64, index uint64) ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+
+	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
+	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(epoch))
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +91,22 @@ func (c *CommitteeCache) ShuffledIndices(epoch uint64, shard uint64) ([]uint64, 
 		return nil, ErrNotCommittee
 	}
 
-	start, end := startEndIndices(item, shard)
+	committeeCountPerSlot := uint64(1)
+	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch > 1 {
+		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	}
 
+	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
+	start, end := startEndIndices(item, indexOffSet)
 	return item.Committee[start:end], nil
 }
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
 func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.CommitteeCache.AddIfNotPresent(committee); err != nil {
@@ -105,6 +118,9 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
 
 // Epochs returns the epochs stored in the committee cache. These are the keys to the cache.
 func (c *CommitteeCache) Epochs() ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache {
+		return nil, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -121,6 +137,9 @@ func (c *CommitteeCache) Epochs() ([]uint64, error) {
 
 // EpochInCache returns true if an input epoch is part of keys in cache.
 func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return false, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -136,10 +155,14 @@ func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
 	return false, nil
 }
 
-// CommitteeCount returns the total number of committees in a given epoch as stored in cache.
-func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
+// CommitteeCountPerSlot returns the number of committees in a given slot as stored in cache.
+func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return 0, false, nil
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
 	if err != nil {
 		return 0, false, err
@@ -157,35 +180,15 @@ func (c *CommitteeCache) CommitteeCount(epoch uint64) (uint64, bool, error) {
 		return 0, false, ErrNotCommittee
 	}
 
-	return item.CommitteeCount, true, nil
-}
-
-// StartShard returns the start shard number in a given epoch as stored in cache.
-func (c *CommitteeCache) StartShard(epoch uint64) (uint64, bool, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
-	if err != nil {
-		return 0, false, err
-	}
-
-	if exists {
-		CommitteeCacheHit.Inc()
-	} else {
-		CommitteeCacheMiss.Inc()
-		return 0, false, nil
-	}
-
-	item, ok := obj.(*Committee)
-	if !ok {
-		return 0, false, ErrNotCommittee
-	}
-
-	return item.StartShard, true, nil
+	return item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch, true, nil
 }
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.
 func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
+	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
+		return nil, nil
+	}
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
@@ -208,12 +211,10 @@ func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
 	return item.Committee, nil
 }
 
-func startEndIndices(c *Committee, wantedShard uint64) (uint64, uint64) {
-	shardCount := params.BeaconConfig().ShardCount
-	currentShard := (wantedShard + shardCount - c.StartShard) % shardCount
+func startEndIndices(c *Committee, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.Committee))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, currentShard+1)
+	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 
 	return start, end
 }

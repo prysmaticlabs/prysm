@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["filter.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/filters",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//tools:__subpackages__",
+    ],
 )
 
 go_test(

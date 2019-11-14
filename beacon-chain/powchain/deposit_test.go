@@ -20,16 +20,13 @@ const pubKeyErr = "could not deserialize validator public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
 
@@ -56,16 +53,13 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
 
@@ -98,16 +92,13 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
 	deposits[0].Data.PublicKey = []byte("junk")
@@ -141,16 +132,13 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
 	var fakeSig [96]byte
@@ -188,16 +176,13 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	helpers.ClearAllCaches()
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
 	deposits, _, keys := testutil.SetupInitialDeposits(t, 1)
@@ -220,16 +205,13 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
@@ -270,16 +252,13 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		Reader:       &goodReader{},
-		Logger:       &goodLogger{},
-		HTTPLogger:   &goodLogger{},
+		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
-		BlockFetcher: &goodFetcher{},
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
 	deposits, _, keys := testutil.SetupInitialDeposits(t, 10)
