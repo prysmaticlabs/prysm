@@ -1,6 +1,7 @@
 syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
+import "proto/eth/v1alpha1/shard_chain.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/validator.proto";
@@ -43,6 +44,13 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
+
+  // Shard chain modifications [9001-10000]
+  ethereum.eth.v1alpha1.ShardState shard_states = 9001 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+  // Add proper tags
+  repeated bytes online_countdown = 9002;
+  ethereum.eth.v1alpha1.CompactCommittee current_light_committee = 9003;
+  ethereum.eth.v1alpha1.CompactCommittee next_light_committee = 9004;
 }
 
 message Fork {

@@ -1,10 +1,11 @@
 syntax = "proto3";
-package ethereum.beacon.p2p.v1;
 
-import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/validator.proto";
+package ethereum.eth.v1alpha1;
+
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
 message ShardBlockWrapper {
   bytes shard_parent_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
@@ -38,29 +39,29 @@ message ShardTransition {
   bytes proposer_signature_aggregate = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
-message AttestationData {
+message ShardAttestationData {
   uint64 slot = 1;
   uint64 index = 2;
   bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  ethereum.eth.v1alpha1.Checkpoint source = 4;
-  ethereum.eth.v1alpha1.Checkpoint target = 5;
+  ShardCheckpoint source = 4;
+  ShardCheckpoint target = 5;
   bytes head_shard_root = 6 [(gogoproto.moretags) = "ssz-size:\"32\""];
   bytes shard_transition_root = 7 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
-message Attestation {
+message ShardAttestation {
   bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-  AttestationData data = 2;
+  ShardAttestationData data = 2;
   bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message AttestationAndCommittee {
   repeated uint64 shard_block_lengths = 1  [(gogoproto.moretags) = "ssz-max:\"2048\""];
-  Attestation attestation = 2;
+  ShardAttestation attestation = 2;
 }
 
-message AttestationAndCommittee {
+message AttestationCustodyBitWrapper {
   bytes attestation_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
   uint64 block_index = 2;
   bool bit = 3;
@@ -68,7 +69,7 @@ message AttestationAndCommittee {
 
 message PendingAttestation {
   bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-  AttestationData data = 2;
+  ShardAttestationData data = 2;
   uint64 inclusion_delay = 3;
   uint64 proposer_index = 4;
   bool crosslink_success = 5;
@@ -78,4 +79,9 @@ message CompactCommittee {
   // Add proper tag
   repeated bytes pubkeys = 1;
   repeated uint64 compact_validators = 2;
+}
+
+message ShardCheckpoint {
+  uint64 epoch = 1;
+  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
