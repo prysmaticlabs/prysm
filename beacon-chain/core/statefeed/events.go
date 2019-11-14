@@ -26,12 +26,6 @@ type Event struct {
 	Data interface{}
 }
 
-// BlockReceivedData is the data sent with BlockReceived events.
-type BlockReceivedData struct {
-	// BlockHash is the hash of the received block.
-	BlockRoot [32]byte
-}
-
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// BlockHash is the hash of the processed block.
