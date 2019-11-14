@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -290,84 +291,80 @@ func GenerateAttestations(
 	conf *BlockGenConfig,
 ) []*ethpb.Attestation {
 	maxAttestations := conf.MaxAttestations
-	headState := proto.Clone(bState).(*pb.BeaconState)
-	headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	currentEpoch := helpers.CurrentEpoch(bState)
 	attestations := make([]*ethpb.Attestation, maxAttestations)
 
-	committee, err := helpers.BeaconCommittee(bState, currentEpoch, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	headRoot, err := helpers.BlockRootAtSlot(headState, bState.Slot)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	var err error
 	targetRoot := make([]byte, 32)
+	headRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(currentEpoch)
-	if epochStartSlot == headState.Slot {
-		targetRoot = headRoot[:]
+	if bState.Slot+1 == helpers.StartSlot(currentEpoch+1) {
+		headState := proto.Clone(bState).(*pb.BeaconState)
+		headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		headRoot, err = helpers.BlockRootAtSlot(headState, bState.Slot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		targetRoot = headRoot
 	} else {
-		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
+		targetRoot, err = helpers.BlockRootAtSlot(bState, epochStartSlot)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	committeeSize := uint64(len(committee))
-	custodyBits := bitfield.NewBitlist(committeeSize)
-	attestingSlot := uint64(0)
-	if bState.Slot > 0 {
-		attestingSlot = bState.Slot - 1
-	}
-
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Slot:            attestingSlot,
-			BeaconBlockRoot: headRoot,
-			Source:          bState.CurrentJustifiedCheckpoint,
-			Target: &ethpb.Checkpoint{
-				Epoch: currentEpoch,
-				Root:  targetRoot,
-			},
-		},
-	}
-
-	dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	})
+	committeesPerSlot, err := helpers.CommitteeCountAtSlot(bState, bState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if maxAttestations > committeeSize {
-		t.Fatalf(
-			"requested %d attestations per block but there are only %d committee members",
+	if maxAttestations < committeesPerSlot {
+		t.Logf(
+			"Warning: %d attestations requested is less than %d committees in current slot, not all validators will be attesting.",
 			maxAttestations,
-			len(committee),
+			committeesPerSlot,
 		)
 	}
 
-	bitsPerAtt := committeeSize / maxAttestations
-	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	for i := uint64(0); i < committeeSize; i += bitsPerAtt {
-		aggregationBits := bitfield.NewBitlist(committeeSize)
-		sigs := []*bls.Signature{}
-		for b := i; b < i+bitsPerAtt; b++ {
-			aggregationBits.SetBitAt(b, true)
-			sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
-		}
-		att.AggregationBits = aggregationBits
+	attsPerCommittee := math.Min(float64(maxAttestations/committeesPerSlot), 1)
+	if math.Trunc(attsPerCommittee) == attsPerCommittee {
+		t.Fatalf("requested attestations must be easily divisible, ")
+	}
 
-		att.Signature = bls.AggregateSignatures(sigs).Marshal()
-		attestations[i/bitsPerAtt] = att
+	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	for c := uint64(0); c < committeesPerSlot || c < maxAttestations; c++ {
+		committee, err := helpers.BeaconCommittee(bState, currentEpoch, c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		committeeSize := uint64(len(committee))
+		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
+		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
+			aggregationBits := bitfield.NewBitlist(committeeSize)
+			sigs := []*bls.Signature{}
+			for b := i; b < i+bitsPerAtt; b++ {
+				aggregationBits.SetBitAt(b, true)
+				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+			}
+
+			attestations[i/bitsPerAtt*(c+1)] = &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot:            bState.Slot,
+					Index:           c,
+					BeaconBlockRoot: headRoot,
+					Source:          bState.CurrentJustifiedCheckpoint,
+					Target: &ethpb.Checkpoint{
+						Epoch: currentEpoch,
+						Root:  targetRoot,
+					},
+				},
+				AggregationBits: aggregationBits,
+				Signature:       bls.AggregateSignatures(sigs).Marshal(),
+			}
+		}
 	}
 	return attestations
 }
