@@ -16,16 +16,16 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State               *pb.BeaconState
-	Root                []byte
-	Block               *ethpb.BeaconBlock
-	FinalizedCheckPoint *ethpb.Checkpoint
-	StateFeedX          *event.Feed
-	BlocksReceived      []*ethpb.BeaconBlock
-	Genesis             time.Time
-	Fork                *pb.Fork
-	DB                  db.Database
-	MockStateFeed       *event.Feed
+	State                    *pb.BeaconState
+	Root                     []byte
+	Block                    *ethpb.BeaconBlock
+	FinalizedCheckPoint      *ethpb.Checkpoint
+	MockStateInitializedFeed *event.Feed
+	BlocksReceived           []*ethpb.BeaconBlock
+	Genesis                  time.Time
+	Fork                     *pb.Fork
+	DB                       db.Database
+	MockStateFeed            *event.Feed
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -112,11 +112,11 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 
 // StateInitializedFeed mocks the same method in the chain service.
 func (ms *ChainService) StateInitializedFeed() *event.Feed {
-	if ms.StateFeedX != nil {
-		return ms.StateFeedX
+	if ms.MockStateInitializedFeed != nil {
+		return ms.MockStateInitializedFeed
 	}
-	ms.StateFeedX = new(event.Feed)
-	return ms.StateFeedX
+	ms.MockStateInitializedFeed = new(event.Feed)
+	return ms.MockStateInitializedFeed
 }
 
 // StateFeed mocks the same method in the chain service.
