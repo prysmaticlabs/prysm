@@ -1,4 +1,4 @@
-package blocks_test
+package benchmarks_test
 
 import (
 	"context"
@@ -15,18 +15,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "operation")
 
 var validatorCount = 65536
 var runAmount = 25
 
-func benchmarkConfig() *testutil.BlockGenConfig {
-	logrus.Printf("Running block benchmarks for %d validators", validatorCount)
-	logrus.SetLevel(logrus.PanicLevel)
-	logrus.SetOutput(ioutil.Discard)
+func benchmarkConfig(b *testing.B) *testutil.BlockGenConfig {
+	b.Logf("Running block benchmarks for %d validators", validatorCount)
 
 	return &testutil.BlockGenConfig{
 		MaxProposerSlashings: 0,
