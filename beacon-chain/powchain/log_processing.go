@@ -27,6 +27,8 @@ var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
+const eth1LookBackPeriod = 100
+
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
 func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
@@ -107,9 +109,13 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	if int64(index) != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
+		if s.requestingOldLogs {
+			return errors.New("received incorrect merkle index")
+		}
 		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
 			return errors.Wrap(err, "Could not get correct merkle index")
 		}
+
 	}
 	s.lastReceivedMerkleIndex = int64(index)
 
@@ -301,19 +307,40 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
 func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
+	// prevent this method from being called recursively
+	s.requestingOldLogs = true
+	defer func() {
+		s.requestingOldLogs = false
+	}()
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
+	startBlock := s.lastRequestedBlock.Uint64() + 1
+	for {
+		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
+		if err != nil {
+			return err
+		}
 
-	for i := s.lastRequestedBlock.Uint64() + 1; i <= beforeCurrentBlk.Uint64(); i++ {
+		if s.lastReceivedMerkleIndex == wantedIndex {
+			break
+		}
+
+		// if the required logs still do not exist after the lookback period, then we return an error.
+		if startBlock < s.lastRequestedBlock.Uint64()-eth1LookBackPeriod {
+			return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
+				"Wanted %d but got %d", wantedIndex, s.lastReceivedMerkleIndex)
+		}
+		startBlock--
+	}
+	return nil
+}
+
+func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
 			return err
 		}
-	}
-
-	if s.lastReceivedMerkleIndex != wantedIndex {
-		return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
-			"Wanted %d but got %d", wantedIndex, s.lastReceivedMerkleIndex)
 	}
 	return nil
 }
