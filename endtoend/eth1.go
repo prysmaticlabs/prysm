@@ -80,6 +80,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
 	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("unable to advance chain: %v", err)
