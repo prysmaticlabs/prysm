@@ -314,7 +314,12 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
-	churnLimit, err := helpers.ValidatorChurnLimit(state)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(state, currentEpoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get active validator count")
+	}
+
+	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
