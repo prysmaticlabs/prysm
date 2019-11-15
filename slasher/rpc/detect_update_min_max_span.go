@@ -41,7 +41,7 @@ func (d minDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *eth
 // DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
 // max span is the span between the current attestation source epoch and the furthest attestation
 // target that its source epoch is lower then it.
-// distance.
+//
 // logic is following the detection method designed by https://github.com/protolambda
 // from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
