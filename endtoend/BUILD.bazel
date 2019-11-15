@@ -20,6 +20,7 @@ go_test(
         "exclusive",
         "manual",
         "minimal",
+        "e2e",
     ],
     deps = [
         "//endtoend/evaluators:go_default_library",
