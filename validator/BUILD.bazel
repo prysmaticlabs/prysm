@@ -79,7 +79,10 @@ go_binary(
     name = "validator",
     embed = [":go_default_library"],
     pure = "off",  # Enabled unless there is a valid reason to include cgo dep.
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//validator:__subpackages__",
+        "//endtoend:__pkg__",
+    ],
 )
 
 [go_binary(
