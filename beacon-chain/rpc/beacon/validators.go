@@ -225,8 +225,6 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
 	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
-	var err error
-
 	if requestedEpoch < finalizedEpoch {
 		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
 		if err != nil {
@@ -235,7 +233,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		if archivedChanges == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Did not find any data for epoch %d - perhaps no active set changed occurred during the epoch",
 				requestedEpoch,
 			)
 		}
@@ -243,9 +241,13 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
 	} else {
-		activatedIndices = validators.ActivatedValidatorIndices(headState)
-		slashedIndices = validators.SlashedValidatorIndices(headState)
-		exitedIndices, err = validators.ExitedValidatorIndices(headState)
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+		}
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(headState), headState.Validators)
+		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
+		exitedIndices, err = validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
@@ -382,7 +384,11 @@ func (bs *Server) GetValidatorQueue(
 
 	// Only activate just enough validators according to the activation churn limit.
 	activationQueueChurn := len(activationQ)
-	churnLimit, err := helpers.ValidatorChurnLimit(headState)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+	}
+	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
 	}

@@ -87,11 +87,15 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 	return nil
 }
 
-// We archive active validator set changes that happened during the epoch.
+// We archive active validator set changes that happened during the previous epoch.
 func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState) error {
-	activations := validators.ActivatedValidatorIndices(headState)
-	slashings := validators.SlashedValidatorIndices(headState)
-	exited, err := validators.ExitedValidatorIndices(headState)
+	activations := validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
+	slashings := validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
+	if err != nil {
+		return errors.Wrap(err, "could not get active validator count")
+	}
+	exited, err := validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
 	if err != nil {
 		return errors.Wrap(err, "could not determine exited validator indices")
 	}
@@ -100,7 +104,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 		Exited:    exited,
 		Slashed:   slashings,
 	}
-	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(ctx, helpers.CurrentEpoch(headState), activeSetChanges); err != nil {
+	if err := s.beaconDB.SaveArchivedActiveValidatorChanges(ctx, helpers.PrevEpoch(headState), activeSetChanges); err != nil {
 		return errors.Wrap(err, "could not archive active validator set changes")
 	}
 	return nil

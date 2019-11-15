@@ -200,8 +200,8 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
-	delayedActEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	prevEpoch := helpers.PrevEpoch(headState)
+	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
 	headState.Validators[4].ActivationEpoch = delayedActEpoch
 	headState.Validators[5].ActivationEpoch = delayedActEpoch
 	event := &statefeed.Event{
@@ -213,7 +213,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	}
 	triggerStateEvent(t, svc, event)
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
+	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].Slashed = true
 	headState.Validators[96].Slashed = true
 	event := &statefeed.Event{
@@ -247,7 +247,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	}
 	triggerStateEvent(t, svc, event)
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,9 +269,9 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
-	headState.Validators[95].ExitEpoch = currentEpoch + 1
-	headState.Validators[95].WithdrawableEpoch = currentEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	prevEpoch := helpers.PrevEpoch(headState)
+	headState.Validators[95].ExitEpoch = prevEpoch + 1
+	headState.Validators[95].WithdrawableEpoch = prevEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -281,7 +281,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	}
 	triggerStateEvent(t, svc, event)
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}

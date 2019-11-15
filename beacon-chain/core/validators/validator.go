@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -63,7 +64,11 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) (*pb.BeaconState, 
 			exitQueueChurn++
 		}
 	}
-	churn, err := helpers.ValidatorChurnLimit(state)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get active validator count")
+	}
+	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
@@ -130,12 +135,11 @@ func SlashValidator(state *pb.BeaconState, slashedIdx uint64, whistleBlowerIdx u
 }
 
 // ActivatedValidatorIndices determines the indices activated during the current epoch.
-func ActivatedValidatorIndices(state *pb.BeaconState) []uint64 {
-	currentEpoch := helpers.CurrentEpoch(state)
+func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	activations := make([]uint64, 0)
-	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
-	for i := 0; i < len(state.Validators); i++ {
-		val := state.Validators[i]
+	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
 		if val.ActivationEpoch == delayedActivationEpoch {
 			activations = append(activations, uint64(i))
 		}
@@ -144,12 +148,11 @@ func ActivatedValidatorIndices(state *pb.BeaconState) []uint64 {
 }
 
 // SlashedValidatorIndices determines the indices slashed during the current epoch.
-func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
-	currentEpoch := helpers.CurrentEpoch(state)
+func SlashedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	slashed := make([]uint64, 0)
-	for i := 0; i < len(state.Validators); i++ {
-		val := state.Validators[i]
-		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
+		maxWithdrawableEpoch := mathutil.Max(val.WithdrawableEpoch, epoch+params.BeaconConfig().EpochsPerSlashingsVector)
 		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
 			slashed = append(slashed, uint64(i))
 		}
@@ -158,11 +161,11 @@ func SlashedValidatorIndices(state *pb.BeaconState) []uint64 {
 }
 
 // ExitedValidatorIndices determines the indices exited during the current epoch.
-func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
+func ExitedValidatorIndices(validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
 	exited := make([]uint64, 0)
 	exitEpochs := make([]uint64, 0)
-	for i := 0; i < len(state.Validators); i++ {
-		val := state.Validators[i]
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
 		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
@@ -176,12 +179,12 @@ func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := 0
-	for _, val := range state.Validators {
+	for _, val := range validators {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
-	churn, err := helpers.ValidatorChurnLimit(state)
+	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
@@ -189,7 +192,7 @@ func ExitedValidatorIndices(state *pb.BeaconState) ([]uint64, error) {
 		exitQueueEpoch++
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	for i, val := range state.Validators {
+	for i, val := range validators {
 		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
 			exited = append(exited, uint64(i))
 		}
