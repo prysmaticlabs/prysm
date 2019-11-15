@@ -920,7 +920,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
-	limit, err := helpers.ValidatorChurnLimit(state)
+	limit, err := helpers.ValidatorChurnLimit(0)
 	if err != nil {
 		t.Error(err)
 	}
