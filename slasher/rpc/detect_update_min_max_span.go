@@ -118,7 +118,7 @@ func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64,
 	}
 	span := target - source + 1
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
-		return 0, span, nil, fmt.Errorf("%d target - source: %d > weakSubjectivityPeriod",
+		return 0, span, nil, fmt.Errorf("target: "%d - source: %d > weakSubjectivityPeriod",
 			params.BeaconConfig().WeakSubjectivityPeriod,
 			span,
 		)
