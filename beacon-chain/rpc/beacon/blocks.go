@@ -23,7 +23,7 @@ func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
@@ -34,7 +34,7 @@ func (bs *Server) ListBlocks(
 
 		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
 		}
 
 		numBlks := len(blks)
@@ -44,7 +44,7 @@ func (bs *Server) ListBlocks(
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
 		}
 
 		return &ethpb.ListBlocksResponse{
@@ -56,7 +56,7 @@ func (bs *Server) ListBlocks(
 	case *ethpb.ListBlocksRequest_Root:
 		blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
 
 		if blk == nil {
@@ -71,7 +71,7 @@ func (bs *Server) ListBlocks(
 	case *ethpb.ListBlocksRequest_Slot:
 		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
 
 		numBlks := len(blks)
@@ -81,7 +81,7 @@ func (bs *Server) ListBlocks(
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
 		}
 
 		return &ethpb.ListBlocksResponse{
@@ -91,7 +91,7 @@ func (bs *Server) ListBlocks(
 		}, nil
 	}
 
-	return nil, status.Errorf(codes.InvalidArgument, "must satisfy one of the filter requirement")
+	return nil, status.Errorf(codes.InvalidArgument, "Must satisfy one of the filter requirement")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from
