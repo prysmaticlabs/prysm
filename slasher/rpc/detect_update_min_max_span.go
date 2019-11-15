@@ -125,7 +125,7 @@ func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64,
 	}
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validatorIdx: %d", validatorIdx)
+		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validator index: %d", validatorIdx)
 	}
 	if _, ok := spanMap.EpochSpanMap[source]; ok {
 		return d.Detect(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
