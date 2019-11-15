@@ -49,7 +49,7 @@ go_image(
     importpath = IMPORT_PATH,
     pure = "off",  # depends on cgo for go-ethereum crypto
     race = "off",
-    static = "off",  # go-ethereum is bad about static
+    static = "on",  # go-ethereum is bad about static
     tags = ["manual"],
     deps = DEPS,
 )
