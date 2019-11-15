@@ -23,12 +23,23 @@ type Server struct {
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
-func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attestation) (*ethpb.AttesterSlashing, error) {
+func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*ethpb.AttesterSlashing, error) {
 	//TODO(#3133): add signature validation
-	sEpoch := req.Data.Source.Epoch
 	tEpoch := req.Data.Target.Epoch
+	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
 	root, err := ssz.HashTreeRoot(req.Data)
-	ss.SlasherDb.DoubleVotes(sEpoch, tEpoch)
+	if err != nil {
+		return nil, err
+	}
+	var idxAtts []*ethpb.IndexedAttestation
+	for _, idx := range indices {
+		atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:])
+		if err != nil {
+			return nil, err
+		}
+		idxAtts = append(idxAtts, atts...)
+	}
+	//TODO(#3133): add surround detection
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 

@@ -69,8 +69,8 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 }
 
 // DoubleVote looks up in db for slashable data possibly multiple slashable actions were preformed by the same validator.
-func (db *Store) DoubleVotes(sourceEpoch uint64, targetEpoch uint64, validatorID uint64, dataroot []byte) ([]*ethpb.IndexedAttestation, error) {
-	idxAttestations, err := db.IndexedAttestation(sourceEpoch, targetEpoch, validatorID)
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot []byte) ([]*ethpb.IndexedAttestation, error) {
+	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorID)
 	if err != nil {
 		return nil, err
 	}
