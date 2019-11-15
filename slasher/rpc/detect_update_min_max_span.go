@@ -19,9 +19,7 @@ type Detector interface {
 // maxDetector is a detector used to detect surround attestations.
 type maxDetector struct{}
 
-// minDetector is a detector used to detect surrounded attestations.
-type minDetector struct{}
-
+// Detect max detector is a detector used to detect surround attestations.
 func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
 	maxSpan := uint64(recorderEpochSpans.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
@@ -30,6 +28,10 @@ func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *eth
 	return 0
 }
 
+// minDetector is a detector used to detect surrounded attestations.
+type minDetector struct{}
+
+// Detect min detector is a detector used to detect surrounded attestations.
 func (d minDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
 	minSpan := uint64(recorderEpochSpans.MinEpochSpan)
 	if minSpan < attestationEpochSpan {
