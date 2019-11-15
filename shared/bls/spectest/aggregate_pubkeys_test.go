@@ -46,7 +46,7 @@ func TestAggregatePubkeysYaml(t *testing.T) {
 		t.Fatalf("Cannot decode string to bytes: %v", err)
 	}
 	if !bytes.Equal(outputBytes, pk.Marshal()) {
-		t.Fatal("Output does not equal marshaled aggregated public " +
-			"key bytes")
+		t.Fatalf("Output does not equal marshaled aggregated public "+
+			"key bytes. wanted %#x but got %#x", outputBytes, pk.Marshal())
 	}
 }

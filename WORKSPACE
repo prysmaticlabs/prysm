@@ -9,15 +9,6 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
-    urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-    ],
-)
-
-http_archive(
     name = "bazel_gazelle",
     sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
     urls = [
@@ -38,6 +29,13 @@ http_archive(
     sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
     strip_prefix = "rules_docker-0.10.1",
     url = "https://github.com/bazelbuild/rules_docker/archive/v0.10.1.tar.gz",
+)
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
+    strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
+    urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
 )
 
 http_archive(
@@ -169,6 +167,13 @@ http_archive(
     sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+)
+
+http_archive(
+    name = "com_github_herumi_bls_eth_go_binary",
+    sha256 = "7e00d57869645a6e6ed90004bef0717627597ed8d93ab3e3426240c0122c4d54",
+    strip_prefix = "bls-go-binary-ae02584f5db9279fb0b2d95214d2179c65c74544",
+    url = "https://github.com/nisdas/bls-go-binary/archive/ae02584f5db9279fb0b2d95214d2179c65c74544.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1236,13 +1241,6 @@ go_repository(
     importpath = "github.com/mdlayher/prombolt",
     sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
     version = "v0.0.0-20161005185022-dfcf01d20ee9",
-)
-
-go_repository(
-    name = "com_github_kilic_bls12-381",
-    importpath = "github.com/kilic/bls12-381",
-    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
-    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
