@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -151,21 +152,19 @@ func generateProposerSlashings(
 	t testing.TB,
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
-	maxSlashings uint64,
+	numSlashings uint64,
 ) []*ethpb.ProposerSlashing {
-	currentSlot := bState.Slot
 	currentEpoch := helpers.CurrentEpoch(bState)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
-	validatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	proposerSlashings := make([]*ethpb.ProposerSlashing, maxSlashings)
-	for i := uint64(0); i < maxSlashings; i++ {
-		proposerIndex := i + uint64(validatorCount/4)
+	proposerSlashings := make([]*ethpb.ProposerSlashing, numSlashings)
+	for i := uint64(0); i < numSlashings; i++ {
+		proposerIndex, err := randValIndex(bState)
+		if err != nil {
+			t.Fatal(err)
+		}
 		header1 := &ethpb.BeaconBlockHeader{
-			Slot:     currentSlot - (i % slotsPerEpoch),
+			Slot:     bState.Slot,
 			BodyRoot: []byte{0, 1, 0},
 		}
 		root, err := ssz.SigningRoot(header1)
@@ -176,7 +175,7 @@ func generateProposerSlashings(
 		header1.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
 
 		header2 := &ethpb.BeaconBlockHeader{
-			Slot:     currentSlot - (i % slotsPerEpoch),
+			Slot:     bState.Slot,
 			BodyRoot: []byte{0, 2, 0},
 		}
 		root, err = ssz.SigningRoot(header2)
@@ -199,31 +198,29 @@ func generateAttesterSlashings(
 	t testing.TB,
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
-	maxSlashings uint64,
+	numSlashings uint64,
 ) []*ethpb.AttesterSlashing {
-	attesterSlashings := make([]*ethpb.AttesterSlashing, maxSlashings)
-	for i := uint64(0); i < maxSlashings; i++ {
-		committee, err := helpers.BeaconCommittee(bState, i, i%params.BeaconConfig().MaxCommitteesPerSlot)
+	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
+	for i := uint64(0); i < numSlashings; i++ {
+		committee, err := helpers.BeaconCommittee(bState, bState.Slot, rand.Uint64()%params.BeaconConfig().MaxCommitteesPerSlot)
 		if err != nil {
 			t.Fatal(err)
 		}
 		committeeSize := uint64(len(committee))
-		attData1 := &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{
-				Epoch: i,
-				Root:  params.BeaconConfig().ZeroHash[:],
-			},
-			Source: &ethpb.Checkpoint{
-				Epoch: i + 1,
-				Root:  params.BeaconConfig().ZeroHash[:],
-			},
-		}
+
 		aggregationBits := bitfield.NewBitlist(committeeSize)
 		aggregationBits.SetBitAt(i, true)
-		custodyBits := bitfield.NewBitlist(committeeSize)
 		att1 := &ethpb.Attestation{
-			Data:            attData1,
-			CustodyBits:     custodyBits,
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{
+					Epoch: i,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: i + 1,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
 			AggregationBits: aggregationBits,
 		}
 		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
@@ -234,22 +231,21 @@ func generateAttesterSlashings(
 			t.Fatal(err)
 		}
 		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
-		sig := privs[committee[i]].Sign(dataRoot[:], domain)
+		valIndex := committee[rand.Uint64()%uint64(len(committee))]
+		sig := privs[valIndex].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
-		attData2 := &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{
-				Epoch: i,
-				Root:  params.BeaconConfig().ZeroHash[:],
-			},
-			Source: &ethpb.Checkpoint{
-				Epoch: i,
-				Root:  params.BeaconConfig().ZeroHash[:],
-			},
-		}
 		att2 := &ethpb.Attestation{
-			Data:            attData2,
-			CustodyBits:     custodyBits,
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{
+					Epoch: i,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: i,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
 			AggregationBits: aggregationBits,
 		}
 		dataRoot, err = ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
@@ -259,7 +255,7 @@ func generateAttesterSlashings(
 		if err != nil {
 			t.Fatal(err)
 		}
-		sig = privs[committee[i]].Sign(dataRoot[:], domain)
+		sig = privs[valIndex].Sign(dataRoot[:], domain)
 		att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		indexedAtt1, err := blocks.ConvertToIndexed(context.Background(), bState, att1)
@@ -298,6 +294,7 @@ func GenerateAttestations(
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(currentEpoch)
+	// Only calculate head state if its needed for boundary.
 	if bState.Slot+1 == helpers.StartSlot(currentEpoch+1) {
 		headState := proto.Clone(bState).(*pb.BeaconState)
 		headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
@@ -372,13 +369,13 @@ func GenerateAttestations(
 func generateDepositsAndEth1Data(
 	t testing.TB,
 	bState *pb.BeaconState,
-	maxDeposits uint64,
+	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
 	*ethpb.Eth1Data,
 ) {
 	previousDepsLen := bState.Eth1DepositIndex
-	currentDeposits, _, _ := SetupInitialDeposits(t, previousDepsLen+maxDeposits)
+	currentDeposits, _, _ := SetupInitialDeposits(t, previousDepsLen+numDeposits)
 	eth1Data := GenerateEth1Data(t, currentDeposits)
 	return currentDeposits[previousDepsLen:], eth1Data
 }
@@ -387,7 +384,7 @@ func generateVoluntaryExits(
 	t testing.TB,
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
-	maxExits uint64,
+	numExits uint64,
 ) []*ethpb.VoluntaryExit {
 	currentEpoch := helpers.CurrentEpoch(bState)
 	validatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
@@ -395,20 +392,31 @@ func generateVoluntaryExits(
 		t.Fatal(err)
 	}
 
-	voluntaryExits := make([]*ethpb.VoluntaryExit, maxExits)
+	voluntaryExits := make([]*ethpb.VoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
-		valIndex := float64(validatorCount)*(2.0/3.0) + float64(i)
+		valIndex, err := randValIndex(bState)
+		if err != nil {
+			t.Fatal(err)
+		}
 		exit := &ethpb.VoluntaryExit{
 			Epoch:          helpers.PrevEpoch(bState),
-			ValidatorIndex: uint64(valIndex),
+			ValidatorIndex: valIndex,
 		}
 		root, err := ssz.SigningRoot(exit)
 		if err != nil {
 			t.Fatal(err)
 		}
 		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
-		exit.Signature = privs[uint64(valIndex)].Sign(root[:], domain).Marshal()
+		exit.Signature = privs[valIndex].Sign(root[:], domain).Marshal()
 		voluntaryExits[i] = exit
 	}
 	return voluntaryExits
+}
+
+func randValIndex(bState *pb.BeaconState) (uint64, error) {
+	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
+	if err != nil {
+		return 0, err
+	}
+	return rand.Uint64() % activeCount, nil
 }
