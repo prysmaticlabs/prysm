@@ -13,7 +13,7 @@ import (
 // Detector is an interface used to implement the slashing surround an surrounded detection
 // methods.
 type Detector interface {
-	Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
+	Detect(attestationEpochSpan uint64, recorderEpochSpan *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 }
 
 // maxDetector is a detector used to detect surround attestations.
