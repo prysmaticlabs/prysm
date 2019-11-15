@@ -55,7 +55,7 @@ message MinMaxEpochSpan {
     uint32 min_epoch_span = 1;
     uint32 max_epoch_span = 2;
 }
-// Every validator will have his own spans map containing min distance from each epoch
+// Every validator will have their own spans map containing min distance from each epoch
 // to the closest target epoch of another attestation (surrounded) and max distance to
 // a target attestation (surrounding), in order to detect slashable attestation as quick
 // as possible.
