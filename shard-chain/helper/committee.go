@@ -79,3 +79,37 @@ func ShardCommittee(state *pb.BeaconState, epoch uint64, shard uint64) ([]uint64
 
 	return helpers.ComputeCommittee(indices, seed, 0, params.BeaconConfig().ActiveShards)
 }
+
+// LightClientCommittee returns the light client committee of the given epoch.
+//
+// Spec pseudocode definition:
+//   def get_light_client_committee(beacon_state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
+//    source_epoch = epoch - epoch % LIGHT_CLIENT_COMMITTEE_PERIOD
+//    if source_epoch > 0:
+//        source_epoch -= LIGHT_CLIENT_COMMITTEE_PERIOD
+//    active_validator_indices = get_active_validator_indices(beacon_state, source_epoch)
+//    seed = get_seed(beacon_state, source_epoch, DOMAIN_SHARD_LIGHT_CLIENT)
+//    return compute_committee(active_validator_indices, seed, 0, ACTIVE_SHARDS)[:TARGET_COMMITTEE_SIZE]
+func LightClientCommittee(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
+	sourceEpoch := epoch - epoch%params.BeaconConfig().ShardCommitteePeriod
+	if sourceEpoch >= params.BeaconConfig().ShardCommitteePeriod {
+		sourceEpoch -= params.BeaconConfig().ShardCommitteePeriod
+	}
+
+	indices, err := helpers.ActiveValidatorIndices(state, sourceEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	seed, err := helpers.Seed(state, sourceEpoch, params.BeaconConfig().DomainShardLightClient)
+	if err != nil {
+		return nil, err
+	}
+
+	committee, err := helpers.ComputeCommittee(indices, seed, 0, params.BeaconConfig().ActiveShards)
+	if err != nil {
+		return nil, err
+	}
+
+	return committee[:params.BeaconConfig().TargetCommitteeSize], nil
+}
