@@ -57,7 +57,7 @@ message MinMaxEpochSpan {
 }
 // Every validator will have their own spans map containing min distance from each epoch
 // to the closest target epoch of another attestation (surrounded) and max distance to
-// a target attestation (surrounding), in order to detect slashable attestation as quick
+// a target attestation (surrounding), in order to detect slashable attestation as quickly
 // as possible.
 message EpochSpanMap {
     // uint64 is for storing the epoch
