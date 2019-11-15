@@ -736,7 +736,11 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 		[]byte("2"),
 		[]byte("3"),
 	}
-	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -789,7 +793,11 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		[]byte("2"),
 		[]byte("3"),
 	}
-	wantChurn, err := helpers.ValidatorChurnLimit(headState)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		t.Fatal(err)
 	}

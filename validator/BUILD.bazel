@@ -38,8 +38,9 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/validator",
-    pure = "on",
+    pure = "off",
     race = "off",
+    static = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [

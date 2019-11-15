@@ -165,13 +165,13 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
-	delayedActEpoch := helpers.DelayedActivationExitEpoch(currentEpoch)
+	prevEpoch := helpers.PrevEpoch(headState)
+	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
 	headState.Validators[4].ActivationEpoch = delayedActEpoch
 	headState.Validators[5].ActivationEpoch = delayedActEpoch
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,12 +190,12 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
+	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].Slashed = true
 	headState.Validators[96].Slashed = true
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,12 +214,12 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
-	headState.Validators[95].ExitEpoch = currentEpoch + 1
-	headState.Validators[95].WithdrawableEpoch = currentEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	prevEpoch := helpers.PrevEpoch(headState)
+	headState.Validators[95].ExitEpoch = prevEpoch + 1
+	headState.Validators[95].WithdrawableEpoch = prevEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	triggerNewHeadEvent(t, svc, [32]byte{})
 
-	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, currentEpoch)
+	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
