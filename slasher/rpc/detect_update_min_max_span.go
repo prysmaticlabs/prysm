@@ -13,13 +13,13 @@ import (
 // Detector is an interface used to implement the slashing surround an surrounded detection
 // methods.
 type Detector interface {
-	Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64
+	Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 }
 
 // maxDetector is a detector used to detect surround attestations.
 type maxDetector struct{}
 
-// Detect max detector is a detector used to detect surround attestations.
+// Detect is used to detect surround attestations.
 func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
 	maxSpan := uint64(recorderEpochSpans.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
