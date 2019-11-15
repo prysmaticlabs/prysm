@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -135,7 +133,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //    """
 //    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
 func DelayedActivationExitEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
+	return epoch + 1 + params.BeaconConfig().MaxSeedLookhead
 }
 
 // ValidatorChurnLimit returns the number of validators that are allowed to
@@ -168,59 +166,57 @@ func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
 //    Return the beacon proposer index at the current slot.
 //    """
 //    epoch = get_current_epoch(state)
-//    committees_per_slot = get_committee_count(state, epoch) // SLOTS_PER_EPOCH
-//    offset = committees_per_slot * (state.slot % SLOTS_PER_EPOCH)
-//    shard = Shard((get_start_shard(state, epoch) + offset) % SHARD_COUNT)
-//    first_committee = get_crosslink_committee(state, epoch, shard)
+//    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
+//    indices = get_active_validator_indices(state, epoch)
+//    return compute_proposer_index(state, indices, seed)
+func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
+	e := CurrentEpoch(state)
+
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not generate seed")
+	}
+
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot)...)
+	seedWithSlotHash := hashutil.Hash(seedWithSlot)
+
+	indices, err := ActiveValidatorIndices(state, e)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get active indices")
+	}
+
+	return ComputeProposerIndex(state, indices, seedWithSlotHash)
+}
+
+// ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
+//
+// Spec pseudocode definition:
+//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
+//    """
+//    Return from ``indices`` a random index sampled by effective balance.
+//    """
+//    assert len(indices) > 0
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    seed = get_seed(state, epoch)
 //    i = 0
 //    while True:
-//        candidate_index = first_committee[(epoch + i) % len(first_committee)]
+//        candidate_index = indices[compute_shuffled_index(ValidatorIndex(i % len(indices)), len(indices), seed)]
 //        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
 //        effective_balance = state.validators[candidate_index].effective_balance
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
-	// Calculate the offset for slot and shard
-	e := CurrentEpoch(state)
-	committeeCount, err := CommitteeCount(state, e)
-	if err != nil {
-		return 0, err
+func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(indices))
+	if length == 0 {
+		return 0, errors.New("empty indices list")
 	}
-	committesPerSlot := committeeCount / params.BeaconConfig().SlotsPerEpoch
-	offSet := committesPerSlot * (state.Slot % params.BeaconConfig().SlotsPerEpoch)
-
-	// Calculate which shards get assigned given the epoch start shard
-	// and the offset
-	startShard, err := StartShard(state, e)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get start shard")
-	}
-	shard := (startShard + offSet) % params.BeaconConfig().ShardCount
-
-	// Use the first committee of the given slot and shard
-	// to select proposer
-	firstCommittee, err := CrosslinkCommittee(state, e, shard)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get first committee")
-	}
-	if len(firstCommittee) == 0 {
-		return 0, fmt.Errorf("empty first committee at slot %d", state.Slot)
-	}
-
-	// Use the generated seed to select proposer from the first committee
 	maxRandomByte := uint64(1<<8 - 1)
-	seed, err := Seed(state, e)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not generate seed")
-	}
 
-	// Looping through the committee to select proposer that has enough
-	// effective balance.
 	for i := uint64(0); ; i++ {
-		candidateIndex := firstCommittee[(e+i)%uint64(len(firstCommittee))]
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
+		if err != nil {
+			return 0, err
+		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBal := state.Validators[candidateIndex].EffectiveBalance

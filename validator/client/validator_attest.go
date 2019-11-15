@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,85 +19,52 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestToBlockHead completes the validator client's attester responsibility at a given slot.
+// SubmitAttestation completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [48]byte) {
-	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
+func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
-	// We fetch the validator index as it is necessary to generate the aggregation
-	// bitfield of the attestation itself.
-	var assignment *pb.AssignmentResponse_ValidatorAssignment
-	if v.assignments == nil {
-		log.Errorf("No assignments for validators")
+	assignment, err := v.assignment(pubKey)
+	if err != nil {
+		log.Errorf("Could not fetch validator assignment: %v", err)
 		return
 	}
-	for _, assign := range v.assignments.ValidatorAssignment {
-		if bytes.Equal(pubKey[:], assign.PublicKey) {
-			assignment = assign
-			break
-		}
-	}
-	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
-	}
-	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
+
+	indexInCommittee, err := v.indexInCommittee(ctx, pubKey, assignment)
 	if err != nil {
-		log.Errorf("Could not fetch validator index: %v", err)
+		log.Errorf("Could not get validator index in assignment: %v", err)
 		return
 	}
 
 	v.waitToSlotMidpoint(ctx, slot)
 
 	req := &pb.AttestationRequest{
-		Slot:  slot,
-		Shard: assignment.Shard,
+		Slot:           slot,
+		CommitteeIndex: assignment.CommitteeIndex,
 	}
 	data, err := v.attesterClient.RequestAttestation(ctx, req)
 	if err != nil {
-		log.Errorf("Could not request attestation to sign at slot %d: %v",
-			slot, err)
+		log.Errorf("Could not request attestation to sign at slot %d: %v", slot, err)
+		return
+	}
+	log = log.WithField("slot", data.Slot)
+	log = log.WithField("committeeIndex", data.Index)
+
+	sig, err := v.signAtt(ctx, pubKey, data)
+	if err != nil {
+		log.Errorf("Could not sign attestation: %v", err)
 		return
 	}
 
 	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
-
-	// Find the index in committee to be used for
-	// the aggregation bitfield
-	var indexInCommittee uint64
-	for i, vIndex := range assignment.Committee {
-		if vIndex == validatorIndexRes.Index {
-			indexInCommittee = uint64(i)
-			break
-		}
-	}
-
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
-
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainAttestation})
-	if err != nil {
-		log.WithError(err).Error("Failed to get domain data from beacon node")
-		return
-	}
-	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data: data,
-		// Default is false until phase 1 where proof of custody gets implemented.
-		CustodyBit: false,
-	}
-
-	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
-	if err != nil {
-		log.WithError(err).Error("Failed to sign attestation data and custody bit")
-		return
-	}
-	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain).Marshal()
-
 	attestation := &ethpb.Attestation{
 		Data:            data,
 		CustodyBits:     custodyBitfield,
@@ -116,7 +84,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, pubKey [
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
-		trace.Int64Attribute("shard", int64(data.Crosslink.Shard)),
+		trace.Int64Attribute("committeeIndex", int64(data.Index)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
@@ -139,4 +107,60 @@ func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	timeToBroadcast := startTime.Add(delay)
 	time.Sleep(roughtime.Until(timeToBroadcast))
+}
+
+// Given the validator public key, this gets the validator assignment.
+func (v *validator) assignment(pubKey [48]byte) (*pb.AssignmentResponse_ValidatorAssignment, error) {
+	if v.assignments == nil {
+		return nil, errors.New("no assignments for validators")
+	}
+
+	for _, assign := range v.assignments.ValidatorAssignment {
+		if bytes.Equal(pubKey[:], assign.PublicKey) {
+			return assign, nil
+		}
+	}
+
+	return nil, fmt.Errorf("pubkey %#x not in assignment", bytesutil.Trunc(pubKey[:]))
+}
+
+// This returns the index of validator's position in a committee. It's used to construct aggregation and
+// custody bit fields.
+func (v *validator) indexInCommittee(
+	ctx context.Context,
+	pubKey [48]byte,
+	assignment *pb.AssignmentResponse_ValidatorAssignment) (uint64, error) {
+	res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	if err != nil {
+		return 0, err
+	}
+
+	for i, validatorIndex := range assignment.Committee {
+		if validatorIndex == res.Index {
+			return uint64(i), nil
+		}
+	}
+
+	return 0, fmt.Errorf("index %d not in committee", res.Index)
+}
+
+// Given validator's public key, this returns the signature of an attestation data.
+func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconAttester})
+	if err != nil {
+		return nil, err
+	}
+	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
+		Data: data,
+		// Default is false until phase 1 where proof of custody gets implemented.
+		CustodyBit: false,
+	}
+
+	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
+	if err != nil {
+		return nil, err
+	}
+
+	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
+	return sig.Marshal(), nil
 }
