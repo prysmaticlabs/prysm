@@ -10,16 +10,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Detector is an interface used to implement the slashing surround an surrounded detection
-// methods.
+// Detector is an interface used to implement the slashable surrounding/surrounded
+// vote detection methods.
 type Detector interface {
 	Detect(attestationEpochSpan uint64, recorderEpochSpan *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 }
 
-// maxDetector is a detector used to detect surround attestations.
+// maxDetector is a detector used to detect surrounding attestations.
 type maxDetector struct{}
 
-// Detect is used to detect surround attestations.
+// Detect is a function for maxDetector used to detect surrounding attestations.
 func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
 	maxSpan := uint64(recorderEpochSpans.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
@@ -31,7 +31,7 @@ func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *eth
 // minDetector is a detector used to detect surrounded attestations.
 type minDetector struct{}
 
-// Detect min detector is a detector used to detect surrounded attestations.
+// Detect is a function for minDetecter used to detect surrounded attestations.
 func (d minDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
 	minSpan := uint64(recorderEpochSpans.MinEpochSpan)
 	if minSpan < attestationEpochSpan {
@@ -41,10 +41,11 @@ func (d minDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *eth
 }
 
 // DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
-// max span is the span between the current attestation source epoch and the furthest attestation
-// target that its source epoch is lower then it.
-// logic is following the detection method designed by https://github.com/protolambda
-// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
+// This is used for detecting surrounding votes.
+// The max span is the span between the current attestation's source epoch and the furthest attestation's
+// target epoch that has a lower (earlier) source epoch.
+// Logic for this detection method was designed by https://github.com/protolambda
+// Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, maxDetector{})
 	if err != nil {
@@ -70,13 +71,13 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 	return 0, nil
 }
 
-// DetectAndUpdateMinEpochSpan is used to detect surround and update the min epoch span
+// DetectAndUpdateMinEpochSpan is used to detect surrounded votes and update the min epoch span
 // of an incoming attestation.
-// min span is the span between the current attestation and the closest attestation target
-// distance.
+// The min span is the span between the current attestations target epoch and the
+// closest attestation's target distance.
 //
-// logic is following the detection method designed by https://github.com/protolambda
-// from here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
+// Logic is following the detection method designed by https://github.com/protolambda
+// Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
 	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, minDetector{})
 	if err != nil {
@@ -107,8 +108,8 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 
 // detectSlashingByEpochSpan is used to detect if a slashable event is present
 // in the db by checking either the closest attestation target or the furthest
-// attestation target. this method receives the detection func in order to be
-// compatible for both cases.
+// attestation target. This method receives a detector in order to be used
+// for both surrounding and surrounded vote cases.
 func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector interface{}) (uint64, uint64, *ethpb.EpochSpanMap, error) {
 	d, ok := detector.(Detector)
 	if !ok {
@@ -118,7 +119,7 @@ func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64,
 	}
 	span := target - source + 1
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
-		return 0, span, nil, fmt.Errorf("target: "%d - source: %d > weakSubjectivityPeriod",
+		return 0, span, nil, fmt.Errorf("target: %d - source: %d > weakSubjectivityPeriod",
 			params.BeaconConfig().WeakSubjectivityPeriod,
 			span,
 		)
