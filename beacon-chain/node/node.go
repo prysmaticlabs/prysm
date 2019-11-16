@@ -83,7 +83,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		stateFeed: new(event.Feed),
 	}
 
-	// Use custom config values if the --no-custom-config flag is set.
+	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
 			log.WithField(
