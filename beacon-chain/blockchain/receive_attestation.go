@@ -5,15 +5,19 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+var processAttInterval = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
@@ -98,6 +102,21 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 	processedAttNoPubsub.Inc()
 	return nil
+}
+
+func (s *Service) processAttestation() {
+	ticker := time.NewTicker(processAttInterval)
+	for {
+		//ctx := context.TODO()
+		select {
+		case <-ticker.C:
+			log.Error("hi! I'm suppose to poll attestations here")
+			s.opsPoolService.IncomingProcessedBlockFeed()
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
+			break
+		}
+	}
 }
 
 // This checks if the attestation is from a competing chain, emits warning and updates metrics.
