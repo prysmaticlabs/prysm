@@ -389,6 +389,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer kvStore.Close()
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
