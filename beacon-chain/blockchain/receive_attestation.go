@@ -59,12 +59,7 @@ func (s *Service) processAttestation() {
 		ctx := context.Background()
 		select {
 		case <-ticker.C:
-			slot := uint64(0)
-			if s.headState != nil && uint64(time.Now().Unix()) > s.headState.GenesisTime {
-				slot = (uint64(time.Now().Unix()) - s.headState.GenesisTime) / params.BeaconConfig().SecondsPerSlot
-			}
-
-			atts, err := s.opsPoolService.AttestationPoolForForkchoice(ctx, slot)
+			atts, err := s.opsPoolService.AttestationPoolForForkchoice(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not retrieve attestation from pool")
 			}

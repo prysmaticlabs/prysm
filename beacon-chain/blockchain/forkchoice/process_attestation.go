@@ -86,14 +86,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 		return err
 	}
 
-	log := log.WithFields(logrus.Fields{
-		"Slot":               a.Data.Slot,
-		"Index":              a.Data.Index,
-		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
-		"BeaconBlockRoot":    fmt.Sprintf("%#x", a.Data.BeaconBlockRoot),
-	})
-	log.Info("Updating latest votes")
-
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
@@ -113,6 +105,14 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	if err := s.db.SaveAttestation(ctx, a); err != nil {
 		return err
 	}
+
+	log := log.WithFields(logrus.Fields{
+		"Slot":               a.Data.Slot,
+		"Index":              a.Data.Index,
+		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
+		"BeaconBlockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
+	})
+	log.Debug("Updated latest votes")
 
 	return nil
 }

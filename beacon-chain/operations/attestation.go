@@ -24,7 +24,7 @@ import (
 type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
-	AttestationPoolForForkchoice(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
+	AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -49,7 +49,7 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 	return item.Value().(*sync.Mutex)
 }
 
-func (s *Service) AttestationPoolForForkchoice(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
+func (s *Service) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
 
