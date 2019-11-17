@@ -49,6 +49,9 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 	return item.Value().(*sync.Mutex)
 }
 
+// AttestationPoolForForkchoice returns the attestations that have not been processed by the
+// fork choice service. It will not return the attestations which the validator vote has
+// already been counted.
 func (s *Service) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
