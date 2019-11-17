@@ -53,7 +53,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
 func (s *Service) processAttestation() {
-	period := time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
+	period := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(period)
 	for {
 		ctx := context.Background()
