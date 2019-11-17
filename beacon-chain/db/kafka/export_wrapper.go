@@ -20,6 +20,7 @@ var _ = iface.Database(&Exporter{})
 var log = logrus.WithField("prefix", "exporter")
 var marshaler = &jsonpb.Marshaler{}
 
+// Exporter wraps a database interface and exports certain objects to kafka topics.
 type Exporter struct {
 	db iface.Database
 	p  *kafka.Producer

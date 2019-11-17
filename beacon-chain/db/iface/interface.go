@@ -1,4 +1,4 @@
-// package iface exists to prevent circular dependencies when implementing the database interface.
+// Package iface exists to prevent circular dependencies when implementing the database interface.
 package iface
 
 import (
