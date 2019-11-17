@@ -55,24 +55,16 @@ func (s *Service) AttestationPoolForForkchoice(ctx context.Context, requestedSlo
 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
-	bState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, errors.New("could not retrieve attestations from DB")
-	}
-
-	if bState.Slot < requestedSlot {
-		bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
-		}
-	}
-
 	for root, ac := range s.attestationPool {
-		for _, att := range ac.ToAttestations() {
+		for i, att := range ac.ToAttestations() {
+			if ac.SignaturePairs[i].VoteCounted {
+				continue
+			}
 			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
 				continue
 			}
 			atts = append(atts, att)
+			ac.SignaturePairs[i].VoteCounted = true
 		}
 	}
 
@@ -110,7 +102,6 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
 				continue
 			}
-
 			if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
 				delete(s.attestationPool, root)
 				continue

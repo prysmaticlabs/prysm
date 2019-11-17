@@ -39,8 +39,6 @@ type Store struct {
 	prevFinalizedCheckpt *ethpb.Checkpoint
 	checkpointState      *cache.CheckpointStateCache
 	checkpointStateLock  sync.Mutex
-	attsQueue            map[[32]byte]*ethpb.Attestation
-	attsQueueLock        sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
 }
@@ -54,7 +52,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		cancel:          cancel,
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
-		attsQueue:       make(map[[32]byte]*ethpb.Attestation),
 		seenAtts:        make(map[[32]byte]bool),
 	}
 }

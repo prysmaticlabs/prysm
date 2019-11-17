@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -52,27 +51,28 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	return nil
 }
 
+// This processes attestations from the attestation pool to account for validator votes and fork choice.
 func (s *Service) processAttestation() {
-	period := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	period := time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 	ticker := time.NewTicker(period)
 	for {
 		ctx := context.Background()
 		select {
 		case <-ticker.C:
 			slot := uint64(0)
-			if uint64(time.Now().Unix()) > s.headState.GenesisTime {
+			if s.headState != nil && uint64(time.Now().Unix()) > s.headState.GenesisTime {
 				slot = (uint64(time.Now().Unix()) - s.headState.GenesisTime) / params.BeaconConfig().SecondsPerSlot
 			}
+
 			atts, err := s.opsPoolService.AttestationPoolForForkchoice(ctx, slot)
 			if err != nil {
-				log.Errorf("Could not retrieve attestations from pool: %v", err)
+				log.WithError(err).Error("Could not retrieve attestation from pool")
 			}
+
 			for _, a := range atts {
-				committee, err := helpers.AttestingIndices(s.headState, a.Data, a.AggregationBits)
-				if err != nil {
-					log.Errorf("Could not get attestation indices: %v", err)
+				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
+					log.WithError(err).Error("Could not receive attestation in chain service")
 				}
-				log.Infof("PROCESSING SLOT %d ATT_SLOT %d INDEX %d COMMITTEE %v", slot, a.Data.Slot, a.Data.Index, committee)
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")

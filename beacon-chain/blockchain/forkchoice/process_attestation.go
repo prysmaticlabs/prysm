@@ -3,7 +3,6 @@ package forkchoice
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -16,7 +15,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -83,52 +81,36 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 		return err
 	}
 
-	// Delay attestation processing until the subsequent slot.
-	if err := s.waitForAttInclDelay(ctx, a, baseState); err != nil {
-		return err
-	}
-
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
 		return err
 	}
 
-	s.attsQueueLock.Lock()
-	defer s.attsQueueLock.Unlock()
-	atts := make([]*ethpb.Attestation, 0, len(s.attsQueue))
-	for root, a := range s.attsQueue {
-		log := log.WithFields(logrus.Fields{
-			"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
-			"Root":               fmt.Sprintf("%#x", root),
-		})
-		log.Debug("Updating latest votes")
+	log := log.WithFields(logrus.Fields{
+		"Slot":               a.Data.Slot,
+		"Index":              a.Data.Index,
+		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
+		"BeaconBlockRoot":    fmt.Sprintf("%#x", a.Data.BeaconBlockRoot),
+	})
+	log.Info("Updating latest votes")
 
-		// Use the target state to to validate attestation and calculate the committees.
-		indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
-		if err != nil {
-			log.WithError(err).Warn("Removing attestation from queue.")
-			delete(s.attsQueue, root)
-			continue
-		}
-
-		// Update every validator's latest vote.
-		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-			return err
-		}
-
-		// Mark attestation as seen we don't update votes when it appears in block.
-		if err := s.setSeenAtt(a); err != nil {
-			return err
-		}
-		delete(s.attsQueue, root)
-		att, err := s.aggregatedAttestations(ctx, a)
-		if err != nil {
-			return err
-		}
-		atts = append(atts, att...)
+	// Use the target state to to validate attestation and calculate the committees.
+	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+	if err != nil {
+		log.WithError(err).Warn("Removing attestation from queue.")
 	}
 
-	if err := s.db.SaveAttestations(ctx, atts); err != nil {
+	// Update every validator's latest vote.
+	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
+		return err
+	}
+
+	// Mark attestation as seen we don't update votes when it appears in block.
+	if err := s.setSeenAtt(a); err != nil {
+		return err
+	}
+
+	if err := s.db.SaveAttestation(ctx, a); err != nil {
 		return err
 	}
 
@@ -176,45 +158,6 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	}
 
 	return baseState, nil
-}
-
-// waitForAttInclDelay waits until the next slot because attestation can only affect
-// fork choice of subsequent slot. This is to delay attestation inclusion for fork choice
-// until the attested slot is in the past.
-func (s *Store) waitForAttInclDelay(ctx context.Context, a *ethpb.Attestation, targetState *pb.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.forkchoice.waitForAttInclDelay")
-	defer span.End()
-
-	nextSlot := a.Data.Slot + 1
-	duration := time.Duration(nextSlot*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclude := time.Unix(int64(targetState.GenesisTime), 0).Add(duration)
-
-	if err := s.aggregateAttestation(ctx, a); err != nil {
-		return errors.Wrap(err, "could not aggregate attestation")
-	}
-
-	time.Sleep(time.Until(timeToInclude))
-	return nil
-}
-
-// aggregateAttestation aggregates the attestations in the pending queue.
-func (s *Store) aggregateAttestation(ctx context.Context, att *ethpb.Attestation) error {
-	s.attsQueueLock.Lock()
-	defer s.attsQueueLock.Unlock()
-	root, err := ssz.HashTreeRoot(att.Data)
-	if err != nil {
-		return err
-	}
-	if a, ok := s.attsQueue[root]; ok {
-		a, err := helpers.AggregateAttestation(a, att)
-		if err != nil {
-			return nil
-		}
-		s.attsQueue[root] = a
-		return nil
-	}
-	s.attsQueue[root] = proto.Clone(att).(*ethpb.Attestation)
-	return nil
 }
 
 // verifyAttestation validates input attestation is valid.

@@ -55,10 +55,6 @@ func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation)
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := as.AttReceiver.ReceiveAttestationNoPubsub(ctx, att); err != nil {
-			log.WithError(err).Error("Could not receive attestation in chain service")
-			return
-		}
 		if err := as.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return
