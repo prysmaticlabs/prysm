@@ -25,6 +25,8 @@ type Exporter struct {
 	p  *kafka.Producer
 }
 
+// Wrap the db with kafka exporter. If the feature flag is not enabled, this service does not wrap
+// the database, but returns the underlying database pointer itself.
 func Wrap(db iface.Database) (iface.Database, error) {
 	if featureconfig.Get().KafkaBootstrapServers == "" {
 		return db, nil
@@ -67,11 +69,13 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 	return nil
 }
 
+// Close closes kafka producer and underlying db.
 func (e Exporter) Close() error {
 	e.p.Close()
 	return e.db.Close()
 }
 
+// SaveAttestation publishes to the kafka topic for attestations.
 func (e Exporter) SaveAttestation(ctx context.Context, att *eth.Attestation) error {
 	go func() {
 		if err := e.publish(ctx, "attestation", att); err != nil {
@@ -82,10 +86,11 @@ func (e Exporter) SaveAttestation(ctx context.Context, att *eth.Attestation) err
 	return e.db.SaveAttestation(ctx, att)
 }
 
+// SaveAttestations publishes to the kafka topic for beacon attestations.
 func (e Exporter) SaveAttestations(ctx context.Context, atts []*eth.Attestation) error {
 	go func() {
 		for _, att := range atts {
-			if err := e.publish(ctx, "attestation", att); err != nil {
+			if err := e.publish(ctx, "beacon_attestation", att); err != nil {
 				log.WithError(err).Error("Failed to publish attestation")
 			}
 		}
@@ -93,9 +98,10 @@ func (e Exporter) SaveAttestations(ctx context.Context, atts []*eth.Attestation)
 	return e.db.SaveAttestations(ctx, atts)
 }
 
+// SaveBlock publishes to the kafka topic for beacon blocks.
 func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
 	go func() {
-		if err := e.publish(ctx, "block", block); err != nil {
+		if err := e.publish(ctx, "beacon_block", block); err != nil {
 			log.WithError(err).Error("Failed to publish block")
 		}
 	}()
@@ -103,6 +109,7 @@ func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
 	return e.db.SaveBlock(ctx, block)
 }
 
+// SaveBlocks publishes to the kafka topic for beacon blocks.
 func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
