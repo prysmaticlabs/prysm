@@ -378,6 +378,91 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	hook.Reset()
 }
 
+func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	tempDir := testutil.TempDir()
+	kvStore, err := kv.NewKVStore(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		ETH1Endpoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        kvStore,
+		DepositCache:    depositcache.NewDepositCache(),
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	web3Service.httpLogger = testAcc.Backend
+	web3Service.lastRequestedBlock = new(big.Int)
+	web3Service.blockHeight = new(big.Int)
+	bConfig := params.MinimalSpecConfig()
+	bConfig.MinGenesisTime = 0
+	params.OverrideBeaconConfig(bConfig)
+
+	testAcc.Backend.Commit()
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	totalNumOfDeposits := depositsReqForChainStart + 30
+
+	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(totalNumOfDeposits))
+	depositOffset := 5
+
+	// 64 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
+	// is 2**14
+	for i := 0; i < totalNumOfDeposits; i++ {
+		data := deposits[i].Data
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.GasLimit = 1000000
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i]); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+		// pack 8 deposits into a block with an offset of
+		// 5
+		if (i+1)%8 == depositOffset {
+			testAcc.Backend.Commit()
+		}
+	}
+
+	genesisTimeChan := make(chan time.Time, 1)
+	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
+	defer sub.Unsubscribe()
+
+	err = web3Service.processPastLogs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cachedDeposits := web3Service.ChainStartDeposits()
+	requiredDepsForChainstart := depositsReqForChainStart + depositOffset
+	if len(cachedDeposits) != requiredDepsForChainstart {
+		t.Fatalf(
+			"Did not cache the chain start deposits correctly, received %d, wanted %d",
+			len(cachedDeposits),
+			requiredDepsForChainstart,
+		)
+	}
+
+	<-genesisTimeChan
+	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
+	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
+	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+
+	hook.Reset()
+}
+
 func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
