@@ -24,6 +24,7 @@ import (
 type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
+	AttestationPoolForForkchoice(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -46,6 +47,36 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 		return mutex
 	}
 	return item.Value().(*sync.Mutex)
+}
+
+func (s *Service) AttestationPoolForForkchoice(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
+	bState, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, errors.New("could not retrieve attestations from DB")
+	}
+
+	if bState.Slot < requestedSlot {
+		bState, err = state.ProcessSlots(ctx, bState, requestedSlot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", requestedSlot)
+		}
+	}
+
+	for root, ac := range s.attestationPool {
+		for _, att := range ac.ToAttestations() {
+			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
+				continue
+			}
+			atts = append(atts, att)
+		}
+	}
+
+	return atts, nil
 }
 
 // AttestationPool returns the attestations that have not seen on the beacon chain,

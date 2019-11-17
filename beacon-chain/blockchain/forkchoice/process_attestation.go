@@ -54,7 +54,7 @@ import (
 //    for i in indexed_attestation.custody_bit_0_indices + indexed_attestation.custody_bit_1_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
+func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
@@ -63,34 +63,34 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return 0, fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
 	baseState, err := s.verifyAttPreState(ctx, tgt)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
-		return 0, errors.Wrap(err, "could not verify attestation target slot")
+		return errors.Wrap(err, "could not verify attestation target slot")
 	}
 
 	// Store target checkpoint state if not yet seen.
 	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	// Delay attestation processing until the subsequent slot.
 	if err := s.waitForAttInclDelay(ctx, a, baseState); err != nil {
-		return 0, err
+		return err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
-		return 0, err
+		return err
 	}
 
 	s.attsQueueLock.Lock()
@@ -113,26 +113,26 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64
 
 		// Update every validator's latest vote.
 		if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-			return 0, err
+			return err
 		}
 
 		// Mark attestation as seen we don't update votes when it appears in block.
 		if err := s.setSeenAtt(a); err != nil {
-			return 0, err
+			return err
 		}
 		delete(s.attsQueue, root)
 		att, err := s.aggregatedAttestations(ctx, a)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		atts = append(atts, att...)
 	}
 
 	if err := s.db.SaveAttestations(ctx, atts); err != nil {
-		return 0, err
+		return err
 	}
 
-	return tgtSlot, nil
+	return nil
 }
 
 // verifyAttPreState validates input attested check point has a valid pre-state.

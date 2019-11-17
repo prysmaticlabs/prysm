@@ -23,7 +23,7 @@ type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
 	OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
