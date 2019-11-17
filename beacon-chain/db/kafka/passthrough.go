@@ -184,7 +184,7 @@ func (e Exporter) FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, err
 	return e.db.FinalizedCheckpoint(ctx)
 }
 
-// ArchiveddActiveValidatorChanges -- passthrough.
+// ArchivedActiveValidatorChanges -- passthrough.
 func (e Exporter) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*eth.ArchivedActiveSetChanges, error) {
 	return e.db.ArchivedActiveValidatorChanges(ctx, epoch)
 }
