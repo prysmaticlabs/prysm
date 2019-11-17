@@ -161,7 +161,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		log.WithFields(logrus.Fields{
 			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
-		}).Error("Deposit registered from deposit contract")
+		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
 	} else {
 		log.WithFields(logrus.Fields{
