@@ -147,7 +147,7 @@ func (s *Service) startSlasher() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 	slasherServer := rpc.Server{
-		SlasherDb: s.slasherDb,
+		SlasherDB: s.slasherDb,
 	}
 
 	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)

@@ -60,6 +60,9 @@ func runBlockProcessingTest(t *testing.T, config string) {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 				beaconState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
+				if transitionError != nil {
+					break
+				}
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -73,7 +76,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 
 			if postSSZExists {
 				if transitionError != nil {
-					t.Fatalf("Unexpected error: %v", transitionError)
+					t.Errorf("Unexpected error: %v", transitionError)
 				}
 
 				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)

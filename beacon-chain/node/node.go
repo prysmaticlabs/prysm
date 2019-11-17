@@ -80,7 +80,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	// Use custom config values if the --no-custom-config flag is set.
+	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
 			log.WithField(
@@ -372,6 +372,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
+		DB:    b.db,
 		Chain: chainService,
 		P2P:   b.fetchP2P(ctx),
 	})
@@ -479,7 +480,7 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	gatewayPort := ctx.GlobalInt(flags.GRPCGatewayPort.Name)
 	if gatewayPort > 0 {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
-		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}
 	return nil
@@ -515,6 +516,7 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
 		BeaconDB:        b.db,
+		HeadFetcher:     chainService,
 		NewHeadNotifier: chainService,
 	})
 	return b.services.RegisterService(svc)

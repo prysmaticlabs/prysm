@@ -30,8 +30,9 @@ type Flag struct {
 	WriteSSZStateTransitions bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify         bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	SkipBLSVerify            bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook      bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
-	OptimizeProcessEpoch     bool   // OptimizeProcessEpoch to process epoch with optimizations by pre computing records
+	EnableBackupWebhook      bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	OptimizeProcessEpoch     bool   // OptimizeProcessEpoch to process epoch with optimizations by pre computing records.
+	Scatter                  bool // Scatter sequential processing by scattering it to multiple cores.
 	PruneFinalizedStates     bool   // PruneFinalizedStates from the database.
 	KafkaBootstrapServers    string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
@@ -42,6 +43,9 @@ type Flag struct {
 	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
+	EnableActiveIndicesCache bool // EnableActiveIndicesCache.
+	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flag
@@ -108,6 +112,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Processing epoch with optimizations")
 		cfg.OptimizeProcessEpoch = true
 	}
+	if ctx.GlobalBool(Scatter.Name) {
+		log.Warn("Scattering sequential proceses to multiple cores")
+		cfg.Scatter = true
+	}
 	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
 		log.Warn("Enabled pruning old finalized states from database.")
 		cfg.PruneFinalizedStates = true
@@ -123,6 +131,18 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
+	}
+	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
+		log.Warn("Enabled committee cache.")
+		cfg.EnableCommitteeCache = true
+	}
+	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
+		log.Warn("Enabled active indices cache.")
+		cfg.EnableActiveIndicesCache = true
+	}
+	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
+		log.Warn("Enabled active count cache.")
+		cfg.EnableActiveCountCache = true
 	}
 	Init(cfg)
 }

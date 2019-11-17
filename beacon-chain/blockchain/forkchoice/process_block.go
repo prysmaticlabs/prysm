@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -73,7 +72,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-
 	postState, err := state.ExecuteStateTransition(ctx, preState, b)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -108,9 +106,11 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
@@ -190,9 +190,11 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -215,6 +217,13 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		reportEpochMetrics(postState)
+
+		// Update committee shuffled indices at the end of every epoch
+		if featureconfig.Get().EnableNewCache {
+			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -280,6 +289,9 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get state for attestation tgt root")
+	}
+	if baseState == nil {
+		return errors.New("no state found in db with attestation tgt root")
 	}
 	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
 	if err != nil {

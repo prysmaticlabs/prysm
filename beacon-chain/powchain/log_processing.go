@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	depositEventSignature = []byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)")
+	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
@@ -78,7 +78,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
 	// Process logs according to their event signature.
-	if depositLog.Topics[0] == hashutil.HashKeccak256(depositEventSignature) {
+	if depositLog.Topics[0] == depositEventSignature {
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}

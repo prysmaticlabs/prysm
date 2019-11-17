@@ -17,6 +17,7 @@ IDENTITY="" # P2P private key
 PEERS="" # Comma separated list of peers
 GEN_STATE="" # filepath to ssz encoded state.
 PORT="8000" # port to serve p2p traffic
+RPCPORT="8001" # port to serve rpc traffic
 YAML_KEY_FILE="" # Path to yaml keyfile as defined here: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
 
 # Constants
@@ -28,7 +29,8 @@ usage() {
     echo "--peer=<peer>"
     echo "--num-validators=<number>"
     echo "--gen-state=<file path>"
-    port "--port=<port number>"
+    echo "--port=<port number>"
+    echo "--rpcport=<port number>"
 }
 
 while [ "$1" != "" ];
@@ -52,6 +54,9 @@ do
             ;;
         --port)
             PORT=$VALUE
+            ;;
+        --rpcport)
+            RPCPORT=$VALUE
             ;;
         --help)
             usage
@@ -81,6 +86,7 @@ echo -n "$IDENTITY" > /tmp/id.key
 BEACON_FLAGS="--bootstrap-node= \
   --deposit-contract=0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
   --p2p-port=$PORT \
+  --grpc-gateway-port=$RPCPORT \
   --peer=$PEERS \
   --interop-genesis-state=$GEN_STATE \
   --p2p-priv-key=/tmp/id.key \

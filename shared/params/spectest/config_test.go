@@ -13,7 +13,7 @@ func TestConfig(t *testing.T) {
 	}
 
 	SetConfig("mainnet")
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
+	if params.BeaconConfig().SlotsPerEpoch != 32 {
 		t.Errorf("Expected mainnet config to be set, but got %d slots per epoch", params.BeaconConfig().SlotsPerEpoch)
 	}
 }
