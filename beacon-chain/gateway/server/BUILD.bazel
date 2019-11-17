@@ -32,7 +32,7 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway/server",
     pure = "off",
     race = "off",
-    static = "on",
+    static = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
