@@ -3,6 +3,7 @@ package blocks_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -100,7 +101,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -141,7 +145,10 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -153,7 +160,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature:  blockSig.Marshal(),
 	}
 
-	_, err := blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -186,7 +193,10 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("failed to generate private key got: %v", err)
+	}
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
@@ -233,7 +243,10 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate private key got: %v", err)
+	}
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
@@ -523,7 +536,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		helpers.CurrentEpoch(beaconState),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Errorf("Could not generate random private key: %v", err)
+	}
 
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
@@ -1509,7 +1525,10 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 }
 
 func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
-	sk := bls.RandKey()
+	sk, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			PublicKey: sk.PublicKey().Marshal(),
@@ -1821,7 +1840,10 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
 	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
 	signingRoot, err := ssz.SigningRoot(exits[0])
 	if err != nil {
