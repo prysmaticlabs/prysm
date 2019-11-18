@@ -63,16 +63,16 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 			State: &pbp2p.BeaconState{Slot: 0},
 		},
 	}
-	wanted := &ethpb.ValidatorAssignments{
-		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
+	wanted := &ethpb.ValidatorBalances{
+		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
 		TotalSize:     int32(0),
 		NextPageToken: strconv.Itoa(0),
 	}
-	res, err := bs.ListValidatorAssignments(
+	res, err := bs.ListValidatorBalances(
 		ctx,
-		&ethpb.ListValidatorAssignmentsRequest{
-			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{
-				Genesis: true,
+		&ethpb.GetValidatorBalancesRequest{
+			QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{
+				Epoch: 0,
 			},
 		},
 	)
