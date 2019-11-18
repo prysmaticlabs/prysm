@@ -24,6 +24,7 @@ import (
 type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
+	AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -46,6 +47,31 @@ func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 		return mutex
 	}
 	return item.Value().(*sync.Mutex)
+}
+
+// AttestationPoolForForkchoice returns the attestations that have not been processed by the
+// fork choice service. It will not return the attestations which the validator vote has
+// already been counted.
+func (s *Service) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
+	for root, ac := range s.attestationPool {
+		for i, att := range ac.ToAttestations() {
+			if ac.SignaturePairs[i].VoteCounted {
+				continue
+			}
+			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
+				continue
+			}
+			atts = append(atts, att)
+			ac.SignaturePairs[i].VoteCounted = true
+		}
+	}
+
+	return atts, nil
 }
 
 // AttestationPool returns the attestations that have not seen on the beacon chain,
@@ -79,7 +105,6 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 			if s.recentAttestationBitlist.Contains(root, att.AggregationBits) {
 				continue
 			}
-
 			if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
 				delete(s.attestationPool, root)
 				continue
