@@ -26,8 +26,12 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
+		root, err := ssz.SigningRoot(b)
+		if err != nil {
+			t.Fatal(err)
+		}
 		blks[i] = b
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b}
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	if err := db.SaveBlocks(ctx, blks); err != nil {
 		t.Fatal(err)
@@ -51,7 +55,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
 				NextPageToken:   strconv.Itoa(1),
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -59,11 +63,11 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
