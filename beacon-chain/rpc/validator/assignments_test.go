@@ -288,3 +288,63 @@ func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
 		t.Error("Did not get wanted error")
 	}
 }
+
+func TestCommitteeAssignment_NilHeadState(t *testing.T) {
+	helpers.ClearAllCaches()
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := uint64(64)
+
+	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
+	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < len(deposits); i++ {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+	vs.BeaconDB.SaveState(ctx, state, genesisRoot)
+	vs.BeaconDB.SaveHeadBlockRoot(ctx, genesisRoot)
+
+	// Test the first validator in registry.
+	req := &pb.AssignmentRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		EpochStart: 0,
+	}
+	res, err := vs.CommitteeAssignment(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+	if res.ValidatorAssignment[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Assigned slot %d can't be higher than %d",
+			res.ValidatorAssignment[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+	}
+}
