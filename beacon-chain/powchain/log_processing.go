@@ -307,7 +307,7 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
 func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
-	// prevent this method from being called recursively
+	// Prevent this method from being called recursively
 	s.requestingOldLogs = true
 	defer func() {
 		s.requestingOldLogs = false
