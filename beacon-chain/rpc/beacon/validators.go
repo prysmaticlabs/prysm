@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -133,6 +134,17 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	balancesCount := len(res)
+	// If there are no balances, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 balances below would result in an error.
+	if balancesCount == 0 {
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
 	if err != nil {
 		return nil, status.Errorf(
@@ -187,6 +199,16 @@ func (bs *Server) GetValidators(
 	}
 
 	validatorCount := len(validators)
+	// If there are no validators, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 validators below would result in an error.
+	if validatorCount == 0 {
+		return &ethpb.Validators{
+			Validators:    make([]*ethpb.Validator, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, status.Errorf(

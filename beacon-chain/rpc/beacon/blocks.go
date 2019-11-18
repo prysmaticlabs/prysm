@@ -72,7 +72,6 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
-
 		if blk == nil {
 			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
 		}
