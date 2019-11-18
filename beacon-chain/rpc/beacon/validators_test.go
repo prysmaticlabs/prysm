@@ -751,7 +751,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 6)
 	headState := &pbp2p.BeaconState{
-		Slot:       0,
+		Slot:       helpers.StartSlot(100),
 		Validators: validators,
 	}
 	activatedIndices := make([]uint64, 0)
@@ -789,10 +789,6 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
-		},
-		FinalizationFetcher: &mock.ChainService{
-			// Pick an epoch far in the future so that we trigger fetching from the archive.
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100},
 		},
 	}
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{

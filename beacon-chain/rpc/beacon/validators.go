@@ -343,7 +343,7 @@ func (bs *Server) GetValidatorParticipation(
 			)
 		}
 		return &ethpb.ValidatorParticipationResponse{
-			Epoch:         0,
+			Epoch:         requestedEpoch,
 			Finalized:     true,
 			Participation: participation,
 		}, nil
