@@ -455,7 +455,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	web3Service.lastRequestedBlock = new(big.Int)
 
 	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
-	// we purposely miss processing the middle 7 logs so that the service, re-requests them
+	// We purposely miss processing the middle 7 logs so that the service, re-requests them.
 	for _, log := range logsToBeProcessed {
 		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
 			t.Fatal(err)
