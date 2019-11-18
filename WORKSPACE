@@ -1199,7 +1199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "c7f1fd03716c94dcc287a0d35905ed35b8a0afe1",
+    commit = "9747dd9834b24a8affe4e3b23b0d10efcb32f6a9",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
