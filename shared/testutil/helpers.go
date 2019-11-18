@@ -67,7 +67,7 @@ func SetupInitialDeposits(t testing.TB, numDeposits uint64) ([]*ethpb.Deposit, [
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				t.Fatalf("could not get signing root of deposit data %v", err)
@@ -171,4 +171,5 @@ func ResetCache() {
 	trie = nil
 	privKeys = []*bls.SecretKey{}
 	deposits = []*ethpb.Deposit{}
+	depositDataRoots = [][32]byte{}
 }

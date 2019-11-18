@@ -1,12 +1,17 @@
 package testing
 
 import (
+	"bytes"
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
 
 // ChainService defines the mock interface for testing
@@ -17,6 +22,9 @@ type ChainService struct {
 	FinalizedCheckPoint *ethpb.Checkpoint
 	StateFeed           *event.Feed
 	BlocksReceived      []*ethpb.BeaconBlock
+	Genesis             time.Time
+	Fork                *pb.Fork
+	DB                  db.Database
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -39,8 +47,23 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 	if ms.State == nil {
 		ms.State = &pb.BeaconState{}
 	}
+	if !bytes.Equal(ms.Root, block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.ParentRoot)
+	}
 	ms.State.Slot = block.Slot
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
+	signingRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		return err
+	}
+	if ms.DB != nil {
+		if err := ms.DB.SaveBlock(ctx, block); err != nil {
+			return err
+		}
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Slot)
+	}
+	ms.Root = signingRoot[:]
+	ms.Block = block
 	return nil
 }
 
@@ -66,6 +89,11 @@ func (ms *ChainService) HeadState() *pb.BeaconState {
 	return ms.State
 }
 
+// CurrentFork mocks HeadState method in chain service.
+func (ms *ChainService) CurrentFork() *pb.Fork {
+	return ms.Fork
+}
+
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
 func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ms.FinalizedCheckPoint
@@ -81,11 +109,6 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 	return nil
 }
 
-// GenesisTime mocks the same method in the chain service.
-func (ms *ChainService) GenesisTime() time.Time {
-	return time.Unix(0, 0)
-}
-
 // StateInitializedFeed mocks the same method in the chain service.
 func (ms *ChainService) StateInitializedFeed() *event.Feed {
 	if ms.StateFeed != nil {
@@ -98,4 +121,9 @@ func (ms *ChainService) StateInitializedFeed() *event.Feed {
 // HeadUpdatedFeed mocks the same method in the chain service.
 func (ms *ChainService) HeadUpdatedFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+// GenesisTime mocks the same method in the chain service.
+func (ms *ChainService) GenesisTime() time.Time {
+	return ms.Genesis
 }

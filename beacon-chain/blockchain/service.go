@@ -137,6 +137,8 @@ func (s *Service) Start() {
 			return
 		}()
 	}
+
+	go s.processAttestation()
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -281,10 +283,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 	if err := s.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
 		return errors.Wrap(err, "Could not start fork choice service: %v")
-	}
-
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(s.FinalizedCheckpt().Root)); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
 	}
 
 	s.headBlock = genesisBlk

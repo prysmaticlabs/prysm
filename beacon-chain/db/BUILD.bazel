@@ -7,7 +7,10 @@ go_library(
         "http_backup_handler.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//tools:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/kv:go_default_library",

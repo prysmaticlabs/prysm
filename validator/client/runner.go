@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -18,14 +20,15 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	WaitForSync(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RolesAt(slot uint64) map[string]pb.ValidatorRole // validatorIndex -> role
-	AttestToBlockHead(ctx context.Context, slot uint64, idx string)
-	ProposeBlock(ctx context.Context, slot uint64, idx string)
+	RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole // validator pubKey -> role
+	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
+	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -42,6 +45,9 @@ func run(ctx context.Context, v Validator) {
 	defer v.Done()
 	if err := v.WaitForChainStart(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
+	}
+	if err := v.WaitForSync(ctx); err != nil {
+		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
@@ -71,7 +77,7 @@ func run(ctx context.Context, v Validator) {
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
-			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
+			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
 				span.End()
@@ -81,22 +87,19 @@ func run(ctx context.Context, v Validator) {
 			var wg sync.WaitGroup
 			for id, role := range v.RolesAt(slot) {
 				wg.Add(1)
-				go func(role pb.ValidatorRole, id string) {
-					defer wg.Done()
-					tpk := id
-					if len(id) > 16 {
-						tpk = id[:16]
-					}
+				go func(role pb.ValidatorRole, id [48]byte) {
 					log := log.WithFields(logrus.Fields{
-						"pubKey": "0x" + tpk,
+						"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
 						"role":   role,
 					})
 					switch role {
+					case pb.ValidatorRole_BOTH:
+						go v.SubmitAttestation(slotCtx, slot, id)
+						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
-						v.AttestToBlockHead(slotCtx, slot, id)
+						v.SubmitAttestation(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
 						v.ProposeBlock(slotCtx, slot, id)
-						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:
 						log.Debug("No active role, doing nothing")
 					default:

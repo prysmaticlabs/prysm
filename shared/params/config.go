@@ -18,9 +18,9 @@ type BeaconChainConfig struct {
 	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
-	ShardCount                     uint64 `yaml:"SHARD_COUNT"`                        // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MaxCommitteesPerSlot           uint64 // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
 	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
@@ -29,7 +29,7 @@ type BeaconChainConfig struct {
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
+	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwei that is effective for staking.
 	EjectionBalance           uint64 `yaml:"EJECTION_BALANCE"`            // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 
@@ -42,12 +42,11 @@ type BeaconChainConfig struct {
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
-	ActivationExitDelay              uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // ActivationExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	MaxSeedLookhead                  uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // MaxSeedLookhead is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
-	MaxEpochsPerCrosslink            uint64 `yaml:"MAX_EPOCHS_PER_CROSSLINK"`            // MaxEpochsPerCrosslink defines the max epoch from current a crosslink can be formed at.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 
@@ -70,15 +69,13 @@ type BeaconChainConfig struct {
 	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS"`       // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS"`           // MaxVoluntaryExits defines the maximum number of validator deposits in a block.
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
-	MaxTransfers         uint64 `yaml:"MAX_TRANSFERS"`          // MaxTransfers defines the maximum number of balance transfers in a block.
 
 	// BLS domain values.
 	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
 	DomainRandao         []byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainAttestation    []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainBeaconAttester []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
 	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainTransfer       []byte `yaml:"DOMAIN_TRANSFER"`        // DomainTransfer defines the BLS signature domain for transfer verification.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -111,14 +108,14 @@ type DepositContractConfig struct {
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
-	BaseRewardsPerEpoch:      5,
+	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
 	SecondsPerDay:            86400,
 
 	// Misc constant.
-	ShardCount:                     1024,
 	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      4096,
+	MaxValidatorsPerCommittee:      2048,
+	MaxCommitteesPerSlot:           64,
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
@@ -137,15 +134,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   6,
-	SlotsPerEpoch:                    64,
+	SecondsPerSlot:                   12,
+	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
-	ActivationExitDelay:              4,
+	MaxSeedLookhead:                  4,
 	SlotsPerEth1VotingPeriod:         1024,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	PersistentCommitteePeriod:        2048,
-	MaxEpochsPerCrosslink:            64,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
 
@@ -168,15 +164,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
-	MaxTransfers:         0,
 
 	// BLS domain values.
 	DomainBeaconProposer: bytesutil.Bytes4(0),
-	DomainRandao:         bytesutil.Bytes4(1),
-	DomainAttestation:    bytesutil.Bytes4(2),
+	DomainBeaconAttester: bytesutil.Bytes4(1),
+	DomainRandao:         bytesutil.Bytes4(2),
 	DomainDeposit:        bytesutil.Bytes4(3),
 	DomainVoluntaryExit:  bytesutil.Bytes4(4),
-	DomainTransfer:       bytesutil.Bytes4(5),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -191,7 +185,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPageSize:               500,
-	SavingInterval:            8,
+	SavingInterval:            4,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
@@ -230,12 +224,12 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := MinimalSpecConfig()
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 1.6 * 1e9
+	demoConfig.EjectionBalance = 3 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
 
 	return demoConfig
 }
@@ -244,9 +238,9 @@ func DemoBeaconConfig() *BeaconChainConfig {
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
 	// Misc
-	minimalConfig.ShardCount = 8
+	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
-	minimalConfig.MaxValidatorsPerCommittee = 4096
+	minimalConfig.MaxValidatorsPerCommittee = 2048
 	minimalConfig.MinPerEpochChurnLimit = 4
 	minimalConfig.ChurnLimitQuotient = 65536
 	minimalConfig.ShuffleRoundCount = 10
@@ -263,16 +257,15 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 12
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.ActivationExitDelay = 4
+	minimalConfig.MaxSeedLookhead = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
-	minimalConfig.MaxEpochsPerCrosslink = 4
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 
 	// State vector lengths
@@ -287,7 +280,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32
-	minimalConfig.BaseRewardsPerEpoch = 5
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
@@ -295,15 +287,13 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
-	minimalConfig.MaxTransfers = 0
 
 	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
-	minimalConfig.DomainRandao = bytesutil.Bytes4(1)
-	minimalConfig.DomainAttestation = bytesutil.Bytes4(2)
+	minimalConfig.DomainBeaconAttester = bytesutil.Bytes4(1)
+	minimalConfig.DomainRandao = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
-	minimalConfig.DomainTransfer = bytesutil.Bytes4(5)
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
@@ -323,6 +313,11 @@ func UseDemoBeaconConfig() {
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
 	beaconConfig = MinimalSpecConfig()
+}
+
+// UseMainnetConfig for beacon chain services.
+func UseMainnetConfig() {
+	beaconConfig = defaultBeaconConfig
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to

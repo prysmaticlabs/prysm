@@ -45,7 +45,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	defer cancel()
 
 	resp := &pb.Status{
-		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:        r.chain.HeadRoot(),
@@ -62,6 +62,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	}
 
 	if code != 0 {
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
@@ -71,7 +72,11 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	}
 	peerstatus.Set(stream.Conn().RemotePeer(), msg)
 
-	return r.validateStatusMessage(msg, stream)
+	err = r.validateStatusMessage(msg, stream)
+	if err != nil {
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
+	}
+	return err
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
@@ -92,6 +97,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	peerstatus.Set(stream.Conn().RemotePeer(), m)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
+		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {
@@ -112,7 +118,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	}
 
 	resp := &pb.Status{
-		HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
+		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:        r.chain.HeadRoot(),

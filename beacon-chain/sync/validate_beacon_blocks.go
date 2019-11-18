@@ -8,6 +8,7 @@ import (
 	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -42,6 +43,16 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if fromSelf {
+		return false, nil
+	}
+
+	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), m.Slot); err != nil {
+		log.WithError(err).WithField("blockSlot", m.Slot).Warn("Rejecting incoming block.")
+		return false, err
+	}
+
+	if r.chain.FinalizedCheckpt().Epoch > helpers.SlotToEpoch(m.Slot) {
+		log.Debug("Block older than finalized checkpoint received,rejecting it")
 		return false, nil
 	}
 

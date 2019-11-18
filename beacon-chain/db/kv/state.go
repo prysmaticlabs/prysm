@@ -2,6 +2,9 @@ package kv
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -12,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -85,22 +87,20 @@ func (k *Store) PruneSavedStates(
 		return errors.Wrap(err, "could not get block roots")
 	}
 
-	for i := 0; i < len(blockRoots); i++ {
-		if err := k.DeleteState(ctx, bytesutil.ToBytes32(blockRoots[i])); err != nil {
-			return errors.Wrap(err, "could not delete saved state")
-		}
+	if err := k.DeleteStates(ctx, blockRoots); err != nil {
+		return errors.Wrap(err, "could not delete saved states")
 	}
 	return nil
 }
 
 // savedStateKeys retrieves the DB keys for the states that we have saved. Used for pruning.
-func (k *Store) savedStateKeys(ctx context.Context, fromSlot uint64, toSlot uint64) ([][]byte, error) {
+func (k *Store) savedStateKeys(ctx context.Context, fromSlot uint64, toSlot uint64) ([][32]byte, error) {
 	savingInterval := params.BeaconConfig().SavingInterval
 	// Filtering from the slot we know we have a saved state for.
 	startSlot := fromSlot - (fromSlot % savingInterval)
 	endSlot := toSlot - (toSlot % savingInterval)
 	currentSlot := startSlot
-	var savedStateKeys [][]byte
+	var savedStateKeys [][32]byte
 	for currentSlot < endSlot {
 		// Looping through until we find a state we have saved.
 		untilSlot := (currentSlot + savingInterval) - ((currentSlot + savingInterval) % savingInterval)
@@ -234,6 +234,29 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 		bucket := tx.Bucket(stateBucket)
 		return bucket.Put(blockRoot[:], enc)
 	})
+}
+
+// DeleteStates by block roots.
+func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
+	defer span.End()
+	var wg sync.WaitGroup
+	errs := make([]string, 0)
+	wg.Add(len(blockRoots))
+	for _, r := range blockRoots {
+		go func(w *sync.WaitGroup, root [32]byte) {
+			defer w.Done()
+			if err := k.DeleteState(ctx, root); err != nil {
+				errs = append(errs, err.Error())
+				return
+			}
+		}(&wg, r)
+	}
+	wg.Wait()
+	if len(errs) > 0 {
+		return fmt.Errorf("deleting states failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 // creates state from marshaled proto state bytes.

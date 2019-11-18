@@ -13,6 +13,7 @@ type fakeValidator struct {
 	DoneCalled                       bool
 	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
+	WaitForSyncCalled                bool
 	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
@@ -45,6 +46,11 @@ func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 	return nil
 }
 
+func (fv *fakeValidator) WaitForSync(_ context.Context) error {
+	fv.WaitForSyncCalled = true
+	return nil
+}
+
 func (fv *fakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
 	fv.CanonicalHeadSlotCalled = true
 	return 0, nil
@@ -71,20 +77,20 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
+func (fv *fakeValidator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[string]pb.ValidatorRole)
-	vr["a"] = fv.RoleAtRet
+	vr := make(map[[48]byte]pb.ValidatorRole)
+	vr[[48]byte{1}] = fv.RoleAtRet
 	return vr
 }
 
-func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, idx string) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, idx string) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }

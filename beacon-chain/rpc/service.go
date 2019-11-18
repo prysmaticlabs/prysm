@@ -4,7 +4,9 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
+	"os"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -18,6 +20,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -35,6 +42,7 @@ var log logrus.FieldLogger
 
 func init() {
 	log = logrus.WithField("prefix", "rpc")
+	rand.Seed(int64(os.Getpid()))
 }
 
 // Service defining an RPC server for a beacon node.
@@ -164,52 +172,56 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	proposerServer := &ProposerServer{
-		beaconDB:               s.beaconDB,
-		headFetcher:            s.headFetcher,
-		blockReceiver:          s.blockReceiver,
-		chainStartFetcher:      s.chainStartFetcher,
-		eth1InfoFetcher:        s.powChainService,
-		eth1BlockFetcher:       s.powChainService,
-		mockEth1Votes:          s.mockEth1Votes,
-		pool:                   s.attestationsPool,
-		canonicalStateChan:     s.canonicalStateChan,
-		depositFetcher:         s.depositFetcher,
-		pendingDepositsFetcher: s.pendingDepositFetcher,
+	proposerServer := &proposer.Server{
+		BeaconDB:               s.beaconDB,
+		HeadFetcher:            s.headFetcher,
+		BlockReceiver:          s.blockReceiver,
+		ChainStartFetcher:      s.chainStartFetcher,
+		Eth1InfoFetcher:        s.powChainService,
+		Eth1BlockFetcher:       s.powChainService,
+		MockEth1Votes:          s.mockEth1Votes,
+		Pool:                   s.attestationsPool,
+		CanonicalStateChan:     s.canonicalStateChan,
+		DepositFetcher:         s.depositFetcher,
+		PendingDepositsFetcher: s.pendingDepositFetcher,
+		SyncChecker:            s.syncService,
 	}
-	attesterServer := &AttesterServer{
-		p2p:               s.p2p,
-		beaconDB:          s.beaconDB,
-		operationsHandler: s.operationsHandler,
-		attReceiver:       s.attestationReceiver,
-		headFetcher:       s.headFetcher,
-		attestationCache:  cache.NewAttestationCache(),
+	attesterServer := &attester.Server{
+		P2p:               s.p2p,
+		BeaconDB:          s.beaconDB,
+		OperationsHandler: s.operationsHandler,
+		AttReceiver:       s.attestationReceiver,
+		HeadFetcher:       s.headFetcher,
+		AttestationCache:  cache.NewAttestationCache(),
+		SyncChecker:       s.syncService,
 	}
-	validatorServer := &ValidatorServer{
-		ctx:                s.ctx,
-		beaconDB:           s.beaconDB,
-		headFetcher:        s.headFetcher,
-		forkFetcher:        s.forkFetcher,
-		canonicalStateChan: s.canonicalStateChan,
-		blockFetcher:       s.powChainService,
-		chainStartFetcher:  s.chainStartFetcher,
-		depositFetcher:     s.depositFetcher,
-		stateFeedListener:  s.stateFeedListener,
-		chainStartChan:     make(chan time.Time),
+	validatorServer := &validator.Server{
+		Ctx:                s.ctx,
+		BeaconDB:           s.beaconDB,
+		HeadFetcher:        s.headFetcher,
+		ForkFetcher:        s.forkFetcher,
+		CanonicalStateChan: s.canonicalStateChan,
+		BlockFetcher:       s.powChainService,
+		ChainStartFetcher:  s.chainStartFetcher,
+		Eth1InfoFetcher:    s.powChainService,
+		DepositFetcher:     s.depositFetcher,
+		SyncChecker:        s.syncService,
+		StateFeedListener:  s.stateFeedListener,
+		ChainStartChan:     make(chan time.Time),
 	}
-	nodeServer := &NodeServer{
-		beaconDB:           s.beaconDB,
-		server:             s.grpcServer,
-		syncChecker:        s.syncService,
-		genesisTimeFetcher: s.genesisTimeFetcher,
+	nodeServer := &node.Server{
+		BeaconDB:           s.beaconDB,
+		Server:             s.grpcServer,
+		SyncChecker:        s.syncService,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
 	}
-	beaconChainServer := &BeaconChainServer{
-		beaconDB:            s.beaconDB,
-		pool:                s.attestationsPool,
-		headFetcher:         s.headFetcher,
-		finalizationFetcher: s.finalizationFetcher,
-		chainStartFetcher:   s.chainStartFetcher,
-		canonicalStateChan:  s.canonicalStateChan,
+	beaconChainServer := &beacon.Server{
+		BeaconDB:            s.beaconDB,
+		Pool:                s.attestationsPool,
+		HeadFetcher:         s.headFetcher,
+		FinalizationFetcher: s.finalizationFetcher,
+		ChainStartFetcher:   s.chainStartFetcher,
+		CanonicalStateChan:  s.canonicalStateChan,
 	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
@@ -221,9 +233,6 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		for s.syncService.Status() != nil {
-			time.Sleep(time.Second * params.BeaconConfig().RPCSyncCheck)
-		}
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Errorf("Could not serve gRPC: %v", err)

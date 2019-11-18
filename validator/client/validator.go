@@ -3,14 +3,16 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -25,7 +27,8 @@ type validator struct {
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	attesterClient       pb.AttesterServiceClient
-	keys                 map[string]*keystore.Key
+	node                 ethpb.NodeClient
+	keys                 map[[48]byte]*keystore.Key
 	pubkeys              [][]byte
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
@@ -107,21 +110,50 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			break
 		}
 	}
-	for _, pk := range validatorActivatedRecords {
-		pubKey := fmt.Sprintf("%#x", pk[:8])
-		log.WithField("pubKey", pubKey).Info("Validator activated")
+	for _, pubKey := range validatorActivatedRecords {
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
 	return nil
 }
 
+// WaitForSync checks whether the beacon node has sync to the latest head
+func (v *validator) WaitForSync(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
+	defer span.End()
+
+	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not get sync status")
+	}
+	if !s.Syncing {
+		return nil
+	}
+
+	for {
+		select {
+		// Poll every half slot
+		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
+			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			if err != nil {
+				return errors.Wrap(err, "could not get sync status")
+			}
+			if !s.Syncing {
+				return nil
+			}
+			log.Info("Waiting for beacon node to sync to latest chain head")
+		case <-ctx.Done():
+			return errors.New("context has been canceled, exiting goroutine")
+		}
+	}
+}
+
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
-		pubKey := fmt.Sprintf("%#x", status.PublicKey[:8])
 		log := log.WithFields(logrus.Fields{
-			"pubKey": pubKey,
+			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
 		})
 		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
@@ -184,6 +216,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
+	// Set deadline to end of epoch.
+	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
+	defer cancel()
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
@@ -203,29 +238,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, assignment := range v.assignments.ValidatorAssignment {
-			var proposerSlot uint64
-			var attesterSlot uint64
-			pubKey := fmt.Sprintf("%#x", assignment.PublicKey[:8])
-
 			lFields := logrus.Fields{
-				"pubKey": pubKey,
+				"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(assignment.PublicKey)),
 				"epoch":  slot / params.BeaconConfig().SlotsPerEpoch,
+				"status": assignment.Status,
 			}
-			if assignment.Status != pb.ValidatorStatus_ACTIVE {
-				lFields["status"] = assignment.Status
-				log.WithFields(lFields).Info("New assignment")
-				continue
-			} else if assignment.IsProposer {
-				proposerSlot = assignment.Slot
-				attesterSlot = assignment.Slot
-			} else {
-				attesterSlot = assignment.Slot
-			}
-			lFields["attesterSlot"] = attesterSlot
-			lFields["proposerSlot"] = "N/A"
-
-			if assignment.IsProposer {
-				lFields["proposerSlot"] = proposerSlot
+			if assignment.Status == pb.ValidatorStatus_ACTIVE {
+				if assignment.ProposerSlot > 0 {
+					lFields["proposerSlot"] = assignment.ProposerSlot
+				}
+				lFields["attesterSlot"] = assignment.AttesterSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
 		}
@@ -237,24 +259,25 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
-	rolesAt := make(map[string]pb.ValidatorRole)
+func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
+	rolesAt := make(map[[48]byte]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
 		var role pb.ValidatorRole
-		if assignment == nil {
+		switch {
+		case assignment == nil:
+			role = pb.ValidatorRole_UNKNOWN
+		case assignment.ProposerSlot == slot && assignment.AttesterSlot == slot:
+			role = pb.ValidatorRole_BOTH
+		case assignment.AttesterSlot == slot:
+			role = pb.ValidatorRole_ATTESTER
+		case assignment.ProposerSlot == slot:
+			role = pb.ValidatorRole_PROPOSER
+		default:
 			role = pb.ValidatorRole_UNKNOWN
 		}
-		if assignment.Slot == slot {
-			// Note: A proposer also attests to the slot.
-			if assignment.IsProposer {
-				role = pb.ValidatorRole_PROPOSER
-			} else {
-				role = pb.ValidatorRole_ATTESTER
-			}
-		} else {
-			role = pb.ValidatorRole_UNKNOWN
-		}
-		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
+		var pubKey [48]byte
+		copy(pubKey[:], assignment.PublicKey)
+		rolesAt[pubKey] = role
 	}
 	return rolesAt
 }

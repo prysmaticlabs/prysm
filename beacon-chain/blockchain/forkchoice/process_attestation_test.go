@@ -1,7 +1,6 @@
 package forkchoice
 
 import (
-	"bytes"
 	"context"
 	"reflect"
 	"strings"
@@ -53,8 +52,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:      make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +94,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err := store.OnAttestation(ctx, tt.a)
+			err := store.OnAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
@@ -116,30 +114,19 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	crosslinks := make([]*ethpb.Crosslink, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &ethpb.Crosslink{
-			ParentRoot: make([]byte, 32),
-			DataRoot:   make([]byte, 32),
-		}
-	}
 	s := &pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		ActiveIndexRoots:           make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		StateRoots:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader:          &ethpb.BeaconBlockHeader{},
-		JustificationBits:          []byte{0},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-		CurrentCrosslinks:          crosslinks,
-		CompactCommitteesRoots:     make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		RandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
+		JustificationBits:   []byte{0},
+		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
@@ -201,40 +188,6 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 }
 
-func TestStore_AggregateAttestation(t *testing.T) {
-	store := &Store{attsQueue: make(map[[32]byte]*ethpb.Attestation)}
-
-	bits := bitfield.NewBitlist(8)
-	bits.SetBitAt(0, true)
-	a := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
-
-	if err := store.aggregateAttestation(context.Background(), a); err != nil {
-		t.Fatal(err)
-	}
-	r, _ := ssz.HashTreeRoot(a.Data)
-	if !bytes.Equal(store.attsQueue[r].AggregationBits, bits) {
-		t.Error("Received incorrect aggregation bitfield")
-	}
-
-	bits.SetBitAt(1, true)
-	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
-	if err := store.aggregateAttestation(context.Background(), a); err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{3, 1}) {
-		t.Error("Received incorrect aggregation bitfield")
-	}
-
-	bits.SetBitAt(7, true)
-	a = &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bits}
-	if err := store.aggregateAttestation(context.Background(), a); err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(store.attsQueue[r].AggregationBits, []byte{131, 1}) {
-		t.Error("Received incorrect aggregation bitfield")
-	}
-}
-
 func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -248,12 +201,12 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 	}
 
 	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x03}}
-	saved, err := store.aggregatedAttestation(ctx, a2)
+	saved, err := store.aggregatedAttestations(ctx, a2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(a2, saved) {
+	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
 	}
 }
