@@ -621,12 +621,8 @@ func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(30),
 				Validators: validators,
-			},
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 200,
 			},
 		},
 	}
@@ -654,7 +650,7 @@ func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(res.Validators, validators[:21]) {
-		t.Errorf("Incorrect number of validators, wanted %d received %d", 20, len(res.Validators))
+		t.Errorf("Incorrect number of validators, wanted %d received %d", len(validators[:21]), len(res.Validators))
 	}
 }
 
