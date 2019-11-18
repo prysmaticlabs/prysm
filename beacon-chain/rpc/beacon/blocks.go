@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -39,7 +40,7 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlock, 0), TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlockContainer, 0), TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -47,8 +48,21 @@ func (bs *Server) ListBlocks(
 			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
 		}
 
+		returnedBlks := blks[start:end]
+		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
+		for i, b := range returnedBlks {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return nil, err
+			}
+			containers[i] = &ethpb.BeaconBlockContainer{
+				Block:     b,
+				BlockRoot: root[:],
+			}
+		}
+
 		return &ethpb.ListBlocksResponse{
-			Blocks:        blks[start:end],
+			Blocks:        containers,
 			TotalSize:     int32(numBlks),
 			NextPageToken: nextPageToken,
 		}, nil
@@ -60,11 +74,18 @@ func (bs *Server) ListBlocks(
 		}
 
 		if blk == nil {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
+		}
+		root, err := ssz.HashTreeRoot(blk)
+		if err != nil {
+			return nil, err
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:    []*ethpb.BeaconBlock{blk},
+			Blocks: []*ethpb.BeaconBlockContainer{{
+				Block:     blk,
+				BlockRoot: root[:]},
+			},
 			TotalSize: 1,
 		}, nil
 
@@ -76,7 +97,7 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -84,8 +105,21 @@ func (bs *Server) ListBlocks(
 			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
 		}
 
+		returnedBlks := blks[start:end]
+		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
+		for i, b := range returnedBlks {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return nil, err
+			}
+			containers[i] = &ethpb.BeaconBlockContainer{
+				Block:     b,
+				BlockRoot: root[:],
+			}
+		}
+
 		return &ethpb.ListBlocksResponse{
-			Blocks:        blks[start:end],
+			Blocks:        containers,
 			TotalSize:     int32(numBlks),
 			NextPageToken: nextPageToken,
 		}, nil

@@ -209,7 +209,7 @@ message ListBlocksRequest {
 }
 
 message ListBlocksResponse {
-    repeated BeaconBlockContainer blocks = 1;
+    repeated BeaconBlockContainer blockContainers = 1;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates from where listing should continue.

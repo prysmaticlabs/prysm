@@ -21,11 +21,13 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 
 	count := uint64(100)
 	blks := make([]*ethpb.BeaconBlock, count)
+	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
 		blks[i] = b
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b}
 	}
 	if err := db.SaveBlocks(ctx, blks); err != nil {
 		t.Fatal(err)
@@ -49,7 +51,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        []*ethpb.BeaconBlock{{Slot: 5}},
+				Blocks:        []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}}},
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -57,18 +59,18 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				Blocks:    []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
+				Blocks:    []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
 			PageSize:    100},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[0:params.BeaconConfig().SlotsPerEpoch],
+				Blocks:        blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
@@ -76,7 +78,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[43:46],
+				Blocks:        blkContainers[43:46],
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
@@ -84,7 +86,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
 			PageSize:    7},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[95:96],
+				Blocks:        blkContainers[95:96],
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
@@ -92,7 +94,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[96:100],
+				Blocks:        blkContainers[96:100],
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
