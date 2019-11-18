@@ -243,6 +243,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
 		requestingGenesis = q.Genesis
+		requestedEpoch = 0
 	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
 		requestedEpoch = q.Epoch
 	}
@@ -322,6 +323,7 @@ func (bs *Server) GetValidatorParticipation(
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorParticipationRequest_Genesis:
 		requestingGenesis = q.Genesis
+		requestedEpoch = 0
 	case *ethpb.GetValidatorParticipationRequest_Epoch:
 		requestedEpoch = q.Epoch
 	default:
