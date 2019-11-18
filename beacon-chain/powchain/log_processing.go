@@ -320,8 +320,11 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 
 		// If the required logs still do not exist after the lookback period, then we return an error.
 		if startBlock < s.lastRequestedBlock.Uint64()-eth1LookBackPeriod {
-			return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
-				"Wanted %d but got %d", wantedIndex, s.lastReceivedMerkleIndex)
+			return fmt.Errorf(
+				"latest index observed is not accurate, wanted %d, but received  %d",
+				wantedIndex,
+				s.lastReceivedMerkleIndex,
+			)
 		}
 		startBlock--
 	}
