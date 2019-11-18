@@ -76,7 +76,7 @@ func (bs *Server) ListBlocks(
 		if blk == nil {
 			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
 		}
-		root, err := ssz.HashTreeRoot(blk)
+		root, err := ssz.SigningRoot(blk)
 		if err != nil {
 			return nil, err
 		}
