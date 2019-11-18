@@ -25,6 +25,14 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 
 	var err error
 	s := vs.HeadFetcher.HeadState()
+
+	if s == nil {
+		s, err = vs.BeaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		}
+	}
+
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
