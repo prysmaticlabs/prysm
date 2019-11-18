@@ -524,6 +524,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 				Slot: 0,
 			},
 		},
+		BeaconDB: db,
 	}
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
@@ -543,27 +544,19 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	ctx := context.Background()
 
 	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[1]), 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
-		Validators: []*ethpb.Validator{{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			PublicKey:       pubKeys[0]},
+		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKeys[1]},
+				PublicKey:       pubKeys[0],
+			},
 			{
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKeys[2]},
+				PublicKey:       pubKeys[1],
+			},
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
@@ -606,9 +599,6 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[1]), 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[2]), 2); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
 	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                context.Background(),
@@ -631,12 +621,12 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[0].PublicKey, response[0].Status.Status.String())
 	}
 
-	if response[1].Status.Status == pb.ValidatorStatus_ACTIVE {
+	if response[1].Status.Status != pb.ValidatorStatus_ACTIVE {
 		t.Errorf("Validator with pubkey %#x was activated when not supposed to",
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != pb.ValidatorStatus_ACTIVE {
+	if response[2].Status.Status != pb.ValidatorStatus_DEPOSIT_RECEIVED {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}

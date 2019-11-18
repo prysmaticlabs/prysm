@@ -137,7 +137,7 @@ func (vs *Server) retrieveStatusFromState(ctx context.Context, pubKey []byte,
 	if err != nil {
 		return pb.ValidatorStatus(0), 0, err
 	}
-	if !ok {
+	if !ok || int(idx) >= len(headState.Validators) {
 		return pb.ValidatorStatus(0), 0, errPubkeyDoesNotExist
 	}
 	return vs.assignmentStatus(idx, headState), idx, nil
