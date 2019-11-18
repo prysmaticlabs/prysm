@@ -819,7 +819,7 @@ func (m *EpochSpanMap) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if len(m.EpochSpanMap) > 0 {
-		for k := range m.EpochSpanMap {
+		for k, _ := range m.EpochSpanMap {
 			dAtA[i] = 0xa
 			i++
 			v := m.EpochSpanMap[k]

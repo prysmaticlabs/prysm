@@ -3,6 +3,7 @@ package state_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -506,7 +507,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.BlockRoots = blockRoots
 
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(0, true)
+	aggBits.SetBitAt(1, true)
 	custodyBits := bitfield.NewBitlist(1)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -835,7 +836,10 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	priv := bls.RandKey()
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
