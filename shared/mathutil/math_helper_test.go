@@ -57,15 +57,15 @@ func TestIntegerSquareRoot(t *testing.T) {
 		},
 		{
 			number: 1024,
-			root: 32,
+			root:   32,
 		},
 		{
 			number: 4,
-			root: 2,
+			root:   2,
 		},
 		{
 			number: 16,
-			root: 4,
+			root:   4,
 		},
 	}
 

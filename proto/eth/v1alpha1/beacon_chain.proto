@@ -209,7 +209,7 @@ message ListBlocksRequest {
 }
 
 message ListBlocksResponse {
-    repeated BeaconBlock blocks = 1;
+    repeated BeaconBlockContainer blocks = 1;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates from where listing should continue.
@@ -218,6 +218,14 @@ message ListBlocksResponse {
 
     // Total count of Blocks matching the request filter.
     int32 total_size = 3;
+}
+
+// A container that contains both the beacon block
+// and its corresponding root.
+message BeaconBlockContainer {
+    BeaconBlock block = 1;
+    // 32 byte merkle tree root of contained beacon block.
+    bytes block_root = 2;
 }
 
 // Information about the head of the beacon chain.
