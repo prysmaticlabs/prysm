@@ -11,7 +11,11 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
+
+var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
@@ -62,54 +66,53 @@ func (vs *Server) multipleValidatorStatus(
 }
 
 func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *pb.ValidatorStatusResponse {
+	ctx, span := trace.StartSpan(ctx, "validatorServer.validatorStatus")
+	defer span.End()
+
+	resp := &pb.ValidatorStatusResponse{
+		Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
+		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+	}
+	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
+	if err != nil && err != errPubkeyDoesNotExist {
+		traceutil.AnnotateError(span, err)
+		return resp
+	}
+	resp.Status = vStatus
+	if err != errPubkeyDoesNotExist {
+		resp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
+	}
+
+	// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
-		if err != nil {
-			return &pb.ValidatorStatusResponse{
-				Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
-				ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-			}
-		}
-		statusResp := &pb.ValidatorStatusResponse{
-			Status: vStatus,
-		}
-		if vStatus == pb.ValidatorStatus_ACTIVE {
-			statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
-		}
-		return statusResp
+		log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
+		return resp
 	}
 
 	_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
-	if eth1BlockNumBigInt == nil {
-		return &pb.ValidatorStatusResponse{
-			Status:          pb.ValidatorStatus_UNKNOWN_STATUS,
-			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
+	if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
+		return resp
 	}
 
-	statusResp := &pb.ValidatorStatusResponse{
-		Status:                 pb.ValidatorStatus_DEPOSIT_RECEIVED,
-		ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
-		Eth1DepositBlockNumber: eth1BlockNumBigInt.Uint64(),
+	if resp.Status == pb.ValidatorStatus_UNKNOWN_STATUS {
+		resp.Status = pb.ValidatorStatus_DEPOSIT_RECEIVED
 	}
+
+	resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
 	if err != nil {
-		return statusResp
+		return resp
 	}
-	statusResp.DepositInclusionSlot = depositBlockSlot
-	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
-	if err != nil {
-		return statusResp
-	}
-	statusResp.Status = vStatus
+	resp.DepositInclusionSlot = depositBlockSlot
 
-	if vStatus == pb.ValidatorStatus_ACTIVE {
-		statusResp.ActivationEpoch = headState.Validators[idx].ActivationEpoch
-		return statusResp
+	// If validator has been activated at any point, they are not in the queue so we can return
+	// the request early. Additionally, if idx is zero (default return value) then we know this
+	// validator cannot be in the queue either.
+	if resp.ActivationEpoch != params.BeaconConfig().FarFutureEpoch || idx == 0 {
+		return resp
 	}
 
-	var queuePosition uint64
 	var lastActivatedValidatorIdx uint64
 	for j := len(headState.Validators) - 1; j >= 0; j-- {
 		if helpers.IsActiveValidator(headState.Validators[j], helpers.CurrentEpoch(headState)) {
@@ -118,14 +121,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 	}
 	// Our position in the activation queue is the above index - our validator index.
-	queuePosition = idx - lastActivatedValidatorIdx
-	return &pb.ValidatorStatusResponse{
-		Status:                    vStatus,
-		Eth1DepositBlockNumber:    eth1BlockNumBigInt.Uint64(),
-		PositionInActivationQueue: queuePosition,
-		DepositInclusionSlot:      depositBlockSlot,
-		ActivationEpoch:           headState.Validators[idx].ActivationEpoch,
+	if lastActivatedValidatorIdx > idx {
+		resp.PositionInActivationQueue = idx - lastActivatedValidatorIdx
 	}
+
+	return resp
 }
 
 func (vs *Server) retrieveStatusFromState(ctx context.Context, pubKey []byte,
@@ -138,7 +138,7 @@ func (vs *Server) retrieveStatusFromState(ctx context.Context, pubKey []byte,
 		return pb.ValidatorStatus(0), 0, err
 	}
 	if !ok {
-		return pb.ValidatorStatus(0), 0, errors.New("pubkey does not exist")
+		return pb.ValidatorStatus(0), 0, errPubkeyDoesNotExist
 	}
 	return vs.assignmentStatus(idx, headState), idx, nil
 }
