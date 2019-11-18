@@ -171,13 +171,6 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
 
-http_archive(
-    name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "7e00d57869645a6e6ed90004bef0717627597ed8d93ab3e3426240c0122c4d54",
-    strip_prefix = "bls-go-binary-ae02584f5db9279fb0b2d95214d2179c65c74544",
-    url = "https://github.com/nisdas/bls-go-binary/archive/ae02584f5db9279fb0b2d95214d2179c65c74544.zip",
-)
-
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
 
 buildifier_dependencies()
@@ -1230,7 +1223,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "c7f1fd03716c94dcc287a0d35905ed35b8a0afe1",
+    commit = "9747dd9834b24a8affe4e3b23b0d10efcb32f6a9",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
@@ -1265,6 +1258,13 @@ go_repository(
     importpath = "github.com/mdlayher/prombolt",
     sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
     version = "v0.0.0-20161005185022-dfcf01d20ee9",
+)
+
+go_repository(
+    name = "com_github_kilic_bls12-381",
+    importpath = "github.com/kilic/bls12-381",
+    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
+    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
