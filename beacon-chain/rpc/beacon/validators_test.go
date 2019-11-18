@@ -658,6 +658,31 @@ func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.GetValidatorActiveSetChanges(
+		ctx,
+		&ethpb.GetValidatorActiveSetChangesRequest{
+			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 6)
@@ -923,7 +948,32 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
+func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -982,7 +1032,7 @@ func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
