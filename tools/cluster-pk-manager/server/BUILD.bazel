@@ -78,7 +78,7 @@ go_image(
     importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/server",
     pure = "off",  # depends on cgo for go-ethereum crypto
     race = "off",
-    static = "on",
+    static = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
