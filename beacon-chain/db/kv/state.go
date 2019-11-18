@@ -159,16 +159,6 @@ func (k *Store) savedBlocks(ctx context.Context, untilSlot uint64) ([]*ethpb.Bea
 	return pBlocks, nil
 }
 
-// DeleteState removes the state of the passed in DB key from the DB.
-func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
-	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(stateBucket)
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
 // HeadState returns the latest canonical state in beacon chain.
 func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
@@ -233,6 +223,34 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		return bucket.Put(blockRoot[:], enc)
+	})
+}
+
+// DeleteState by block root.
+func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
+	defer span.End()
+
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+
+		bkt = tx.Bucket(checkpointBucket)
+		enc := bkt.Get(finalizedCheckpointKey)
+		checkpoint := &ethpb.Checkpoint{}
+		if enc == nil {
+			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else {
+			proto.Unmarshal(enc, checkpoint)
+		}
+
+		// Safe guard against deleting genesis or finalized state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
+			return errors.New("could not delete genesis or finalized state")
+		}
+
+		bkt = tx.Bucket(stateBucket)
+		return bkt.Delete(blockRoot[:])
 	})
 }
 

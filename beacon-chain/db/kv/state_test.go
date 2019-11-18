@@ -45,6 +45,53 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
+func TestStore_StatesBatchDelete(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	numBlocks := 100
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	evenBlockRoots := make([][32]byte, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: []byte("parent"),
+		}
+		r, err := ssz.SigningRoot(totalBlocks[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := db.SaveState(context.Background(), &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+			t.Fatal(err)
+		}
+		blockRoots = append(blockRoots, r)
+		if i%2 == 0 {
+			evenBlockRoots = append(evenBlockRoots, r)
+		}
+	}
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
+		t.Fatal(err)
+	}
+	// We delete all even indexed states.
+	if err := db.DeleteStates(ctx, evenBlockRoots); err != nil {
+		t.Fatal(err)
+	}
+	// When we retrieve the data, only the odd indexed state should remain.
+	for _, r := range blockRoots {
+		s, err := db.State(context.Background(), r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s == nil {
+			continue
+		}
+		if s.Slot%2 == 0 {
+			t.Errorf("State with slot %d should have been deleted", s.Slot)
+		}
+	}
+}
+
 func TestHeadState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

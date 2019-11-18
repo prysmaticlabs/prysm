@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -172,8 +173,8 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	}
 
 	savingInterval := params.BeaconConfig().SavingInterval
-	nextSavingSlot := (preState.Slot + savingInterval) - (preState.Slot+savingInterval)%savingInterval
-	if postState.Slot%savingInterval == 0 {
+	nextSavingSlot := preState.Slot%savingInterval + savingInterval
+	if postState.Slot == savingInterval {
 		if err := s.db.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
 		}
