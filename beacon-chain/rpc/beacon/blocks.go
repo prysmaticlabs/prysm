@@ -40,7 +40,7 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlockContainer, 0), TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{BlockContainers: make([]*ethpb.BeaconBlockContainer, 0), TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -62,9 +62,9 @@ func (bs *Server) ListBlocks(
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        containers,
-			TotalSize:     int32(numBlks),
-			NextPageToken: nextPageToken,
+			BlockContainers: containers,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
@@ -74,7 +74,7 @@ func (bs *Server) ListBlocks(
 		}
 
 		if blk == nil {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
 		}
 		root, err := ssz.HashTreeRoot(blk)
 		if err != nil {
@@ -82,7 +82,7 @@ func (bs *Server) ListBlocks(
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks: []*ethpb.BeaconBlockContainer{{
+			BlockContainers: []*ethpb.BeaconBlockContainer{{
 				Block:     blk,
 				BlockRoot: root[:]},
 			},
@@ -97,7 +97,7 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -119,9 +119,9 @@ func (bs *Server) ListBlocks(
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        containers,
-			TotalSize:     int32(numBlks),
-			NextPageToken: nextPageToken,
+			BlockContainers: containers,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 	}
 
