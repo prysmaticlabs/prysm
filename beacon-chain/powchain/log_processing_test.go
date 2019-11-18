@@ -534,5 +534,21 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Errorf("missing logs were not re-requested. Wanted Index %d but got %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
 	}
 
+	web3Service.lastReceivedMerkleIndex = 0
+	web3Service.lastRequestedBlock = new(big.Int)
+
+	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
+	// We purposely miss processing the middle 7 logs so that the service, re-requests them.
+	for _, log := range logsToBeProcessed {
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
+			t.Fatal(err)
+		}
+		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
+	}
+
+	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
+		t.Errorf("Missing logs were not re-requested want = %d but got = %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
+	}
+
 	hook.Reset()
 }
