@@ -33,7 +33,7 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, er
 		return nil
 	})
 	if sm.EpochSpanMap == nil {
-		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
+		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxEpochSpan)
 	}
 	return sm, err
 }
