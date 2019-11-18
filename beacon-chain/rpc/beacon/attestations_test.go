@@ -361,7 +361,7 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)

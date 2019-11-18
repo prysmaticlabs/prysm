@@ -21,11 +21,17 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 
 	count := uint64(100)
 	blks := make([]*ethpb.BeaconBlock, count)
+	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
 		b := &ethpb.BeaconBlock{
 			Slot: i,
 		}
+		root, err := ssz.SigningRoot(b)
+		if err != nil {
+			t.Fatal(err)
+		}
 		blks[i] = b
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	if err := db.SaveBlocks(ctx, blks); err != nil {
 		t.Fatal(err)
@@ -49,52 +55,52 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        []*ethpb.BeaconBlock{{Slot: 5}},
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     1}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
+				NextPageToken:   strconv.Itoa(1),
+				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
-				TotalSize: 1}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
+				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:    []*ethpb.BeaconBlock{{Slot: 6}},
-				TotalSize: 1}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
+				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
 			PageSize:    100},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[0:params.BeaconConfig().SlotsPerEpoch],
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+				BlockContainers: blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
+				NextPageToken:   strconv.Itoa(1),
+				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[43:46],
-				NextPageToken: strconv.Itoa(2),
-				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+				BlockContainers: blkContainers[43:46],
+				NextPageToken:   strconv.Itoa(2),
+				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
 			PageSize:    7},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[95:96],
-				NextPageToken: strconv.Itoa(2),
-				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch)}},
+				BlockContainers: blkContainers[95:96],
+				NextPageToken:   strconv.Itoa(2),
+				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
-				Blocks:        blks[96:100],
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+				BlockContainers: blkContainers[96:100],
+				NextPageToken:   strconv.Itoa(1),
+				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
 
 	for _, test := range tests {
@@ -103,7 +109,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.Blocks), len(res.Blocks))
+			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.BlockContainers), len(res.BlockContainers))
 		}
 	}
 }
@@ -116,13 +122,13 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	bs := &Server{BeaconDB: db}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
 	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 
-	wanted = "must satisfy one of the filter requirement"
+	wanted = "Must satisfy one of the filter requirement"
 	req = &ethpb.ListBlocksRequest{}
 	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -133,8 +139,8 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Blocks) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	if len(res.BlockContainers) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
@@ -145,8 +151,8 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Blocks) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	if len(res.BlockContainers) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
@@ -158,8 +164,8 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Blocks) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	if len(res.BlockContainers) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
@@ -171,8 +177,8 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Blocks) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.Blocks))
+	if len(res.BlockContainers) != 0 {
+		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
 	}
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)

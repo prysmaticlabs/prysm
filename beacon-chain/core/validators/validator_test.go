@@ -213,7 +213,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		activatedIndices := ActivatedValidatorIndices(tt.state)
+		activatedIndices := ActivatedValidatorIndices(helpers.CurrentEpoch(tt.state), tt.state.Validators)
 		if !reflect.DeepEqual(tt.wanted, activatedIndices) {
 			t.Errorf("Wanted %v, received %v", tt.wanted, activatedIndices)
 		}
@@ -270,7 +270,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		slashedIndices := SlashedValidatorIndices(tt.state)
+		slashedIndices := SlashedValidatorIndices(helpers.CurrentEpoch(tt.state), tt.state.Validators)
 		if !reflect.DeepEqual(tt.wanted, slashedIndices) {
 			t.Errorf("Wanted %v, received %v", tt.wanted, slashedIndices)
 		}
@@ -328,7 +328,11 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		exitedIndices, err := ExitedValidatorIndices(tt.state)
+		activeCount, err := helpers.ActiveValidatorCount(tt.state, helpers.CurrentEpoch(tt.state))
+		if err != nil {
+			t.Fatal(err)
+		}
+		exitedIndices, err := ExitedValidatorIndices(tt.state.Validators, activeCount)
 		if err != nil {
 			t.Fatal(err)
 		}

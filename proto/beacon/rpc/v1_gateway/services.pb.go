@@ -6,12 +6,15 @@ package ethereum_beacon_rpc_v1
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
-	math "math"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1395,6 +1398,17 @@ type AttesterServiceServer interface {
 	SubmitAttestation(context.Context, *v1alpha1.Attestation) (*AttestResponse, error)
 }
 
+// UnimplementedAttesterServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedAttesterServiceServer struct {
+}
+
+func (*UnimplementedAttesterServiceServer) RequestAttestation(ctx context.Context, req *AttestationRequest) (*v1alpha1.AttestationData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestAttestation not implemented")
+}
+func (*UnimplementedAttesterServiceServer) SubmitAttestation(ctx context.Context, req *v1alpha1.Attestation) (*AttestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitAttestation not implemented")
+}
+
 func RegisterAttesterServiceServer(s *grpc.Server, srv AttesterServiceServer) {
 	s.RegisterService(&_AttesterService_serviceDesc, srv)
 }
@@ -1490,6 +1504,17 @@ func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *v1alpha1.B
 type ProposerServiceServer interface {
 	RequestBlock(context.Context, *BlockRequest) (*v1alpha1.BeaconBlock, error)
 	ProposeBlock(context.Context, *v1alpha1.BeaconBlock) (*ProposeResponse, error)
+}
+
+// UnimplementedProposerServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedProposerServiceServer struct {
+}
+
+func (*UnimplementedProposerServiceServer) RequestBlock(ctx context.Context, req *BlockRequest) (*v1alpha1.BeaconBlock, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestBlock not implemented")
+}
+func (*UnimplementedProposerServiceServer) ProposeBlock(ctx context.Context, req *v1alpha1.BeaconBlock) (*ProposeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProposeBlock not implemented")
 }
 
 func RegisterProposerServiceServer(s *grpc.Server, srv ProposerServiceServer) {
@@ -1710,6 +1735,38 @@ type ValidatorServiceServer interface {
 	ExitedValidators(context.Context, *ExitedValidatorsRequest) (*ExitedValidatorsResponse, error)
 	WaitForChainStart(*empty.Empty, ValidatorService_WaitForChainStartServer) error
 	CanonicalHead(context.Context, *empty.Empty) (*v1alpha1.BeaconBlock, error)
+}
+
+// UnimplementedValidatorServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedValidatorServiceServer struct {
+}
+
+func (*UnimplementedValidatorServiceServer) DomainData(ctx context.Context, req *DomainRequest) (*DomainResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DomainData not implemented")
+}
+func (*UnimplementedValidatorServiceServer) WaitForActivation(req *ValidatorActivationRequest, srv ValidatorService_WaitForActivationServer) error {
+	return status.Errorf(codes.Unimplemented, "method WaitForActivation not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorIndex(ctx context.Context, req *ValidatorIndexRequest) (*ValidatorIndexResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorIndex not implemented")
+}
+func (*UnimplementedValidatorServiceServer) CommitteeAssignment(ctx context.Context, req *AssignmentRequest) (*AssignmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitteeAssignment not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorStatus(ctx context.Context, req *ValidatorIndexRequest) (*ValidatorStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorStatus not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorPerformance(ctx context.Context, req *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorPerformance not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ExitedValidators(ctx context.Context, req *ExitedValidatorsRequest) (*ExitedValidatorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExitedValidators not implemented")
+}
+func (*UnimplementedValidatorServiceServer) WaitForChainStart(req *empty.Empty, srv ValidatorService_WaitForChainStartServer) error {
+	return status.Errorf(codes.Unimplemented, "method WaitForChainStart not implemented")
+}
+func (*UnimplementedValidatorServiceServer) CanonicalHead(ctx context.Context, req *empty.Empty) (*v1alpha1.BeaconBlock, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CanonicalHead not implemented")
 }
 
 func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {

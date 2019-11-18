@@ -69,25 +69,25 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get parent block signing root")
+		return nil, status.Errorf(codes.Internal, "Could not get parent block signing root: %v", err)
 	}
 
 	eth1Data, err := ps.getEth1Data(ctx, req.Slot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, status.Error(codes.Internal, errors.Wrap(err, "could not get ETH1 data").Error())
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
 
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := ps.deposits(ctx, eth1Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get eth1 deposits")
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts, err := ps.Pool.AttestationPool(ctx, req.Slot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get pending attestations")
+		return nil, status.Errorf(codes.Internal, "Could not get pending attestations: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -117,7 +117,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 	stateRoot, err = ps.computeStateRoot(ctx, blk)
 	if err != nil {
 		interop.WriteBlockToDisk(blk, true /*failed*/)
-		return nil, errors.Wrap(err, "could not get compute state root")
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
 
@@ -129,12 +129,12 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash block")
+		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 	if err := ps.BlockReceiver.ReceiveBlock(ctx, blk); err != nil {
-		return nil, errors.Wrap(err, "could not process beacon block")
+		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil

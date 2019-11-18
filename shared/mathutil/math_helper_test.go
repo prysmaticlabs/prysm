@@ -55,6 +55,18 @@ func TestIntegerSquareRoot(t *testing.T) {
 			number: 1 << 62,
 			root:   1 << 31,
 		},
+		{
+			number: 1024,
+			root:   32,
+		},
+		{
+			number: 4,
+			root:   2,
+		},
+		{
+			number: 16,
+			root:   4,
+		},
 	}
 
 	for _, testVals := range tt {
@@ -71,6 +83,16 @@ func BenchmarkIntegerSquareRoot(b *testing.B) {
 		root := mathutil.IntegerSquareRoot(val)
 		if root != 1<<31 {
 			b.Fatalf("Expected root and computed root are not equal 1<<31, %d", root)
+		}
+	}
+}
+
+func BenchmarkIntegerSquareRoot_WithDatatable(b *testing.B) {
+	val := uint64(1024)
+	for i := 0; i < b.N; i++ {
+		root := mathutil.IntegerSquareRoot(val)
+		if root != 32 {
+			b.Fatalf("Expected root and computed root are not equal 32, %d", root)
 		}
 	}
 }
