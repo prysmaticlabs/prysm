@@ -1,0 +1,61 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_test(
+    name = "go_default_test",
+    size = "enormous",
+    srcs = [
+        "demo_e2e_test.go",
+        "endtoend_test.go",
+        "minimal_e2e_test.go",
+    ],
+    data = [
+        "//beacon-chain",
+        "//validator",
+        "@com_github_ethereum_go_ethereum//cmd/geth",
+    ],
+    embed = [":go_default_library"],
+    shard_count = 2,
+    tags = [
+        "block-network",
+        "exclusive",
+        "manual",
+        "minimal",
+        "e2e",
+    ],
+    deps = [
+        "//endtoend/evaluators:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "beacon_node.go",
+        "epochTimer.go",
+        "eth1.go",
+        "validator.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/endtoend",
+    visibility = ["//endtoend:__subpackages__"],
+    deps = [
+        "//contracts/deposit-contract:go_default_library",
+        "//endtoend/evaluators:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
