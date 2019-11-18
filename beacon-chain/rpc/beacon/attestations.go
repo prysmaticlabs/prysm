@@ -66,7 +66,7 @@ func (bs *Server) ListAttestations(
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	default:
-		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		return nil, status.Error(codes.Internal, "Must specify a filter criteria for fetching attestations")
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))

@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestServer_ListAssignments_FutureEpoch(t *testing.T) {
+func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
