@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-ssz"
@@ -40,7 +41,11 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{BlockContainers: make([]*ethpb.BeaconBlockContainer, 0), TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -73,7 +78,11 @@ func (bs *Server) ListBlocks(
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
 		if blk == nil {
-			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
 		}
 		root, err := ssz.SigningRoot(blk)
 		if err != nil {
@@ -96,7 +105,11 @@ func (bs *Server) ListBlocks(
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{BlockContainers: []*ethpb.BeaconBlockContainer{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
@@ -124,7 +137,7 @@ func (bs *Server) ListBlocks(
 		}, nil
 	}
 
-	return nil, status.Errorf(codes.InvalidArgument, "Must satisfy one of the filter requirement")
+	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from
