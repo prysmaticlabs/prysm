@@ -20,8 +20,12 @@ type Detector interface {
 type maxDetector struct{}
 
 // Detect is a function for maxDetector used to detect surrounding attestations.
-func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
-	maxSpan := uint64(recorderEpochSpans.MaxEpochSpan)
+func (d maxDetector) Detect(
+	attestationEpochSpan uint64,
+	recorderEpochSpan *ethpb.MinMaxEpochSpan,
+	attestationSourceEpoch uint64) uint64 {
+
+	maxSpan := uint64(recorderEpochSpan.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
 		return maxSpan + attestationSourceEpoch
 	}
@@ -32,8 +36,11 @@ func (d maxDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *eth
 type minDetector struct{}
 
 // Detect is a function for minDetecter used to detect surrounded attestations.
-func (d minDetector) Detect(attestationEpochSpan uint64, recorderEpochSpans *ethpb.MinMaxEpochSpan, attestationSourceEpoch uint64) uint64 {
-	minSpan := uint64(recorderEpochSpans.MinEpochSpan)
+func (d minDetector) Detect(attestationEpochSpan uint64,
+	recorderEpochSpan *ethpb.MinMaxEpochSpan,
+	attestationSourceEpoch uint64) uint64 {
+
+	minSpan := uint64(recorderEpochSpan.MinEpochSpan)
 	if minSpan < attestationEpochSpan {
 		return minSpan + attestationSourceEpoch
 	}
