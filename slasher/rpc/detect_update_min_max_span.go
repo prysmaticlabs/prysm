@@ -13,7 +13,7 @@ import (
 // vote detection methods.
 type detectFn = func(attestationEpochSpan uint64, recorderEpochSpan *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 
-// detectMin is a function for maxDetector used to detect surrounding attestations.
+// detectMax is a function for maxDetector used to detect surrounding attestations.
 func detectMax(
 	attestationEpochSpan uint64,
 	recorderEpochSpan *ethpb.MinMaxEpochSpan,
@@ -106,7 +106,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 
 // detectSlashingByEpochSpan is used to detect if a slashable event is present
 // in the db by checking either the closest attestation target or the furthest
-// attestation target. This method receives a detector in order to be used
+// attestation target. This method receives a detector function in order to be used
 // for both surrounding and surrounded vote cases.
 func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector detectFn) (uint64, uint64, *ethpb.EpochSpanMap, error) {
 	span := target - source + 1
