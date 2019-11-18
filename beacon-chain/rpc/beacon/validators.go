@@ -169,7 +169,8 @@ func (bs *Server) GetValidators(
 	}
 
 	headState := bs.HeadFetcher.HeadState()
-	requestedEpoch := helpers.CurrentEpoch(headState)
+	currentEpoch := helpers.CurrentEpoch(headState)
+	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorsRequest_Genesis:
 		if q.Genesis {
@@ -179,9 +180,8 @@ func (bs *Server) GetValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 	validators := headState.Validators
-	if requestedEpoch < finalizedEpoch {
+	if requestedEpoch < currentEpoch {
 		stopIdx := len(validators)
 		for idx, val := range validators {
 			// The first time we see a validator with an activation epoch > the requested epoch,
@@ -192,6 +192,14 @@ func (bs *Server) GetValidators(
 			}
 		}
 		validators = validators[:stopIdx]
+	} else if requestedEpoch > currentEpoch {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	}
 
 	validatorCount := len(validators)
