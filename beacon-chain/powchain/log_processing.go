@@ -113,7 +113,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			return errors.New("received incorrect merkle index")
 		}
 		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
-			return errors.Wrap(err, "Could not get correct merkle index")
+			return errors.Wrap(err, "could not get correct merkle index")
 		}
 
 	}
