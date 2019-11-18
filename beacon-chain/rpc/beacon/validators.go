@@ -59,7 +59,7 @@ func (bs *Server) ListValidatorBalances(
 				0,
 			)
 		}
-	} else if !requestingGenesis && epoch == helpers.CurrentEpoch(headState) {
+	} else if epoch == helpers.CurrentEpoch(headState) {
 		balances = headState.Balances
 	} else {
 		// Otherwise, we are requesting data from the future and we return an error.
