@@ -41,8 +41,10 @@ func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 		t.Error(err)
 	}
 	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
-	priv := bls.RandKey()
-
+	priv, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
 	sig := priv.Sign(signingRoot[:], domain)
 	exit.Signature = sig.Marshal()
 	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
