@@ -44,16 +44,17 @@ type Server struct {
 func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to tree hash attestation: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
+	}
+
+	// Broadcast the new attestation to the network.
+	if err := as.P2p.Broadcast(ctx, att); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := as.AttReceiver.ReceiveAttestation(ctx, att); err != nil {
-			log.WithError(err).Error("Could not receive attestation in chain service")
-			return
-		}
 		if err := as.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return

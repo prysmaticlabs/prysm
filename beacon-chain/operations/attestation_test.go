@@ -506,3 +506,72 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
 }
+
+func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
+	helpers.ClearAllCaches()
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
+
+	aggBits := bitfield.NewBitlist(8)
+	aggBits.SetBitAt(1, true)
+	custodyBits := bitfield.NewBitlist(8)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
+		},
+		AggregationBits: aggBits,
+		CustodyBits:     custodyBits,
+	}
+
+	r, _ := ssz.HashTreeRoot(att.Data)
+	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
+
+	atts, err := service.AttestationPoolForForkchoice(context.Background())
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+
+	if !reflect.DeepEqual(atts[0], att) {
+		t.Error("Did not receive wanted attestation")
+	}
+}
+
+func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
+	helpers.ClearAllCaches()
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
+	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
+
+	aggBits := bitfield.NewBitlist(8)
+	aggBits.SetBitAt(1, true)
+	custodyBits := bitfield.NewBitlist(8)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
+		},
+		AggregationBits: aggBits,
+		CustodyBits:     custodyBits,
+	}
+
+	r, _ := ssz.HashTreeRoot(att.Data)
+	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
+
+	_, err := service.AttestationPoolForForkchoice(context.Background())
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+
+	atts, err := service.AttestationPoolForForkchoice(context.Background())
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+
+	if len(atts) != 0 {
+		t.Errorf("Wanted att count 0, got %d", len(atts))
+	}
+}
