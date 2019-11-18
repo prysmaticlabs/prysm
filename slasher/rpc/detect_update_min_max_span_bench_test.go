@@ -61,7 +61,7 @@ func BenchmarkDetectSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectEpochMaxSpan)
+				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectMax)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -71,7 +71,7 @@ func BenchmarkDetectSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectEpochMinSpan)
+				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectMin)
 				if err != nil {
 					b.Fatal(err)
 				}
