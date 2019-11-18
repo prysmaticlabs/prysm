@@ -26,10 +26,14 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 	var err error
 	s := vs.HeadFetcher.HeadState()
 
+	// if the head state is nil, retrieve it from DB.
 	if s == nil {
 		s, err = vs.BeaconDB.HeadState(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		}
+		if s == nil {
+			return nil, status.Error(codes.Internal, "Head state does not exist")
 		}
 	}
 
