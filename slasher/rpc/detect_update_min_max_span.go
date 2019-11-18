@@ -3,24 +3,18 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Detector is an interface used to implement the slashable surrounding/surrounded
+// Detector is a function type used to implement the slashable surrounding/surrounded
 // vote detection methods.
-type Detector interface {
-	Detect(attestationEpochSpan uint64, recorderEpochSpan *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
-}
+type detectFn = func(attestationEpochSpan uint64, recorderEpochSpan *ethpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 
-// maxDetector is a detector used to detect surrounding attestations.
-type maxDetector struct{}
-
-// Detect is a function for maxDetector used to detect surrounding attestations.
-func (d maxDetector) Detect(
+// detectMin is a function for maxDetector used to detect surrounding attestations.
+func detectMax(
 	attestationEpochSpan uint64,
 	recorderEpochSpan *ethpb.MinMaxEpochSpan,
 	attestationSourceEpoch uint64) uint64 {
@@ -32,11 +26,8 @@ func (d maxDetector) Detect(
 	return 0
 }
 
-// minDetector is a detector used to detect surrounded attestations.
-type minDetector struct{}
-
-// Detect is a function for minDetecter used to detect surrounded attestations.
-func (d minDetector) Detect(attestationEpochSpan uint64,
+// detectMin is a function for minDetecter used to detect surrounded attestations.
+func detectMin(attestationEpochSpan uint64,
 	recorderEpochSpan *ethpb.MinMaxEpochSpan,
 	attestationSourceEpoch uint64) uint64 {
 
@@ -54,7 +45,7 @@ func (d minDetector) Detect(attestationEpochSpan uint64,
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
-	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, maxDetector{})
+	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMax)
 	if err != nil {
 		return 0, err
 	}
@@ -86,7 +77,7 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
-	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, minDetector{})
+	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMin)
 	if err != nil {
 		return 0, err
 	}
@@ -117,13 +108,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 // in the db by checking either the closest attestation target or the furthest
 // attestation target. This method receives a detector in order to be used
 // for both surrounding and surrounded vote cases.
-func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector interface{}) (uint64, uint64, *ethpb.EpochSpanMap, error) {
-	d, ok := detector.(Detector)
-	if !ok {
-		return 0, 0, nil, fmt.Errorf("detector interface should be of type Detector. got: %v",
-			reflect.TypeOf(detector),
-		)
-	}
+func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector detectFn) (uint64, uint64, *ethpb.EpochSpanMap, error) {
 	span := target - source + 1
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
 		return 0, span, nil, fmt.Errorf("target: %d - source: %d > weakSubjectivityPeriod",
@@ -136,7 +121,7 @@ func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64,
 		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validator index: %d", validatorIdx)
 	}
 	if _, ok := spanMap.EpochSpanMap[source]; ok {
-		return d.Detect(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
+		return detector(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
 	}
 	return 0, span, spanMap, nil
 }
