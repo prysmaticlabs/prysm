@@ -22,6 +22,11 @@ func (op *Operations) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Att
 	return op.Attestations, nil
 }
 
+// AttestationPoolForForkchoice --
+func (op *Operations) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return op.Attestations, nil
+}
+
 // HandleAttestation --
 func (op *Operations) HandleAttestation(context.Context, proto.Message) error {
 	return nil
