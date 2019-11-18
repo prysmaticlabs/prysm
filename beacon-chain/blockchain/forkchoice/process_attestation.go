@@ -89,7 +89,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
-		log.WithError(err).Warn("Removing attestation from queue.")
+		return err
 	}
 
 	// Update every validator's latest vote.
