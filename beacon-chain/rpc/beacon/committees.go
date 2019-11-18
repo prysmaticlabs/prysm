@@ -100,8 +100,8 @@ func (bs *Server) ListBeaconCommittees(
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.SlotToEpoch(headState.Slot),
-			helpers.StartSlot(startSlot),
+			helpers.CurrentEpoch(headState),
+			helpers.SlotToEpoch(startSlot),
 		)
 	}
 

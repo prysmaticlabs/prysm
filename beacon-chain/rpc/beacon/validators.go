@@ -47,8 +47,8 @@ func (bs *Server) ListValidatorBalances(
 	var balances []uint64
 	var err error
 	validators := headState.Validators
-	if requestingGenesis {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
+	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
 		}
@@ -59,20 +59,16 @@ func (bs *Server) ListValidatorBalances(
 				0,
 			)
 		}
-	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
-		}
-		if balances == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				epoch,
-			)
-		}
-	} else {
+	} else if !requestingGenesis && epoch == helpers.CurrentEpoch(headState) {
 		balances = headState.Balances
+	} else {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			epoch,
+		)
 	}
 
 	for _, pubKey := range req.PublicKeys {
