@@ -81,17 +81,18 @@ service BeaconChain {
 
     // Retrieve validator balances for a given set of public keys at a specific
     // epoch in time.
-    rpc ListValidatorBalances(GetValidatorBalancesRequest) returns (ValidatorBalances) {
+    rpc ListValidatorBalances(ListValidatorBalancesRequest) returns (ValidatorBalances) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/balances"
         };
     }
 
-    // Retrieve the current list of active validators.
+    // Retrieve the current validator registry.
     //
     // The request may include an optional historical epoch to retrieve a
-    // specific validator set in time.
-    rpc GetValidators(GetValidatorsRequest) returns (Validators) {
+    // specific validator set in time. It can also specify fetching
+    // only active validators.
+    rpc ListValidators(ListValidatorsRequest) returns (Validators) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators"
         };
@@ -310,7 +311,7 @@ message BeaconCommittees {
     int32 total_size = 5;
 }
 
-message GetValidatorBalancesRequest {
+message ListValidatorBalancesRequest {
     oneof query_filter {
         // Optional criteria to retrieve balances at a specific epoch.
         uint64 epoch = 1;
@@ -360,7 +361,7 @@ message ValidatorBalances {
     int32 total_size = 4;
 }
 
-message GetValidatorsRequest {
+message ListValidatorsRequest {
     oneof query_filter {
         // Optional criteria to retrieve validators at a specific epoch. 
         // Omitting this field or setting it to zero will retrieve a response
@@ -371,14 +372,17 @@ message GetValidatorsRequest {
         bool genesis = 2;
     }
 
+    // Specify whether or not you want to retrieve only active validators.
+    bool active = 3;
+
     // The maximum number of Validators to return in the response.
     // This field is optional.
-    int32 page_size = 3;
+    int32 page_size = 4;
 
     // A pagination token returned from a previous call to `GetValidators`
     // that indicates where this listing should continue from.
     // This field is optional.
-    string page_token = 4;
+    string page_token = 5;
 }
 
 message Validators {
