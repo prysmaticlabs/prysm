@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -40,6 +41,15 @@ func (bs *Server) ListValidatorAssignments(
 		requestedEpoch = q.Epoch
 	}
 
+	if requestedEpoch > helpers.CurrentEpoch(headState) {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			requestedEpoch,
+		)
+	}
+
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
 		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
@@ -65,6 +75,13 @@ func (bs *Server) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
 	if len(filteredIndices) == 0 {
+		if len(activeIndices) == 0 {
+			return &ethpb.ValidatorAssignments{
+				Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
+				TotalSize:     int32(0),
+				NextPageToken: strconv.Itoa(0),
+			}, nil
+		}
 		// If no filter was specified, return assignments from active validator indices with pagination.
 		filteredIndices = activeIndices
 	}
