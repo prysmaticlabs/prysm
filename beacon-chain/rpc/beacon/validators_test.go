@@ -138,12 +138,14 @@ func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) 
 	currentNumValidators := 100
 	numOldBalances := 50
 	validators := make([]*ethpb.Validator, currentNumValidators)
+	balances := make([]uint64, currentNumValidators)
 	oldBalances := make([]uint64, numOldBalances)
 	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numOldBalances)
 	for i := 0; i < currentNumValidators; i++ {
 		validators[i] = &ethpb.Validator{
 			PublicKey: []byte(strconv.Itoa(i)),
 		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	for i := 0; i < numOldBalances; i++ {
 		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
@@ -163,6 +165,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) 
 			State: &pbp2p.BeaconState{
 				Slot:       helpers.StartSlot(100 /* epoch 100 */),
 				Validators: validators,
+				Balances:   balances,
 			},
 		},
 	}
