@@ -100,7 +100,10 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 		if helpers.IsEpochEnd(i) {
 			continue
 		}
-		svc.stateNotifier.StateFeed().Send(event)
+		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+		for sent := 0; sent == 0; {
+			sent = svc.stateNotifier.StateFeed().Send(event)
+		}
 	}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
