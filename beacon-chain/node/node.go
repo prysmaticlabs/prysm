@@ -151,6 +151,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	return beacon, nil
 }
 
+// StateFeed implements statefeed.Notifier.
+func (b *BeaconNode) StateFeed() *event.Feed {
+	return b.stateFeed
+}
+
 // Start the BeaconNode and kicks off every registered service.
 func (b *BeaconNode) Start() {
 	b.lock.Lock()
@@ -280,7 +285,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
-		StateFeed:         b.stateFeed,
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -521,7 +526,7 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
 		BeaconDB:      b.db,
 		HeadFetcher:   chainService,
-		StateNotifier: chainService,
+		StateNotifier: b,
 	})
 	return b.services.RegisterService(svc)
 }
