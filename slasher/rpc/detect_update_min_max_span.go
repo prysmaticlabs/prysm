@@ -45,6 +45,13 @@ func detectMin(attestationEpochSpan uint64,
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+	if target < source {
+		return 0, fmt.Errorf(
+			"target: %d < source: %d ",
+			target,
+			source,
+		)
+	}
 	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMax)
 	if err != nil {
 		return 0, err
@@ -77,6 +84,13 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+	if target < source {
+		return 0, fmt.Errorf(
+			"target: %d < source: %d ",
+			target,
+			source,
+		)
+	}
 	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMin)
 	if err != nil {
 		return 0, err

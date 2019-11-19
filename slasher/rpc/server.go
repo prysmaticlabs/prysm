@@ -45,7 +45,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 	}
 	for _, idx := range indices {
-		atts, err := ss.DetectSurround(ctx, tEpoch, req.Data.Source.Epoch, idx)
+		atts, err := ss.DetectSurround(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, idx)
 		if err != nil {
 			return nil, err
 		}
