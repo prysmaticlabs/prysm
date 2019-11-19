@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -65,11 +66,21 @@ func (bs *Server) ListAttestations(
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	default:
-		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
 	numAttestations := len(atts)
+
+	// If there are no attestations, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 attestations below would result in an error.
+	if numAttestations == 0 {
+		return &ethpb.ListAttestationsResponse{
+			Attestations:  make([]*ethpb.Attestation, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
 	if err != nil {
