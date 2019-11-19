@@ -74,6 +74,50 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived")
 }
 
+func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+	svc, beaconDB := setupService(t)
+	defer dbutil.TeardownDB(t, beaconDB)
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+
+	exitRoutine := make(chan bool)
+	go func() {
+		svc.run(svc.ctx)
+		<-exitRoutine
+	}()
+
+	// Send out an event every slot, skipping the end slot of the epoch.
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch+1; i++ {
+		svc.headFetcher = &mock.ChainService{
+			State: &pb.BeaconState{Slot: i},
+		}
+		if helpers.IsEpochEnd(i) {
+			continue
+		}
+		svc.stateNotifier.StateFeed().Send(event)
+	}
+	if err := svc.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	exitRoutine <- true
+
+	// The context should have been canceled.
+	if svc.ctx.Err() != context.Canceled {
+		t.Error("context was not canceled")
+	}
+
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
+	// Even though there was a skip slot, we should still be able to archive
+	// upon the next block event afterwards.
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
+}
+
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
