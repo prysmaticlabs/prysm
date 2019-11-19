@@ -10,6 +10,8 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -220,6 +222,14 @@ func (c *privateKeyServiceClient) Request(ctx context.Context, in *PrivateKeyReq
 // PrivateKeyServiceServer is the server API for PrivateKeyService service.
 type PrivateKeyServiceServer interface {
 	Request(context.Context, *PrivateKeyRequest) (*PrivateKeyResponse, error)
+}
+
+// UnimplementedPrivateKeyServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedPrivateKeyServiceServer struct {
+}
+
+func (*UnimplementedPrivateKeyServiceServer) Request(ctx context.Context, req *PrivateKeyRequest) (*PrivateKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Request not implemented")
 }
 
 func RegisterPrivateKeyServiceServer(s *grpc.Server, srv PrivateKeyServiceServer) {

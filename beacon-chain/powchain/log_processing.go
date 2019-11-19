@@ -27,6 +27,8 @@ var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
+const eth1LookBackPeriod = 100
+
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
 func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
@@ -52,21 +54,8 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 		}
 	}
 	if !s.chainStarted {
-		blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
-		if err != nil {
-			return errors.Wrap(err, "could not get eth1 block")
-		}
-		if blk == nil {
-			return errors.Wrap(err, "got empty block from powchain service")
-		}
-		if blk.Hash() == [32]byte{} {
-			return errors.New("got empty blockhash from powchain service")
-		}
-		timeStamp := blk.Time()
-		triggered := state.IsValidGenesisState(s.activeValidatorCount, timeStamp)
-		if triggered {
-			s.setGenesisTime(timeStamp)
-			s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
+		if err := s.checkForChainStart(ctx, blkNum); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -107,9 +96,13 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	if int64(index) != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
-			return errors.Wrap(err, "Could not get correct merkle index")
+		if s.requestingOldLogs {
+			return errors.New("received incorrect merkle index")
 		}
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
+			return errors.Wrap(err, "could not get correct merkle index")
+		}
+
 	}
 	s.lastReceivedMerkleIndex = int64(index)
 
@@ -255,15 +248,21 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return err
 	}
 
-	if len(logs) > 0 {
-		start := logs[0].BlockNumber
-		end := s.blockHeight.Uint64()
-		// Process logs from each block one by one
-		for i := start; i <= end; i++ {
-			err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
-			if err != nil {
-				return err
+	currentBlockNum := uint64(0)
+
+	for _, log := range logs {
+		if log.BlockNumber > currentBlockNum {
+			if !s.chainStarted {
+				if err := s.checkForChainStart(ctx, big.NewInt(int64(currentBlockNum))); err != nil {
+					return err
+				}
 			}
+			// set new block number after checking for chainstart for previous block.
+			s.lastRequestedBlock.Set(big.NewInt(int64(currentBlockNum)))
+			currentBlockNum = log.BlockNumber
+		}
+		if err := s.ProcessLog(ctx, log); err != nil {
+			return err
 		}
 	}
 
@@ -301,19 +300,64 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
 func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
+	// Prevent this method from being called recursively
+	s.requestingOldLogs = true
+	defer func() {
+		s.requestingOldLogs = false
+	}()
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
+	startBlock := s.lastRequestedBlock.Uint64() + 1
+	for {
+		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
+		if err != nil {
+			return err
+		}
 
-	for i := s.lastRequestedBlock.Uint64() + 1; i <= beforeCurrentBlk.Uint64(); i++ {
+		if s.lastReceivedMerkleIndex == wantedIndex {
+			break
+		}
+
+		// If the required logs still do not exist after the lookback period, then we return an error.
+		if startBlock < s.lastRequestedBlock.Uint64()-eth1LookBackPeriod {
+			return fmt.Errorf(
+				"latest index observed is not accurate, wanted %d, but received  %d",
+				wantedIndex,
+				s.lastReceivedMerkleIndex,
+			)
+		}
+		startBlock--
+	}
+	return nil
+}
+
+func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	if s.lastReceivedMerkleIndex != wantedIndex {
-		return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
-			"Wanted %d but got %d", wantedIndex, s.lastReceivedMerkleIndex)
+// checkForChainStart checks the given  block number for if chainstart has occurred.
+func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error {
+	blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
+	if err != nil {
+		return errors.Wrap(err, "could not get eth1 block")
+	}
+	if blk == nil {
+		return errors.Wrap(err, "got empty block from powchain service")
+	}
+	if blk.Hash() == [32]byte{} {
+		return errors.New("got empty blockhash from powchain service")
+	}
+	timeStamp := blk.Time()
+	triggered := state.IsValidGenesisState(s.activeValidatorCount, timeStamp)
+	if triggered {
+		s.setGenesisTime(timeStamp)
+		s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
 	}
 	return nil
 }

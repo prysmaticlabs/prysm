@@ -141,6 +141,7 @@ type Service struct {
 	depositedPubkeys        map[[48]byte]uint64
 	processingLock          sync.RWMutex
 	eth2GenesisTime         uint64
+	requestingOldLogs       bool
 	connectedETH1           bool
 }
 
