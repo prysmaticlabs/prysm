@@ -42,8 +42,18 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
 	}
-
-	//TODO(#3133): add surround detection
+	for _, idx := range indices {
+		atts, err := ss.DetectSurround(ctx, tEpoch, req.Data.Source.Epoch, idx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range atts {
+			atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, &ethpb.AttesterSlashing{
+				Attestation_1: req,
+				Attestation_2: ia,
+			})
+		}
+	}
 	return atsSlashinngRes, nil
 }
 
@@ -84,4 +94,41 @@ func (ss *Server) SlashableProposals(req *types.Empty, server ethpb.Slasher_Slas
 func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_SlashableAttestationsServer) error {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
 	return status.Error(codes.Unimplemented, "not implemented")
+}
+
+// DetectSurround is a method used to return the attestation that were detected
+// by min max surround detection method.
+func (ss Server) DetectSurround(ctx context.Context, source uint64, target uint64, validatorIdx uint64) ([]*ethpb.IndexedAttestation, error) {
+	minTargetEpoch, err := ss.DetectAndUpdateMinEpochSpan(ctx, source, target, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	maxTargetEpoch, err := ss.DetectAndUpdateMaxEpochSpan(ctx, source, target, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	var iAtts []*ethpb.IndexedAttestation
+	if minTargetEpoch > 0 {
+		iats, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range iats {
+			if ia.Data.Source.Epoch > source && ia.Data.Target.Epoch < target {
+				iAtts = append(iAtts, ia)
+			}
+		}
+	}
+	if maxTargetEpoch > 0 {
+		iats, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range iats {
+			if ia.Data.Source.Epoch < source && ia.Data.Target.Epoch > target {
+				iAtts = append(iAtts, ia)
+			}
+		}
+	}
+	return iAtts, nil
 }
