@@ -147,7 +147,6 @@ func (s *Service) run(ctx context.Context) {
 					continue
 				}
 				currentEpoch := helpers.CurrentEpoch(headState)
-				log.Infof("Current %d, slot %d", currentEpoch, headState.Slot)
 				if !helpers.IsEpochEnd(headState.Slot) && currentEpoch <= s.lastArchivedEpoch {
 					continue
 				}
