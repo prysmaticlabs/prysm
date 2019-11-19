@@ -30,7 +30,11 @@ func (bs *Server) ListBeaconCommittees(
 		)
 	}
 
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
 	var requestingGenesis bool
 	var startSlot uint64
 	switch q := req.QueryFilter.(type) {
@@ -44,7 +48,6 @@ func (bs *Server) ListBeaconCommittees(
 
 	var attesterSeed [32]byte
 	var activeIndices []uint64
-	var err error
 	// This is the archival condition, if the requested epoch is < current epoch or if we are
 	// requesting data from the genesis epoch.
 	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headState.Slot) {

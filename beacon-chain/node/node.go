@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -57,6 +58,7 @@ type BeaconNode struct {
 	stop         chan struct{} // Channel to wait for termination notifications.
 	db           db.Database
 	depositCache *depositcache.DepositCache
+	stateFeed    *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -75,9 +77,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:       ctx,
+		services:  registry,
+		stop:      make(chan struct{}),
+		stateFeed: new(event.Feed),
 	}
 
 	// Use custom config values if the --no-custom-config flag is not set.
@@ -277,6 +280,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
+		StateFeed:         b.stateFeed,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -515,9 +519,9 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		return err
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:        b.db,
-		HeadFetcher:     chainService,
-		NewHeadNotifier: chainService,
+		BeaconDB:      b.db,
+		HeadFetcher:   chainService,
+		StateNotifier: chainService,
 	})
 	return b.services.RegisterService(svc)
 }

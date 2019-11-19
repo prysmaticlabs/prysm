@@ -14,7 +14,11 @@ import (
 func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	block := msg.(*ethpb.BeaconBlock)
 
-	headState := r.chain.HeadState()
+	headState, err := r.chain.HeadState(ctx)
+	if err != nil {
+		log.Errorf("Head state is not available: %v", err)
+		return nil
+	}
 	// Ignore block older than last finalized checkpoint.
 	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch) {
 		log.Debugf("Received a block older than finalized checkpoint, %d < %d",
