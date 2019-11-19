@@ -84,7 +84,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	}
 }
 
-func TestServer_ListValidatorBalances_DefaultResponse(t *testing.T) {
+func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -119,6 +119,58 @@ func TestServer_ListValidatorBalances_DefaultResponse(t *testing.T) {
 		&ethpb.GetValidatorBalancesRequest{
 			QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{
 				Epoch: 0,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(balancesResponse, res.Balances) {
+		t.Errorf("Wanted %v, received %v", balancesResponse, res.Balances)
+	}
+}
+
+func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	currentNumValidators := 100
+	numOldBalances := 50
+	validators := make([]*ethpb.Validator, currentNumValidators)
+	oldBalances := make([]uint64, numOldBalances)
+	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numOldBalances)
+	for i := 0; i < currentNumValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+	}
+	for i := 0; i < numOldBalances; i++ {
+		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
+			PublicKey: []byte(strconv.Itoa(i)),
+			Index:     uint64(i),
+			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	// We archive old balances for epoch 50.
+	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(100 /* epoch 100 */),
+				Validators: validators,
+			},
+		},
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.GetValidatorBalancesRequest{
+			QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{
+				Epoch: 50,
 			},
 		},
 	)
