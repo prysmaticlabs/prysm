@@ -71,7 +71,7 @@ func (s *Service) processAttestation() {
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
-			break
+			return
 		}
 	}
 }

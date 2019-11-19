@@ -353,8 +353,8 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		}
 	}
 
-	if bc.HeadState() == nil {
-		t.Error("Head state can't be nil after initialize beacon chain")
+	if _, err := bc.HeadState(ctx); err != nil {
+		t.Error(err)
 	}
 	if bc.HeadBlock() == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
@@ -407,8 +407,12 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !reflect.DeepEqual(c.HeadBlock(), headBlock) {
 		t.Error("head block incorrect")
 	}
-	if !reflect.DeepEqual(c.HeadState(), headState) {
-		t.Error("head block incorrect")
+	s, err := c.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, headState) {
+		t.Error("head state incorrect")
 	}
 	if headBlock.Slot != c.HeadSlot() {
 		t.Error("head slot incorrect")
