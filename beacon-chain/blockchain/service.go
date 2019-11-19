@@ -70,8 +70,7 @@ type Config struct {
 	OpsPoolService    operations.OperationFeeds
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
-
-	StateNotifier statefeed.Notifier
+	StateNotifier     statefeed.Notifier
 }
 
 // NewService instantiates a new block service instance that will
