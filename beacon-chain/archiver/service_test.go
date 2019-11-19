@@ -330,7 +330,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		},
 	}
 	triggerStateEvent(t, svc, event)
-
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
@@ -341,7 +341,6 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	if !reflect.DeepEqual(retrieved.Exited, []uint64{95}) {
 		t.Errorf("Wanted indices 95 exited, received %v", retrieved.Exited)
 	}
-	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {

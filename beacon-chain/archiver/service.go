@@ -89,7 +89,12 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 
 // We archive active validator set changes that happened during the previous epoch.
 func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	prevEpoch := epoch - 1
+	var prevEpoch uint64
+	if epoch == 0 {
+		prevEpoch = 0
+	} else {
+		prevEpoch = epoch - 1
+	}
 	activations := validators.ActivatedValidatorIndices(prevEpoch, headState.Validators)
 	slashings := validators.SlashedValidatorIndices(prevEpoch, headState.Validators)
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, prevEpoch)
