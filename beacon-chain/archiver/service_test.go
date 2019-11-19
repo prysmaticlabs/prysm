@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,17 +28,23 @@ func init() {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
-func TestArchiverService_ReceivesNewChainHeadEvent(t *testing.T) {
+func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
-	headRoot := [32]byte{1, 2, 3}
-	triggerNewHeadEvent(t, svc, headRoot)
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", headRoot))
-	testutil.AssertLogsContain(t, hook, "New chain head event")
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", event.Data.(*statefeed.BlockProcessedData).BlockRoot))
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
 }
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
@@ -46,15 +53,22 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	// The head state is NOT an epoch end.
 	svc.headFetcher = &mock.ChainService{
-		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 3},
+		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 2},
 	}
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	// The context should have been canceled.
 	if svc.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
-	testutil.AssertLogsContain(t, hook, "New chain head event")
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
 	// The service should ONLY log any archival logs if we receive a
 	// head slot that is an epoch end.
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived")
@@ -69,7 +83,14 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	attestedBalance := uint64(1)
 	currentEpoch := helpers.CurrentEpoch(headState)
@@ -99,7 +120,14 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	retrieved, err := svc.beaconDB.ArchivedBalances(svc.ctx, helpers.CurrentEpoch(headState))
 	if err != nil {
@@ -125,7 +153,14 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	currentEpoch := helpers.CurrentEpoch(headState)
 	proposerSeed, err := helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
@@ -169,11 +204,21 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
 	headState.Validators[4].ActivationEpoch = delayedActEpoch
 	headState.Validators[5].ActivationEpoch = delayedActEpoch
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if retrieved == nil {
+		t.Fatal("Retrieved indices are nil")
 	}
 	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
 		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
@@ -193,11 +238,21 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].Slashed = true
 	headState.Validators[96].Slashed = true
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if retrieved == nil {
+		t.Fatal("Retrieved indices are nil")
 	}
 	if !reflect.DeepEqual(retrieved.Slashed, []uint64{95, 96}) {
 		t.Errorf("Wanted indices 95, 96 slashed, received %v", retrieved.Slashed)
@@ -217,11 +272,21 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].ExitEpoch = prevEpoch + 1
 	headState.Validators[95].WithdrawableEpoch = prevEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	triggerNewHeadEvent(t, svc, [32]byte{})
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+	triggerStateEvent(t, svc, event)
 
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if retrieved == nil {
+		t.Fatal("Retrieved indices are nil")
 	}
 	if !reflect.DeepEqual(retrieved.Exited, []uint64{95}) {
 		t.Errorf("Wanted indices 95 exited, received %v", retrieved.Exited)
@@ -263,22 +328,24 @@ func setupService(t *testing.T) (*Service, db.Database) {
 	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		beaconDB:        beaconDB,
-		ctx:             ctx,
-		cancel:          cancel,
-		newHeadRootChan: make(chan [32]byte, 0),
-		newHeadNotifier: &mock.ChainService{},
+		beaconDB:      beaconDB,
+		ctx:           ctx,
+		cancel:        cancel,
+		stateNotifier: &mock.ChainService{},
 	}, beaconDB
 }
 
-func triggerNewHeadEvent(t *testing.T, svc *Service, headRoot [32]byte) {
+func triggerStateEvent(t *testing.T, svc *Service, event *statefeed.Event) {
 	exitRoutine := make(chan bool)
 	go func() {
 		svc.run(svc.ctx)
 		<-exitRoutine
 	}()
 
-	svc.newHeadRootChan <- headRoot
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed)
+	for sent := 0; sent == 0; {
+		sent = svc.stateNotifier.StateFeed().Send(event)
+	}
 	if err := svc.Stop(); err != nil {
 		t.Fatal(err)
 	}
