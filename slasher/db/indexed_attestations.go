@@ -8,7 +8,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	"github.com/prysmaticlabs/go-ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -69,12 +68,13 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 }
 
 // DoubleVote looks up in db for slashable data possibly multiple slashable actions were preformed by the same validator.
-func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot []byte) ([]*ethpb.IndexedAttestation, error) {
-	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorID)
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot []byte) ([]*ethpb.AttesterSlashing, error) {
+	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
 	if err != nil {
 		return nil, err
 	}
 	var iAtt []*ethpb.IndexedAttestation
+	var origIdxAtt *ethpb.IndexedAttestation
 	for _, idxAtt := range idxAttestations {
 		root, err := ssz.HashTreeRoot(idxAtt.Data)
 		if err != nil {
@@ -82,9 +82,18 @@ func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot [
 		}
 		if !bytes.Equal(root[:], dataroot) {
 			iAtt = append(iAtt, idxAtt)
+		} else {
+			origIdxAtt = idxAtt
 		}
 	}
-	return iAtt, nil
+	var as []*ethpb.AttesterSlashing
+	for _, ia := range iAtt {
+		as = append(as, &ethpb.AttesterSlashing{
+			Attestation_1: origIdxAtt,
+			Attestation_2: ia,
+		})
+	}
+	return as, nil
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
