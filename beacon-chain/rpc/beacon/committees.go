@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -99,8 +100,8 @@ func (bs *Server) ListBeaconCommittees(
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.SlotToEpoch(headState.Slot),
-			helpers.StartSlot(startSlot),
+			helpers.CurrentEpoch(headState),
+			helpers.SlotToEpoch(startSlot),
 		)
 	}
 
@@ -133,6 +134,18 @@ func (bs *Server) ListBeaconCommittees(
 	}
 
 	numCommittees := len(committees)
+	// If there are no committees, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 committees below would result in an error.
+	if numCommittees == 0 {
+		return &ethpb.BeaconCommittees{
+			Epoch:                helpers.SlotToEpoch(startSlot),
+			ActiveValidatorCount: uint64(len(activeIndices)),
+			Committees:           make([]*ethpb.BeaconCommittees_CommitteeItem, 0),
+			TotalSize:            int32(0),
+			NextPageToken:        strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
 	if err != nil {
 		return nil, status.Errorf(
