@@ -28,7 +28,7 @@ func (r *RegularSync) processPendingBlocksQueue() {
 			r.processPendingBlocks(ctx)
 		case <-r.ctx.Done():
 			log.Debug("Context closed, exiting routine")
-			break
+			return
 		}
 	}
 }
