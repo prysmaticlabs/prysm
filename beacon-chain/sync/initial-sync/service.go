@@ -63,7 +63,7 @@ func (s *InitialSync) Start() {
 	ch := make(chan time.Time)
 	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
-	if _, err := s.chain.HeadState(nil); err != nil {
+	if _, err := s.chain.HeadState(context.TODO()); err != nil {
 		// Wait until chain start.
 		genesis = <-ch
 	} else {
