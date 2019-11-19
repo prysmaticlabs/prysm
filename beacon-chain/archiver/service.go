@@ -89,12 +89,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 
 // We archive active validator set changes that happened during the previous epoch.
 func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	var prevEpoch uint64
-	if epoch == 0 {
-		prevEpoch = 0
-	} else {
-		prevEpoch = epoch - 1
-	}
+	prevEpoch := epoch - 1
 	activations := validators.ActivatedValidatorIndices(prevEpoch, headState.Validators)
 	slashings := validators.SlashedValidatorIndices(prevEpoch, headState.Validators)
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, prevEpoch)
@@ -152,12 +147,13 @@ func (s *Service) run(ctx context.Context) {
 					continue
 				}
 				currentEpoch := helpers.CurrentEpoch(headState)
+				log.Infof("Current %d, slot %d", currentEpoch, headState.Slot)
 				if !helpers.IsEpochEnd(headState.Slot) && currentEpoch <= s.lastArchivedEpoch {
 					continue
 				}
 				epochToArchive := currentEpoch
-				if currentEpoch > s.lastArchivedEpoch {
-					epochToArchive = currentEpoch - 1
+				if !helpers.IsEpochEnd(headState.Slot) {
+					epochToArchive--
 				}
 				if err := s.archiveCommitteeInfo(ctx, headState, epochToArchive); err != nil {
 					log.WithError(err).Error("Could not archive committee info")

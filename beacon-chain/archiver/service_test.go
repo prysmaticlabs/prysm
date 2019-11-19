@@ -156,7 +156,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	}
 
 	if !proto.Equal(wanted, retrieved) {
-		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch, wanted, retrieved)
+		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch-1, wanted, retrieved)
 	}
 	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
