@@ -68,13 +68,12 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 }
 
 // DoubleVotes looks up in db for slashable data possibly multiple slashable actions were preformed by the same validator.
-func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot []byte) ([]*ethpb.AttesterSlashing, error) {
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot []byte, att *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
 	if err != nil {
 		return nil, err
 	}
 	var iAtt []*ethpb.IndexedAttestation
-	var origIdxAtt *ethpb.IndexedAttestation
 	for _, idxAtt := range idxAttestations {
 		root, err := ssz.HashTreeRoot(idxAtt.Data)
 		if err != nil {
@@ -82,14 +81,12 @@ func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataroot [
 		}
 		if !bytes.Equal(root[:], dataroot) {
 			iAtt = append(iAtt, idxAtt)
-		} else {
-			origIdxAtt = idxAtt
 		}
 	}
 	var as []*ethpb.AttesterSlashing
 	for _, ia := range iAtt {
 		as = append(as, &ethpb.AttesterSlashing{
-			Attestation_1: origIdxAtt,
+			Attestation_1: att,
 			Attestation_2: ia,
 		})
 	}
