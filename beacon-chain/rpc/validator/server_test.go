@@ -149,11 +149,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				PublicKey:       pubKey1,
 			},
-			{
-				ActivationEpoch: 0,
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKey2,
-			},
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
