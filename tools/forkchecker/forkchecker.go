@@ -89,8 +89,8 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 		log.Fatal(err)
 	}
 
-	log.Infof("Comparing all heads for head slot :%d", head1.BlockSlot)
-	if (head1.BlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+	log.Infof("Comparing all heads for head slot :%d", head1.HeadBlockSlot)
+	if (head1.HeadBlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 		p, err := clients[endpt1].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{})
 		if err != nil {
 			log.Fatal(err)
@@ -108,10 +108,10 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			logHead(endpt1, head1)
 			logHead(endpt2, head2)
 
-			if (head1.BlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+			if (head1.HeadBlockSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
 					QueryFilter: &pb.GetValidatorParticipationRequest_Epoch{
-						Epoch: head2.BlockSlot / params.BeaconConfig().SlotsPerEpoch,
+						Epoch: head2.HeadBlockSlot / params.BeaconConfig().SlotsPerEpoch,
 					},
 				})
 				if err != nil {
@@ -126,11 +126,11 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 func logHead(endpt string, head *pb.ChainHead) {
 	log.WithFields(
 		logrus.Fields{
-			"HeadSlot":       head.BlockSlot,
-			"HeadRoot":       hex.EncodeToString(head.BlockRoot),
-			"JustifiedEpoch": head.JustifiedSlot / params.BeaconConfig().SlotsPerEpoch,
+			"HeadSlot":       head.HeadBlockSlot,
+			"HeadRoot":       hex.EncodeToString(head.HeadBlockRoot),
+			"JustifiedEpoch": head.JustifiedEpoch,
 			"JustifiedRoot":  hex.EncodeToString(head.JustifiedBlockRoot),
-			"FinalizedEpoch": head.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch,
+			"FinalizedEpoch": head.FinalizedEpoch,
 			"FinalizedRoot":  hex.EncodeToString(head.FinalizedBlockRoot),
 		}).Info("Head from beacon node ", endpt)
 }
