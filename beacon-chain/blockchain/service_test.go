@@ -35,7 +35,6 @@ import (
 
 // Ensure Service implements interfaces.
 var _ = ChainFeeds(&Service{})
-var _ = StateNotifier(&Service{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -68,6 +67,17 @@ func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
 
 func (s *store) Head(ctx context.Context) ([]byte, error) {
 	return s.headRoot, nil
+}
+
+type mockBeaconNode struct {
+	stateFeed *event.Feed
+}
+
+func (mbn *mockBeaconNode) StateFeed() *event.Feed {
+	if mbn.stateFeed == nil {
+		mbn.stateFeed = new(event.Feed)
+	}
+	return mbn.stateFeed
 }
 
 type mockOperationService struct{}
@@ -222,7 +232,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    &mockOperationService{},
 		P2p:               &mockBroadcaster{},
-		StateFeed:         new(event.Feed),
+		StateNotifier:     &mockBeaconNode{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
