@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"errors"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -159,22 +158,25 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 	}
 
 	finalizedCheckpoint := headState.FinalizedCheckpoint
-	finalizedBlockSlot, err := bs.blockSlot(ctx, finalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized block slot: %v", err)
+	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
+	finalizedBlockSlot := b.Slot
 
 	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
-	justifiedBlockSlot, err := bs.blockSlot(ctx, justifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get justified block slot: %v", err)
+	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
+	justifiedBlockSlot := b.Slot
 
 	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
-	prevJustifiedBlockSlot, err := bs.blockSlot(ctx, prevJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get prev justified block slot: %v", err)
+	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get prev justified block")
 	}
+	prevJustifiedBlockSlot := b.Slot
 
 	return &ethpb.ChainHead{
 		HeadBlockSlot:              headBlock.Slot,
@@ -190,20 +192,4 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 		PreviousJustifiedSlot:      prevJustifiedBlockSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 	}, nil
-}
-
-// Given input slot, this retrieves the highest slot where a block exists.
-func (bs *Server) blockSlot(ctx context.Context, slot uint64) (uint64, error) {
-	for slot > 0 {
-		filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-		b, err := bs.BeaconDB.Blocks(ctx, filter)
-		if err != nil {
-			return 0, err
-		}
-		if len(b) > 0 {
-			return slot, nil
-		}
-		slot--
-	}
-	return 0, errors.New("no block exists")
 }

@@ -252,7 +252,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 		HeadFetcher: &mock.ChainService{Block: &ethpb.BeaconBlock{}, State: s},
 	}
 
-	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "no block exists") {
+	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "Could not get finalized block") {
 		t.Fatal("Did not get wanted error")
 	}
 }
@@ -261,14 +261,21 @@ func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	db.SaveBlock(context.Background(), finalizedBlock)
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
+	db.SaveBlock(context.Background(), justifiedBlock)
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
+	db.SaveBlock(context.Background(), prevJustifiedBlock)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
+
 	s := &pbp2p.BeaconState{
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
 	}
-	db.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: s.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch - 1})
-	db.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: s.CurrentJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch - 1})
-	db.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch - 1})
 
 	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
 	bs := &Server{
@@ -292,28 +299,28 @@ func TestServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted FinalizedEpoch: %d, got: %d",
 			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedEpoch)
 	}
-	if head.PreviousJustifiedSlot != 3*params.BeaconConfig().SlotsPerEpoch-1 {
+	if head.PreviousJustifiedSlot != 3 {
 		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
-			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedSlot)
+			3, head.PreviousJustifiedSlot)
 	}
-	if head.JustifiedBlockSlot != 2*params.BeaconConfig().SlotsPerEpoch-1 {
+	if head.JustifiedBlockSlot != 2 {
 		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
-			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedBlockSlot)
+			2, head.JustifiedBlockSlot)
 	}
-	if head.FinalizedBlockSlot != 1*params.BeaconConfig().SlotsPerEpoch-1 {
+	if head.FinalizedBlockSlot != 1 {
 		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
-			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedBlockSlot)
+			1, head.FinalizedBlockSlot)
 	}
-	if !bytes.Equal([]byte{'A'}, head.PreviousJustifiedBlockRoot) {
+	if !bytes.Equal(pjRoot[:], head.PreviousJustifiedBlockRoot) {
 		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
-			[]byte{'A'}, head.PreviousJustifiedBlockRoot)
+			pjRoot[:], head.PreviousJustifiedBlockRoot)
 	}
-	if !bytes.Equal([]byte{'B'}, head.JustifiedBlockRoot) {
+	if !bytes.Equal(jRoot[:], head.JustifiedBlockRoot) {
 		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
-			[]byte{'B'}, head.JustifiedBlockRoot)
+			jRoot[:], head.JustifiedBlockRoot)
 	}
-	if !bytes.Equal([]byte{'C'}, head.FinalizedBlockRoot) {
+	if !bytes.Equal(fRoot[:], head.FinalizedBlockRoot) {
 		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
-			[]byte{'C'}, head.FinalizedBlockRoot)
+			fRoot[:], head.FinalizedBlockRoot)
 	}
 }
