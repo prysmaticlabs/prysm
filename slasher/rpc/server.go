@@ -36,11 +36,13 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	}
 	atsSlashinngRes := &ethpb.AttesterSlashingResponse{}
 	for _, idx := range indices {
-		atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:])
+		atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
 		if err != nil {
 			return nil, err
 		}
-		atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
+		if atts != nil && len(atts) > 0 {
+			atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
+		}
 	}
 
 	//TODO(#3133): add surround detection
