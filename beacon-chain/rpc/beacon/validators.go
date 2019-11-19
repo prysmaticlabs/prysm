@@ -22,7 +22,8 @@ import (
 // archived, persistent data.
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
-	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+	req *ethpb.GetValidatorBalancesRequest,
+) (*ethpb.ValidatorBalances, error) {
 
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
@@ -30,7 +31,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
-	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
+	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 
 	headState := bs.HeadFetcher.HeadState()
 	var requestingGenesis bool
@@ -72,7 +73,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	for _, pubKey := range req.PublicKeys {
-		// Skip empty public key
+		// Skip empty public key.
 		if len(pubKey) == 0 {
 			continue
 		}
@@ -119,8 +120,8 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
-		// return everything.
-		for i := 0; i < len(headState.Balances); i++ {
+		// Return everything.
+		for i := 0; i < len(balances); i++ {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: headState.Validators[i].PublicKey,
 				Index:     uint64(i),
