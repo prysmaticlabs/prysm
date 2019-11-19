@@ -137,6 +137,8 @@ func (s *Service) Start() {
 			return
 		}()
 	}
+
+	go s.processAttestation()
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1

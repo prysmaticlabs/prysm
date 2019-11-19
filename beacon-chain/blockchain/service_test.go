@@ -54,8 +54,8 @@ func (s *store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	return nil
 }
 
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
-	return 0, nil
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+	return nil
 }
 
 func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
@@ -80,8 +80,16 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return nil
 }
 
-func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
-	return nil
+func (ms *mockOperationService) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
+func (ms *mockOperationService) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
+func (ms *mockOperationService) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return nil, nil
 }
 
 type mockClient struct{}

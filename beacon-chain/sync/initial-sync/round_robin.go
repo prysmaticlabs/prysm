@@ -72,6 +72,9 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
+			if count <= 1 {
+				step = 1
+			}
 
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 			if start > helpers.StartSlot(highestFinalizedEpoch()+1) {

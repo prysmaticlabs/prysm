@@ -27,8 +27,8 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
-		Step:      4,
-		Count:     100,
+		Step:      64,
+		Count:     16,
 	}
 
 	// Populate the database with blocks that would match the request.
