@@ -6,11 +6,12 @@ package eth
 import (
 	context "context"
 	fmt "fmt"
+	io "io"
+	math "math"
+
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -900,7 +901,7 @@ func (m *EpochSpanMap) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if len(m.EpochSpanMap) > 0 {
-		for k, _ := range m.EpochSpanMap {
+		for k := range m.EpochSpanMap {
 			dAtA[i] = 0xa
 			i++
 			v := m.EpochSpanMap[k]
