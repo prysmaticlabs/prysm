@@ -102,7 +102,7 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 			return nil, err
 		}
 		if h == nil {
-			return nil, errors.New("head state does not exists")
+			return nil, errors.New("head state does not exist")
 		}
 		return h, nil
 	}
