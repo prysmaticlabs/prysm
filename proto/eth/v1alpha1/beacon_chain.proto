@@ -326,7 +326,7 @@ message ListValidatorBalancesRequest {
     // Validator indices to filter for the given epoch.
     repeated uint64 indices = 4;
 
-    // The maximum number of to return in the response.
+    // The maximum number of items to return in the response.
     // This field is optional.
     int32 page_size = 5;
 
