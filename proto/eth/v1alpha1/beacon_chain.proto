@@ -276,11 +276,11 @@ message ListCommitteesRequest {
         bool genesis = 2;
     }
 
-    // The maximum number of Validators to return in the response.
+    // The maximum number of results to return in the response.
     // This field is optional.
     int32 page_size = 3;
 
-    // A pagination token returned from a previous call to `GetValidators`
+    // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
     // This field is optional.
     string page_token = 4;
@@ -323,14 +323,14 @@ message ListValidatorBalancesRequest {
     // epoch.
     repeated bytes public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
 
-    // Validator indices to filter validators for the given epoch.
+    // Validator indices to filter for the given epoch.
     repeated uint64 indices = 4;
 
-    // The maximum number of Validators to return in the response.
+    // The maximum number of to return in the response.
     // This field is optional.
     int32 page_size = 5;
 
-    // A pagination token returned from a previous call to `GetValidators`
+    // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
     // This field is optional.
     string page_token = 6;
@@ -353,11 +353,11 @@ message ValidatorBalances {
 
     repeated Balance balances = 2;
 
-    // A pagination token returned from a previous call to `GetListValidatorBalances`
+    // A pagination token returned from a previous call
     // that indicates from where listing should continue.
     string next_page_token = 3;
 
-    // Total count of Validators matching the request filter.
+    // Total count of results matching the request filter.
     int32 total_size = 4;
 }
 
@@ -375,11 +375,11 @@ message ListValidatorsRequest {
     // Specify whether or not you want to retrieve only active validators.
     bool active = 3;
 
-    // The maximum number of Validators to return in the response.
+    // The maximum number of results to return in the response.
     // This field is optional.
     int32 page_size = 4;
 
-    // A pagination token returned from a previous call to `GetValidators`
+    // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
     // This field is optional.
     string page_token = 5;
@@ -393,7 +393,7 @@ message Validators {
 
     repeated Validator validators = 2;
 
-    // A pagination token returned from a previous call to `GetValidators`
+    // A pagination token returned from a previous call
     // that indicates from where listing should continue.
     // This field is optional.
     string next_page_token = 3;
@@ -459,11 +459,11 @@ message ListValidatorAssignmentsRequest {
     // Validator indicies to filter assignments for the given epoch.
     repeated uint64 indices = 4;
 
-    // The maximum number of ValidatorAssignments to return in the response.
+    // The maximum number of results to return in the response.
     // This field is optional.
     int32 page_size = 5;
 
-    // A pagination token returned from a previous call to `ListValidatorAssignments`
+    // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
     // This field is optional.
     string page_token = 6;
@@ -498,12 +498,12 @@ message ValidatorAssignments {
 
     repeated CommitteeAssignment assignments = 2;
 
-    // A pagination token returned from a previous call to `ListValidatorAssignmentsRequest`
+    // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
     // This field is optional.
     string next_page_token = 3;
 
-    // Total count of CommitteeAssignments matching the request filter.
+    // Total count of results matching the request filter.
     int32 total_size = 4;
 }
 
