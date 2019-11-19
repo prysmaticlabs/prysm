@@ -73,5 +73,5 @@ func TestHeadState_DataRace(t *testing.T) {
 			[32]byte{},
 		)
 	}()
-	s.HeadState()
+	s.HeadState(context.Background())
 }

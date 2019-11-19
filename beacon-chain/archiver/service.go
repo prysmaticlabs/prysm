@@ -141,7 +141,11 @@ func (s *Service) run(ctx context.Context) {
 			case statefeed.BlockProcessed:
 				data := event.Data.(*statefeed.BlockProcessedData)
 				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockRoot)).Debug("Received block processed event")
-				headState := s.headFetcher.HeadState()
+				headState, err := s.headFetcher.HeadState(ctx)
+				if err != nil {
+					log.WithError(err).Error("Head state is not available")
+					continue
+				}
 				if !helpers.IsEpochEnd(headState.Slot) {
 					continue
 				}

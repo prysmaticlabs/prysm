@@ -105,16 +105,11 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 		}
 	}()
 
-	headState := as.HeadFetcher.HeadState()
-	headRoot := as.HeadFetcher.HeadRoot()
-
-	// Safe guard against head state is nil in chain service. This should not happen.
-	if headState == nil {
-		headState, err = as.BeaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-		}
+	headState, err := as.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
+	headRoot := as.HeadFetcher.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
