@@ -85,8 +85,8 @@ func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
 }
 
 // HeadState mocks HeadState method in chain service.
-func (ms *ChainService) HeadState() *pb.BeaconState {
-	return ms.State
+func (ms *ChainService) HeadState(context.Context) (*pb.BeaconState, error) {
+	return ms.State, nil
 }
 
 // CurrentFork mocks HeadState method in chain service.

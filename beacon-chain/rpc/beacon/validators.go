@@ -31,7 +31,11 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -44,7 +48,6 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	var balances []uint64
-	var err error
 	validators := headState.Validators
 	if requestingGenesis {
 		balances, err = bs.BeaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
@@ -160,7 +163,10 @@ func (bs *Server) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	requestedEpoch := helpers.CurrentEpoch(headState)
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorsRequest_Genesis:
@@ -210,7 +216,10 @@ func (bs *Server) GetValidators(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	requestedEpoch := helpers.CurrentEpoch(headState)
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
@@ -280,7 +289,10 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	prevEpoch := helpers.PrevEpoch(headState)
 
@@ -358,7 +370,10 @@ func (bs *Server) GetValidatorParticipation(
 func (bs *Server) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
 	// Additionally, determine those validators queued to exit
 	awaitingExit := make([]uint64, 0)

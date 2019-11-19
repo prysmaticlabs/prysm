@@ -134,9 +134,13 @@ func (bs *Server) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.HeadFetcher.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.HeadFetcher.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.HeadFetcher.HeadState().PreviousJustifiedCheckpoint
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not get head state")
+	}
+	finalizedCheckpoint := headState.FinalizedCheckpoint
+	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
+	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
 
 	return &ethpb.ChainHead{
 		BlockRoot:                  bs.HeadFetcher.HeadRoot(),

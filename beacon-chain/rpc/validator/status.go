@@ -11,6 +11,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidatorStatus returns the validator status of the current epoch.
@@ -24,7 +26,10 @@ import (
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
-	headState := vs.HeadFetcher.HeadState()
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
@@ -34,9 +39,9 @@ func (vs *Server) multipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte,
 ) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	headState := vs.HeadFetcher.HeadState()
-	if headState == nil {
-		return false, nil, nil
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return false, nil, err
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))

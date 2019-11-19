@@ -26,7 +26,10 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
 	requestedEpoch := helpers.CurrentEpoch(headState)
