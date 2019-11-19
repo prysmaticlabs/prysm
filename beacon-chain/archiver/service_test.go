@@ -77,6 +77,8 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
 	defer dbutil.TeardownDB(t, beaconDB)
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
@@ -94,8 +96,9 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 
 	// Send out an event every slot, skipping the end slot of the epoch.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch+1; i++ {
+		headState.Slot = i
 		svc.headFetcher = &mock.ChainService{
-			State: &pb.BeaconState{Slot: i},
+			State: headState,
 		}
 		if helpers.IsEpochEnd(i) {
 			continue
