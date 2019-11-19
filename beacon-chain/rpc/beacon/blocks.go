@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -180,7 +181,7 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 
 	return &ethpb.ChainHead{
 		HeadBlockSlot:              headBlock.Slot,
-		HeadBlockEpoch:             headBlock.Slot * params.BeaconConfig().SlotsPerEpoch,
+		HeadBlockEpoch:             helpers.SlotToEpoch(headBlock.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
 		FinalizedBlockSlot:         finalizedBlockSlot,
