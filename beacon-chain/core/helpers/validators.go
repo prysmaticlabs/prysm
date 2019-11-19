@@ -146,12 +146,8 @@ func DelayedActivationExitEpoch(epoch uint64) uint64 {
 //    """
 //    active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
 //    return max(MIN_PER_EPOCH_CHURN_LIMIT, len(active_validator_indices) // CHURN_LIMIT_QUOTIENT)
-func ValidatorChurnLimit(state *pb.BeaconState) (uint64, error) {
-	validatorCount, err := ActiveValidatorCount(state, CurrentEpoch(state))
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get validator count")
-	}
-	churnLimit := validatorCount / params.BeaconConfig().ChurnLimitQuotient
+func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
+	churnLimit := activeValidatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
 		churnLimit = params.BeaconConfig().MinPerEpochChurnLimit
 	}
@@ -213,7 +209,7 @@ func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(uint64(i)%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
 		if err != nil {
 			return 0, err
 		}

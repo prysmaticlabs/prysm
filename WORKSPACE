@@ -9,15 +9,6 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
-    urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-    ],
-)
-
-http_archive(
     name = "bazel_gazelle",
     sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
     urls = [
@@ -35,9 +26,16 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.10.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.10.1.tar.gz",
+    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
+    strip_prefix = "rules_docker-0.12.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+)
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
+    strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
+    urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
 )
 
 http_archive(
@@ -183,7 +181,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "09745575a923640154bcf307fba8aedff47f240a",
+    commit = "d09d649aea36f02c03f8396ba39a8d4db8a607e4",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -1201,7 +1199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "1205871db17ccc2fb824fc6dfa40d01c48fb6a7e",
+    commit = "4de8622eca7e6c4ff3cdf3c0db679e7fb8d57c0c",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
@@ -1257,4 +1255,95 @@ go_repository(
     importpath = "golang.org/x/exp",
     sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
     version = "v0.0.0-20191002040644-a1355ae1e2c3",
+)
+
+go_repository(
+    name = "com_github_naoina_toml",
+    importpath = "github.com/naoina/toml",
+    sum = "h1:PT/lllxVVN0gzzSqSlHEmP8MJB4MY2U7STGxiouV4X8=",
+    version = "v0.1.1",
+)
+
+go_repository(
+    name = "com_github_elastic_gosigar",
+    importpath = "github.com/elastic/gosigar",
+    sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
+    version = "v0.10.5",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    importpath = "gopkg.in/urfave/cli.v1",
+    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
+    version = "v1.20.0",
+)
+
+go_repository(
+    name = "com_github_naoina_go_stringutil",
+    importpath = "github.com/naoina/go-stringutil",
+    sum = "h1:rCUeRUHjBjGTSHl0VC00jUPLz8/F9dDzYI70Hzifhks=",
+    version = "v0.1.0",
+)
+
+go_repository(
+    name = "com_github_influxdata_influxdb",
+    importpath = "github.com/influxdata/influxdb",
+    sum = "h1:uSeBTNO4rBkbp1Be5FKRsAmglM9nlx25TzVQRQt1An4=",
+    version = "v1.7.9",
+)
+
+go_repository(
+    name = "com_github_robertkrimen_otto",
+    importpath = "github.com/robertkrimen/otto",
+    sum = "h1:1VUlQbCfkoSGv7qP7Y+ro3ap1P1pPZxgdGVqiTVy5C4=",
+    version = "v0.0.0-20180617131154-15f95af6e78d",
+)
+
+go_repository(
+    name = "com_github_peterh_liner",
+    importpath = "github.com/peterh/liner",
+    sum = "h1:f+aAedNJA6uk7+6rXsYBnhdo4Xux7ESLe+kcuVUF5os=",
+    version = "v1.1.0",
+)
+
+go_repository(
+    name = "com_github_graph_gophers_graphql_go",
+    importpath = "github.com/graph-gophers/graphql-go",
+    sum = "h1:HwRCZlPXN00r58jaIPE11HXn7EvhheQrE+Cxw0vkrH0=",
+    version = "v0.0.0-20191031232829-adde0d0f76a3",
+)
+
+go_repository(
+    name = "com_github_rjeczalik_notify",
+    importpath = "github.com/rjeczalik/notify",
+    sum = "h1:MiTWrPj55mNDHEiIX5YUSKefw/+lCQVoAFmD6oQm5w8=",
+    version = "v0.9.2",
+)
+
+go_repository(
+    name = "com_github_mohae_deepcopy",
+    importpath = "github.com/mohae/deepcopy",
+    sum = "h1:RWengNIwukTxcDr9M+97sNutRR1RKhG96O6jWumTTnw=",
+    version = "v0.0.0-20170929034955-c48cc78d4826",
+)
+
+go_repository(
+    name = "in_gopkg_olebedev_go_duktape_v3",
+    importpath = "gopkg.in/olebedev/go-duktape.v3",
+    sum = "h1:uuol9OUzSvZntY1v963NAbVd7A+PHLMz1FlCe3Lorcs=",
+    version = "v3.0.0-20190709231704-1e4459ed25ff",
+)
+
+go_repository(
+    name = "in_gopkg_sourcemap_v1",
+    importpath = "gopkg.in/sourcemap.v1",
+    sum = "h1:inv58fC9f9J3TK2Y2R1NPntXEn3/wjWHkonhIUODNTI=",
+    version = "v1.0.5",
+)
+
+go_repository(
+    name = "com_github_fatih_color",
+    importpath = "github.com/fatih/color",
+    sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
+    version = "v1.7.0",
 )

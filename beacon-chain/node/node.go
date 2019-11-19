@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -57,6 +58,7 @@ type BeaconNode struct {
 	stop         chan struct{} // Channel to wait for termination notifications.
 	db           db.Database
 	depositCache *depositcache.DepositCache
+	stateFeed    *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -75,12 +77,13 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:       ctx,
+		services:  registry,
+		stop:      make(chan struct{}),
+		stateFeed: new(event.Feed),
 	}
 
-	// Use custom config values if the --no-custom-config flag is set.
+	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
 			log.WithField(
@@ -146,6 +149,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	return beacon, nil
+}
+
+// StateFeed implements statefeed.Notifier.
+func (b *BeaconNode) StateFeed() *event.Feed {
+	return b.stateFeed
 }
 
 // Start the BeaconNode and kicks off every registered service.
@@ -277,6 +285,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -515,8 +524,9 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		return err
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:        b.db,
-		NewHeadNotifier: chainService,
+		BeaconDB:      b.db,
+		HeadFetcher:   chainService,
+		StateNotifier: b,
 	})
 	return b.services.RegisterService(svc)
 }

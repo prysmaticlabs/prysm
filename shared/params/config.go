@@ -29,7 +29,7 @@ type BeaconChainConfig struct {
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwie that is effective for staking.
+	MaxEffectiveBalance       uint64 `yaml:"MAX_EFFECTIVE_BALANCE"`       // MaxEffectiveBalance is the maximal amount of Gwei that is effective for staking.
 	EjectionBalance           uint64 `yaml:"EJECTION_BALANCE"`            // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 
@@ -257,7 +257,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 12
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
@@ -280,7 +280,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
 	minimalConfig.MinSlashingPenaltyQuotient = 32
-	minimalConfig.BaseRewardsPerEpoch = 5
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16

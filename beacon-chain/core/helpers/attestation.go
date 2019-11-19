@@ -5,12 +5,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 var (
@@ -24,42 +20,6 @@ var (
 	// bits overlap with each other.
 	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
 )
-
-// SlotSignature returns the signed signature of the hash tree root of input slot.
-//
-// Spec pseudocode definition:
-//   def slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
-//    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
-//    return bls_sign(privkey, hash_tree_root(slot), domain)
-func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	d := Domain(state.Fork, CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
-	s, err := ssz.HashTreeRoot(slot)
-	if err != nil {
-		return nil, err
-	}
-	return privKey.Sign(s[:], d), nil
-}
-
-// IsAggregator returns true if the signature is from the input validator.
-//
-// Spec pseudocode definition:
-//   def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature) -> bool:
-//    committee = get_beacon_committee(state, slot, index)
-//    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
-//    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
-func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, sig *bls.Signature) (bool, error) {
-	committee, err := BeaconCommittee(state, slot, index)
-	if err != nil {
-		return false, err
-	}
-	modulo := uint64(1)
-	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
-		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
-	}
-
-	b := hashutil.Hash(sig.Marshal()[:8])
-	return binary.LittleEndian.Uint64(b[:])%modulo == 0, nil
-}
 
 // AggregateAttestations such that the minimal number of attestations are returned.
 // Note: this is currently a naive implementation to the order of O(n^2).

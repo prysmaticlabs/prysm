@@ -29,7 +29,7 @@ To generate the abi using the vyper compiler, you can use
 
 ```
 
-vyper -f abi  ./depositContract.v.py > abi.json
+docker run -v $(pwd):/code ethereum/vyper:0.1.0b12  -f abi /code/depositContract.v.py > abi.json
 
 ```
 
@@ -39,7 +39,7 @@ To generate the bytecode you can then use
 
 ```
 
-vyper  ./depositContract.v.py > bytecode.bin
+docker run -v $(pwd):/code ethereum/vyper:0.1.0b12 /code/depositContract.v.py > bytecode.bin
 
 ```
 
@@ -47,21 +47,22 @@ and save the bytecode in `bytecode.bin` in the folder. Now with both the abi and
 we can generate the go bindings. 
 
 ```
-abigen -bin ./bytecode.bin -abi ./abi.json -out ./depositContract.go --pkg depositcontract --type DepositContract
+
+bazel run @com_github_ethereum_go_ethereum//cmd/abigen -- -bin $(pwd)/bytecode.bin -abi $(pwd)/abi.json -out $(pwd)/depositContract.go --pkg depositcontract --type DepositContract
 
 ```
 
 ## How to execute tests
 
 ```
-go test ./...
+bazel test //contracts/deposit-contract:go_default_test
 
 ```
 
 Run with `-v` option for detailed log output
 
 ```
-go test ./... -v
+bazel test //contracts/deposit-contract:go_default_test --test_arg=-test.v --test_output=streamed 
 === RUN   TestSetupRegistrationContract_OK
 --- PASS: TestSetupRegistrationContract_OK (0.07s)
 === RUN   TestRegister_Below1ETH

@@ -56,7 +56,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Failed to get domain data from beacon node")
+	testutil.AssertLogsContain(t, hook, "Failed to sign randao reveal")
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
