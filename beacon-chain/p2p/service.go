@@ -259,7 +259,7 @@ func (s *Service) listenForNewNodes() {
 			s.connectWithAllPeers(multiAddresses)
 		case <-s.ctx.Done():
 			log.Debug("p2p context is closed, exiting routine")
-			break
+			return
 		}
 	}
 }
