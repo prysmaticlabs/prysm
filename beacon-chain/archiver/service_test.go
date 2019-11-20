@@ -74,6 +74,56 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Successfully archived")
 }
 
+func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+	svc, beaconDB := setupService(t)
+	validatorCount := uint64(100)
+	headState := setupState(t, validatorCount)
+	defer dbutil.TeardownDB(t, beaconDB)
+	event := &statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: [32]byte{1, 2, 3},
+			Verified:  true,
+		},
+	}
+
+	exitRoutine := make(chan bool)
+	go func() {
+		svc.run(svc.ctx)
+		<-exitRoutine
+	}()
+
+	// Send out an event every slot, skipping the end slot of the epoch.
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch+1; i++ {
+		headState.Slot = i
+		svc.headFetcher = &mock.ChainService{
+			State: headState,
+		}
+		if helpers.IsEpochEnd(i) {
+			continue
+		}
+		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+		for sent := 0; sent == 0; {
+			sent = svc.stateNotifier.StateFeed().Send(event)
+		}
+	}
+	if err := svc.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	exitRoutine <- true
+
+	// The context should have been canceled.
+	if svc.ctx.Err() != context.Canceled {
+		t.Error("context was not canceled")
+	}
+
+	testutil.AssertLogsContain(t, hook, "Received block processed event")
+	// Even though there was a skip slot, we should still be able to archive
+	// upon the next block event afterwards.
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
+}
+
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
@@ -106,7 +156,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	}
 
 	if !proto.Equal(wanted, retrieved) {
-		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch, wanted, retrieved)
+		t.Errorf("Wanted participation for epoch %d %v, retrieved %v", currentEpoch-1, wanted, retrieved)
 	}
 	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
@@ -280,7 +330,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		},
 	}
 	triggerStateEvent(t, svc, event)
-
+	testutil.AssertLogsContain(t, hook, "Successfully archived")
 	retrieved, err := beaconDB.ArchivedActiveValidatorChanges(svc.ctx, prevEpoch)
 	if err != nil {
 		t.Fatal(err)
@@ -291,7 +341,6 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	if !reflect.DeepEqual(retrieved.Exited, []uint64{95}) {
 		t.Errorf("Wanted indices 95 exited, received %v", retrieved.Exited)
 	}
-	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }
 
 func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {

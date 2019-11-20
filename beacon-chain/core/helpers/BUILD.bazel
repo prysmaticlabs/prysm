@@ -34,6 +34,7 @@ go_library(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
 
@@ -53,6 +54,7 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 2,
     deps = [
+        "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
@@ -60,6 +62,7 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],

@@ -4,7 +4,6 @@ package ethereum.eth.v1alpha1;
 
 import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/attestation.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 
@@ -17,7 +16,7 @@ option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
 service Slasher {
     // Gets AttesterSlashing container if the attestation that 
     // was received produces a slashable event.
-    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.Attestation) returns (ethereum.eth.v1alpha1.AttesterSlashing);
+    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
 
     // Gets ProposerSlashing container if the block header that 
     // was received produces a slashable event.
@@ -46,6 +45,9 @@ message ProposerSlashingRequest {
 }
 message ProposerSlashingResponse {
     repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
+message AttesterSlashingResponse {
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 // In order to detect surrounded attestation we need to compare
 // each attestation source to those spans
