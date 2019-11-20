@@ -9,8 +9,12 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestAggregateAttestation(t *testing.T) {
@@ -205,5 +209,107 @@ func TestAggregateAttestations(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSlotSignature_Verify(t *testing.T) {
+	priv, _ := bls.RandKey(rand.Reader)
+	pub := priv.PublicKey()
+	state := &pb.BeaconState{Fork: &pb.Fork{CurrentVersion: params.BeaconConfig().GenesisForkVersion}, Slot: 100}
+	slot := uint64(101)
+
+	sig, err := helpers.SlotSignature(state, slot, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	msg, _ := ssz.HashTreeRoot(slot)
+	if !sig.Verify(msg[:], pub, domain) {
+		t.Error("Could not verify slot signature")
+	}
+}
+
+func TestIsAggregator_True(t *testing.T) {
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sig := privKeys[0].Sign([]byte{}, 0)
+	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !agg {
+		t.Error("Wanted aggregator true, got false")
+	}
+}
+
+func TestIsAggregator_False(t *testing.T) {
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sig := privKeys[0].Sign([]byte{}, 0)
+	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agg {
+		t.Error("Wanted aggregator false, got true")
+	}
+}
+
+func TestAggregateSignature_True(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	atts := make([]*ethpb.Attestation, 0, 100)
+	msg := []byte("hello")
+	for i := 0; i < 100; i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:], 0)
+		pubkeys = append(pubkeys, pub)
+		att := &ethpb.Attestation{Signature: sig.Marshal()}
+		atts = append(atts, att)
+	}
+	aggSig, err := helpers.AggregateSignature(atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+		t.Error("Signature did not verify")
+	}
+}
+
+func TestAggregateSignature_False(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	atts := make([]*ethpb.Attestation, 0, 100)
+	msg := []byte("hello")
+	for i := 0; i < 100; i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:], 0)
+		pubkeys = append(pubkeys, pub)
+		att := &ethpb.Attestation{Signature: sig.Marshal()}
+		atts = append(atts, att)
+	}
+	aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+		t.Error("Signature not suppose to verify")
 	}
 }

@@ -1,6 +1,7 @@
 package initialsync
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -62,11 +63,15 @@ func (s *InitialSync) Start() {
 	ch := make(chan time.Time)
 	sub := s.chain.StateInitializedFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
-	if s.chain.HeadState() == nil {
+	if _, err := s.chain.HeadState(context.TODO()); err != nil {
 		// Wait until chain start.
 		genesis = <-ch
 	} else {
-		genesis = time.Unix(int64(s.chain.HeadState().GenesisTime), 0)
+		headState, err := s.chain.HeadState(context.TODO())
+		if err != nil {
+			panic(err)
+		}
+		genesis = time.Unix(int64(headState.GenesisTime), 0)
 	}
 
 	if genesis.After(roughtime.Now()) {
