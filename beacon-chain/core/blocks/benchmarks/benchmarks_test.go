@@ -74,7 +74,7 @@ func BenchmarkExecuteStateTransition(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	config := &featureconfig.Flag{
+	config := &featureconfig.Flags{
 		EnableActiveIndicesCache: true,
 		EnableActiveCountCache:   true,
 		EnableNewCache:           true,
@@ -105,7 +105,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_ProcessEpoch(b *testing.B) {
-	config := &featureconfig.Flag{
+	config := &featureconfig.Flags{
 		EnableActiveIndicesCache: true,
 		EnableActiveCountCache:   true,
 		EnableNewCache:           true,
