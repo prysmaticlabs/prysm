@@ -622,7 +622,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, errors.Wrap(err, "could not get attesting balance current epoch")
 	}
 
-	fmt.Println("matched")
 	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process justification")
@@ -633,7 +632,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	fmt.Println("rewards")
 	state, err = e.ProcessRegistryUpdates(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process registry updates")
@@ -648,7 +646,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process final updates")
 	}
-	fmt.Println("final updates")
 	return state, nil
 }
 
