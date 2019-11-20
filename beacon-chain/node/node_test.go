@@ -6,10 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli"
 )
+
+// Ensure BeaconNode implements interfaces.
+var _ = statefeed.Notifier(&BeaconNode{})
 
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
