@@ -247,6 +247,25 @@ func TestIsAggregator_True(t *testing.T) {
 	}
 }
 
+func TestIsAggregator_False(t *testing.T) {
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sig := privKeys[0].Sign([]byte{}, 0)
+	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agg {
+		t.Error("Wanted aggregator false, got true")
+	}
+}
+
 func TestAggregateSignature_True(t *testing.T) {
 	pubkeys := make([]*bls.PublicKey, 0, 100)
 	atts := make([]*ethpb.Attestation, 0, 100)
@@ -265,5 +284,26 @@ func TestAggregateSignature_True(t *testing.T) {
 	}
 	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
 		t.Error("Signature did not verify")
+	}
+}
+
+func TestAggregateSignature_False(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	atts := make([]*ethpb.Attestation, 0, 100)
+	msg := []byte("hello")
+	for i := 0; i < 100; i++ {
+		priv, _ := bls.RandKey(rand.Reader)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:], 0)
+		pubkeys = append(pubkeys, pub)
+		att := &ethpb.Attestation{Signature: sig.Marshal()}
+		atts = append(atts, att)
+	}
+	aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+		t.Error("Signature not suppose to verify")
 	}
 }

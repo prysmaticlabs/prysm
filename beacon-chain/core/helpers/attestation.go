@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -134,7 +135,7 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 //    committee = get_beacon_committee(state, slot, index)
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
-func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, sig *bls.Signature) (bool, error) {
+func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig *bls.Signature) (bool, error) {
 	committee, err := BeaconCommittee(state, slot, index)
 	if err != nil {
 		return false, err
@@ -143,8 +144,8 @@ func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, sig *bls.Sig
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
-
-	b := hashutil.Hash(sig.Marshal())
+	fmt.Println(modulo)
+	b := hashutil.Hash(slotSig.Marshal())
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 
