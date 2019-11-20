@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -40,7 +41,10 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	defer span.End()
 
 	pids := peerstatus.Keys()
-	slots := r.sortedPendingSlots()
+	slots, err := r.sortedPendingSlots()
+	if err != nil {
+		return errors.Wrap(err, "could not sort pending slots")
+	}
 
 	span.AddAttributes(
 		trace.Int64Attribute("numSlots", int64(len(slots))),
@@ -101,20 +105,55 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	return nil
 }
 
-func (r *RegularSync) sortedPendingSlots() []int {
+func (r *RegularSync) sortedPendingSlots() ([]int, error) {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
 
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	for s := range r.slotToPendingBlocks {
 		epoch := helpers.SlotToEpoch(s)
 		// don't process old blocks
-		if epoch <= r.chain.FinalizedCheckpt().Epoch {
-			delete(r.slotToPendingBlocks, s)
+		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
+			if err := r.removeAllDescendants(s); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		slots = append(slots, int(s))
 	}
 	sort.Ints(slots)
-	return slots
+	return slots, nil
+}
+
+// deletes all descendants of a block with slot. method is
+// not threadsafe and is called in sortedPendingSlots .
+func (r *RegularSync) removeAllDescendants(slot uint64) error {
+	oldBlockRoots := make(map[[32]byte]bool)
+	blk := r.slotToPendingBlocks[slot]
+	blkRoot, err := ssz.SigningRoot(blk)
+	if err != nil {
+		return err
+	}
+	// remove the outdated block
+	oldBlockRoots[blkRoot] = true
+	delete(r.slotToPendingBlocks, slot)
+
+	for s, b := range r.slotToPendingBlocks {
+		if oldBlockRoots[bytesutil.ToBytes32(b.ParentRoot)] {
+			root, err := ssz.SigningRoot(blk)
+			if err != nil {
+				return err
+			}
+			oldBlockRoots[root] = true
+			delete(r.slotToPendingBlocks, s)
+		}
+	}
+
+	for rt, _ := range r.seenPendingBlocks {
+		if oldBlockRoots[rt] {
+			delete(r.seenPendingBlocks, rt)
+		}
+	}
+	return nil
 }
