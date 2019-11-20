@@ -22,7 +22,7 @@ import (
 // archived, persistent data.
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
-	req *ethpb.GetValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
@@ -40,9 +40,9 @@ func (bs *Server) ListValidatorBalances(
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.GetValidatorBalancesRequest_Epoch:
+	case *ethpb.ListValidatorBalancesRequest_Epoch:
 		epoch = q.Epoch
-	case *ethpb.GetValidatorBalancesRequest_Genesis:
+	case *ethpb.ListValidatorBalancesRequest_Genesis:
 		requestingGenesis = q.Genesis
 	default:
 		epoch = helpers.CurrentEpoch(headState)
@@ -160,11 +160,11 @@ func (bs *Server) ListValidatorBalances(
 	}, nil
 }
 
-// GetValidators retrieves the current list of active validators with an optional historical epoch flag to
+// ListValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
-func (bs *Server) GetValidators(
+func (bs *Server) ListValidators(
 	ctx context.Context,
-	req *ethpb.GetValidatorsRequest,
+	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
@@ -179,11 +179,11 @@ func (bs *Server) GetValidators(
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.GetValidatorsRequest_Genesis:
+	case *ethpb.ListValidatorsRequest_Genesis:
 		if q.Genesis {
 			requestedEpoch = 0
 		}
-	case *ethpb.GetValidatorsRequest_Epoch:
+	case *ethpb.ListValidatorsRequest_Epoch:
 		requestedEpoch = q.Epoch
 	}
 

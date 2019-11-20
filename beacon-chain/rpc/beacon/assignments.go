@@ -22,8 +22,12 @@ func (bs *Server) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Requested page size %d can not be greater than max size %d",
+			req.PageSize,
+			params.BeaconConfig().MaxPageSize,
+		)
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment

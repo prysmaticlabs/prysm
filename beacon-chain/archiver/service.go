@@ -26,7 +26,7 @@ type Service struct {
 	cancel            context.CancelFunc
 	beaconDB          db.Database
 	headFetcher       blockchain.HeadFetcher
-	stateNotifier     blockchain.StateNotifier
+	stateNotifier     statefeed.Notifier
 	lastArchivedEpoch uint64
 }
 
@@ -34,7 +34,7 @@ type Service struct {
 type Config struct {
 	BeaconDB      db.Database
 	HeadFetcher   blockchain.HeadFetcher
-	StateNotifier blockchain.StateNotifier
+	StateNotifier statefeed.Notifier
 }
 
 // NewArchiverService initializes the service from configuration options.
