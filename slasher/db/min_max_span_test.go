@@ -20,30 +20,30 @@ func init() {
 		{
 			validatorIdx: 1,
 			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1: {MinSpan: 10, MaxSpan: 20},
-					2: {MinSpan: 11, MaxSpan: 21},
-					3: {MinSpan: 12, MaxSpan: 22},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
+					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
+					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
 				},
 			},
 		},
 		{
 			validatorIdx: 2,
 			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1: {MinSpan: 10, MaxSpan: 20},
-					2: {MinSpan: 11, MaxSpan: 21},
-					3: {MinSpan: 12, MaxSpan: 22},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
+					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
+					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
 				},
 			},
 		},
 		{
 			validatorIdx: 3,
 			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxSpan{
-					1: {MinSpan: 10, MaxSpan: 20},
-					2: {MinSpan: 11, MaxSpan: 21},
-					3: {MinSpan: 12, MaxSpan: 22},
+				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
+					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
+					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
 				},
 			},
 		},
@@ -59,7 +59,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*ethpb.MinMaxSpan{}) {
+	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*ethpb.MinMaxEpochSpan{}) {
 		t.Fatal("ValidatorSpansMap should return nil")
 	}
 }
@@ -111,7 +111,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*ethpb.MinMaxSpan{}) {
+		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*ethpb.MinMaxEpochSpan{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}

@@ -50,7 +50,10 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
-	s := r.chain.HeadState()
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "Could not get head state")
+	}
 	slashSlot := slashing.Header_1.Slot
 	if s.Slot < slashSlot {
 		if ctx.Err() != nil {

@@ -46,11 +46,11 @@ service BeaconChain {
         };
     }
 
-    // Retrieve blocks by root, slot, or epoch. 
-    // 
+    // Retrieve blocks by root, slot, or epoch.
+    //
     // The server may return multiple blocks in the case that a slot or epoch is
     // provided as the filter criteria. The server may return an empty list when
-    // no blocks in their database match the filter criteria. This RPC should 
+    // no blocks in their database match the filter criteria. This RPC should
     // not return NOT_FOUND. Only one filter criteria should be used.
     rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
         option (google.api.http) = {
@@ -59,8 +59,8 @@ service BeaconChain {
     }
 
     // Retrieve information about the head of the beacon chain from the view of
-    // the beacon chain node. 
-    // 
+    // the beacon chain node.
+    //
     // This includes the head block slot and root as well as information about
     // the most recent finalized and justified slots.
     rpc GetChainHead(google.protobuf.Empty) returns (ChainHead) {
@@ -79,17 +79,17 @@ service BeaconChain {
         };
     }
 
-    // Retrieve validator balances for a given set of public keys at a specific 
+    // Retrieve validator balances for a given set of public keys at a specific
     // epoch in time.
-    rpc ListValidatorBalances(GetValidatorBalancesRequest) returns (ValidatorBalances) { 
+    rpc ListValidatorBalances(GetValidatorBalancesRequest) returns (ValidatorBalances) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/balances"
         };
     }
 
-    // Retrieve the current list of active validators. 
+    // Retrieve the current list of active validators.
     //
-    // The request may include an optional historical epoch to retrieve a 
+    // The request may include an optional historical epoch to retrieve a
     // specific validator set in time.
     rpc GetValidators(GetValidatorsRequest) returns (Validators) {
         option (google.api.http) = {
@@ -97,8 +97,8 @@ service BeaconChain {
         };
     }
 
-    // Retrieve the active set changes for a given epoch. 
-    // 
+    // Retrieve the active set changes for a given epoch.
+    //
     // This data includes any activations, voluntary exits, and involuntary
     // ejections.
     rpc GetValidatorActiveSetChanges(GetValidatorActiveSetChangesRequest) returns (ActiveSetChanges) {
@@ -126,7 +126,7 @@ service BeaconChain {
 
     // Retrieve the validator participation information for a given epoch.
     //
-    // This method returns information about the global participation of 
+    // This method returns information about the global participation of
     // validator attestations.
     rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
         option (google.api.http) = {
@@ -209,7 +209,7 @@ message ListBlocksRequest {
 }
 
 message ListBlocksResponse {
-    repeated BeaconBlock blocks = 1;
+    repeated BeaconBlockContainer blockContainers = 1;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates from where listing should continue.
@@ -220,31 +220,50 @@ message ListBlocksResponse {
     int32 total_size = 3;
 }
 
-// Information about the head of the beacon chain.
+// A container that contains both the beacon block
+// and its corresponding root.
+message BeaconBlockContainer {
+    BeaconBlock block = 1;
+    // 32 byte merkle tree root of contained beacon block.
+    bytes block_root = 2;
+}
+
 message ChainHead {
     // 32 byte merkle tree root of the canonical head block in the beacon node.
-    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
     // Slot of the head block.
-    uint64 block_slot = 2;
+    uint64 head_block_slot = 2;
 
-    // Most recent finalized slot.
-    uint64 finalized_slot = 3;
-    
+    // Epoch of the head block.
+    uint64 head_block_epoch = 3;
+
+    // Most recent slot that contains the finalized block.
+    uint64 finalized_block_slot = 4;
+
+    // Epoch of the finalized block.
+    uint64 finalized_epoch = 5;
+
     // Most recent 32 byte finalized block root.
-    bytes finalized_block_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes finalized_block_root = 6 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
-    // Most recent justified slot.
-    uint64 justified_slot = 5;
+    // Most recent slot that contains the justified block.
+    uint64 justified_block_slot = 7;
+
+    // Epoch of the justified block.
+    uint64 justified_epoch = 8;
 
     // Most recent 32 byte justified block root.
-    bytes justified_block_root = 6 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes justified_block_root = 9 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
-    // Previous justified slot.
-    uint64 previous_justified_slot = 7;
+    // Most recent slot that contains the previous justified block.
+    uint64 previous_justified_slot = 10;
+
+    // Epoch of the previous justified block.
+    uint64 previous_justified_epoch = 11;
 
     // Previous 32 byte justified block root.
-    bytes previous_justified_block_root = 8 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes previous_justified_block_root = 12 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message ListCommitteesRequest {

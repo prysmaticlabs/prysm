@@ -23,7 +23,7 @@ type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
 	OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
@@ -39,8 +39,6 @@ type Store struct {
 	prevFinalizedCheckpt *ethpb.Checkpoint
 	checkpointState      *cache.CheckpointStateCache
 	checkpointStateLock  sync.Mutex
-	attsQueue            map[[32]byte]*ethpb.Attestation
-	attsQueueLock        sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
 }
@@ -54,7 +52,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		cancel:          cancel,
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
-		attsQueue:       make(map[[32]byte]*ethpb.Attestation),
 		seenAtts:        make(map[[32]byte]bool),
 	}
 }

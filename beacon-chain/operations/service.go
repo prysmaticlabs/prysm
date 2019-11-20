@@ -18,6 +18,7 @@ import (
 // service.
 type OperationFeeds interface {
 	IncomingProcessedBlockFeed() *event.Feed
+	Pool
 }
 
 // Service represents a service that handles the internal

@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -26,7 +27,10 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
 	requestedEpoch := helpers.CurrentEpoch(headState)
@@ -38,6 +42,15 @@ func (bs *Server) ListValidatorAssignments(
 		}
 	case *ethpb.ListValidatorAssignmentsRequest_Epoch:
 		requestedEpoch = q.Epoch
+	}
+
+	if requestedEpoch > helpers.CurrentEpoch(headState) {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			requestedEpoch,
+		)
 	}
 
 	// Filter out assignments by public keys.
@@ -65,6 +78,13 @@ func (bs *Server) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
 	if len(filteredIndices) == 0 {
+		if len(activeIndices) == 0 {
+			return &ethpb.ValidatorAssignments{
+				Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
+				TotalSize:     int32(0),
+				NextPageToken: strconv.Itoa(0),
+			}, nil
+		}
 		// If no filter was specified, return assignments from active validator indices with pagination.
 		filteredIndices = activeIndices
 	}

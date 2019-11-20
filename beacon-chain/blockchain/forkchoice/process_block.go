@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -107,9 +106,11 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
@@ -189,9 +190,11 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {

@@ -108,7 +108,11 @@ func (vs *Server) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
 	var err error
-	headState := vs.HeadFetcher.HeadState()
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if req.Slot > headState.Slot {
 		headState, err = state.ProcessSlots(ctx, headState, req.Slot)

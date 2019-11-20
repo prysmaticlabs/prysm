@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -31,7 +32,11 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
 	var requestingGenesis bool
 	var epoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -44,10 +49,9 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	var balances []uint64
-	var err error
 	validators := headState.Validators
-	if requestingGenesis {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, 0 /* genesis epoch */)
+	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
 		}
@@ -58,20 +62,16 @@ func (bs *Server) ListValidatorBalances(
 				0,
 			)
 		}
-	} else if !requestingGenesis && epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
-		}
-		if balances == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				epoch,
-			)
-		}
-	} else {
+	} else if epoch == helpers.CurrentEpoch(headState) {
 		balances = headState.Balances
+	} else {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			epoch,
+		)
 	}
 
 	for _, pubKey := range req.PublicKeys {
@@ -133,6 +133,17 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	balancesCount := len(res)
+	// If there are no balances, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 balances below would result in an error.
+	if balancesCount == 0 {
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
 	if err != nil {
 		return nil, status.Errorf(
@@ -160,8 +171,13 @@ func (bs *Server) GetValidators(
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
-	headState := bs.HeadFetcher.HeadState()
-	requestedEpoch := helpers.CurrentEpoch(headState)
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	requestedEpoch := currentEpoch
+
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorsRequest_Genesis:
 		if q.Genesis {
@@ -171,9 +187,8 @@ func (bs *Server) GetValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 	validators := headState.Validators
-	if requestedEpoch < finalizedEpoch {
+	if requestedEpoch < currentEpoch {
 		stopIdx := len(validators)
 		for idx, val := range validators {
 			// The first time we see a validator with an activation epoch > the requested epoch,
@@ -184,9 +199,27 @@ func (bs *Server) GetValidators(
 			}
 		}
 		validators = validators[:stopIdx]
+	} else if requestedEpoch > currentEpoch {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	}
 
 	validatorCount := len(validators)
+	// If there are no validators, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 validators below would result in an error.
+	if validatorCount == 0 {
+		return &ethpb.Validators{
+			Validators:    make([]*ethpb.Validator, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), validatorCount)
 	if err != nil {
 		return nil, status.Errorf(
@@ -210,13 +243,18 @@ func (bs *Server) GetValidators(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	headState := bs.HeadFetcher.HeadState()
-	requestedEpoch := helpers.CurrentEpoch(headState)
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	requestedEpoch := currentEpoch
+	requestingGenesis := false
+
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
-		if q.Genesis {
-			requestedEpoch = 0
-		}
+		requestingGenesis = q.Genesis
+		requestedEpoch = 0
 	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
 		requestedEpoch = q.Epoch
 	}
@@ -224,10 +262,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	activatedIndices := make([]uint64, 0)
 	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
-	finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
-	var err error
-
-	if requestedEpoch < finalizedEpoch {
+	if requestingGenesis || requestedEpoch < currentEpoch {
 		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch archived active validator changes: %v", err)
@@ -235,20 +270,32 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		if archivedChanges == nil {
 			return nil, status.Errorf(
 				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				"Did not find any data for epoch %d - perhaps no active set changed occurred during the epoch",
 				requestedEpoch,
 			)
 		}
 		activatedIndices = archivedChanges.Activated
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
-	} else {
-		activatedIndices = validators.ActivatedValidatorIndices(headState)
-		slashedIndices = validators.SlashedValidatorIndices(headState)
-		exitedIndices, err = validators.ExitedValidatorIndices(headState)
+	} else if requestedEpoch == currentEpoch {
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+		}
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(headState), headState.Validators)
+		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
+		exitedIndices, err = validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
+	} else {
+		// We are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	}
 
 	// We retrieve the public keys for the indices.
@@ -278,31 +325,29 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	currentEpoch := helpers.SlotToEpoch(headState.Slot)
 	prevEpoch := helpers.PrevEpoch(headState)
 
 	var requestedEpoch uint64
-	var isGenesis bool
+	var requestingGenesis bool
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorParticipationRequest_Genesis:
-		isGenesis = q.Genesis
+		requestingGenesis = q.Genesis
+		requestedEpoch = 0
 	case *ethpb.GetValidatorParticipationRequest_Epoch:
 		requestedEpoch = q.Epoch
 	default:
 		requestedEpoch = prevEpoch
 	}
 
-	if requestedEpoch > helpers.SlotToEpoch(headState.Slot) {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot request data from an epoch in the future: req.Epoch %d, currentEpoch %d", requestedEpoch, currentEpoch,
-		)
-	}
 	// If the request is from genesis or another past epoch, we look into our archived
 	// data to find it and return it if it exists.
-	if isGenesis {
-		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, 0)
+	if requestingGenesis || requestedEpoch < prevEpoch {
+		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
 		}
@@ -314,31 +359,20 @@ func (bs *Server) GetValidatorParticipation(
 			)
 		}
 		return &ethpb.ValidatorParticipationResponse{
-			Epoch:         0,
+			Epoch:         requestedEpoch,
 			Finalized:     true,
 			Participation: participation,
 		}, nil
-	} else if requestedEpoch < prevEpoch {
-		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
-		}
-		if participation == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				requestedEpoch,
-			)
-		}
-		finalizedEpoch := bs.FinalizationFetcher.FinalizedCheckpt().Epoch
-		// If the epoch we requested is <= the finalized epoch, we consider it finalized as well.
-		finalized := requestedEpoch <= finalizedEpoch
-		return &ethpb.ValidatorParticipationResponse{
-			Epoch:         requestedEpoch,
-			Finalized:     finalized,
-			Participation: participation,
-		}, nil
+	} else if requestedEpoch > currentEpoch {
+		// We are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	}
+
 	// Else if the request is for the current epoch, we compute validator participation
 	// right away and return the result based on the head state.
 	participation, err := epoch.ComputeValidatorParticipation(headState, requestedEpoch)
@@ -356,7 +390,10 @@ func (bs *Server) GetValidatorParticipation(
 func (bs *Server) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
 	// Additionally, determine those validators queued to exit
 	awaitingExit := make([]uint64, 0)
@@ -382,7 +419,11 @@ func (bs *Server) GetValidatorQueue(
 
 	// Only activate just enough validators according to the activation churn limit.
 	activationQueueChurn := len(activationQ)
-	churnLimit, err := helpers.ValidatorChurnLimit(headState)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+	}
+	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
 	}

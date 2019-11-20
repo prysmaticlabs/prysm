@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -36,12 +37,6 @@ type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
 }
 
-// NewHeadNotifier defines a struct which can notify many consumers of a new,
-// canonical chain head event occuring in the node.
-type NewHeadNotifier interface {
-	HeadUpdatedFeed() *event.Feed
-}
-
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
@@ -55,7 +50,6 @@ type Service struct {
 	chainStartChan       chan time.Time
 	genesisTime          time.Time
 	stateInitializedFeed *event.Feed
-	headUpdatedFeed      *event.Feed
 	p2p                  p2p.Broadcaster
 	maxRoutines          int64
 	headSlot             uint64
@@ -63,6 +57,8 @@ type Service struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	headLock             sync.RWMutex
+
+	stateNotifier statefeed.Notifier
 }
 
 // Config options for the service.
@@ -74,6 +70,7 @@ type Config struct {
 	OpsPoolService    operations.OperationFeeds
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
+	StateNotifier     statefeed.Notifier
 }
 
 // NewService instantiates a new block service instance that will
@@ -91,10 +88,10 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		forkChoiceStore:      store,
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
-		headUpdatedFeed:      new(event.Feed),
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
+		stateNotifier:        cfg.StateNotifier,
 	}, nil
 }
 
@@ -137,6 +134,8 @@ func (s *Service) Start() {
 			return
 		}()
 	}
+
+	go s.processAttestation()
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -202,12 +201,6 @@ func (s *Service) Status() error {
 // when the beacon state is first initialized.
 func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
-}
-
-// HeadUpdatedFeed is a feed containing the head block root and
-// is written to when a new head block is saved to DB.
-func (s *Service) HeadUpdatedFeed() *event.Feed {
-	return s.headUpdatedFeed
 }
 
 // This gets called to update canonical root mapping.
