@@ -30,10 +30,10 @@ type Server struct {
 	SyncChecker sync.Checker
 }
 
-// SubmitSlotSignature is called by a validator at every slot to check whether
+// SubmitAggregateAndProof is called by a validator at every slot to check whether
 // it's assigned to be an aggregator. If yes, server will broadcast aggregated attestation
 // and proof on the validators behave.
-func (as *Server) SubmitSlotSignature(ctx context.Context, req *pb.AggregationRequest) (*pb.AggregationResponse, error) {
+func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.AggregationRequest) (*pb.AggregationResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregation")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
@@ -72,7 +72,7 @@ func (as *Server) SubmitSlotSignature(ctx context.Context, req *pb.AggregationRe
 			"slot":           req.Slot,
 			"validatorIndex": validatorIndex,
 			"committeeIndex": req.CommitteeIndex,
-		}).Info("Broadcasting aggregated attestation and proof")
+		}).Debug("Broadcasting aggregated attestation and proof")
 
 		return &pb.AggregationResponse{Aggregated: true}, nil
 	}

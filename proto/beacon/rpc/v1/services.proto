@@ -18,7 +18,7 @@ service ProposerService {
 }
 
 service AggregatorService {
-  rpc SubmitSlotSignature (AggregationRequest) returns (AggregationResponse);
+  rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
 }
 
 service ValidatorService {

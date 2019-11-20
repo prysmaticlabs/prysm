@@ -13,10 +13,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SubmitSlotSignature submits whether the validator's signed slot signature to the beacon node
+// SubmitAggregateAndProof submits whether the validator's signed slot signature to the beacon node
 // via gRPC. Beacon node will verify the slot signature and broadcast aggregated signature and
 // proof on the validator's behave if the validator is the aggregator at the correct slot.
-func (v *validator) SubmitSlotSignature(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.IsAggregator")
 	defer span.End()
 
@@ -34,7 +34,7 @@ func (v *validator) SubmitSlotSignature(ctx context.Context, slot uint64, pubKey
 		return
 	}
 
-	res, err := v.aggregatorClient.SubmitSlotSignature(ctx, &pb.AggregationRequest{
+	res, err := v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
 		Slot:           slot,
 		CommitteeIndex: assignment.CommitteeIndex,
 		PublicKey:      pubKey[:],
@@ -50,7 +50,7 @@ func (v *validator) SubmitSlotSignature(ctx context.Context, slot uint64, pubKey
 			"slot":           slot,
 			"committeeIndex": assignment.CommitteeIndex,
 			"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
-		}).Info("Assigned as an aggregator and submitted aggregation request")
+		}).Info("Assigned and submitted aggregation and proof request")
 	}
 }
 

@@ -29,7 +29,7 @@ type Validator interface {
 	RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole // validator pubKey -> role
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
-	SubmitSlotSignature(ctx context.Context, slot uint64, pubKey [48]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -94,14 +94,13 @@ func run(ctx context.Context, v Validator) {
 						"role":   role,
 					})
 
-					// Submit aggregated attestation request to the beacon node.
-					v.SubmitSlotSignature(ctx, slot, id)
-
 					switch role {
 					case pb.ValidatorRole_BOTH:
 						go v.SubmitAttestation(slotCtx, slot, id)
+						v.SubmitAggregateAndProof(ctx, slot, id)
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
+						v.SubmitAggregateAndProof(ctx, slot, id)
 						v.SubmitAttestation(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
 						v.ProposeBlock(slotCtx, slot, id)
