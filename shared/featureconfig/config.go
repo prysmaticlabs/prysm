@@ -9,7 +9,7 @@ The process for implementing new features using this package is as follows:
 	4. Place any "previous" behavior in the `else` statement.
 	5. Ensure any tests using the new feature fail if the flag isn't enabled.
 	5a. Use the following to enable your flag for tests:
-	cfg := &featureconfig.Flag{
+	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
 	featureconfig.Init(cfg)
@@ -23,8 +23,8 @@ import (
 
 var log = logrus.WithField("prefix", "flags")
 
-// Flag is a struct to represent what features the client will perform on runtime.
-type Flag struct {
+// Flags is a struct to represent which features the client will perform on runtime.
+type Flags struct {
 	GenesisDelay             bool // GenesisDelay when processing a chain start genesis event.
 	MinimalConfig            bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
@@ -47,18 +47,18 @@ type Flag struct {
 	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
-var featureConfig *Flag
+var featureConfig *Flags
 
 // Get retrieves feature config.
-func Get() *Flag {
+func Get() *Flags {
 	if featureConfig == nil {
-		return &Flag{}
+		return &Flags{}
 	}
 	return featureConfig
 }
 
 // Init sets the global config equal to the config that is passed in.
-func Init(c *Flag) {
+func Init(c *Flags) {
 	featureConfig = c
 }
 
@@ -66,7 +66,7 @@ func Init(c *Flag) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
-	cfg := &Flag{}
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
@@ -146,7 +146,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
-	cfg := &Flag{}
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
