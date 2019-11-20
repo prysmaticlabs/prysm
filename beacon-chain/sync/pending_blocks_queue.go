@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -106,9 +107,14 @@ func (r *RegularSync) sortedPendingSlots() []int {
 
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
 	for s := range r.slotToPendingBlocks {
+		epoch := helpers.SlotToEpoch(s)
+		// don't process old blocks
+		if epoch <= r.chain.FinalizedCheckpt().Epoch {
+			delete(r.slotToPendingBlocks, s)
+			continue
+		}
 		slots = append(slots, int(s))
 	}
 	sort.Ints(slots)
-
 	return slots
 }
