@@ -3,25 +3,23 @@ package benchmarks_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 var validatorCount = 65536
-var runAmount = 25
+var runAmount = 15
 
-func benchmarkConfig(b *testing.B) *testutil.BlockGenConfig {
-	b.Logf("Running block benchmarks for %d validators", validatorCount)
+func benchmarkConfig(t testing.TB) *testutil.BlockGenConfig {
+	t.Logf("Running block benchmarks for %d validators", validatorCount)
 
 	return &testutil.BlockGenConfig{
 		MaxProposerSlashings: 0,
@@ -32,23 +30,19 @@ func benchmarkConfig(b *testing.B) *testutil.BlockGenConfig {
 	}
 }
 
-func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
+func TestBenchmarkExecuteStateTransition(t *testing.T) {
+	maxAtts := benchmarkConfig(t).MaxAttestations
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
+	c.TargetCommitteeSize = committeeSize
+	c.MaxAttestations = maxAtts
 	params.OverrideBeaconConfig(c)
 
-	beaconState := genesisBeaconState(t)
-
-	conf := &testutil.BlockGenConfig{
-		MaxAttestations: 2,
-		Signatures:      true,
-	}
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, uint64(validatorCount))
-	if err != nil {
-		t.Fatal(err)
-	}
-	block := testutil.GenerateFullBlock(t, beaconState, privs, conf, 0)
+	beaconState := beaconState1Epoch(t)
+	block := fullBlock(t)
 
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
@@ -56,17 +50,47 @@ func TestBenchmarkExecuteStateTransition_PerformsSuccessfully(t *testing.T) {
 }
 
 func BenchmarkExecuteStateTransition(b *testing.B) {
+	maxAtts := benchmarkConfig(b).MaxAttestations
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (benchmarkConfig().MaxAttestations / slotsPerEpoch)
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
-	c.MaxAttestations = benchmarkConfig().MaxAttestations
+	c.MaxAttestations = maxAtts
 	params.OverrideBeaconConfig(c)
 
-	beaconState := beaconState2Epochs(b)
-	cleanStates := createCleanStates(beaconState)
+	beaconState := beaconState1Epoch(b)
+	cleanStates := clonedStates(beaconState)
+	block := fullBlock(b)
+
+	b.N = runAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		fmt.Println(i)
+		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
+	config := &featureconfig.Flag{
+		EnableCommitteeCache: true,
+	}
+	featureconfig.Init(config)
+	maxAtts := benchmarkConfig(b).MaxAttestations
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
+	c := params.BeaconConfig()
+	c.PersistentCommitteePeriod = 0
+	c.MinValidatorWithdrawabilityDelay = 0
+	c.TargetCommitteeSize = committeeSize
+	c.MaxAttestations = maxAtts
+	params.OverrideBeaconConfig(c)
+
+	beaconState := beaconState1Epoch(b)
+	cleanStates := clonedStates(beaconState)
 	block := fullBlock(b)
 
 	b.N = runAmount
@@ -108,10 +132,9 @@ func BenchmarkExecuteStateTransition_ProcessEpoch(b *testing.B) {
 		if err != nil {
 			b.Error(err)
 		}
-		fmt.Printf("state at slot %d\n", beaconState.Slot)
 	}
 
-	cleanStates := createCleanStates(beaconState)
+	cleanStates := clonedStates(beaconState)
 
 	fmt.Printf("Atts in current epoch %d\n", len(beaconState.CurrentEpochAttestations))
 	fmt.Printf("Atts in prev epoch %d\n", len(beaconState.PreviousEpochAttestations))
@@ -127,17 +150,18 @@ func BenchmarkExecuteStateTransition_ProcessEpoch(b *testing.B) {
 }
 
 func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
+	maxAtts := benchmarkConfig(b).MaxAttestations
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (benchmarkConfig().MaxAttestations / slotsPerEpoch)
+	committeeSize := (uint64(validatorCount) / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
 	c := params.BeaconConfig()
 	c.PersistentCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
-	c.MaxAttestations = benchmarkConfig().MaxAttestations
+	c.MaxAttestations = maxAtts
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 
-	beaconState := beaconState2Epochs(b)
+	beaconState := beaconState1Epoch(b)
 
 	b.N = 50
 	b.ResetTimer()
@@ -149,10 +173,10 @@ func BenchmarkHashTreeRoot_65536Validators(b *testing.B) {
 	}
 }
 
-func cloneState(beaconState *pb.BeaconState) []*pb.BeaconState {
-	cleanStates := make([]*pb.BeaconState, runAmount)
+func clonedStates(beaconState *pb.BeaconState) []*pb.BeaconState {
+	clonedStates := make([]*pb.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
-		cleanStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
+		clonedStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
 	}
-	return cleanStates
+	return clonedStates
 }

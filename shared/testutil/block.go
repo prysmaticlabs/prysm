@@ -50,7 +50,6 @@ func GenerateFullBlock(
 	conf *BlockGenConfig,
 	slot uint64,
 ) *ethpb.BeaconBlock {
-
 	currentSlot := bState.Slot
 	if currentSlot > slot {
 		t.Fatalf("Current slot in state is larger than given slot. %d > %d", currentSlot, slot)
@@ -68,7 +67,7 @@ func GenerateFullBlock(
 
 	atts := []*ethpb.Attestation{}
 	if conf.MaxAttestations > 0 {
-		atts = GenerateAttestations(t, bState, privs, conf)
+		atts = GenerateAttestations(t, bState, privs, conf, slot)
 	}
 
 	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data
@@ -90,6 +89,10 @@ func GenerateFullBlock(
 	parentRoot, err := ssz.SigningRoot(newHeader)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if slot == currentSlot {
+		slot = currentSlot + 1
 	}
 
 	reveal := []byte{1, 2, 3, 4}
@@ -155,7 +158,6 @@ func generateProposerSlashings(
 	numSlashings uint64,
 ) []*ethpb.ProposerSlashing {
 	currentEpoch := helpers.CurrentEpoch(bState)
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, numSlashings)
 	for i := uint64(0); i < numSlashings; i++ {
@@ -200,24 +202,30 @@ func generateAttesterSlashings(
 	privs []*bls.SecretKey,
 	numSlashings uint64,
 ) []*ethpb.AttesterSlashing {
+	currentEpoch := helpers.CurrentEpoch(bState)
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
 	for i := uint64(0); i < numSlashings; i++ {
-		committee, err := helpers.BeaconCommittee(bState, bState.Slot, rand.Uint64()%params.BeaconConfig().MaxCommitteesPerSlot)
+		committeeIndex := rand.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
+		committee, err := helpers.BeaconCommittee(bState, bState.Slot, committeeIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
 		committeeSize := uint64(len(committee))
+		randIndex := rand.Uint64() % uint64(len(committee))
+		valIndex := committee[randIndex]
 
 		aggregationBits := bitfield.NewBitlist(committeeSize)
-		aggregationBits.SetBitAt(i, true)
+		aggregationBits.SetBitAt(randIndex, true)
 		att1 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				Slot:  bState.Slot,
+				Index: committeeIndex,
 				Target: &ethpb.Checkpoint{
-					Epoch: i,
+					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
 				},
 				Source: &ethpb.Checkpoint{
-					Epoch: i + 1,
+					Epoch: currentEpoch + 1,
 					Root:  params.BeaconConfig().ZeroHash[:],
 				},
 			},
@@ -231,18 +239,19 @@ func generateAttesterSlashings(
 			t.Fatal(err)
 		}
 		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
-		valIndex := committee[rand.Uint64()%uint64(len(committee))]
 		sig := privs[valIndex].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		att2 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				Slot:  bState.Slot,
+				Index: committeeIndex,
 				Target: &ethpb.Checkpoint{
-					Epoch: i,
+					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
 				},
 				Source: &ethpb.Checkpoint{
-					Epoch: i,
+					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
 				},
 			},
@@ -285,35 +294,50 @@ func GenerateAttestations(
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
 	conf *BlockGenConfig,
+	slot uint64,
 ) []*ethpb.Attestation {
 	maxAttestations := conf.MaxAttestations
-	currentEpoch := helpers.CurrentEpoch(bState)
-	attestations := make([]*ethpb.Attestation, maxAttestations)
+	currentEpoch := helpers.SlotToEpoch(slot)
+	attestations := []*ethpb.Attestation{}
+
+	if slot > bState.Slot {
+		t.Fatalf("slot %d greater than state slot %d", slot, bState.Slot)
+	}
 
 	var err error
 	targetRoot := make([]byte, 32)
+
 	headRoot := make([]byte, 32)
+	// Only calculate head state if its an attestation for the current slot.
 	epochStartSlot := helpers.StartSlot(currentEpoch)
-	// Only calculate head state if its needed for boundary.
-	if bState.Slot+1 == helpers.StartSlot(currentEpoch+1) {
+	if slot == bState.Slot {
 		headState := proto.Clone(bState).(*pb.BeaconState)
 		headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		headRoot, err = helpers.BlockRootAtSlot(headState, bState.Slot)
+		headRoot, err = helpers.BlockRootAtSlot(headState, slot)
 		if err != nil {
 			t.Fatal(err)
 		}
-		targetRoot = headRoot
+		if slot == epochStartSlot {
+			targetRoot, err = helpers.BlockRoot(headState, currentEpoch)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			targetRoot, err = helpers.BlockRoot(bState, currentEpoch)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	} else {
-		targetRoot, err = helpers.BlockRootAtSlot(bState, epochStartSlot)
+		headRoot, err = helpers.BlockRootAtSlot(bState, slot)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-
-	committeesPerSlot, err := helpers.CommitteeCountAtSlot(bState, bState.Slot)
+	committeesPerSlot, err := helpers.CommitteeCountAtSlot(bState, slot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,41 +350,68 @@ func GenerateAttestations(
 		)
 	}
 
-	attsPerCommittee := math.Min(float64(maxAttestations/committeesPerSlot), 1)
-	if math.Trunc(attsPerCommittee) == attsPerCommittee {
-		t.Fatalf("requested attestations must be easily divisible, ")
+	if maxAttestations > committeesPerSlot {
+		t.Logf(
+			"Warning: %d attestations requested are more than %d committees in current slot, attestations will not be perfectly efficient.",
+			maxAttestations,
+			committeesPerSlot,
+		)
+	}
+
+	attsPerCommittee := math.Max(float64(maxAttestations/committeesPerSlot), 1)
+	if math.Trunc(attsPerCommittee) != attsPerCommittee {
+		t.Fatalf(
+			"requested attestations %d must be easily divisible by committees in slot %d, calculated %f",
+			maxAttestations,
+			committeesPerSlot,
+			attsPerCommittee,
+		)
 	}
 
 	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	for c := uint64(0); c < committeesPerSlot || c < maxAttestations; c++ {
-		committee, err := helpers.BeaconCommittee(bState, currentEpoch, c)
+	for c := uint64(0); c < committeesPerSlot && c < maxAttestations; c++ {
+		committee, err := helpers.BeaconCommittee(bState, slot, c)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		attData := &ethpb.AttestationData{
+			Slot:            slot,
+			Index:           c,
+			BeaconBlockRoot: headRoot,
+			Source:          bState.CurrentJustifiedCheckpoint,
+			Target: &ethpb.Checkpoint{
+				Epoch: currentEpoch,
+				Root:  targetRoot,
+			},
+		}
+
+		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+			Data:       attData,
+			CustodyBit: false,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		committeeSize := uint64(len(committee))
 		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
 		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 			aggregationBits := bitfield.NewBitlist(committeeSize)
+			custodyBits := bitfield.NewBitlist(committeeSize)
 			sigs := []*bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
 				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
 			}
 
-			attestations[i/bitsPerAtt*(c+1)] = &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					Slot:            bState.Slot,
-					Index:           c,
-					BeaconBlockRoot: headRoot,
-					Source:          bState.CurrentJustifiedCheckpoint,
-					Target: &ethpb.Checkpoint{
-						Epoch: currentEpoch,
-						Root:  targetRoot,
-					},
-				},
+			att := &ethpb.Attestation{
+				Data:            attData,
 				AggregationBits: aggregationBits,
+				CustodyBits:     custodyBits,
 				Signature:       bls.AggregateSignatures(sigs).Marshal(),
 			}
+			attestations = append(attestations, att)
 		}
 	}
 	return attestations
@@ -387,10 +438,6 @@ func generateVoluntaryExits(
 	numExits uint64,
 ) []*ethpb.VoluntaryExit {
 	currentEpoch := helpers.CurrentEpoch(bState)
-	validatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	voluntaryExits := make([]*ethpb.VoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
