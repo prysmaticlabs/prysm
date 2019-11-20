@@ -41,10 +41,10 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	defer span.End()
 
 	pids := peerstatus.Keys()
-	slots, err := r.sortedPendingSlots()
-	if err != nil {
-		return errors.Wrap(err, "could not sort pending slots")
+	if err := r.validatePendingSlots(); err != nil {
+		return errors.Wrap(err, "could not validate pending slots")
 	}
+	slots := r.sortedPendingSlots()
 
 	span.AddAttributes(
 		trace.Int64Attribute("numSlots", int64(len(slots))),
@@ -105,55 +105,48 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	return nil
 }
 
-func (r *RegularSync) sortedPendingSlots() ([]int, error) {
+func (r *RegularSync) sortedPendingSlots() []int {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
 
 	slots := make([]int, 0, len(r.slotToPendingBlocks))
-	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	for s := range r.slotToPendingBlocks {
-		epoch := helpers.SlotToEpoch(s)
-		// don't process old blocks
-		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
-			if err := r.removeAllDescendants(s); err != nil {
-				return nil, err
-			}
-			continue
-		}
 		slots = append(slots, int(s))
 	}
 	sort.Ints(slots)
-	return slots, nil
+	return slots
 }
 
-// deletes all descendants of a block with slot. method is
-// not threadsafe and is called in sortedPendingSlots .
-func (r *RegularSync) removeAllDescendants(slot uint64) error {
+func (r *RegularSync) validatePendingSlots() error {
+	r.pendingQueueLock.RLock()
+	defer r.pendingQueueLock.RUnlock()
 	oldBlockRoots := make(map[[32]byte]bool)
-	blk := r.slotToPendingBlocks[slot]
-	blkRoot, err := ssz.SigningRoot(blk)
-	if err != nil {
-		return err
-	}
-	// remove the outdated block
-	oldBlockRoots[blkRoot] = true
-	delete(r.slotToPendingBlocks, slot)
 
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	for s, b := range r.slotToPendingBlocks {
+		epoch := helpers.SlotToEpoch(s)
+		// remove all descendant blocks of old blocks
 		if oldBlockRoots[bytesutil.ToBytes32(b.ParentRoot)] {
-			root, err := ssz.SigningRoot(blk)
+			root, err := ssz.SigningRoot(b)
 			if err != nil {
 				return err
 			}
 			oldBlockRoots[root] = true
 			delete(r.slotToPendingBlocks, s)
+			delete(r.seenPendingBlocks, root)
+			continue
+		}
+		// don't process old blocks
+		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
+			blkRoot, err := ssz.SigningRoot(b)
+			if err != nil {
+				return err
+			}
+			oldBlockRoots[blkRoot] = true
+			delete(r.slotToPendingBlocks, s)
+			delete(r.seenPendingBlocks, blkRoot)
 		}
 	}
-
-	for rt, _ := range r.seenPendingBlocks {
-		if oldBlockRoots[rt] {
-			delete(r.seenPendingBlocks, rt)
-		}
-	}
+	oldBlockRoots = nil
 	return nil
 }
