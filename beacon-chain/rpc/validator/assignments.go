@@ -23,18 +23,9 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	var err error
-	s := vs.HeadFetcher.HeadState()
-
-	// if the head state is nil, retrieve it from DB.
-	if s == nil {
-		s, err = vs.BeaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-		}
-		if s == nil {
-			return nil, status.Error(codes.Internal, "Head state does not exist")
-		}
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.

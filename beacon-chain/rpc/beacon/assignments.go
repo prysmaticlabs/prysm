@@ -22,12 +22,19 @@ func (bs *Server) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Requested page size %d can not be greater than max size %d",
+			req.PageSize,
+			params.BeaconConfig().MaxPageSize,
+		)
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
 	requestedEpoch := helpers.CurrentEpoch(headState)

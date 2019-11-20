@@ -67,6 +67,32 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 	return iAtt, err
 }
 
+// DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	var slashIdxAtt []*ethpb.IndexedAttestation
+	for _, at := range idxAttestations {
+		root, err := ssz.HashTreeRoot(at.Data)
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(root[:], dataRoot) {
+			slashIdxAtt = append(slashIdxAtt, at)
+		}
+	}
+	var as []*ethpb.AttesterSlashing
+	for _, ia := range slashIdxAtt {
+		as = append(as, &ethpb.AttesterSlashing{
+			Attestation_1: origAtt,
+			Attestation_2: ia,
+		})
+	}
+	return as, nil
+}
+
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
 func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) bool {
 	key := bytesutil.Bytes8(targetEpoch)
