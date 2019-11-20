@@ -19,7 +19,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		MaxAttestations: 1,
+		MaxAttestations: 4,
 		Signatures:      true,
 	}
 	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
@@ -55,7 +55,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	deposits, _, privs := SetupInitialDeposits(t, 32)
+	deposits, _, privs := SetupInitialDeposits(t, 64)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -63,7 +63,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 
 	conf := &BlockGenConfig{
-		MaxAttestations: 1,
+		MaxAttestations: 2,
 		Signatures:      true,
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
@@ -88,7 +88,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 257)
+	deposits, _, privs := SetupInitialDeposits(t, 32)
 
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
@@ -112,7 +112,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 256)
+	deposits, _, privs := SetupInitialDeposits(t, 32)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -144,7 +144,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		MaxAttestations: 2,
+		MaxAttestations: 4,
 		Signatures:      true,
 	}
 	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)

@@ -102,6 +102,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 		EnableActiveIndicesCache: true,
 		EnableActiveCountCache:   true,
 		EnableNewCache:           true,
+		OptimizeProcessEpoch:     true,
 	}
 	featureconfig.Init(config)
 	setConfig(b)

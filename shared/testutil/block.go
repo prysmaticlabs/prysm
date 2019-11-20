@@ -125,11 +125,7 @@ func GenerateFullBlock(
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.StateRoot = root[:]
+	block.StateRoot = s[:]
 
 	if conf.Signatures {
 		blockRoot, err := ssz.SigningRoot(block)
@@ -284,11 +280,13 @@ func generateAttesterSlashings(
 	return attesterSlashings
 }
 
-// GenerateAttestations creates attestations that are entirely valid, for all the committees of the current state slot.
-// This function always returns all validators participating.
-// Attestations requested must be cleanly divisible by committees per slot. then it will
-// return 1 attestation with all validators aggregated into it. If maxAttestations is set to 4, then
-// it will return 4 attestations for the same data with their aggregation bits split uniformly.
+// GenerateAttestations creates attestations that are entirely valid, for all
+// the committees of the current state slot. This function expects attestations
+// requested to be cleanly divisible by committees per slot. If there is 1 committee
+// in the slot, and maxAttestations is set to 4, then it will return 4 attestations
+// for the same data with their aggregation bits split uniformly.
+//
+// If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
 	t testing.TB,
 	bState *pb.BeaconState,
@@ -306,11 +304,9 @@ func GenerateAttestations(
 
 	var err error
 	targetRoot := make([]byte, 32)
-
 	headRoot := make([]byte, 32)
-	// Only calculate head state if its an attestation for the current slot.
 	epochStartSlot := helpers.StartSlot(currentEpoch)
-	if slot == bState.Slot {
+	if slot == bState.Slot { // Only calculate head state if its an attestation for the current slot.
 		headState := proto.Clone(bState).(*pb.BeaconState)
 		headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
 		if err != nil {
@@ -337,6 +333,7 @@ func GenerateAttestations(
 			t.Fatal(err)
 		}
 	}
+
 	committeesPerSlot, err := helpers.CommitteeCountAtSlot(bState, slot)
 	if err != nil {
 		t.Fatal(err)
@@ -348,9 +345,7 @@ func GenerateAttestations(
 			maxAttestations,
 			committeesPerSlot,
 		)
-	}
-
-	if maxAttestations > committeesPerSlot {
+	} else if maxAttestations > committeesPerSlot {
 		t.Logf(
 			"Warning: %d attestations requested are more than %d committees in current slot, attestations will not be perfectly efficient.",
 			maxAttestations,
