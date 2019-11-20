@@ -117,6 +117,9 @@ func (r *RegularSync) sortedPendingSlots() []int {
 	return slots
 }
 
+// validatePendingSlots validates the pending blocks
+// by their slot. if they are before the current finalized
+// checkpoint, these blocks are removed from the queue
 func (r *RegularSync) validatePendingSlots() error {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
