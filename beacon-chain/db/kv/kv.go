@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/karlseguin/ccache"
+	"github.com/dgraph-io/ristretto"
 	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,9 +26,9 @@ var BlockCacheSize = int64(256)
 type Store struct {
 	db                  *bolt.DB
 	databasePath        string
-	blockCache          *ccache.Cache
-	votesCache          *ccache.Cache
-	validatorIndexCache *ccache.Cache
+	blockCache          *ristretto.Cache
+	votesCache          *ristretto.Cache
+	validatorIndexCache *ristretto.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -46,13 +46,39 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
+	blockCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: BlockCacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
+		BufferItems: 64,             // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	votesCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
+		BufferItems: 64,             // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	validatorCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
+		BufferItems: 64,             // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	kv := &Store{
 		db:                  boltDB,
 		databasePath:        dirPath,
-		blockCache:          ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
-		votesCache:          ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
-		validatorIndexCache: ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		blockCache:          blockCache,
+		votesCache:          votesCache,
+		validatorIndexCache: validatorCache,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

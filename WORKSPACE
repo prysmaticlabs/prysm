@@ -1347,3 +1347,15 @@ go_repository(
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
 )
+
+go_repository(
+    name = "com_github_dgraph_io_ristretto",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    importpath = "github.com/dgraph-io/ristretto",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    importpath = "github.com/cespare/xxhash",
+)

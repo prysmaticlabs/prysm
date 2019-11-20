@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -24,8 +23,8 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
 	// Return block from cache if it exists.
-	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
-		return v.Value().(*ethpb.BeaconBlock), nil
+	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
+		return v.(*ethpb.BeaconBlock), nil
 	}
 	var block *ethpb.BeaconBlock
 	err := k.db.View(func(tx *bolt.Tx) error {
@@ -183,7 +182,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
-	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
+	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return true
 	}
 	exists := false
@@ -214,7 +213,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
-		k.blockCache.Delete(string(blockRoot[:]))
+		k.blockCache.Del(string(blockRoot[:]))
 		return bkt.Delete(blockRoot[:])
 	})
 }
@@ -250,7 +249,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
-	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
+	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
@@ -266,7 +265,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
+		k.blockCache.Set(string(blockRoot[:]), block, 0)
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
