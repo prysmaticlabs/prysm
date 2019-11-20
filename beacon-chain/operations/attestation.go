@@ -25,6 +25,7 @@ type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
 	AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error)
+	SlotCommitteeAttestations(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -132,6 +133,23 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 
 	for _, ac := range s.attestationPool {
 		atts = append(atts, ac.ToAttestations()...)
+	}
+
+	return atts, nil
+}
+
+// SlotCommitteeAttestations returns the attestations from the attestations pool that's filtered
+// by slot and committee indices.
+func (s *Service) SlotCommitteeAttestations(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	s.attestationPoolLock.Lock()
+	defer s.attestationPoolLock.Unlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
+	for _, ac := range s.attestationPool {
+		if ac.Data.Slot == slot && ac.Data.Index == index {
+			atts = append(atts, ac.ToAttestations()...)
+		}
 	}
 
 	return atts, nil
