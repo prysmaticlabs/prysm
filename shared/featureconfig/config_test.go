@@ -9,7 +9,7 @@ import (
 )
 
 func TestInitFeatureConfig(t *testing.T) {
-	cfg := &featureconfig.Flag{
+	cfg := &featureconfig.Flags{
 		GenesisDelay: true,
 	}
 	featureconfig.Init(cfg)
