@@ -6,6 +6,7 @@ go_library(
         "runner.go",
         "service.go",
         "validator.go",
+        "validator_aggregate.go",
         "validator_attest.go",
         "validator_metrics.go",
         "validator_propose.go",
