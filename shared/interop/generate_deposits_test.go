@@ -15,7 +15,7 @@ func TestSPMPDeposits(t *testing.T) {
 
 	numDeposits := 557
 
-	cfg := &featureconfig.Flag{
+	cfg := &featureconfig.Flags{
 		Scatter: false,
 	}
 	featureconfig.Init(cfg)
@@ -39,7 +39,7 @@ func TestSPMPDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg = &featureconfig.Flag{
+	cfg = &featureconfig.Flags{
 		Scatter: true,
 	}
 	featureconfig.Init(cfg)
