@@ -271,7 +271,10 @@ func TestAggregateSignature_True(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, 100)
 	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
-		priv, _ := bls.RandKey(rand.Reader)
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:], 0)
 		pubkeys = append(pubkeys, pub)
@@ -292,7 +295,10 @@ func TestAggregateSignature_False(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, 100)
 	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
-		priv, _ := bls.RandKey(rand.Reader)
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:], 0)
 		pubkeys = append(pubkeys, pub)
