@@ -57,7 +57,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 
 	votesCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
+		MaxCost:     1 << 25,        // maximum cost of cache (32MB).
 		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
+		MaxCost:     1 << 25,        // maximum cost of cache (32MB).
 		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
