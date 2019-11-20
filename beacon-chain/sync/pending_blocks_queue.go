@@ -143,7 +143,6 @@ func (r *RegularSync) validatePendingSlots() error {
 				return err
 			}
 			oldBlockRoots[blkRoot] = true
-			oldBlockRoots[bytesutil.ToBytes32(b.ParentRoot)] = true
 			delete(r.slotToPendingBlocks, s)
 			delete(r.seenPendingBlocks, blkRoot)
 		}
