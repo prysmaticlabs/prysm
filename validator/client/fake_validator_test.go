@@ -94,3 +94,6 @@ func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
+
+func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {
+}
