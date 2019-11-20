@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
@@ -28,7 +30,10 @@ var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
-	headState := vs.HeadFetcher.HeadState()
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
@@ -38,9 +43,9 @@ func (vs *Server) multipleValidatorStatus(
 	ctx context.Context,
 	pubkeys [][]byte,
 ) (bool, []*pb.ValidatorActivationResponse_Status, error) {
-	headState := vs.HeadFetcher.HeadState()
-	if headState == nil {
-		return false, nil, nil
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return false, nil, err
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))

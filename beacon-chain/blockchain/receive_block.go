@@ -99,7 +99,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	}
 
 	// Send notification of the processed block to the state feed.
-	s.stateFeed.Send(&statefeed.Event{
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,
@@ -153,7 +153,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	}
 
 	// Send notification of the processed block to the state feed.
-	s.stateFeed.Send(&statefeed.Event{
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,
@@ -197,7 +197,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	}
 
 	// Send notification of the processed block to the state feed.
-	s.stateFeed.Send(&statefeed.Event{
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: root,

@@ -76,7 +76,11 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 func TestHeadState_CanRetrieve(t *testing.T) {
 	s := &pb.BeaconState{Slot: 2}
 	c := &Service{headState: s}
-	if !reflect.DeepEqual(s, c.HeadState()) {
+	headState, err := c.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, headState) {
 		t.Error("incorrect head state received")
 	}
 }

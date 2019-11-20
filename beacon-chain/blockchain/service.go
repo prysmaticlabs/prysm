@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -34,11 +35,6 @@ import (
 // information feeds to consumers.
 type ChainFeeds interface {
 	StateInitializedFeed() *event.Feed
-}
-
-// StateNotifier interface defines the methods of the service that provides state updates to consumers.
-type StateNotifier interface {
-	StateFeed() *event.Feed
 }
 
 // Service represents a service that handles the internal
@@ -61,7 +57,8 @@ type Service struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	headLock             sync.RWMutex
-	stateFeed            *event.Feed
+
+	stateNotifier statefeed.Notifier
 }
 
 // Config options for the service.
@@ -73,7 +70,7 @@ type Config struct {
 	OpsPoolService    operations.OperationFeeds
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
-	StateFeed         *event.Feed
+	StateNotifier     statefeed.Notifier
 }
 
 // NewService instantiates a new block service instance that will
@@ -94,7 +91,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		p2p:                  cfg.P2p,
 		canonicalRoots:       make(map[uint64][]byte),
 		maxRoutines:          cfg.MaxRoutines,
-		stateFeed:            cfg.StateFeed,
+		stateNotifier:        cfg.StateNotifier,
 	}, nil
 }
 
@@ -204,11 +201,6 @@ func (s *Service) Status() error {
 // when the beacon state is first initialized.
 func (s *Service) StateInitializedFeed() *event.Feed {
 	return s.stateInitializedFeed
-}
-
-// StateFeed provides the feed that notifies subscribers when the beacon chain state is updated.
-func (s *Service) StateFeed() *event.Feed {
-	return s.stateFeed
 }
 
 // This gets called to update canonical root mapping.

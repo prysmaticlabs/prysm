@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -28,7 +30,7 @@ type HeadFetcher interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
-	HeadState() *pb.BeaconState
+	HeadState(ctx context.Context) (*pb.BeaconState, error)
 }
 
 // CanonicalRootFetcher defines a common interface for methods in blockchain service which
@@ -88,11 +90,24 @@ func (s *Service) HeadBlock() *ethpb.BeaconBlock {
 }
 
 // HeadState returns the head state of the chain.
-func (s *Service) HeadState() *pb.BeaconState {
+// If the head state is nil from service struct,
+// it will attempt to get from DB and error if nil again.
+func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return proto.Clone(s.headState).(*pb.BeaconState)
+	if s.headState == nil {
+		h, err := s.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if h == nil {
+			return nil, errors.New("head state does not exist")
+		}
+		return h, nil
+	}
+
+	return proto.Clone(s.headState).(*pb.BeaconState), nil
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
