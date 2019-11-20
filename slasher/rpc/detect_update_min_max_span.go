@@ -32,7 +32,8 @@ func detectMin(attestationEpochSpan uint64,
 	attestationSourceEpoch uint64) uint64 {
 
 	minSpan := uint64(recorderEpochSpan.MinEpochSpan)
-	if minSpan < attestationEpochSpan {
+
+	if minSpan > 0 && minSpan < attestationEpochSpan {
 		return minSpan + attestationSourceEpoch
 	}
 	return 0
@@ -60,7 +61,7 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 		return targetEpoch, nil
 	}
 	for i := uint64(1); i < target-source; i++ {
-		val := uint32(span - i - 1)
+		val := uint32(span - i)
 		if _, ok := spanMap.EpochSpanMap[source+i]; !ok {
 			spanMap.EpochSpanMap[source+i] = &ethpb.MinMaxEpochSpan{}
 		}
@@ -123,7 +124,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 // attestation target. This method receives a detector function in order to be used
 // for both surrounding and surrounded vote cases.
 func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector detectFn) (uint64, uint64, *ethpb.EpochSpanMap, error) {
-	span := target - source + 1
+	span := target - source
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
 		return 0, span, nil, fmt.Errorf("target: %d - source: %d > weakSubjectivityPeriod",
 			params.BeaconConfig().WeakSubjectivityPeriod,
