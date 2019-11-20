@@ -17,6 +17,10 @@ service ProposerService {
   rpc ProposeBlock(ethereum.eth.v1alpha1.BeaconBlock) returns (ProposeResponse);
 }
 
+service AggregatorService {
+  rpc SubmitSlotSignature (AggregationRequest) returns (AggregationResponse);
+}
+
 service ValidatorService {
   rpc DomainData(DomainRequest) returns (DomainResponse);
   rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
@@ -47,6 +51,17 @@ message AttestationRequest {
 
 message AttestResponse {
   bytes root = 1;
+}
+
+message AggregationRequest {
+  uint64 slot = 1;
+  uint64 committee_index = 2;
+  bytes public_key = 3;
+  bytes slot_signature = 4;
+}
+
+message AggregationResponse {
+  bool aggregated = 1;
 }
 
 message ValidatorPerformanceRequest {
@@ -89,7 +104,7 @@ message ChainStartResponse {
   uint64 genesis_time = 2;
 }
 
- enum ValidatorRole {
+enum ValidatorRole {
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
