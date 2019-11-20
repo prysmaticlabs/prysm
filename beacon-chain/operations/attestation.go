@@ -139,7 +139,7 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 }
 
 // SlotCommitteeAttestations returns the attestations from the attestations pool that's filtered
-// by slot and committee indices.
+// by slot and committee index.
 func (s *Service) SlotCommitteeAttestations(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
 	s.attestationPoolLock.Lock()
 	defer s.attestationPoolLock.Unlock()
