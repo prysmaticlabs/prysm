@@ -263,19 +263,21 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole {
 	rolesAt := make(map[[48]byte][]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
 		var roles []pb.ValidatorRole
-		switch {
-		case assignment == nil:
+
+		if assignment == nil {
 			roles = append(roles, pb.ValidatorRole_UNKNOWN)
-		case assignment.ProposerSlot == slot && assignment.AttesterSlot == slot:
+			continue
+		}
+		if assignment.ProposerSlot == slot {
 			roles = append(roles, pb.ValidatorRole_PROPOSER)
+		}
+		if assignment.AttesterSlot == slot {
 			roles = append(roles, pb.ValidatorRole_ATTESTER)
-		case assignment.AttesterSlot == slot:
-			roles = append(roles, pb.ValidatorRole_ATTESTER)
-		case assignment.ProposerSlot == slot:
-			roles = append(roles, pb.ValidatorRole_PROPOSER)
-		default:
+		}
+		if len(roles) == 0 {
 			roles = append(roles, pb.ValidatorRole_UNKNOWN)
 		}
+
 		var pubKey [48]byte
 		copy(pubKey[:], assignment.PublicKey)
 		rolesAt[pubKey] = roles
