@@ -1347,3 +1347,9 @@ go_repository(
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
 )
+
+go_repository(
+    name = "com_github_protolambda_zssz",
+    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
+    importpath = "github.com/protolambda/zssz",
+)
