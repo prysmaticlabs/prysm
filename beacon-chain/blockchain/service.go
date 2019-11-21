@@ -57,13 +57,13 @@ type Service struct {
 	headState            *pb.BeaconState
 	canonicalRoots       map[uint64][]byte
 	headLock             sync.RWMutex
-
-	stateNotifier statefeed.Notifier
+	stateNotifier        statefeed.Notifier
 }
 
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf    int
+	ShouldArchive     bool
 	ChainStartFetcher powchain.ChainStartFetcher
 	BeaconDB          db.Database
 	DepositCache      *depositcache.DepositCache
@@ -77,7 +77,7 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB, cfg.ShouldArchive)
 	return &Service{
 		ctx:                  ctx,
 		cancel:               cancel,

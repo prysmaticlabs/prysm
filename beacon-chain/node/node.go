@@ -276,6 +276,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
+	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
@@ -286,6 +287,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
+		ShouldArchive:     shouldArchive,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

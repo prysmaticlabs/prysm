@@ -211,6 +211,13 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
+	if s.shouldArchive {
+		// Save the unseen attestations from block to db.
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return errors.Wrap(err, "could not save attestations")
+		}
+	}
+
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		reportEpochMetrics(postState)
