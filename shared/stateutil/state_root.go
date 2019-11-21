@@ -3,9 +3,9 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/pkg/errors"
 
 	"github.com/minio/sha256-simd"
+	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -40,11 +40,17 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[1] = slotBufRoot[:]
 
 	// Fork data structure root.
-	forkHashTreeRoot := forkRoot(state.Fork)
+	forkHashTreeRoot, err := forkRoot(state.Fork)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute fork merkleization")
+	}
 	fieldRoots[2] = forkHashTreeRoot[:]
 
 	// BeaconBlockHeader data structure root.
-	headerHashTreeRoot := blockHeaderRoot(state.LatestBlockHeader)
+	headerHashTreeRoot, err := blockHeaderRoot(state.LatestBlockHeader)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute block header merkleization")
+	}
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
@@ -71,13 +77,19 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[6] = mixedLen[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot := eth1Root(state.Eth1Data)
+	eth1HashTreeRoot, err := eth1Root(state.Eth1Data)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
+	}
 	fieldRoots[7] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(state.Eth1DataVotes); i++ {
-		eth1 := eth1Root(state.Eth1DataVotes[i])
+		eth1, err := eth1Root(state.Eth1DataVotes[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
+		}
 		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
 	}
 	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1VotesRoots, uint64(len(eth1VotesRoots)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
@@ -103,7 +115,10 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// Validators slice root.
 	validatorsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.Validators); i++ {
-		val := validatorRoot(state.Validators[i])
+		val, err := validatorRoot(state.Validators[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+		}
 		validatorsRoots = append(validatorsRoots, val[:])
 	}
 	validatorsRootsRoot, err := bitwiseMerkleize(validatorsRoots, uint64(len(validatorsRoots)), params.BeaconConfig().ValidatorRegistryLimit)
@@ -178,12 +193,15 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// PreviousEpochAttestations slice root.
 	prevAttsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
-		pendingPrevRoot := pendingAttestationRoot(state.PreviousEpochAttestations[i])
+		pendingPrevRoot, err := pendingAttestationRoot(state.PreviousEpochAttestations[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
+		}
 		prevAttsRoots = append(prevAttsRoots, pendingPrevRoot[:])
 	}
 	prevAttsRootsRoot, err := bitwiseMerkleize(prevAttsRoots, uint64(len(prevAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not previous epoch attestations merkleization")
+		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
 	prevAttsLenBuf := new(bytes.Buffer)
 	if err := binary.Write(prevAttsLenBuf, binary.LittleEndian, uint64(len(state.PreviousEpochAttestations))); err != nil {
@@ -198,12 +216,15 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// CurrentEpochAttestations slice root.
 	currAttsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
-		pendingRoot := pendingAttestationRoot(state.CurrentEpochAttestations[i])
+		pendingRoot, err := pendingAttestationRoot(state.CurrentEpochAttestations[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
+		}
 		currAttsRoots = append(currAttsRoots, pendingRoot[:])
 	}
 	currAttsRootsRoot, err := bitwiseMerkleize(currAttsRoots, uint64(len(currAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not current epoch attestations merkleization")
+		return [32]byte{}, errors.Wrap(err, "could not compute current epoch attestations merkleization")
 	}
 	// We need to mix in the length of the slice.
 	currAttsLenBuf := new(bytes.Buffer)
@@ -220,15 +241,24 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[16] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.
-	prevCheckRoot := checkpointRoot(state.PreviousJustifiedCheckpoint)
+	prevCheckRoot, err := checkpointRoot(state.PreviousJustifiedCheckpoint)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute previous justified checkpoint merkleization")
+	}
 	fieldRoots[17] = prevCheckRoot[:]
 
 	// CurrentJustifiedCheckpoint data structure root.
-	currJustRoot := checkpointRoot(state.CurrentJustifiedCheckpoint)
+	currJustRoot, err := checkpointRoot(state.CurrentJustifiedCheckpoint)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute current justified checkpoint merkleization")
+	}
 	fieldRoots[18] = currJustRoot[:]
 
 	// FinalizedCheckpoint data structure root.
-	finalRoot := checkpointRoot(state.FinalizedCheckpoint)
+	finalRoot, err := checkpointRoot(state.FinalizedCheckpoint)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
+	}
 	fieldRoots[19] = finalRoot[:]
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
@@ -238,7 +268,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	return root, nil
 }
 
-func forkRoot(fork *pb.Fork) [32]byte {
+func forkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)
 	fieldRoots[0] = prevRoot[:]
@@ -250,12 +280,12 @@ func forkRoot(fork *pb.Fork) [32]byte {
 	fieldRoots[2] = epochRoot[:]
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, err
 	}
-	return root
+	return root, nil
 }
 
-func blockHeaderRoot(header *ethpb.BeaconBlockHeader) [32]byte {
+func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 	headerSlotBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
@@ -266,21 +296,21 @@ func blockHeaderRoot(header *ethpb.BeaconBlockHeader) [32]byte {
 	fieldRoots[3] = header.BodyRoot
 	signatureChunks, err := pack([][]byte{header.Signature})
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
 	sigRoot, err := bitwiseMerkleize(signatureChunks, uint64(len(signatureChunks)), uint64(len(signatureChunks)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
 	fieldRoots[4] = sigRoot[:]
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
-func attestationDataRoot(data *ethpb.AttestationData) [32]byte {
+func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
 	// Slot.
@@ -299,21 +329,27 @@ func attestationDataRoot(data *ethpb.AttestationData) [32]byte {
 	fieldRoots[2] = data.BeaconBlockRoot
 
 	// Source
-	sourceRoot := checkpointRoot(data.Source)
+	sourceRoot, err := checkpointRoot(data.Source)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
+	}
 	fieldRoots[3] = sourceRoot[:]
 
 	// Target
-	targetRoot := checkpointRoot(data.Target)
+	targetRoot, err := checkpointRoot(data.Target)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
+	}
 	fieldRoots[4] = targetRoot[:]
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
-func pendingAttestationRoot(att *pb.PendingAttestation) [32]byte {
+func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	fieldRoots := make([][]byte, 4)
 
 	// Bitfield.
@@ -324,7 +360,10 @@ func pendingAttestationRoot(att *pb.PendingAttestation) [32]byte {
 	fieldRoots[0] = aggregationRoot[:]
 
 	// Attestation data.
-	attDataRoot := attestationDataRoot(att.Data)
+	attDataRoot, err := attestationDataRoot(att.Data)
+	if err != nil {
+		return [32]byte{}, nil
+	}
 	fieldRoots[1] = attDataRoot[:]
 
 	// Inclusion delay.
@@ -341,22 +380,22 @@ func pendingAttestationRoot(att *pb.PendingAttestation) [32]byte {
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
-func validatorRoot(validator *ethpb.Validator) [32]byte {
+func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	fieldRoots := make([][]byte, 8)
 
 	// Public key.
 	pubKeyChunks, err := pack([][]byte{validator.PublicKey})
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
 	pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
 	fieldRoots[0] = pubKeyRoot[:]
 
@@ -405,12 +444,12 @@ func validatorRoot(validator *ethpb.Validator) [32]byte {
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
-func eth1Root(eth1Data *ethpb.Eth1Data) [32]byte {
+func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	fieldRoots[0] = eth1Data.DepositRoot
 	eth1DataCountBuf := make([]byte, 8)
@@ -420,12 +459,12 @@ func eth1Root(eth1Data *ethpb.Eth1Data) [32]byte {
 	fieldRoots[2] = eth1Data.BlockHash
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
-func checkpointRoot(checkpoint *ethpb.Checkpoint) [32]byte {
+func checkpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
 	epochBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(epochBuf, checkpoint.Epoch)
@@ -434,9 +473,9 @@ func checkpointRoot(checkpoint *ethpb.Checkpoint) [32]byte {
 	fieldRoots[1] = checkpoint.Root
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, nil
 	}
-	return root
+	return root, nil
 }
 
 func bitlistRoot(bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
