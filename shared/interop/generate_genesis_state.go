@@ -9,7 +9,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -62,24 +61,21 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
-	if c := featureconfig.Get(); c.Scatter {
-		deposits := make([]*ethpb.Deposit, len(depositDataItems))
-		results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-			return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to generate deposits from data")
-		}
-		for _, result := range results {
-			if depositExtent, ok := result.Extent.([]*ethpb.Deposit); ok {
-				copy(deposits[result.Offset:], depositExtent)
-			} else {
-				return nil, errors.New("extent not of expected type")
-			}
-		}
-		return deposits, nil
+	deposits := make([]*ethpb.Deposit, len(depositDataItems))
+	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate deposits from data")
 	}
-	return generateDepositsFromData(depositDataItems, 0, trie)
+	for _, result := range results {
+		if depositExtent, ok := result.Extent.([]*ethpb.Deposit); ok {
+			copy(deposits[result.Offset:], depositExtent)
+		} else {
+			return nil, errors.New("extent not of expected type")
+		}
+	}
+	return deposits, nil
 }
 
 // generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
