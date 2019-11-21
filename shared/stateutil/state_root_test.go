@@ -1,4 +1,4 @@
-package stateutil
+package stateutil_test
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestHashTreeRootEquality(t *testing.T) {
@@ -14,7 +15,7 @@ func TestHashTreeRootEquality(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r2, err := HashTreeRootState(genesisState)
+	r2, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +29,7 @@ func BenchmarkHashTreeRootState_Custom(b *testing.B) {
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := HashTreeRootState(genesisState); err != nil {
+		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
