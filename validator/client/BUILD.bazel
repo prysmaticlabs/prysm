@@ -47,6 +47,7 @@ go_test(
         "fake_validator_test.go",
         "runner_test.go",
         "service_test.go",
+        "validator_aggregate_test.go",
         "validator_attest_test.go",
         "validator_propose_test.go",
         "validator_test.go",

@@ -7,12 +7,16 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -67,7 +71,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	}
 }
 
-func TestSubmitAggregateAndProof_Ok(t *testing.T) {
+func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -93,7 +97,45 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
+	res, err := aggregatorServer.SubmitAggregateAndProof(ctx, req)
+	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !res.Aggregated {
+		t.Error("Wanted aggregator true, got false")
+	}
+}
+
+func TestSubmitAggregateAndProof_IsNotAggregator(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
+	s, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: s},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+	}
+
+	sig := privKeys[0].Sign([]byte{}, 0)
+	pubKey := bytesutil.ToBytes48(privKeys[0].PublicKey().Marshal())
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
+	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := aggregatorServer.SubmitAggregateAndProof(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if res.Aggregated {
+		t.Error("Wanted aggregator false, got true")
 	}
 }
