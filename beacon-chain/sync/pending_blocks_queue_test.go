@@ -209,23 +209,6 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
-	var wg sync.WaitGroup
-	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
-		defer wg.Done()
-		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if code == 0 {
-			t.Error("Expected a non-zero code")
-		}
-		if errMsg != errWrongForkVersion.Error() {
-			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkVersion.Error()))
-			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
-		}
-	})
 
 	r := &RegularSync{
 		p2p: p1,
