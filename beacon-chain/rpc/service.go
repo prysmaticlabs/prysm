@@ -74,6 +74,9 @@ type Service struct {
 	p2p                   p2p.Broadcaster
 	depositFetcher        depositcache.DepositFetcher
 	pendingDepositFetcher depositcache.PendingDepositsFetcher
+	slasherConn           *grpc.ClientConn
+	slasherAddress        string
+	slasherCert           string
 }
 
 // Config options for the beacon node RPC server.
@@ -98,6 +101,9 @@ type Config struct {
 	Broadcaster           p2p.Broadcaster
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
+	SlasherPort           string
+	SlasherHost           string
+	SlasherCert           string
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -129,6 +135,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		pendingDepositFetcher: cfg.PendingDepositFetcher,
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		slasherAddress:        cfg.SlasherHost + ":" + cfg.SlasherPort,
+		slasherCert:           cfg.SlasherCert,
 	}
 }
 
@@ -239,6 +247,38 @@ func (s *Service) Start() {
 			}
 		}
 	}()
+	var dialOpt grpc.DialOption
+	if v.withCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
+		if err != nil {
+			log.Errorf("Could not get valid credentials: %v", err)
+			return
+		}
+		dialOpt = grpc.WithTransportCredentials(creds)
+	} else {
+		dialOpt = grpc.WithInsecure()
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+	}
+	slasherOpts := []grpc.DialOption{
+		dialOpt,
+		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+			grpc_opentracing.StreamClientInterceptor(),
+			grpc_prometheus.StreamClientInterceptor,
+		)),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+			grpc_opentracing.UnaryClientInterceptor(),
+			grpc_prometheus.UnaryClientInterceptor,
+		)),
+	}
+	conn, err := grpc.DialContext(s.ctx, s.slasherAddress, slasherOpts...)
+	if err != nil {
+		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
+		return
+	}
+	log.Info("Successfully started gRPC connection")
+	s.slasherConn = conn
+
 }
 
 // Stop the service.
