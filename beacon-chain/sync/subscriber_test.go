@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -44,15 +45,22 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
+	chainService := &mockChain.ChainService{}
 	r := RegularSync{
-		ctx: context.Background(),
-		p2p: p2p,
+		ctx:           context.Background(),
+		p2p:           p2p,
+		chain:         chainService,
+		stateNotifier: chainService.StateNotifier(),
 	}
 
-	r.chain = &mockChain.ChainService{}
 	topic := "/eth2/beacon_block"
 	r.registerSubscribers()
-	i := r.chain.StateInitializedFeed().Send(time.Now())
+	i := r.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.StateInitialized,
+		Data: &statefeed.StateInitializedData{
+			StartTime: time.Now(),
+		},
+	})
 	if i == 0 {
 		t.Fatal("didn't send genesis time to subscribers")
 	}

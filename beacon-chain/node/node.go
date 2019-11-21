@@ -363,11 +363,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:          b.db,
-		P2P:         b.fetchP2P(ctx),
-		Operations:  operationService,
-		Chain:       chainService,
-		InitialSync: initSync,
+		DB:            b.db,
+		P2P:           b.fetchP2P(ctx),
+		Operations:    operationService,
+		Chain:         chainService,
+		InitialSync:   initSync,
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(rs)
@@ -381,9 +382,10 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		DB:    b.db,
-		Chain: chainService,
-		P2P:   b.fetchP2P(ctx),
+		DB:            b.db,
+		Chain:         chainService,
+		P2P:           b.fetchP2P(ctx),
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -442,7 +444,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
-		StateFeedListener:     chainService,
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
@@ -452,6 +453,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		StateNotifier:         b,
 	})
 
 	return b.services.RegisterService(rpcService)
