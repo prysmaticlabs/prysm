@@ -115,10 +115,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Scattering sequential proceses to multiple cores")
 		cfg.Scatter = true
 	}
-	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
-		log.Warn("Enabled pruning old finalized states from database.")
-		cfg.PruneFinalizedStates = true
-	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true

@@ -408,10 +408,6 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	if !featureconfig.Get().PruneFinalizedStates {
-		return nil
-	}
-
 	// Make sure finalized slot is not a skipped slot.
 	for i := endSlot; i > 0; i-- {
 		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
