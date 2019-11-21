@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -68,7 +69,7 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(block, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot, err := ssz.HashTreeRoot(state)
+	postStateRoot, err := stateutil.HashTreeRootState(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
@@ -172,7 +173,7 @@ func CalculateStateRoot(
 		}
 	}
 
-	root, err := ssz.HashTreeRoot(stateCopy)
+	root, err := stateutil.HashTreeRootState(stateCopy)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not tree hash beacon state")
 	}
@@ -201,7 +202,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
 
-	prevStateRoot, err := ssz.HashTreeRoot(state)
+	prevStateRoot, err := stateutil.HashTreeRootState(state)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
@@ -251,7 +252,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Restart from cached value, if one exists.
-		root, err = ssz.HashTreeRoot(state)
+		root, err = stateutil.HashTreeRootState(state)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
 		}
