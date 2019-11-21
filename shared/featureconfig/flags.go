@@ -100,8 +100,9 @@ var (
 		Hidden: true,
 	}
 	deprecatedScatterFlag = cli.BoolFlag{
-		Name:  "scatter",
-		Usage: deprecatedUsage,
+		Name:   "scatter",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 )
 
