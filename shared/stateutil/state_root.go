@@ -18,57 +18,63 @@ import (
 
 const bytesPerChunk = 32
 
-// HashTreeRootState --
+// HashTreeRootState provides a fully-customized version of ssz.HashTreeRoot
+// for the BeaconState type of the official Ethereum Serenity specification.
+// The reason for this particular function is to optimize for speed and memory allocation
+// at the expense of complete specificity (that is, this function can only be used
+// on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
 
-	// Do the genesis time:
+	// Genesis time root.
 	genesisBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(genesisBuf, state.GenesisTime)
 	genesisBufRoot := bytesutil.ToBytes32(genesisBuf)
 	fieldRoots[0] = genesisBufRoot[:]
-	// Do the slot:
+
+	// Slot root.
 	slotBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(slotBuf, state.Slot)
 	slotBufRoot := bytesutil.ToBytes32(slotBuf)
 	fieldRoots[1] = slotBufRoot[:]
 
-	// Handle the fork data:
+	// Fork data structure root.
 	forkHashTreeRoot := forkRoot(state.Fork)
 	fieldRoots[2] = forkHashTreeRoot[:]
 
-	// Handle the beacon block header:
+	// BeaconBlockHeader data structure root.
 	headerHashTreeRoot := blockHeaderRoot(state.LatestBlockHeader)
 	fieldRoots[3] = headerHashTreeRoot[:]
 
-	// Handle the block roots:
+	// BlockRoots array root.
 	blockRoots := merkleize(state.BlockRoots)
 	fieldRoots[4] = blockRoots[:]
 
-	// Handle the state roots:
+	// StateRoots array root.
 	stateRoots := merkleize(state.StateRoots)
 	fieldRoots[5] = stateRoots[:]
 
-	// Handle the historical roots:
+	// HistoricalRoots slice root.
+	historicalRootsRoot, err := bitwiseMerkleize(state.HistoricalRoots, uint64(len(state.HistoricalRoots)), params.BeaconConfig().HistoricalRootsLimit)
+	if err != nil {
+		panic(err)
+	}
 	historicalRootsBuf := new(bytes.Buffer)
 	if err := binary.Write(historicalRootsBuf, binary.LittleEndian, uint64(len(state.HistoricalRoots))); err != nil {
 		panic(err)
 	}
+	// We need to mix in the length of the slice.
 	historicalRootsOutput := make([]byte, 32)
 	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
-	merkleRoot, err := bitwiseMerkleize(state.HistoricalRoots, uint64(len(state.HistoricalRoots)), params.BeaconConfig().HistoricalRootsLimit)
-	if err != nil {
-		panic(err)
-	}
-	mixedLen := mixInLength(merkleRoot, historicalRootsOutput)
+	mixedLen := mixInLength(historicalRootsRoot, historicalRootsOutput)
 	fieldRoots[6] = mixedLen[:]
 
-	// Handle the eth1 data:
+	// Eth1Data data structure root.
 	eth1HashTreeRoot := eth1Root(state.Eth1Data)
 	fieldRoots[7] = eth1HashTreeRoot[:]
 
-	// Handle eth1 data votes:
+	// Eth1DataVotes slice root.
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(state.Eth1DataVotes); i++ {
 		eth1 := eth1Root(state.Eth1DataVotes[i])
@@ -82,18 +88,19 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	if err := binary.Write(eth1VotesRootBuf, binary.LittleEndian, uint64(len(state.Eth1DataVotes))); err != nil {
 		panic(err)
 	}
+	// We need to mix in the length of the slice.
 	eth1VotesRootBufRoot := make([]byte, 32)
 	copy(eth1VotesRootBufRoot, eth1VotesRootBuf.Bytes())
 	mixedEth1Root := mixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
 	fieldRoots[8] = mixedEth1Root[:]
 
-	// Handle eth1 deposit index:
+	// Eth1DepositIndex root.
 	eth1DepositIndexBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eth1DepositIndexBuf, state.Eth1DepositIndex)
 	eth1DepositBuf := bytesutil.ToBytes32(eth1DepositIndexBuf)
 	fieldRoots[9] = eth1DepositBuf[:]
 
-	// Handle the validator registry:
+	// Validators slice root.
 	validatorsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.Validators); i++ {
 		val := validatorRoot(state.Validators[i])
@@ -107,12 +114,13 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	if err := binary.Write(validatorsRootsBuf, binary.LittleEndian, uint64(len(state.Validators))); err != nil {
 		panic(err)
 	}
+	// We need to mix in the length of the slice.
 	validatorsRootsBufRoot := make([]byte, 32)
 	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
 	mixedValLen := mixInLength(validatorsRootsRoot, validatorsRootsBufRoot)
 	fieldRoots[10] = mixedValLen[:]
 
-	// Handle the validator balances:
+	// Balances slice root.
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(state.Balances); i++ {
 		balanceBuf := make([]byte, 8)
@@ -146,11 +154,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	mixedBalLen := mixInLength(balancesRootsRoot, balancesRootsBufRoot)
 	fieldRoots[11] = mixedBalLen[:]
 
-	// Handle the randao mixes:
+	// RandaoMixes array root.
 	randaoRoots := merkleize(state.RandaoMixes)
 	fieldRoots[12] = randaoRoots[:]
 
-	// Handle the slashings:
+	// Slashings array root.
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
 	for i := 0; i < len(slashingMarshaling); i++ {
 		slashBuf := make([]byte, 8)
@@ -167,13 +175,7 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	fieldRoots[13] = slashingRootsRoot[:]
 
-	// Handle the previous epoch attestations 14:
-	prevAttsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(prevAttsLenBuf, binary.LittleEndian, uint64(len(state.PreviousEpochAttestations))); err != nil {
-		panic(err)
-	}
-	prevAttsLenRoot := make([]byte, 32)
-	copy(prevAttsLenRoot, prevAttsLenBuf.Bytes())
+	// PreviousEpochAttestations slice root.
 	prevAttsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
 		pendingPrevRoot := pendingAttestationRoot(state.PreviousEpochAttestations[i])
@@ -183,16 +185,17 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	if err != nil {
 		panic(err)
 	}
+	prevAttsLenBuf := new(bytes.Buffer)
+	if err := binary.Write(prevAttsLenBuf, binary.LittleEndian, uint64(len(state.PreviousEpochAttestations))); err != nil {
+		panic(err)
+	}
+	// We need to mix in the length of the slice.
+	prevAttsLenRoot := make([]byte, 32)
+	copy(prevAttsLenRoot, prevAttsLenBuf.Bytes())
 	prevRoot := mixInLength(prevAttsRootsRoot, prevAttsLenRoot)
 	fieldRoots[14] = prevRoot[:]
 
-	// Handle the current epoch attestations 15:
-	currAttsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(currAttsLenBuf, binary.LittleEndian, uint64(len(state.CurrentEpochAttestations))); err != nil {
-		panic(err)
-	}
-	currAttsLenRoot := make([]byte, 32)
-	copy(currAttsLenRoot, currAttsLenBuf.Bytes())
+	// CurrentEpochAttestations slice root.
 	currAttsRoots := make([][]byte, 0)
 	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
 		pendingRoot := pendingAttestationRoot(state.CurrentEpochAttestations[i])
@@ -202,20 +205,29 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	if err != nil {
 		panic(err)
 	}
+	// We need to mix in the length of the slice.
+	currAttsLenBuf := new(bytes.Buffer)
+	if err := binary.Write(currAttsLenBuf, binary.LittleEndian, uint64(len(state.CurrentEpochAttestations))); err != nil {
+		panic(err)
+	}
+	currAttsLenRoot := make([]byte, 32)
+	copy(currAttsLenRoot, currAttsLenBuf.Bytes())
 	currRoot := mixInLength(currAttsRootsRoot, currAttsLenRoot)
 	fieldRoots[15] = currRoot[:]
 
-	// Handle the justification bits 16:
+	// JustificationBits root.
 	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)
 	fieldRoots[16] = justifiedBitsRoot[:]
 
-	// Handle the previous justified checkpoint 17:
+	// PreviousJustifiedCheckpoint data structure root.
 	prevCheckRoot := checkpointRoot(state.PreviousJustifiedCheckpoint)
 	fieldRoots[17] = prevCheckRoot[:]
-	// Handle the current justified checkpoint 18:
+
+	// CurrentJustifiedCheckpoint data structure root.
 	currJustRoot := checkpointRoot(state.CurrentJustifiedCheckpoint)
 	fieldRoots[18] = currJustRoot[:]
-	// Handle the finalized checkpoint 19:
+
+	// FinalizedCheckpoint data structure root.
 	finalRoot := checkpointRoot(state.FinalizedCheckpoint)
 	fieldRoots[19] = finalRoot[:]
 
