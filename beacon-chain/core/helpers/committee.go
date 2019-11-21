@@ -296,7 +296,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		count, err := CommitteeCountAtSlot(state, epoch*params.BeaconConfig().SlotsPerEpoch)
+		count, err := CommitteeCountAtSlot(state, StartSlot(epoch))
 		if err != nil {
 			return err
 		}
