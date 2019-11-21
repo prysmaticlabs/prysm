@@ -187,10 +187,10 @@ func (bs *Server) ListValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	validators := headState.Validators
+	vals := headState.Validators
 	if requestedEpoch < currentEpoch {
-		stopIdx := len(validators)
-		for idx, val := range validators {
+		stopIdx := len(vals)
+		for idx, val := range vals {
 			// The first time we see a validator with an activation epoch > the requested epoch,
 			// we know this validator is from the future relative to what the request wants.
 			if val.ActivationEpoch > requestedEpoch {
@@ -198,7 +198,7 @@ func (bs *Server) ListValidators(
 				break
 			}
 		}
-		validators = validators[:stopIdx]
+		vals = vals[:stopIdx]
 	} else if requestedEpoch > currentEpoch {
 		// Otherwise, we are requesting data from the future and we return an error.
 		return nil, status.Errorf(
@@ -209,8 +209,20 @@ func (bs *Server) ListValidators(
 		)
 	}
 
-	validatorCount := len(validators)
-	// If there are no validators, we simply return a response specifying this.
+	// Filter active validators if the request specifies it.
+	res := vals
+	if req.Active {
+		filteredValidators := make([]*ethpb.Validator, 0)
+		for _, val := range vals {
+			if helpers.IsActiveValidator(val, requestedEpoch) {
+				filteredValidators = append(filteredValidators, val)
+			}
+		}
+		res = filteredValidators
+	}
+
+	validatorCount := len(res)
+	// If there are no items, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 validators below would result in an error.
 	if validatorCount == 0 {
 		return &ethpb.Validators{
@@ -230,7 +242,7 @@ func (bs *Server) ListValidators(
 	}
 
 	return &ethpb.Validators{
-		Validators:    validators[start:end],
+		Validators:    res[start:end],
 		TotalSize:     int32(validatorCount),
 		NextPageToken: nextPageToken,
 	}, nil

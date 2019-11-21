@@ -18,7 +18,7 @@ import (
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
 // proof on the validator's behave.
 func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
-	ctx, span := trace.StartSpan(ctx, "validator.IsAggregator")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProof")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
