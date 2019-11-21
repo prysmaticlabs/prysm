@@ -3,7 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/minio/sha256-simd"
 	"github.com/protolambda/zssz/htr"
@@ -23,7 +23,7 @@ const bytesPerChunk = 32
 // The reason for this particular function is to optimize for speed and memory allocation
 // at the expense of complete specificity (that is, this function can only be used
 // on the Prysm BeaconState data structure).
-func HashTreeRootState(state *pb.BeaconState) [32]byte {
+func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
 
@@ -58,11 +58,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	// HistoricalRoots slice root.
 	historicalRootsRoot, err := bitwiseMerkleize(state.HistoricalRoots, uint64(len(state.HistoricalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
 	historicalRootsBuf := new(bytes.Buffer)
 	if err := binary.Write(historicalRootsBuf, binary.LittleEndian, uint64(len(state.HistoricalRoots))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal historical roots length")
 	}
 	// We need to mix in the length of the slice.
 	historicalRootsOutput := make([]byte, 32)
@@ -82,11 +82,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1VotesRoots, uint64(len(eth1VotesRoots)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
 	eth1VotesRootBuf := new(bytes.Buffer)
 	if err := binary.Write(eth1VotesRootBuf, binary.LittleEndian, uint64(len(state.Eth1DataVotes))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
 	}
 	// We need to mix in the length of the slice.
 	eth1VotesRootBufRoot := make([]byte, 32)
@@ -108,11 +108,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	validatorsRootsRoot, err := bitwiseMerkleize(validatorsRoots, uint64(len(validatorsRoots)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
 	validatorsRootsBuf := new(bytes.Buffer)
 	if err := binary.Write(validatorsRootsBuf, binary.LittleEndian, uint64(len(state.Validators))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal validator registry length")
 	}
 	// We need to mix in the length of the slice.
 	validatorsRootsBufRoot := make([]byte, 32)
@@ -129,7 +129,7 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	balancesChunks, err := pack(balancesMarshaling)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
 	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
 	elemSize := uint64(8)
@@ -143,11 +143,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	balancesRootsRoot, err := bitwiseMerkleize(balancesChunks, uint64(len(balancesChunks)), balLimit)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
 	balancesRootsBuf := new(bytes.Buffer)
 	if err := binary.Write(balancesRootsBuf, binary.LittleEndian, uint64(len(state.Balances))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal balances length")
 	}
 	balancesRootsBufRoot := make([]byte, 32)
 	copy(balancesRootsBufRoot, balancesRootsBuf.Bytes())
@@ -167,11 +167,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	slashingChunks, err := pack(slashingMarshaling)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
 	}
 	slashingRootsRoot, err := bitwiseMerkleize(slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute slashings merkleization")
 	}
 	fieldRoots[13] = slashingRootsRoot[:]
 
@@ -183,11 +183,11 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	prevAttsRootsRoot, err := bitwiseMerkleize(prevAttsRoots, uint64(len(prevAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not previous epoch attestations merkleization")
 	}
 	prevAttsLenBuf := new(bytes.Buffer)
 	if err := binary.Write(prevAttsLenBuf, binary.LittleEndian, uint64(len(state.PreviousEpochAttestations))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal previous epoch attestations length")
 	}
 	// We need to mix in the length of the slice.
 	prevAttsLenRoot := make([]byte, 32)
@@ -203,12 +203,12 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 	}
 	currAttsRootsRoot, err := bitwiseMerkleize(currAttsRoots, uint64(len(currAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not current epoch attestations merkleization")
 	}
 	// We need to mix in the length of the slice.
 	currAttsLenBuf := new(bytes.Buffer)
 	if err := binary.Write(currAttsLenBuf, binary.LittleEndian, uint64(len(state.CurrentEpochAttestations))); err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not marshal current epoch attestations length")
 	}
 	currAttsLenRoot := make([]byte, 32)
 	copy(currAttsLenRoot, currAttsLenBuf.Bytes())
@@ -233,9 +233,9 @@ func HashTreeRootState(state *pb.BeaconState) [32]byte {
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
-		panic(err)
+		return [32]byte{}, errors.Wrap(err, "could not compute full beacon state merkleization")
 	}
-	return root
+	return root, nil
 }
 
 func forkRoot(fork *pb.Fork) [32]byte {

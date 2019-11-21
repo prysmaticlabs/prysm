@@ -12,6 +12,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_protolambda_zssz//htr:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
