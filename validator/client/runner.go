@@ -97,7 +97,7 @@ func run(ctx context.Context, v Validator) {
 					switch role {
 					case pb.ValidatorRole_BOTH:
 						go v.SubmitAttestation(slotCtx, slot, id)
-						v.SubmitAggregateAndProof(ctx, slot, id)
+						go v.SubmitAggregateAndProof(ctx, slot, id)
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
 						v.SubmitAggregateAndProof(ctx, slot, id)
