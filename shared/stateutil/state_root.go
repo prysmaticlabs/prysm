@@ -54,12 +54,18 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRoots := merkleize(state.BlockRoots)
-	fieldRoots[4] = blockRoots[:]
+	blockRootsRoot, err := bitwiseMerkleize(state.BlockRoots, uint64(len(state.BlockRoots)), uint64(len(state.BlockRoots)))
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute block roots merkleization")
+	}
+	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRoots := merkleize(state.StateRoots)
-	fieldRoots[5] = stateRoots[:]
+	stateRootsRoot, err := bitwiseMerkleize(state.StateRoots, uint64(len(state.StateRoots)), uint64(len(state.StateRoots)))
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")
+	}
+	fieldRoots[5] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
 	historicalRootsRoot, err := bitwiseMerkleize(state.HistoricalRoots, uint64(len(state.HistoricalRoots)), params.BeaconConfig().HistoricalRootsLimit)
@@ -170,8 +176,11 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[11] = mixedBalLen[:]
 
 	// RandaoMixes array root.
-	randaoRoots := merkleize(state.RandaoMixes)
-	fieldRoots[12] = randaoRoots[:]
+	randaoRootsRoot, err := bitwiseMerkleize(state.RandaoMixes, uint64(len(state.RandaoMixes)), uint64(len(state.RandaoMixes)))
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
+	}
+	fieldRoots[12] = randaoRootsRoot[:]
 
 	// Slashings array root.
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -562,40 +571,6 @@ func pack(serializedItems [][]byte) ([][]byte, error) {
 	}
 	chunks[len(chunks)-1] = lastChunk
 	return chunks, nil
-}
-
-func merkleize(chunks [][]byte) [32]byte {
-	if len(chunks) == 1 {
-		var root [32]byte
-		copy(root[:], chunks[0])
-		return root
-	}
-	for !isPowerOf2(len(chunks)) {
-		chunks = append(chunks, make([]byte, bytesPerChunk))
-	}
-	hashLayer := chunks
-	// We keep track of the hash layers of a Merkle trie until we reach
-	// the top layer of length 1, which contains the single root element.
-	//        [Root]      -> Top layer has length 1.
-	//    [E]       [F]   -> This layer has length 2.
-	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
-	i := 1
-	for len(hashLayer) > 1 {
-		layer := [][]byte{}
-		for i := 0; i < len(hashLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
-			layer = append(layer, hashedChunk[:])
-		}
-		hashLayer = layer
-		i++
-	}
-	var root [32]byte
-	copy(root[:], hashLayer[0])
-	return root
-}
-
-func isPowerOf2(n int) bool {
-	return n != 0 && (n&(n-1)) == 0
 }
 
 func mixInLength(root [32]byte, length []byte) [32]byte {
