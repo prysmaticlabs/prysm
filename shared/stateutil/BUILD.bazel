@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -16,5 +16,15 @@ go_library(
         "@com_github_protolambda_zssz//htr:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["state_root_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/interop:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
