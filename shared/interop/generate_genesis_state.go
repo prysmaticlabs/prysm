@@ -100,31 +100,28 @@ func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int
 
 // DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
 func DepositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
-	if c := featureconfig.Get(); c.Scatter {
-		type depositData struct {
-			items []*ethpb.Deposit_Data
-			roots [][]byte
-		}
-		depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
-		depositDataRoots := make([][]byte, len(privKeys))
-		results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-			items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
-			return &depositData{items: items, roots: roots}, err
-		})
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
-		}
-		for _, result := range results {
-			if depositDataExtent, ok := result.Extent.(*depositData); ok {
-				copy(depositDataItems[result.Offset:], depositDataExtent.items)
-				copy(depositDataRoots[result.Offset:], depositDataExtent.roots)
-			} else {
-				return nil, nil, errors.New("extent not of expected type")
-			}
-		}
-		return depositDataItems, depositDataRoots, nil
+	type depositData struct {
+		items []*ethpb.Deposit_Data
+		roots [][]byte
 	}
-	return depositDataFromKeys(privKeys, pubKeys)
+	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+	depositDataRoots := make([][]byte, len(privKeys))
+	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
+		return &depositData{items: items, roots: roots}, err
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to generate deposit data from keys")
+	}
+	for _, result := range results {
+		if depositDataExtent, ok := result.Extent.(*depositData); ok {
+			copy(depositDataItems[result.Offset:], depositDataExtent.items)
+			copy(depositDataRoots[result.Offset:], depositDataExtent.roots)
+		} else {
+			return nil, nil, errors.New("extent not of expected type")
+		}
+	}
+	return depositDataItems, depositDataRoots, nil
 }
 
 func depositDataFromKeys(privKeys []*bls.SecretKey, pubKeys []*bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
