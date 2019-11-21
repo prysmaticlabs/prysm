@@ -46,7 +46,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	}
 
 	for _, idx := range indices {
-		atts, err := ss.DetectSurround(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, idx)
+		atts, err := ss.DetectSurroundVotes(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, idx)
 		if err != nil {
 			return nil, err
 		}
@@ -99,9 +99,9 @@ func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_S
 	return status.Error(codes.Unimplemented, "not implemented")
 }
 
-// DetectSurround is a method used to return the attestation that were detected
+// DetectSurroundVotes is a method used to return the attestation that were detected
 // by min max surround detection method.
-func (ss Server) DetectSurround(ctx context.Context, source uint64, target uint64, validatorIdx uint64) ([]*ethpb.IndexedAttestation, error) {
+func (ss *Server) DetectSurroundVotes(ctx context.Context, source uint64, target uint64, validatorIdx uint64) ([]*ethpb.IndexedAttestation, error) {
 	minTargetEpoch, err := ss.DetectAndUpdateMinEpochSpan(ctx, source, target, validatorIdx)
 	if err != nil {
 		return nil, err
@@ -110,28 +110,28 @@ func (ss Server) DetectSurround(ctx context.Context, source uint64, target uint6
 	if err != nil {
 		return nil, err
 	}
-	var iAtts []*ethpb.IndexedAttestation
+	var idxAtts []*ethpb.IndexedAttestation
 	if minTargetEpoch > 0 {
-		iats, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}
-		for _, ia := range iats {
+		for _, ia := range attestations {
 			if ia.Data.Source.Epoch > source && ia.Data.Target.Epoch < target {
-				iAtts = append(iAtts, ia)
+				idxAtts = append(idxAtts, ia)
 			}
 		}
 	}
 	if maxTargetEpoch > 0 {
-		iats, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}
-		for _, ia := range iats {
+		for _, ia := range attestations {
 			if ia.Data.Source.Epoch < source && ia.Data.Target.Epoch > target {
-				iAtts = append(iAtts, ia)
+				idxAtts = append(idxAtts, ia)
 			}
 		}
 	}
-	return iAtts, nil
+	return idxAtts, nil
 }
