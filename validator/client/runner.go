@@ -95,7 +95,7 @@ func run(ctx context.Context, v Validator) {
 						case pb.ValidatorRole_UNKNOWN:
 							log.Debug("No active roles, doing nothing")
 						default:
-							log.Warn("Unhandled roles")
+							log.Warnf("Unhandled role %v", role)
 						}
 					}
 
