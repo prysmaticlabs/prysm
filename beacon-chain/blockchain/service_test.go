@@ -106,7 +106,6 @@ func (ms *mockOperationService) AttestationsBySlotCommittee(ctx context.Context,
 	return nil, nil
 }
 
-
 type mockClient struct{}
 
 func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
