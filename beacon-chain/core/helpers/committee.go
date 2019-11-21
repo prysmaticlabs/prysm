@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/terencechain/prysm-phase2/beacon-chain/core/helpers"
 )
 
 var committeeCache = cache.NewCommitteeCache()
@@ -297,7 +296,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		count, err := CommitteeCountAtSlot(state, helpers.StartSlot(epoch))
+		count, err := CommitteeCountAtSlot(state, StartSlot(epoch))
 		if err != nil {
 			return err
 		}
