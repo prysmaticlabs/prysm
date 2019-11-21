@@ -101,7 +101,7 @@ var (
 	}
 	deprecatedScatterFlag = cli.BoolFlag{
 		Name:  "scatter",
-		Usage: "Scatter sequential processes to multiple cores",
+		Usage: deprecatedUsage,
 	}
 )
 
