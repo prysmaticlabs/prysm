@@ -100,8 +100,8 @@ func run(ctx context.Context, v Validator) {
 						go v.SubmitAggregateAndProof(ctx, slot, id)
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_ATTESTER:
-						v.SubmitAggregateAndProof(ctx, slot, id)
-						v.SubmitAttestation(slotCtx, slot, id)
+						go v.SubmitAggregateAndProof(ctx, slot, id)
+						go v.SubmitAttestation(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
 						v.ProposeBlock(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:

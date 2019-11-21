@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -67,7 +66,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
 	}
 	if !exists {
-		return nil, errors.New("could not locate validator index in DB")
+		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
 	// Broadcast aggregated attestation and proof if is an aggregator
