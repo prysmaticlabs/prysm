@@ -115,8 +115,8 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
-		&ethpb.GetValidatorBalancesRequest{
-			QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
 				Epoch: 0,
 			},
 		},
@@ -170,8 +170,8 @@ func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) 
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
-		&ethpb.GetValidatorBalancesRequest{
-			QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
 				Epoch: 50,
 			},
 		},
