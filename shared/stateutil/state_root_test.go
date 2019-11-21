@@ -9,7 +9,7 @@ import (
 )
 
 func TestHashTreeRootEquality(t *testing.T) {
-	genesisState := setupGenesisState(b, 512)
+	genesisState := setupGenesisState(t, 512)
 	r1, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		t.Fatal(err)
