@@ -60,7 +60,7 @@ message AggregationRequest {
 }
 
 message AggregationResponse {
-  bool aggregated = 1;
+  bytes root = 1;
 }
 
 message ValidatorPerformanceRequest {

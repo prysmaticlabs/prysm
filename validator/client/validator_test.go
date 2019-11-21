@@ -556,29 +556,29 @@ func TestRolesAt_OK(t *testing.T) {
 	defer finish()
 
 	v.assignments = &pb.AssignmentResponse{
-			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
-				{
-					CommitteeIndex: 1,
-					AttesterSlot:   1,
-					PublicKey:      []byte{0x01},
-				},
-				{
-					CommitteeIndex: 2,
-					ProposerSlot:   1,
-					PublicKey:      []byte{0x02},
-				},
-				{
-					CommitteeIndex: 1,
-					AttesterSlot:   2,
-					PublicKey:      []byte{0x03},
-				},
-				{
-					CommitteeIndex: 2,
-					AttesterSlot:   1,
-					ProposerSlot:   1,
-					PublicKey:      []byte{0x04},
-				},
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   1,
+				PublicKey:      []byte{0x01},
 			},
+			{
+				CommitteeIndex: 2,
+				ProposerSlot:   1,
+				PublicKey:      []byte{0x02},
+			},
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   2,
+				PublicKey:      []byte{0x03},
+			},
+			{
+				CommitteeIndex: 2,
+				AttesterSlot:   1,
+				ProposerSlot:   1,
+				PublicKey:      []byte{0x04},
+			},
+		},
 	}
 
 	priv, _ := bls.RandKey(rand.Reader)

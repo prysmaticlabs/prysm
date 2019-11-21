@@ -46,13 +46,12 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-	if res.Aggregated {
-		log.WithFields(logrus.Fields{
-			"slot":           slot,
-			"committeeIndex": assignment.CommitteeIndex,
-			"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
-		}).Info("Assigned and submitted aggregation and proof request")
-	}
+	log.WithFields(logrus.Fields{
+		"slot":            slot,
+		"committeeIndex":  assignment.CommitteeIndex,
+		"pubKey":          fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+		"aggregationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(res.Root[:])),
+	}).Debug("Assigned and submitted aggregation and proof request")
 }
 
 func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) ([]byte, error) {

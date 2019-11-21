@@ -21,7 +21,7 @@ func TestSubmitAggregateAndProof_AssignmentRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
-func TestSubmitAggregateAndProof_NotAnAggregator(t *testing.T) {
+func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -39,31 +39,7 @@ func TestSubmitAggregateAndProof_NotAnAggregator(t *testing.T) {
 	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
-	).Return(&pb.AggregationResponse{Aggregated: false}, nil)
-
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Assigned and submitted aggregation and proof request")
-}
-
-func TestSubmitAggregateAndProof_Aggregator(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
-	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
-		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
-		},
-	}}
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
-
-	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
-	).Return(&pb.AggregationResponse{Aggregated: true}, nil)
+	).Return(&pb.AggregationResponse{}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Assigned and submitted aggregation and proof request")
