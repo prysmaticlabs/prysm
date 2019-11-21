@@ -32,7 +32,7 @@ func TestStore_OnBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -105,7 +105,7 @@ func TestStore_SaveNewValidators(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 	preCount := 2 // validators 0 and validators 1
 	s := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{PublicKey: []byte{0}}, {PublicKey: []byte{1}},
@@ -138,7 +138,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 	r := [32]byte{'A'}
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -188,7 +188,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 	r := [32]byte{'A'}
 	atts := make([]*ethpb.Attestation, 5)
 	hashes := make([][32]byte, 5)
@@ -225,7 +225,7 @@ func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}, CustodyBits: bitfield.NewBitlist(2)}
 	a2 := &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: []byte{'A'}}, AggregationBits: bitfield.Bitlist{0b110}, CustodyBits: bitfield.NewBitlist(2)}
 	r1, _ := ssz.HashTreeRoot(a1.Data)
@@ -282,7 +282,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	// Save 100 blocks in DB, each has a state.
 	numBlocks := 100
