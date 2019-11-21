@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -46,6 +47,30 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	beaconState := beaconState1Epoch(t)
 	block := fullBlock(t)
 
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+}
+
+func TestBenchmarkExecuteStateTransition_WithCache(t *testing.T) {
+	config := &featureconfig.Flags{
+		EnableNewCache: true,
+	}
+	featureconfig.Init(config)
+	setConfig(t)
+
+	beaconState := beaconState1Epoch(t)
+	block := fullBlock(t)
+
+	// We have to reset slot back to last epoch to hydrate cache. Since
+	// some attestations in block are from previous epoch
+	currentSlot := beaconState.Slot
+	beaconState.Slot =- params.BeaconConfig().SlotsPerEpoch
+	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot = currentSlot
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
 	}
