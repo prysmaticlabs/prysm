@@ -141,6 +141,9 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 // AttestationsBySlotCommittee returns the attestations from the attestations pool filtered
 // by slot and committee index.
 func (s *Service) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "operations.AttestationsBySlotCommittee")
+	defer span.End()
+
 	s.attestationPoolLock.RLock()
 	defer s.attestationPoolLock.RUnlock()
 
