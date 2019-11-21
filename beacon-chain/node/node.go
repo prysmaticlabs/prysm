@@ -325,6 +325,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
+		StateNotifier:   b,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
