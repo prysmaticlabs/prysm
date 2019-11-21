@@ -23,7 +23,7 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole // validator pubKey -> role
+	RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 }
