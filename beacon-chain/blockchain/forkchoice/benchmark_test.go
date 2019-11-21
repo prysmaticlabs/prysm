@@ -16,7 +16,7 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 	db := testDB.SetupDB(b)
 	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -78,7 +78,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 	db := testDB.SetupDB(b)
 	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree2(db)
 	if err != nil {
@@ -132,7 +132,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 	db := testDB.SetupDB(b)
 	defer testDB.TeardownDB(b, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree3(db)
 	if err != nil {

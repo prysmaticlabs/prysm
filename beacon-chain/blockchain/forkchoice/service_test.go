@@ -23,7 +23,7 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	genesisTime := time.Unix(9999, 0)
 	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
@@ -66,7 +66,7 @@ func TestStore_AncestorOk(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -137,7 +137,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -217,7 +217,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {
@@ -248,7 +248,7 @@ func TestStore_GetHead(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db)
+	store := NewForkChoiceService(ctx, db, false)
 
 	roots, err := blockTree1(db)
 	if err != nil {

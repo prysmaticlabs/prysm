@@ -94,7 +94,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 		}
 
-		store := NewForkChoiceService(ctx, db)
+		store := NewForkChoiceService(ctx, db, false)
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
