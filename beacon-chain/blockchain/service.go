@@ -149,7 +149,6 @@ func (s *Service) Start() {
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-//func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
 	initialDeposits := s.chainStartFetcher.ChainStartDeposits()
 	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
