@@ -259,25 +259,26 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
-	rolesAt := make(map[[48]byte]pb.ValidatorRole)
+func (v *validator) RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole {
+	rolesAt := make(map[[48]byte][]pb.ValidatorRole)
 	for _, assignment := range v.assignments.ValidatorAssignment {
-		var role pb.ValidatorRole
+		var roles []pb.ValidatorRole
 		switch {
 		case assignment == nil:
-			role = pb.ValidatorRole_UNKNOWN
+			roles = append(roles, pb.ValidatorRole_UNKNOWN)
 		case assignment.ProposerSlot == slot && assignment.AttesterSlot == slot:
-			role = pb.ValidatorRole_BOTH
+			roles = append(roles, pb.ValidatorRole_PROPOSER)
+			roles = append(roles, pb.ValidatorRole_ATTESTER)
 		case assignment.AttesterSlot == slot:
-			role = pb.ValidatorRole_ATTESTER
+			roles = append(roles, pb.ValidatorRole_ATTESTER)
 		case assignment.ProposerSlot == slot:
-			role = pb.ValidatorRole_PROPOSER
+			roles = append(roles, pb.ValidatorRole_PROPOSER)
 		default:
-			role = pb.ValidatorRole_UNKNOWN
+			roles = append(roles, pb.ValidatorRole_UNKNOWN)
 		}
 		var pubKey [48]byte
 		copy(pubKey[:], assignment.PublicKey)
-		rolesAt[pubKey] = role
+		rolesAt[pubKey] = roles
 	}
 	return rolesAt
 }
