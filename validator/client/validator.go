@@ -265,7 +265,6 @@ func (v *validator) RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole {
 		var roles []pb.ValidatorRole
 
 		if assignment == nil {
-			roles = append(roles, pb.ValidatorRole_UNKNOWN)
 			continue
 		}
 		if assignment.ProposerSlot == slot {
