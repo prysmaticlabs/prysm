@@ -30,8 +30,8 @@ type Server struct {
 	SyncChecker sync.Checker
 }
 
-// SubmitAggregateAndProof is called by a validator at every slot to check whether
-// it's assigned to be an aggregator. If yes, server will broadcast aggregated attestation
+// SubmitAggregateAndProof is called by a validator at every slot if you are part of the committee
+// to check whether it's assigned to be an aggregator. If yes, server will broadcast aggregated attestation
 // and proof regarding the validators' behavior.
 func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.AggregationRequest) (*pb.AggregationResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregation")

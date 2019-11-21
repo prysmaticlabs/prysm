@@ -14,7 +14,7 @@ import (
 )
 
 // SubmitAggregateAndProof submits the validator's signed slot signature to the beacon node
-// via gRPC. Beacon node will verify the slot signature and determine if the validagtor is also
+// via gRPC. Beacon node will verify the slot signature and determine if the validator is also
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
 // proof on the validator's behave.
 func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
