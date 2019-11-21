@@ -48,4 +48,18 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+	SlasherCert = cli.StringFlag{
+		Name:  "slasher-tls-cert",
+		Usage: "Certificate for secure slasher gRPC connection. Pass this in order to use slasher gRPC securely.",
+	}
+	SlasherProvider = cli.StringFlag{
+		Name:  "slasher-provider",
+		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
+		Value: "127.0.0.1",
+	}
+	SlasherPort = cli.IntFlag{
+		Name:  "slasher-port",
+		Usage: "A slasher provider grpc port.",
+		Value: 5000,
+	}
 )

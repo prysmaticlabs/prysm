@@ -430,6 +430,10 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	slasherCert := ctx.GlobalString(flags.SlasherCert.Name)
+	slasherPort := ctx.GlobalInt(flags.SlasherPort.Name)
+	slasherProvider := ctx.GlobalString(flags.SlasherProvider)
+
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
 		Port:                  port,
@@ -452,6 +456,9 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		SlasherCert:           slasherCert,
+		SlasherPort:           slasherPort,
+		SlasherHost:           slasherProvider,
 	})
 
 	return b.services.RegisterService(rpcService)

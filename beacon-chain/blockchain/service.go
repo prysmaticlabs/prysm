@@ -71,13 +71,14 @@ type Config struct {
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
+	SlasherClient     ethpb.SlasherClient
 }
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB, cfg.SlasherClient)
 	return &Service{
 		ctx:                  ctx,
 		cancel:               cancel,

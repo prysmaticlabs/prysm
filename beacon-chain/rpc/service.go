@@ -7,12 +7,14 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -47,36 +49,38 @@ func init() {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	beaconDB              db.Database
-	stateFeedListener     blockchain.ChainFeeds
-	headFetcher           blockchain.HeadFetcher
-	forkFetcher           blockchain.ForkFetcher
-	finalizationFetcher   blockchain.FinalizationFetcher
-	genesisTimeFetcher    blockchain.GenesisTimeFetcher
-	attestationReceiver   blockchain.AttestationReceiver
-	blockReceiver         blockchain.BlockReceiver
-	powChainService       powchain.Chain
-	chainStartFetcher     powchain.ChainStartFetcher
-	mockEth1Votes         bool
-	attestationsPool      operations.Pool
-	operationsHandler     operations.Handler
-	syncService           sync.Checker
-	port                  string
-	listener              net.Listener
-	withCert              string
-	withKey               string
-	grpcServer            *grpc.Server
-	canonicalStateChan    chan *pbp2p.BeaconState
-	incomingAttestation   chan *ethpb.Attestation
-	credentialError       error
-	p2p                   p2p.Broadcaster
-	depositFetcher        depositcache.DepositFetcher
-	pendingDepositFetcher depositcache.PendingDepositsFetcher
-	slasherConn           *grpc.ClientConn
-	slasherAddress        string
-	slasherCert           string
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	beaconDB               db.Database
+	stateFeedListener      blockchain.ChainFeeds
+	headFetcher            blockchain.HeadFetcher
+	forkFetcher            blockchain.ForkFetcher
+	finalizationFetcher    blockchain.FinalizationFetcher
+	genesisTimeFetcher     blockchain.GenesisTimeFetcher
+	attestationReceiver    blockchain.AttestationReceiver
+	blockReceiver          blockchain.BlockReceiver
+	powChainService        powchain.Chain
+	chainStartFetcher      powchain.ChainStartFetcher
+	mockEth1Votes          bool
+	attestationsPool       operations.Pool
+	operationsHandler      operations.Handler
+	syncService            sync.Checker
+	port                   string
+	listener               net.Listener
+	withCert               string
+	withKey                string
+	grpcServer             *grpc.Server
+	canonicalStateChan     chan *pbp2p.BeaconState
+	incomingAttestation    chan *ethpb.Attestation
+	credentialError        error
+	p2p                    p2p.Broadcaster
+	depositFetcher         depositcache.DepositFetcher
+	pendingDepositFetcher  depositcache.PendingDepositsFetcher
+	slasherConn            *grpc.ClientConn
+	slasherAddress         string
+	slasherCert            string
+	slasherCredentialError error
+	slasherClient          ethpb.SlasherClient
 }
 
 // Config options for the beacon node RPC server.
@@ -101,7 +105,7 @@ type Config struct {
 	Broadcaster           p2p.Broadcaster
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
-	SlasherPort           string
+	SlasherPort           int
 	SlasherHost           string
 	SlasherCert           string
 }
@@ -135,7 +139,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		pendingDepositFetcher: cfg.PendingDepositFetcher,
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		slasherAddress:        cfg.SlasherHost + ":" + cfg.SlasherPort,
+		slasherAddress:        cfg.SlasherHost + ":" + strconv.Itoa(cfg.SlasherPort),
 		slasherCert:           cfg.SlasherCert,
 	}
 }
@@ -248,11 +252,11 @@ func (s *Service) Start() {
 		}
 	}()
 	var dialOpt grpc.DialOption
-	if v.withCert != "" {
-		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
+	if s.slasherCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.slasherCert, "")
 		if err != nil {
 			log.Errorf("Could not get valid credentials: %v", err)
-			return
+			s.slasherCredentialError = err
 		}
 		dialOpt = grpc.WithTransportCredentials(creds)
 	} else {
@@ -273,12 +277,12 @@ func (s *Service) Start() {
 	}
 	conn, err := grpc.DialContext(s.ctx, s.slasherAddress, slasherOpts...)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
+		log.Errorf("Could not dial endpoint: %s, %v", s.slasherAddress, err)
 		return
 	}
 	log.Info("Successfully started gRPC connection")
 	s.slasherConn = conn
-
+	s.slasherClient = ethpb.NewSlasherClient(s.slasherConn)
 }
 
 // Stop the service.
@@ -288,13 +292,23 @@ func (s *Service) Stop() error {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
+	if s.slasherConn != nil {
+		s.slasherConn.Close()
+	}
 	return nil
 }
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	var err error
 	if s.credentialError != nil {
-		return s.credentialError
+		err = s.credentialError
+	}
+	if s.slasherCredentialError != nil {
+		if err != nil {
+			return errors.Wrap(err, "Slasher cred error: "+s.slasherCredentialError.Error())
+		}
+		return s.slasherCredentialError
 	}
 	return nil
 }

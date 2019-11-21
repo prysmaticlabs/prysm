@@ -41,11 +41,12 @@ type Store struct {
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	slasherClient        ethpb.SlasherClient
 }
 
 // NewForkChoiceService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
+func NewForkChoiceService(ctx context.Context, db db.Database, sc ethpb.SlasherClient) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Store{
 		ctx:             ctx,
@@ -53,6 +54,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		seenAtts:        make(map[[32]byte]bool),
+		slasherClient:   sc,
 	}
 }
 
