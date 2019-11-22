@@ -470,12 +470,14 @@ func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 
 func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
-	fieldRoots[0] = eth1Data.DepositRoot
-	eth1DataCountBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-	eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
-	fieldRoots[1] = eth1CountRoot[:]
-	fieldRoots[2] = eth1Data.BlockHash
+	if eth1Data != nil {
+		fieldRoots[0] = eth1Data.DepositRoot
+		eth1DataCountBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
+		eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
+		fieldRoots[1] = eth1CountRoot[:]
+		fieldRoots[2] = eth1Data.BlockHash
+	}
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, nil
@@ -485,11 +487,13 @@ func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 
 func checkpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
-	epochBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(epochBuf, checkpoint.Epoch)
-	epochRoot := bytesutil.ToBytes32(epochBuf)
-	fieldRoots[0] = epochRoot[:]
-	fieldRoots[1] = checkpoint.Root
+	if checkpoint != nil {
+		epochBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(epochBuf, checkpoint.Epoch)
+		epochRoot := bytesutil.ToBytes32(epochBuf)
+		fieldRoots[0] = epochRoot[:]
+		fieldRoots[1] = checkpoint.Root
+	}
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, nil
