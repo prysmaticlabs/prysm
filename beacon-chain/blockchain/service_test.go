@@ -101,6 +101,10 @@ func (ms *mockOperationService) AttestationPoolForForkchoice(ctx context.Context
 	return nil, nil
 }
 
+func (ms *mockOperationService) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
 type mockClient struct{}
 
 func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
