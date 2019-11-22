@@ -18,7 +18,7 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
-	setConfig()
+	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
 		t.Fatal(err)
@@ -35,18 +35,25 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 
 func TestBenchmarkExecuteStateTransition_WithCache(t *testing.T) {
 	config := &featureconfig.Flags{
-		EnableNewCache: true,
+		EnableShuffledIndexCache: true,
+		EnableNewCache:           true,
 	}
 	featureconfig.Init(config)
-	setConfig(t)
+	SetConfig()
 
-	beaconState := beaconState1Epoch(t)
-	block := fullBlock(t)
+	beaconState, err := beaconState1Epoch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := fullBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot
-	beaconState.Slot =- params.BeaconConfig().SlotsPerEpoch
+	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
 	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +65,7 @@ func TestBenchmarkExecuteStateTransition_WithCache(t *testing.T) {
 }
 
 func TestBenchmarkProcessEpoch(t *testing.T) {
-	setConfig()
+	SetConfig()
 	beaconState, err := beaconState2FullEpochs()
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +77,7 @@ func TestBenchmarkProcessEpoch(t *testing.T) {
 }
 
 func BenchmarkExecuteStateTransition(b *testing.B) {
-	setConfig()
+	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
 		b.Fatal(err)
@@ -97,7 +104,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 		EnableBLSPubkeyCache:     true,
 	}
 	featureconfig.Init(config)
-	setConfig()
+	SetConfig()
 
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
@@ -128,7 +135,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	setConfig()
+	SetConfig()
 	beaconState, err := beaconState2FullEpochs()
 	if err != nil {
 		b.Fatal(err)
@@ -168,7 +175,7 @@ func clonedStates(beaconState *pb.BeaconState) []*pb.BeaconState {
 }
 
 func beaconState1Epoch() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile("beaconState1Epoch.ssz")
+	beaconBytes, err := ioutil.ReadFile(FilePath(BState1EpochFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +187,7 @@ func beaconState1Epoch() (*pb.BeaconState, error) {
 }
 
 func beaconState2FullEpochs() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile("beaconState2FullEpochs.ssz")
+	beaconBytes, err := ioutil.ReadFile(FilePath(BState2EpochFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +199,7 @@ func beaconState2FullEpochs() (*pb.BeaconState, error) {
 }
 
 func fullBlock() (*ethpb.BeaconBlock, error) {
-	blockBytes, err := ioutil.ReadFile("block128Atts.ssz")
+	blockBytes, err := ioutil.ReadFile(FilePath(FullBlockFileName))
 	if err != nil {
 		return nil, err
 	}

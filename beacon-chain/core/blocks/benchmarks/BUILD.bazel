@@ -1,9 +1,9 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_test(
     name = "go_default_test",
     srcs = ["benchmarks_test.go"],
-    data = glob(["*.ssz"]),
+    data = glob(["benchmark_files/*.ssz"]),
     embed = [":go_default_library"],
     tags = [
         "manual",
@@ -22,28 +22,9 @@ go_test(
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "config.go",
-        "generateBenchFiles.go",
-    ],
-    testonly = True,
+    srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks",
-    visibility = ["//visibility:private"],
-    deps = [
-        "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/interop:go_default_library",
-        "//shared/params:go_default_library",
-        "//shared/testutil:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-    ],
-)
-
-go_binary(
-    name = "generateBenchFiles",
-    embed = [":go_default_library"],
     testonly = True,
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain/core/blocks/benchmarks:__subpackages__"],
+    deps = ["//shared/params:go_default_library"],
 )
