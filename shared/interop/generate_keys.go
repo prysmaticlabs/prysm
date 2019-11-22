@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 )
@@ -20,31 +19,28 @@ const (
 // the algorithm specified in the Eth2.0-Specs interop mock start section found here:
 // https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
-	if c := featureconfig.Get(); c.Scatter {
-		privKeys := make([]*bls.SecretKey, numKeys)
-		pubKeys := make([]*bls.PublicKey, numKeys)
-		type keys struct {
-			secrets []*bls.SecretKey
-			publics []*bls.PublicKey
-		}
-		results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-			secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
-			return &keys{secrets: secs, publics: pubs}, err
-		})
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to generate keys")
-		}
-		for _, result := range results {
-			if keysExtent, ok := result.Extent.(*keys); ok {
-				copy(privKeys[result.Offset:], keysExtent.secrets)
-				copy(pubKeys[result.Offset:], keysExtent.publics)
-			} else {
-				return nil, nil, errors.New("extent not of expected type")
-			}
-		}
-		return privKeys, pubKeys, nil
+	privKeys := make([]*bls.SecretKey, numKeys)
+	pubKeys := make([]*bls.PublicKey, numKeys)
+	type keys struct {
+		secrets []*bls.SecretKey
+		publics []*bls.PublicKey
 	}
-	return deterministicallyGenerateKeys(startIndex, numKeys)
+	results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
+		return &keys{secrets: secs, publics: pubs}, err
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to generate keys")
+	}
+	for _, result := range results {
+		if keysExtent, ok := result.Extent.(*keys); ok {
+			copy(privKeys[result.Offset:], keysExtent.secrets)
+			copy(pubKeys[result.Offset:], keysExtent.publics)
+		} else {
+			return nil, nil, errors.New("extent not of expected type")
+		}
+	}
+	return privKeys, pubKeys, nil
 }
 
 func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {

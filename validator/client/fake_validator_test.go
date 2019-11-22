@@ -22,7 +22,7 @@ type fakeValidator struct {
 	UpdateAssignmentsRet             error
 	RoleAtCalled                     bool
 	RoleAtArg1                       uint64
-	RoleAtRet                        pb.ValidatorRole
+	RolesAtRet                       []pb.ValidatorRole
 	AttestToBlockHeadCalled          bool
 	AttestToBlockHeadArg1            uint64
 	ProposeBlockCalled               bool
@@ -77,12 +77,12 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte]pb.ValidatorRole)
-	vr[[48]byte{1}] = fv.RoleAtRet
-	return vr
+	vr := make(map[[48]byte][]pb.ValidatorRole)
+	vr[[48]byte{1}] = fv.RolesAtRet
+	return vr, nil
 }
 
 func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
@@ -94,3 +94,5 @@ func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
+
+func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}
