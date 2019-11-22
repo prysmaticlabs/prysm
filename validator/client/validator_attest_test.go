@@ -296,7 +296,7 @@ func TestWaitForSlotMidPoint_WaitCorrectly(t *testing.T) {
 	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 2
 	midpointTime := currentTime + timeToSleep
-	validator.waitToSlotMidpoint(context.Background(), numOfSlots)
+	validator.waitToOneThird(context.Background(), numOfSlots)
 
 	currentTime = uint64(time.Now().Unix())
 	if currentTime != midpointTime {
