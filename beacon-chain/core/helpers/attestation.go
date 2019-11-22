@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -144,7 +143,7 @@ func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig *bls
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
-	fmt.Println(modulo)
+
 	b := hashutil.Hash(slotSig.Marshal())
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }

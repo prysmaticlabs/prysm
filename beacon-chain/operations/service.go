@@ -32,7 +32,7 @@ type Service struct {
 	error                      error
 	attestationPool            map[[32]byte]*dbpb.AttestationContainer
 	recentAttestationBitlist   *recentAttestationMultiMap
-	attestationPoolLock        sync.Mutex
+	attestationPoolLock        sync.RWMutex
 	attestationLockCache       *ccache.Cache
 }
 
