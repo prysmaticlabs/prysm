@@ -7,12 +7,13 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
+	io "io"
+	math "math"
+
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
