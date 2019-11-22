@@ -74,6 +74,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	featureconfig.ConfigureBeaconChain(ctx)
+	flags.ConfigureArchiveFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -276,7 +277,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
-	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
 
 	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
@@ -287,7 +287,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
-		ShouldArchive:     shouldArchive,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -517,8 +516,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
-	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
-	if !shouldArchive {
+	if !flags.Get().EnableArchive {
 		return nil
 	}
 	var chainService *blockchain.Service

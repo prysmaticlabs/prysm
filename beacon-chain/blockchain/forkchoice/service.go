@@ -42,12 +42,11 @@ type Store struct {
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
-	shouldArchive        bool
 }
 
 // NewForkChoiceService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewForkChoiceService(ctx context.Context, db db.Database, shouldArchive bool) *Store {
+func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Store{
 		ctx:             ctx,
@@ -55,7 +54,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database, shouldArchive boo
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		seenAtts:        make(map[[32]byte]bool),
-		shouldArchive:   shouldArchive,
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -158,7 +159,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
-	if s.shouldArchive {
+	if flags.Get().EnableArchive {
 		// Save the unseen attestations from block to db.
 		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
 			return errors.Wrap(err, "could not save attestations")

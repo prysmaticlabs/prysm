@@ -30,3 +30,42 @@ var (
 		Usage: "Whether or not beacon chain should archive historical blocks",
 	}
 )
+
+type ArchiveFlags struct {
+	EnableArchive                     bool
+	EnableArchivedValidatorSetChanges bool
+	EnableArchivedBlocks              bool
+	EnableArchivedAttestations        bool
+}
+
+var archiveConfig *ArchiveFlags
+
+// Get retrieves archive config.
+func Get() *ArchiveFlags {
+	if archiveConfig == nil {
+		return &ArchiveFlags{}
+	}
+	return archiveConfig
+}
+
+// Init sets the archive config equal to the config that is passed in.
+func Init(c *ArchiveFlags) {
+	archiveConfig = c
+}
+
+func ConfigureArchiveFlags(ctx *cli.Context) {
+	cfg := &ArchiveFlags{}
+	if ctx.GlobalBool(ArchiveEnableFlag.Name) {
+		cfg.EnableArchive = true
+	}
+	if ctx.GlobalBool(ArchiveValidatorSetChangesFlag.Name) {
+		cfg.EnableArchivedValidatorSetChanges = true
+	}
+	if ctx.GlobalBool(ArchiveBlocksFlag.Name) {
+		cfg.EnableArchivedBlocks = true
+	}
+	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
+		cfg.EnableArchivedAttestations = true
+	}
+	Init(cfg)
+}

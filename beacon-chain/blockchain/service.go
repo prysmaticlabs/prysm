@@ -63,7 +63,6 @@ type Service struct {
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf    int
-	ShouldArchive     bool
 	ChainStartFetcher powchain.ChainStartFetcher
 	BeaconDB          db.Database
 	DepositCache      *depositcache.DepositCache
@@ -77,7 +76,7 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB, cfg.ShouldArchive)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
 		ctx:                  ctx,
 		cancel:               cancel,

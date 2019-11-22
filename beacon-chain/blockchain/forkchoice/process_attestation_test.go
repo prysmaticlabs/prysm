@@ -19,7 +19,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db, false)
+	store := NewForkChoiceService(ctx, db)
 
 	_, err := blockTree1(db)
 	if err != nil {
@@ -112,7 +112,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseDemoBeaconConfig()
 
-	store := NewForkChoiceService(ctx, db, false)
+	store := NewForkChoiceService(ctx, db)
 
 	s := &pb.BeaconState{
 		Fork: &pb.Fork{
@@ -193,7 +193,7 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	store := NewForkChoiceService(ctx, db, false)
+	store := NewForkChoiceService(ctx, db)
 	a1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x02}}
 	err := store.db.SaveAttestation(ctx, a1)
 	if err != nil {
