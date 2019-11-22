@@ -33,6 +33,30 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	}
 }
 
+func TestBenchmarkExecuteStateTransition_WithCache(t *testing.T) {
+	config := &featureconfig.Flags{
+		EnableNewCache: true,
+	}
+	featureconfig.Init(config)
+	setConfig(t)
+
+	beaconState := beaconState1Epoch(t)
+	block := fullBlock(t)
+
+	// We have to reset slot back to last epoch to hydrate cache. Since
+	// some attestations in block are from previous epoch
+	currentSlot := beaconState.Slot
+	beaconState.Slot =- params.BeaconConfig().SlotsPerEpoch
+	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot = currentSlot
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+}
+
 func TestBenchmarkProcessEpoch(t *testing.T) {
 	setConfig()
 	beaconState, err := beaconState2FullEpochs()
