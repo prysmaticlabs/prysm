@@ -44,7 +44,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	// As specified in the spec, an attester should wait until one-third of the way through the slot,
 	// then create and broadcast the attestation.
-	// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#attesting
+	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#attesting
 	v.waitToOneThird(ctx, slot)
 
 	req := &pb.AttestationRequest{
