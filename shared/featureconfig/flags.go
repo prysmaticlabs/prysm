@@ -73,11 +73,6 @@ var (
 		Name:  "optimize-process-epoch",
 		Usage: "Process epoch with optimizations",
 	}
-	// Scatter scatters sequential processes to  multiple cores
-	Scatter = cli.BoolFlag{
-		Name:  "scatter",
-		Usage: "Scatter sequential processes to multiple cores",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
@@ -104,11 +99,17 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedScatterFlag = cli.BoolFlag{
+		Name:   "scatter",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
+	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 }
 
@@ -128,7 +129,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
-	Scatter,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
