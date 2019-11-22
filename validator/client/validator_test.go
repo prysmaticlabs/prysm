@@ -579,16 +579,19 @@ func TestRolesAt_OK(t *testing.T) {
 		},
 	}
 	roleMap := v.RolesAt(1)
-	if roleMap[[48]byte{0x01}] != pb.ValidatorRole_ATTESTER {
+	if roleMap[[48]byte{0x01}][0] != pb.ValidatorRole_ATTESTER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
 	}
-	if roleMap[[48]byte{0x02}] != pb.ValidatorRole_PROPOSER {
+	if roleMap[[48]byte{0x02}][0] != pb.ValidatorRole_PROPOSER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
 	}
-	if roleMap[[48]byte{0x03}] != pb.ValidatorRole_UNKNOWN {
+	if roleMap[[48]byte{0x03}][0] != pb.ValidatorRole_UNKNOWN {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
-	if roleMap[[48]byte{0x04}] != pb.ValidatorRole_BOTH {
-		t.Errorf("Unexpected validator role. want: BOTH")
+	if roleMap[[48]byte{0x04}][0] != pb.ValidatorRole_PROPOSER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	}
+	if roleMap[[48]byte{0x04}][1] != pb.ValidatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
 	}
 }
