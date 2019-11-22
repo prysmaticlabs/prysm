@@ -101,6 +101,7 @@ func (v *ValidatorService) Start() {
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
 		pubkeys:              pubKeys,
