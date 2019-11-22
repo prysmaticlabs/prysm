@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -76,14 +77,18 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 	beaconState.Slot--
 
+	depRoot := []byte("a")
+	depRoot32 := bytesutil.ToBytes32(depRoot)
+	blockHash := []byte("b")
+	blockHash32 := bytesutil.ToBytes32(blockHash)
 	block := &ethpb.BeaconBlock{
 		Slot:       slot,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data: &ethpb.Eth1Data{
 				DepositCount: uint64(len(deposits)),
-				DepositRoot:  []byte("a"),
-				BlockHash:    []byte("b"),
+				DepositRoot:  depRoot32[:],
+				BlockHash:    blockHash32[:],
 			},
 			RandaoReveal: randaoReveal[:],
 			Attestations: nil,
@@ -234,14 +239,18 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 	beaconState.Slot--
 
+	depRoot := []byte("a")
+	depRoot32 := bytesutil.ToBytes32(depRoot)
+	blockHash := []byte("b")
+	blockHash32 := bytesutil.ToBytes32(blockHash)
 	block := &ethpb.BeaconBlock{
 		Slot:       slot,
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data: &ethpb.Eth1Data{
 				DepositCount: uint64(len(deposits)),
-				DepositRoot:  []byte("a"),
-				BlockHash:    []byte("b"),
+				DepositRoot:  depRoot32[:],
+				BlockHash:    blockHash32[:],
 			},
 			RandaoReveal: randaoReveal[:],
 			Attestations: nil,

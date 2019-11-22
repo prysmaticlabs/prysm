@@ -275,11 +275,6 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	}
 	fieldRoots[19] = finalRoot[:]
 
-	//for i := 0; i < len(fieldRoots); i++ {
-	//	fmt.Printf("%#x and %d\n", fieldRoots[i], i)
-	//}
-	//fmt.Println(" ")
-
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute full beacon state merkleization")
@@ -470,6 +465,9 @@ func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 
 func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
+	for i := 0; i < len(fieldRoots); i++ {
+		fieldRoots[i] = make([]byte, 32)
+	}
 	if eth1Data != nil {
 		fieldRoots[0] = eth1Data.DepositRoot
 		eth1DataCountBuf := make([]byte, 8)
