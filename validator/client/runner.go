@@ -23,9 +23,10 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole // validator pubKey -> roles
+	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -82,7 +83,13 @@ func run(ctx context.Context, v Validator) {
 			}
 
 			var wg sync.WaitGroup
-			for id, roles := range v.RolesAt(slot) {
+
+			allRoles, err := v.RolesAt(ctx, slot)
+			if err != nil {
+				log.WithError(err).Error("Could not get validator roles")
+				continue
+			}
+			for id, roles := range allRoles {
 				wg.Add(1)
 				go func(roles []pb.ValidatorRole, id [48]byte) {
 
@@ -92,6 +99,8 @@ func run(ctx context.Context, v Validator) {
 							go v.SubmitAttestation(slotCtx, slot, id)
 						case pb.ValidatorRole_PROPOSER:
 							go v.ProposeBlock(slotCtx, slot, id)
+						case pb.ValidatorRole_AGGREGATOR:
+							go v.SubmitAggregateAndProof(slotCtx, slot, id)
 						case pb.ValidatorRole_UNKNOWN:
 							log.Debug("No active roles, doing nothing")
 						default:

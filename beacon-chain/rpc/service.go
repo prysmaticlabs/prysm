@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
@@ -222,9 +223,15 @@ func (s *Service) Start() {
 		ChainStartFetcher:   s.chainStartFetcher,
 		CanonicalStateChan:  s.canonicalStateChan,
 	}
+	aggregatorServer := &aggregator.Server{
+		BeaconDB:    s.beaconDB,
+		HeadFetcher: s.headFetcher,
+		SyncChecker: s.syncService,
+	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 

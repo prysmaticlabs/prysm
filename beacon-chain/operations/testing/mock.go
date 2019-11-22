@@ -31,3 +31,8 @@ func (op *Operations) AttestationPoolForForkchoice(ctx context.Context) ([]*ethp
 func (op *Operations) HandleAttestation(context.Context, proto.Message) error {
 	return nil
 }
+
+// AttestationsBySlotCommittee --
+func (op *Operations) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
