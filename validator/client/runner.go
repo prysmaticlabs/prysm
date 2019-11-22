@@ -2,14 +2,11 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,7 +23,7 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RolesAt(slot uint64) map[[48]byte]pb.ValidatorRole // validator pubKey -> role
+	RolesAt(slot uint64) map[[48]byte][]pb.ValidatorRole // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 }
@@ -85,28 +82,24 @@ func run(ctx context.Context, v Validator) {
 			}
 
 			var wg sync.WaitGroup
-			for id, role := range v.RolesAt(slot) {
+			for id, roles := range v.RolesAt(slot) {
 				wg.Add(1)
-				go func(role pb.ValidatorRole, id [48]byte) {
-					log := log.WithFields(logrus.Fields{
-						"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
-						"role":   role,
-					})
-					switch role {
-					case pb.ValidatorRole_BOTH:
-						go v.SubmitAttestation(slotCtx, slot, id)
-						v.ProposeBlock(slotCtx, slot, id)
-					case pb.ValidatorRole_ATTESTER:
-						v.SubmitAttestation(slotCtx, slot, id)
-					case pb.ValidatorRole_PROPOSER:
-						v.ProposeBlock(slotCtx, slot, id)
-					case pb.ValidatorRole_UNKNOWN:
-						log.Debug("No active role, doing nothing")
-					default:
-						log.Warn("Unhandled role")
+				go func(roles []pb.ValidatorRole, id [48]byte) {
+
+					for _, role := range roles {
+						switch role {
+						case pb.ValidatorRole_ATTESTER:
+							go v.SubmitAttestation(slotCtx, slot, id)
+						case pb.ValidatorRole_PROPOSER:
+							go v.ProposeBlock(slotCtx, slot, id)
+						case pb.ValidatorRole_UNKNOWN:
+							log.Debug("No active roles, doing nothing")
+						default:
+							log.Warnf("Unhandled role %v", role)
+						}
 					}
 
-				}(role, id)
+				}(roles, id)
 			}
 			// Wait for all processes to complete, then report span complete.
 			go func() {
