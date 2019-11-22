@@ -91,16 +91,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	stateRoot, err := stateutil.HashTreeRootState(beaconState)
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
-	}
-	stateRoot2, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		t.Fatalf("Could not hash genesis state: %v", err)
-	}
-	if stateRoot != stateRoot2 {
-		t.Fatalf("Wanted %#x received %#x", stateRoot2, stateRoot)
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
