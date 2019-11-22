@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "aggregator_service_mock.go",
         "attester_service_mock.go",
         "node_mock.go",
         "proposer_service_mock.go",

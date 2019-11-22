@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -550,35 +552,54 @@ func TestUpdateAssignments_OK(t *testing.T) {
 }
 
 func TestRolesAt_OK(t *testing.T) {
+	v, m, finish := setup(t)
+	defer finish()
 
-	v := validator{
-		assignments: &pb.AssignmentResponse{
-			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
-				{
-					CommitteeIndex: 1,
-					AttesterSlot:   1,
-					PublicKey:      []byte{0x01},
-				},
-				{
-					CommitteeIndex: 2,
-					ProposerSlot:   1,
-					PublicKey:      []byte{0x02},
-				},
-				{
-					CommitteeIndex: 1,
-					AttesterSlot:   2,
-					PublicKey:      []byte{0x03},
-				},
-				{
-					CommitteeIndex: 2,
-					AttesterSlot:   1,
-					ProposerSlot:   1,
-					PublicKey:      []byte{0x04},
-				},
+	v.assignments = &pb.AssignmentResponse{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   1,
+				PublicKey:      []byte{0x01},
+			},
+			{
+				CommitteeIndex: 2,
+				ProposerSlot:   1,
+				PublicKey:      []byte{0x02},
+			},
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   2,
+				PublicKey:      []byte{0x03},
+			},
+			{
+				CommitteeIndex: 2,
+				AttesterSlot:   1,
+				ProposerSlot:   1,
+				PublicKey:      []byte{0x04},
 			},
 		},
 	}
-	roleMap := v.RolesAt(1)
+
+	priv, _ := bls.RandKey(rand.Reader)
+	keyStore, _ := keystore.NewKeyFromBLS(priv)
+	v.keys[[48]byte{0x01}] = keyStore
+	v.keys[[48]byte{0x04}] = keyStore
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&pb.DomainResponse{}, nil /*err*/)
+
+	roleMap, err := v.RolesAt(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if roleMap[[48]byte{0x01}][0] != pb.ValidatorRole_ATTESTER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
 	}
@@ -593,5 +614,8 @@ func TestRolesAt_OK(t *testing.T) {
 	}
 	if roleMap[[48]byte{0x04}][1] != pb.ValidatorRole_ATTESTER {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	}
+	if roleMap[[48]byte{0x04}][2] != pb.ValidatorRole_AGGREGATOR {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_AGGREGATOR")
 	}
 }
