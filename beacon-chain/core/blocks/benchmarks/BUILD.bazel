@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_test(
     name = "go_default_test",
@@ -26,6 +26,7 @@ go_library(
         "config.go",
         "generateBenchFiles.go",
     ],
+    testonly = True,
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks",
     visibility = ["//visibility:private"],
     deps = [
@@ -43,5 +44,6 @@ go_library(
 go_binary(
     name = "generateBenchFiles",
     embed = [":go_default_library"],
+    testonly = True,
     visibility = ["//visibility:public"],
 )
