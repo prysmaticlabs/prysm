@@ -139,9 +139,9 @@ func GenerateFullBlock(
 		if err != nil {
 			t.Fatal(err)
 		}
-		bState.Slot = currentSlot
 		domain := helpers.Domain(bState.Fork, helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 		block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
+		bState.Slot = currentSlot
 	}
 
 	return block
