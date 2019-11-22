@@ -74,10 +74,6 @@ var (
 		Usage: "Process epoch with optimizations",
 	}
 	// Scatter scatters sequential processes to  multiple cores
-	Scatter = cli.BoolFlag{
-		Name:  "scatter",
-		Usage: "Scatter sequential processes to multiple cores",
-	}
 	pruneFinalizedStatesFlag = cli.BoolFlag{
 		Name:  "prune-finalized-states",
 		Usage: "Delete old states from the database after reaching new finalized checkpoint",
@@ -103,11 +99,17 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedScatterFlag = cli.BoolFlag{
+		Name:   "scatter",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
+	deprecatedScatterFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -126,7 +128,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	OptimizeProcessEpoch,
-	Scatter,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
