@@ -5,7 +5,6 @@ package ethereum.beacon.rpc.v1;
 import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
-import "google/api/annotations.proto";
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
@@ -93,7 +92,6 @@ message ChainStartResponse {
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
-     BOTH = 3;
 }
 
 message ValidatorIndexRequest {
