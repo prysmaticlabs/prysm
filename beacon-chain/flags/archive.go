@@ -31,6 +31,8 @@ var (
 	}
 )
 
+// ArchiveFlags specifies all the archive flags for the
+// archiver service.
 type ArchiveFlags struct {
 	EnableArchive                     bool
 	EnableArchivedValidatorSetChanges bool
@@ -53,6 +55,8 @@ func Init(c *ArchiveFlags) {
 	archiveConfig = c
 }
 
+// ConfigureArchiveFlags initializes the archiver config
+// based on the provided cli context.
 func ConfigureArchiveFlags(ctx *cli.Context) {
 	cfg := &ArchiveFlags{}
 	if ctx.GlobalBool(ArchiveEnableFlag.Name) {
