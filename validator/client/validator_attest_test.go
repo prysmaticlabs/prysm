@@ -294,7 +294,7 @@ func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-	timeToSleep := params.BeaconConfig().SecondsPerSlot / 2
+	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
 	oneThird := currentTime + timeToSleep
 	validator.waitToOneThird(context.Background(), numOfSlots)
 
