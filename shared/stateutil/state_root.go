@@ -9,6 +9,7 @@ import (
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -98,7 +99,11 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 		}
 		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1VotesRoots, uint64(len(eth1VotesRoots)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
+	eth1Chunks, err := pack(eth1VotesRoots)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
+	}
+	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), uint64(1024))
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -208,7 +213,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 		}
 		prevAttsRoots = append(prevAttsRoots, pendingPrevRoot[:])
 	}
-	prevAttsRootsRoot, err := bitwiseMerkleize(prevAttsRoots, uint64(len(prevAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+	prevAttsRootsRoot, err := bitwiseMerkleize(prevAttsRoots, uint64(len(prevAttsRoots)), params.BeaconConfig().MaxAttestations*32)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
@@ -231,7 +236,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 		}
 		currAttsRoots = append(currAttsRoots, pendingRoot[:])
 	}
-	currAttsRootsRoot, err := bitwiseMerkleize(currAttsRoots, uint64(len(currAttsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+	currAttsRootsRoot, err := bitwiseMerkleize(currAttsRoots, uint64(len(currAttsRoots)), params.BeaconConfig().MaxAttestations*32)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute current epoch attestations merkleization")
 	}
@@ -269,6 +274,11 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 		return [32]byte{}, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[19] = finalRoot[:]
+
+	//for i := 0; i < len(fieldRoots); i++ {
+	//	fmt.Printf("%#x and %d\n", fieldRoots[i], i)
+	//}
+	//fmt.Println(" ")
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {

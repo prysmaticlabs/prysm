@@ -19,6 +19,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -90,9 +91,16 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	stateRoot, err := stateutil.HashTreeRootState(beaconState)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
+	}
+	stateRoot2, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
+	}
+	if stateRoot != stateRoot2 {
+		t.Fatalf("Wanted %#x received %#x", stateRoot2, stateRoot)
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
