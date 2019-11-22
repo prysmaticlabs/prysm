@@ -469,12 +469,16 @@ func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 		fieldRoots[i] = make([]byte, 32)
 	}
 	if eth1Data != nil {
-		fieldRoots[0] = eth1Data.DepositRoot
+		if len(eth1Data.DepositRoot) > 0 {
+			fieldRoots[0] = eth1Data.DepositRoot
+		}
 		eth1DataCountBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
 		eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
 		fieldRoots[1] = eth1CountRoot[:]
-		fieldRoots[2] = eth1Data.BlockHash
+		if len(eth1Data.BlockHash) > 0 {
+			fieldRoots[2] = eth1Data.BlockHash
+		}
 	}
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
