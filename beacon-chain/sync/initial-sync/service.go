@@ -65,10 +65,7 @@ func (s *InitialSync) Start() {
 	var genesis time.Time
 
 	headState, err := s.chain.HeadState(s.ctx)
-	if err != nil {
-		panic(err)
-	}
-	if headState == nil {
+	if headState == nil || err != nil {
 		// Wait for state to be initialized.
 		stateChannel := make(chan *statefeed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
