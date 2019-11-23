@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -87,11 +88,11 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(ctx *cli.Context) {
-						featureconfig.ConfigureValidatorFeatures(ctx)
+						featureconfig.ConfigureValidator(ctx)
 						// Use custom config values if the --no-custom-config flag is set.
 						if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 							log.Info("Using custom parameter configuration")
-							if featureconfig.FeatureConfig().MinimalConfig {
+							if featureconfig.Get().MinimalConfig {
 								log.Warn("Using Minimal Config")
 								params.UseMinimalConfig()
 							} else {
@@ -151,6 +152,13 @@ contract in order to activate the validator client`,
 		debug.Exit(ctx)
 		return nil
 	}
+
+	defer func() {
+		if x := recover(); x != nil {
+			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			panic(x)
+		}
+	}()
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())

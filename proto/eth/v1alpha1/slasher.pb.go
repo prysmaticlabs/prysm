@@ -25,6 +25,116 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+type ValidatorIDToIdxAtt struct {
+	Indices              []uint64 `protobuf:"varint,1,rep,packed,name=indices,proto3" json:"indices,omitempty"`
+	DataRoot             []byte   `protobuf:"bytes,2,opt,name=data_root,json=dataRoot,proto3" json:"data_root,omitempty"`
+	Signature            []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ValidatorIDToIdxAtt) Reset()         { *m = ValidatorIDToIdxAtt{} }
+func (m *ValidatorIDToIdxAtt) String() string { return proto.CompactTextString(m) }
+func (*ValidatorIDToIdxAtt) ProtoMessage()    {}
+func (*ValidatorIDToIdxAtt) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{0}
+}
+func (m *ValidatorIDToIdxAtt) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ValidatorIDToIdxAtt) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ValidatorIDToIdxAtt.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ValidatorIDToIdxAtt) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorIDToIdxAtt.Merge(m, src)
+}
+func (m *ValidatorIDToIdxAtt) XXX_Size() int {
+	return m.Size()
+}
+func (m *ValidatorIDToIdxAtt) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorIDToIdxAtt.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorIDToIdxAtt proto.InternalMessageInfo
+
+func (m *ValidatorIDToIdxAtt) GetIndices() []uint64 {
+	if m != nil {
+		return m.Indices
+	}
+	return nil
+}
+
+func (m *ValidatorIDToIdxAtt) GetDataRoot() []byte {
+	if m != nil {
+		return m.DataRoot
+	}
+	return nil
+}
+
+func (m *ValidatorIDToIdxAtt) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type ValidatorIDToIdxAttList struct {
+	IndicesList          []*ValidatorIDToIdxAtt `protobuf:"bytes,1,rep,name=indicesList,proto3" json:"indicesList,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
+	XXX_unrecognized     []byte                 `json:"-"`
+	XXX_sizecache        int32                  `json:"-"`
+}
+
+func (m *ValidatorIDToIdxAttList) Reset()         { *m = ValidatorIDToIdxAttList{} }
+func (m *ValidatorIDToIdxAttList) String() string { return proto.CompactTextString(m) }
+func (*ValidatorIDToIdxAttList) ProtoMessage()    {}
+func (*ValidatorIDToIdxAttList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{1}
+}
+func (m *ValidatorIDToIdxAttList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ValidatorIDToIdxAttList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ValidatorIDToIdxAttList.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ValidatorIDToIdxAttList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorIDToIdxAttList.Merge(m, src)
+}
+func (m *ValidatorIDToIdxAttList) XXX_Size() int {
+	return m.Size()
+}
+func (m *ValidatorIDToIdxAttList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorIDToIdxAttList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorIDToIdxAttList proto.InternalMessageInfo
+
+func (m *ValidatorIDToIdxAttList) GetIndicesList() []*ValidatorIDToIdxAtt {
+	if m != nil {
+		return m.IndicesList
+	}
+	return nil
+}
+
 type ProposerSlashingRequest struct {
 	BlockHeader          *BeaconBlockHeader `protobuf:"bytes,1,opt,name=block_header,json=blockHeader,proto3" json:"block_header,omitempty"`
 	ValidatorIndex       uint64             `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty"`
@@ -37,7 +147,7 @@ func (m *ProposerSlashingRequest) Reset()         { *m = ProposerSlashingRequest
 func (m *ProposerSlashingRequest) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingRequest) ProtoMessage()    {}
 func (*ProposerSlashingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3db2cc39857595b, []int{0}
+	return fileDescriptor_c3db2cc39857595b, []int{2}
 }
 func (m *ProposerSlashingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -91,7 +201,7 @@ func (m *ProposerSlashingResponse) Reset()         { *m = ProposerSlashingRespon
 func (m *ProposerSlashingResponse) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingResponse) ProtoMessage()    {}
 func (*ProposerSlashingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c3db2cc39857595b, []int{1}
+	return fileDescriptor_c3db2cc39857595b, []int{3}
 }
 func (m *ProposerSlashingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -127,41 +237,210 @@ func (m *ProposerSlashingResponse) GetProposerSlashing() []*ProposerSlashing {
 	return nil
 }
 
+type AttesterSlashingResponse struct {
+	AttesterSlashing     []*AttesterSlashing `protobuf:"bytes,1,rep,name=attester_slashing,json=attesterSlashing,proto3" json:"attester_slashing,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
+}
+
+func (m *AttesterSlashingResponse) Reset()         { *m = AttesterSlashingResponse{} }
+func (m *AttesterSlashingResponse) String() string { return proto.CompactTextString(m) }
+func (*AttesterSlashingResponse) ProtoMessage()    {}
+func (*AttesterSlashingResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{4}
+}
+func (m *AttesterSlashingResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AttesterSlashingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AttesterSlashingResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AttesterSlashingResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AttesterSlashingResponse.Merge(m, src)
+}
+func (m *AttesterSlashingResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *AttesterSlashingResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AttesterSlashingResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AttesterSlashingResponse proto.InternalMessageInfo
+
+func (m *AttesterSlashingResponse) GetAttesterSlashing() []*AttesterSlashing {
+	if m != nil {
+		return m.AttesterSlashing
+	}
+	return nil
+}
+
+type MinMaxEpochSpan struct {
+	MinEpochSpan         uint32   `protobuf:"varint,1,opt,name=min_epoch_span,json=minEpochSpan,proto3" json:"min_epoch_span,omitempty"`
+	MaxEpochSpan         uint32   `protobuf:"varint,2,opt,name=max_epoch_span,json=maxEpochSpan,proto3" json:"max_epoch_span,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MinMaxEpochSpan) Reset()         { *m = MinMaxEpochSpan{} }
+func (m *MinMaxEpochSpan) String() string { return proto.CompactTextString(m) }
+func (*MinMaxEpochSpan) ProtoMessage()    {}
+func (*MinMaxEpochSpan) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{5}
+}
+func (m *MinMaxEpochSpan) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MinMaxEpochSpan) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MinMaxEpochSpan.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MinMaxEpochSpan) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MinMaxEpochSpan.Merge(m, src)
+}
+func (m *MinMaxEpochSpan) XXX_Size() int {
+	return m.Size()
+}
+func (m *MinMaxEpochSpan) XXX_DiscardUnknown() {
+	xxx_messageInfo_MinMaxEpochSpan.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MinMaxEpochSpan proto.InternalMessageInfo
+
+func (m *MinMaxEpochSpan) GetMinEpochSpan() uint32 {
+	if m != nil {
+		return m.MinEpochSpan
+	}
+	return 0
+}
+
+func (m *MinMaxEpochSpan) GetMaxEpochSpan() uint32 {
+	if m != nil {
+		return m.MaxEpochSpan
+	}
+	return 0
+}
+
+type EpochSpanMap struct {
+	EpochSpanMap         map[uint64]*MinMaxEpochSpan `protobuf:"bytes,1,rep,name=epoch_span_map,json=epochSpanMap,proto3" json:"epoch_span_map,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
+	XXX_unrecognized     []byte                      `json:"-"`
+	XXX_sizecache        int32                       `json:"-"`
+}
+
+func (m *EpochSpanMap) Reset()         { *m = EpochSpanMap{} }
+func (m *EpochSpanMap) String() string { return proto.CompactTextString(m) }
+func (*EpochSpanMap) ProtoMessage()    {}
+func (*EpochSpanMap) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c3db2cc39857595b, []int{6}
+}
+func (m *EpochSpanMap) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EpochSpanMap) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EpochSpanMap.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EpochSpanMap) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EpochSpanMap.Merge(m, src)
+}
+func (m *EpochSpanMap) XXX_Size() int {
+	return m.Size()
+}
+func (m *EpochSpanMap) XXX_DiscardUnknown() {
+	xxx_messageInfo_EpochSpanMap.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EpochSpanMap proto.InternalMessageInfo
+
+func (m *EpochSpanMap) GetEpochSpanMap() map[uint64]*MinMaxEpochSpan {
+	if m != nil {
+		return m.EpochSpanMap
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterType((*ValidatorIDToIdxAtt)(nil), "ethereum.eth.v1alpha1.ValidatorIDToIdxAtt")
+	proto.RegisterType((*ValidatorIDToIdxAttList)(nil), "ethereum.eth.v1alpha1.ValidatorIDToIdxAttList")
 	proto.RegisterType((*ProposerSlashingRequest)(nil), "ethereum.eth.v1alpha1.ProposerSlashingRequest")
 	proto.RegisterType((*ProposerSlashingResponse)(nil), "ethereum.eth.v1alpha1.ProposerSlashingResponse")
+	proto.RegisterType((*AttesterSlashingResponse)(nil), "ethereum.eth.v1alpha1.AttesterSlashingResponse")
+	proto.RegisterType((*MinMaxEpochSpan)(nil), "ethereum.eth.v1alpha1.MinMaxEpochSpan")
+	proto.RegisterType((*EpochSpanMap)(nil), "ethereum.eth.v1alpha1.EpochSpanMap")
+	proto.RegisterMapType((map[uint64]*MinMaxEpochSpan)(nil), "ethereum.eth.v1alpha1.EpochSpanMap.EpochSpanMapEntry")
 }
 
 func init() { proto.RegisterFile("proto/eth/v1alpha1/slasher.proto", fileDescriptor_c3db2cc39857595b) }
 
 var fileDescriptor_c3db2cc39857595b = []byte{
-	// 406 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0x41, 0x6b, 0x14, 0x31,
-	0x14, 0xc7, 0x89, 0x15, 0x85, 0xac, 0x68, 0x0d, 0xb4, 0x0e, 0x23, 0x2c, 0xc3, 0xa2, 0xec, 0x9c,
-	0x92, 0x76, 0xc5, 0x93, 0x27, 0x57, 0x04, 0x8b, 0x17, 0xd9, 0x0a, 0x42, 0x2f, 0x43, 0x32, 0xfb,
-	0x9c, 0x0c, 0x66, 0x26, 0x31, 0xc9, 0x14, 0xfb, 0x29, 0xbc, 0xfb, 0x89, 0x3c, 0xfa, 0x11, 0x64,
-	0x3f, 0x89, 0x4c, 0x66, 0xda, 0x2d, 0xbb, 0xb3, 0xb2, 0x3d, 0xbe, 0xf7, 0x7e, 0x79, 0xef, 0x9f,
-	0xff, 0x7b, 0x38, 0x31, 0x56, 0x7b, 0xcd, 0xc0, 0x4b, 0x76, 0x79, 0xca, 0x95, 0x91, 0xfc, 0x94,
-	0x39, 0xc5, 0x9d, 0x04, 0x4b, 0x43, 0x89, 0x1c, 0x81, 0x97, 0x60, 0xa1, 0xa9, 0x28, 0x78, 0x49,
-	0xaf, 0xa1, 0xf8, 0x79, 0xa1, 0x75, 0xa1, 0x80, 0x05, 0x48, 0x34, 0x5f, 0x19, 0x54, 0xc6, 0x5f,
-	0x75, 0x6f, 0xe2, 0x97, 0x03, 0x5d, 0x05, 0xf0, 0x5c, 0xd7, 0x99, 0x50, 0x3a, 0xff, 0xd6, 0x63,
-	0x2f, 0x06, 0x30, 0xee, 0x3d, 0x38, 0xcf, 0x7d, 0xa9, 0xeb, 0x8e, 0x9a, 0xfc, 0x44, 0xf8, 0xd9,
-	0x27, 0xab, 0x8d, 0x76, 0x60, 0xcf, 0x5b, 0x69, 0x65, 0x5d, 0x2c, 0xe0, 0x7b, 0x03, 0xce, 0x93,
-	0x8f, 0xf8, 0x51, 0x68, 0x98, 0x49, 0xe0, 0x4b, 0xb0, 0x11, 0x4a, 0x50, 0x3a, 0x9a, 0xa5, 0x74,
-	0x50, 0x33, 0x9d, 0x07, 0x09, 0xf3, 0xf6, 0xc1, 0x87, 0xc0, 0x2f, 0x46, 0x62, 0x1d, 0x90, 0x29,
-	0x7e, 0x72, 0xc9, 0x55, 0xb9, 0xe4, 0x5e, 0xdb, 0xac, 0xac, 0x97, 0xf0, 0x23, 0xba, 0x97, 0xa0,
-	0xf4, 0xfe, 0xe2, 0xf1, 0x4d, 0xfa, 0xac, 0xcd, 0x4e, 0x0c, 0x8e, 0xb6, 0x05, 0x39, 0xa3, 0x6b,
-	0x07, 0xe4, 0x33, 0x7e, 0x6a, 0xfa, 0x5a, 0xe6, 0xfa, 0x62, 0x84, 0x92, 0x83, 0x74, 0x34, 0x9b,
-	0xee, 0x90, 0xb5, 0xd5, 0xeb, 0xd0, 0x6c, 0x64, 0x66, 0xbf, 0x0e, 0xf0, 0xc3, 0xf3, 0x6e, 0x2d,
-	0x04, 0xf0, 0xf1, 0x99, 0x0b, 0x01, 0x17, 0x0a, 0xde, 0xae, 0xfd, 0x22, 0x93, 0x1d, 0x03, 0x6e,
-	0x31, 0xf1, 0xf4, 0xbf, 0xcc, 0x7a, 0x24, 0x71, 0xf8, 0xf0, 0xd6, 0x98, 0x60, 0x1a, 0xa1, 0xfb,
-	0xfe, 0xa0, 0x5b, 0x4f, 0xcc, 0xf6, 0xe6, 0x7b, 0xf7, 0xbe, 0x60, 0x72, 0x33, 0xb2, 0x83, 0xb8,
-	0x72, 0xe4, 0x98, 0x76, 0xc7, 0x46, 0xaf, 0x8f, 0x8d, 0xbe, 0x6f, 0x8f, 0x2d, 0xde, 0xd7, 0xd0,
-	0x13, 0x44, 0x2e, 0xf0, 0xd1, 0x90, 0x65, 0x77, 0xef, 0xbd, 0xe9, 0xd3, 0x09, 0x9a, 0xbf, 0xfb,
-	0xbd, 0x1a, 0xa3, 0x3f, 0xab, 0x31, 0xfa, 0xbb, 0x1a, 0xa3, 0x8b, 0xd7, 0x45, 0xe9, 0x65, 0x23,
-	0x68, 0xae, 0x2b, 0x66, 0xec, 0x95, 0xab, 0xb8, 0x2f, 0x73, 0xc5, 0x85, 0xeb, 0x22, 0xb6, 0x7d,
-	0xf3, 0x6f, 0xc0, 0x4b, 0xf1, 0x20, 0xe4, 0x5f, 0xfd, 0x0b, 0x00, 0x00, 0xff, 0xff, 0x8a, 0x43,
-	0x60, 0x04, 0x91, 0x03, 0x00, 0x00,
+	// 631 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xd1, 0x6e, 0xd3, 0x30,
+	0x14, 0x95, 0xd7, 0xc1, 0x98, 0x5b, 0xb6, 0xce, 0x68, 0x5b, 0xd5, 0xa1, 0xa9, 0xaa, 0x80, 0x15,
+	0x1e, 0x92, 0xad, 0x68, 0x12, 0x02, 0x5e, 0x36, 0x98, 0x44, 0xc5, 0x26, 0xa1, 0x6c, 0x02, 0x69,
+	0x08, 0x45, 0x4e, 0x73, 0x49, 0xcc, 0x12, 0xdb, 0xc4, 0xee, 0xd4, 0x7e, 0x05, 0xdf, 0xc1, 0x9f,
+	0xf0, 0xc8, 0x03, 0x1f, 0x80, 0xf6, 0x25, 0x28, 0x4e, 0xba, 0x65, 0x6d, 0x23, 0x95, 0xb7, 0xdc,
+	0x73, 0xcf, 0xbd, 0xc7, 0xf7, 0xe4, 0xda, 0xb8, 0x25, 0x13, 0xa1, 0x85, 0x0d, 0x3a, 0xb4, 0x2f,
+	0xf7, 0x68, 0x24, 0x43, 0xba, 0x67, 0xab, 0x88, 0xaa, 0x10, 0x12, 0xcb, 0xa4, 0xc8, 0x3a, 0xe8,
+	0x10, 0x12, 0x18, 0xc4, 0x16, 0xe8, 0xd0, 0x1a, 0x93, 0x9a, 0x5b, 0x81, 0x10, 0x41, 0x04, 0xb6,
+	0x21, 0x79, 0x83, 0xaf, 0x36, 0xc4, 0x52, 0x8f, 0xb2, 0x9a, 0xe6, 0xe3, 0x19, 0x5d, 0x3d, 0xa0,
+	0x7d, 0xc1, 0x5d, 0x2f, 0x12, 0xfd, 0x8b, 0x8c, 0xd6, 0xfe, 0x86, 0x1f, 0x7c, 0xa4, 0x11, 0xf3,
+	0xa9, 0x16, 0x49, 0xef, 0xed, 0x99, 0xe8, 0xf9, 0xc3, 0x03, 0xad, 0x49, 0x03, 0x2f, 0x31, 0xee,
+	0xb3, 0x3e, 0xa8, 0x06, 0x6a, 0x55, 0x3a, 0x8b, 0xce, 0x38, 0x24, 0x5b, 0x78, 0xd9, 0xa7, 0x9a,
+	0xba, 0x89, 0x10, 0xba, 0xb1, 0xd0, 0x42, 0x9d, 0x9a, 0x73, 0x2f, 0x05, 0x1c, 0x21, 0x34, 0x79,
+	0x88, 0x97, 0x15, 0x0b, 0x38, 0xd5, 0x83, 0x04, 0x1a, 0x15, 0x93, 0xbc, 0x01, 0xda, 0x01, 0xde,
+	0x9c, 0xa1, 0x75, 0xcc, 0x94, 0x26, 0xc7, 0xb8, 0x9a, 0x0b, 0xa4, 0xa1, 0xd1, 0xac, 0x76, 0x9f,
+	0x59, 0x33, 0xe7, 0xb6, 0x66, 0x34, 0x71, 0x8a, 0xe5, 0xed, 0x1f, 0x08, 0x6f, 0x7e, 0x48, 0x84,
+	0x14, 0x0a, 0x92, 0xd3, 0xd4, 0x49, 0xc6, 0x03, 0x07, 0xbe, 0x0f, 0x40, 0x69, 0xf2, 0x1e, 0xd7,
+	0xcc, 0xfc, 0x6e, 0x08, 0xd4, 0x87, 0xa4, 0x81, 0x5a, 0xa8, 0x53, 0xed, 0x76, 0x4a, 0xa4, 0x0e,
+	0x8d, 0x63, 0x87, 0x69, 0xc1, 0x3b, 0xc3, 0x77, 0xaa, 0xde, 0x4d, 0x40, 0x76, 0xf0, 0xea, 0xe5,
+	0xf8, 0x30, 0x2e, 0xe3, 0x3e, 0x0c, 0x8d, 0x25, 0x8b, 0xce, 0xca, 0x35, 0xdc, 0x4b, 0xd1, 0xb6,
+	0xc4, 0x8d, 0xe9, 0x03, 0x29, 0x29, 0xb8, 0x02, 0x72, 0x86, 0xd7, 0x64, 0x9e, 0x73, 0x55, 0x9e,
+	0xcc, 0x1d, 0xd8, 0x29, 0x39, 0xd6, 0x54, 0xaf, 0xba, 0x9c, 0x40, 0x52, 0xc5, 0x03, 0xad, 0x41,
+	0xe9, 0xd9, 0x8a, 0x34, 0xcf, 0xcd, 0xab, 0x38, 0xd5, 0xab, 0x4e, 0x27, 0x90, 0xf6, 0x17, 0xbc,
+	0x7a, 0xc2, 0xf8, 0x09, 0x1d, 0x1e, 0x49, 0xd1, 0x0f, 0x4f, 0x25, 0xe5, 0xe4, 0x11, 0x5e, 0x89,
+	0x19, 0x77, 0x21, 0x05, 0x5c, 0x25, 0x29, 0x37, 0x76, 0xdf, 0x77, 0x6a, 0x31, 0xe3, 0xb7, 0x59,
+	0x74, 0x58, 0x64, 0x2d, 0xe4, 0xac, 0x42, 0xaf, 0xf6, 0x1f, 0x84, 0x6b, 0xd7, 0xd1, 0x09, 0x95,
+	0xe4, 0x33, 0x5e, 0xb9, 0x29, 0x71, 0x63, 0x2a, 0xf3, 0x11, 0xf6, 0x4b, 0x46, 0x28, 0x16, 0xdf,
+	0x0a, 0x8e, 0xb8, 0x4e, 0x46, 0x4e, 0x0d, 0x0a, 0x50, 0x33, 0xc0, 0x6b, 0x53, 0x14, 0x52, 0xc7,
+	0x95, 0x0b, 0x18, 0x99, 0x19, 0x16, 0x9d, 0xf4, 0x93, 0xbc, 0xc6, 0x77, 0x2e, 0x69, 0x34, 0x00,
+	0x73, 0xe2, 0x6a, 0xf7, 0x49, 0x89, 0xf4, 0x84, 0x2f, 0x4e, 0x56, 0xf4, 0x72, 0xe1, 0x05, 0xea,
+	0xfe, 0xac, 0xe0, 0xa5, 0xd3, 0xec, 0xb6, 0x13, 0x8d, 0x37, 0x7a, 0xca, 0x04, 0xd4, 0x8b, 0x20,
+	0xb3, 0x9c, 0x6a, 0x26, 0x38, 0x79, 0x5a, 0xd2, 0xd8, 0x6c, 0x17, 0xf8, 0x05, 0x6a, 0xd3, 0x9e,
+	0xf7, 0x0f, 0x8e, 0xb7, 0x41, 0xe1, 0x7a, 0x41, 0xd5, 0xec, 0x3a, 0xb1, 0xe6, 0x5d, 0xbc, 0xec,
+	0x56, 0x95, 0x8a, 0x96, 0x2e, 0xfd, 0x27, 0x4c, 0xae, 0x25, 0x33, 0x12, 0x8d, 0x14, 0xd9, 0xb0,
+	0xb2, 0x27, 0xcd, 0x1a, 0x3f, 0x69, 0xd6, 0x51, 0xfa, 0xa4, 0x35, 0xe7, 0xbd, 0x07, 0xbb, 0x88,
+	0x9c, 0xe3, 0xf5, 0x59, 0x0e, 0xfe, 0x7f, 0xef, 0x49, 0xbf, 0x76, 0xd1, 0xe1, 0x9b, 0x5f, 0x57,
+	0xdb, 0xe8, 0xf7, 0xd5, 0x36, 0xfa, 0x7b, 0xb5, 0x8d, 0xce, 0xf7, 0x03, 0xa6, 0xc3, 0x81, 0x67,
+	0xf5, 0x45, 0x6c, 0xcb, 0x64, 0xa4, 0x62, 0xaa, 0x59, 0x3f, 0xa2, 0x9e, 0xca, 0x22, 0x7b, 0xfa,
+	0x01, 0x7e, 0x05, 0x3a, 0xf4, 0xee, 0x1a, 0xfc, 0xf9, 0xbf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xfd,
+	0xa1, 0x96, 0x59, 0xf7, 0x05, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -176,7 +455,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SlasherClient interface {
-	IsSlashableAttestation(ctx context.Context, in *Attestation, opts ...grpc.CallOption) (*AttesterSlashing, error)
+	IsSlashableAttestation(ctx context.Context, in *IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error)
 	IsSlashableBlock(ctx context.Context, in *ProposerSlashingRequest, opts ...grpc.CallOption) (*ProposerSlashingResponse, error)
 	SlashableProposals(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Slasher_SlashableProposalsClient, error)
 	SlashableAttestations(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Slasher_SlashableAttestationsClient, error)
@@ -190,8 +469,8 @@ func NewSlasherClient(cc *grpc.ClientConn) SlasherClient {
 	return &slasherClient{cc}
 }
 
-func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *Attestation, opts ...grpc.CallOption) (*AttesterSlashing, error) {
-	out := new(AttesterSlashing)
+func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error) {
+	out := new(AttesterSlashingResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Slasher/IsSlashableAttestation", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -274,7 +553,7 @@ func (x *slasherSlashableAttestationsClient) Recv() (*AttesterSlashing, error) {
 
 // SlasherServer is the server API for Slasher service.
 type SlasherServer interface {
-	IsSlashableAttestation(context.Context, *Attestation) (*AttesterSlashing, error)
+	IsSlashableAttestation(context.Context, *IndexedAttestation) (*AttesterSlashingResponse, error)
 	IsSlashableBlock(context.Context, *ProposerSlashingRequest) (*ProposerSlashingResponse, error)
 	SlashableProposals(*types.Empty, Slasher_SlashableProposalsServer) error
 	SlashableAttestations(*types.Empty, Slasher_SlashableAttestationsServer) error
@@ -285,7 +564,7 @@ func RegisterSlasherServer(s *grpc.Server, srv SlasherServer) {
 }
 
 func _Slasher_IsSlashableAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Attestation)
+	in := new(IndexedAttestation)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -297,7 +576,7 @@ func _Slasher_IsSlashableAttestation_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.eth.v1alpha1.Slasher/IsSlashableAttestation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).IsSlashableAttestation(ctx, req.(*Attestation))
+		return srv.(SlasherServer).IsSlashableAttestation(ctx, req.(*IndexedAttestation))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -390,6 +669,89 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 	Metadata: "proto/eth/v1alpha1/slasher.proto",
 }
 
+func (m *ValidatorIDToIdxAtt) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorIDToIdxAtt) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Indices) > 0 {
+		dAtA2 := make([]byte, len(m.Indices)*10)
+		var j1 int
+		for _, num := range m.Indices {
+			for num >= 1<<7 {
+				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
+				num >>= 7
+				j1++
+			}
+			dAtA2[j1] = uint8(num)
+			j1++
+		}
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(j1))
+		i += copy(dAtA[i:], dAtA2[:j1])
+	}
+	if len(m.DataRoot) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(len(m.DataRoot)))
+		i += copy(dAtA[i:], m.DataRoot)
+	}
+	if len(m.Signature) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ValidatorIDToIdxAttList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ValidatorIDToIdxAttList) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.IndicesList) > 0 {
+		for _, msg := range m.IndicesList {
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintSlasher(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
 func (m *ProposerSlashingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -409,11 +771,11 @@ func (m *ProposerSlashingRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintSlasher(dAtA, i, uint64(m.BlockHeader.Size()))
-		n1, err := m.BlockHeader.MarshalTo(dAtA[i:])
+		n3, err := m.BlockHeader.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n1
+		i += n3
 	}
 	if m.ValidatorIndex != 0 {
 		dAtA[i] = 0x10
@@ -459,6 +821,118 @@ func (m *ProposerSlashingResponse) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *AttesterSlashingResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AttesterSlashingResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.AttesterSlashing) > 0 {
+		for _, msg := range m.AttesterSlashing {
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintSlasher(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *MinMaxEpochSpan) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MinMaxEpochSpan) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.MinEpochSpan != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(m.MinEpochSpan))
+	}
+	if m.MaxEpochSpan != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintSlasher(dAtA, i, uint64(m.MaxEpochSpan))
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *EpochSpanMap) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EpochSpanMap) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.EpochSpanMap) > 0 {
+		for k, _ := range m.EpochSpanMap {
+			dAtA[i] = 0xa
+			i++
+			v := m.EpochSpanMap[k]
+			msgSize := 0
+			if v != nil {
+				msgSize = v.Size()
+				msgSize += 1 + sovSlasher(uint64(msgSize))
+			}
+			mapSize := 1 + sovSlasher(uint64(k)) + msgSize
+			i = encodeVarintSlasher(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0x8
+			i++
+			i = encodeVarintSlasher(dAtA, i, uint64(k))
+			if v != nil {
+				dAtA[i] = 0x12
+				i++
+				i = encodeVarintSlasher(dAtA, i, uint64(v.Size()))
+				n4, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
+				}
+				i += n4
+			}
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
 func encodeVarintSlasher(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -468,6 +942,51 @@ func encodeVarintSlasher(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
+func (m *ValidatorIDToIdxAtt) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Indices) > 0 {
+		l = 0
+		for _, e := range m.Indices {
+			l += sovSlasher(uint64(e))
+		}
+		n += 1 + sovSlasher(uint64(l)) + l
+	}
+	l = len(m.DataRoot)
+	if l > 0 {
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ValidatorIDToIdxAttList) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.IndicesList) > 0 {
+		for _, e := range m.IndicesList {
+			l = e.Size()
+			n += 1 + l + sovSlasher(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *ProposerSlashingRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -505,6 +1024,67 @@ func (m *ProposerSlashingResponse) Size() (n int) {
 	return n
 }
 
+func (m *AttesterSlashingResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.AttesterSlashing) > 0 {
+		for _, e := range m.AttesterSlashing {
+			l = e.Size()
+			n += 1 + l + sovSlasher(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *MinMaxEpochSpan) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.MinEpochSpan != 0 {
+		n += 1 + sovSlasher(uint64(m.MinEpochSpan))
+	}
+	if m.MaxEpochSpan != 0 {
+		n += 1 + sovSlasher(uint64(m.MaxEpochSpan))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *EpochSpanMap) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.EpochSpanMap) > 0 {
+		for k, v := range m.EpochSpanMap {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovSlasher(uint64(l))
+			}
+			mapEntrySize := 1 + sovSlasher(uint64(k)) + l
+			n += mapEntrySize + 1 + sovSlasher(uint64(mapEntrySize))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func sovSlasher(x uint64) (n int) {
 	for {
 		n++
@@ -517,6 +1097,292 @@ func sovSlasher(x uint64) (n int) {
 }
 func sozSlasher(x uint64) (n int) {
 	return sovSlasher(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *ValidatorIDToIdxAtt) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorIDToIdxAtt: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorIDToIdxAtt: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType == 0 {
+				var v uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					v |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				m.Indices = append(m.Indices, v)
+			} else if wireType == 2 {
+				var packedLen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					packedLen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if packedLen < 0 {
+					return ErrInvalidLengthSlasher
+				}
+				postIndex := iNdEx + packedLen
+				if postIndex < 0 {
+					return ErrInvalidLengthSlasher
+				}
+				if postIndex > l {
+					return io.ErrUnexpectedEOF
+				}
+				var elementCount int
+				var count int
+				for _, integer := range dAtA[iNdEx:postIndex] {
+					if integer < 128 {
+						count++
+					}
+				}
+				elementCount = count
+				if elementCount != 0 && len(m.Indices) == 0 {
+					m.Indices = make([]uint64, 0, elementCount)
+				}
+				for iNdEx < postIndex {
+					var v uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowSlasher
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						v |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					m.Indices = append(m.Indices, v)
+				}
+			} else {
+				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DataRoot", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DataRoot = append(m.DataRoot[:0], dAtA[iNdEx:postIndex]...)
+			if m.DataRoot == nil {
+				m.DataRoot = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ValidatorIDToIdxAttList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ValidatorIDToIdxAttList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ValidatorIDToIdxAttList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IndicesList", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.IndicesList = append(m.IndicesList, &ValidatorIDToIdxAtt{})
+			if err := m.IndicesList[len(m.IndicesList)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *ProposerSlashingRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -689,6 +1555,355 @@ func (m *ProposerSlashingResponse) Unmarshal(dAtA []byte) error {
 			if err := m.ProposerSlashing[len(m.ProposerSlashing)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AttesterSlashingResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AttesterSlashingResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AttesterSlashingResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AttesterSlashing", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AttesterSlashing = append(m.AttesterSlashing, &AttesterSlashing{})
+			if err := m.AttesterSlashing[len(m.AttesterSlashing)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MinMaxEpochSpan) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MinMaxEpochSpan: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MinMaxEpochSpan: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MinEpochSpan", wireType)
+			}
+			m.MinEpochSpan = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.MinEpochSpan |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MaxEpochSpan", wireType)
+			}
+			m.MaxEpochSpan = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.MaxEpochSpan |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EpochSpanMap) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EpochSpanMap: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EpochSpanMap: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EpochSpanMap", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.EpochSpanMap == nil {
+				m.EpochSpanMap = make(map[uint64]*MinMaxEpochSpan)
+			}
+			var mapkey uint64
+			var mapvalue *MinMaxEpochSpan
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlasher
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowSlasher
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowSlasher
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthSlasher
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthSlasher
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &MinMaxEpochSpan{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipSlasher(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthSlasher
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.EpochSpanMap[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

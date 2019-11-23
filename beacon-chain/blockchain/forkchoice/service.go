@@ -23,7 +23,7 @@ type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
 	OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error)
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
@@ -31,17 +31,17 @@ type ForkChoicer interface {
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	db                  db.Database
-	justifiedCheckpt    *ethpb.Checkpoint
-	finalizedCheckpt    *ethpb.Checkpoint
-	checkpointState     *cache.CheckpointStateCache
-	checkpointStateLock sync.Mutex
-	attsQueue           map[[32]byte]*ethpb.Attestation
-	attsQueueLock       sync.Mutex
-	seenAtts            map[[32]byte]bool
-	seenAttsLock        sync.Mutex
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	db                   db.Database
+	justifiedCheckpt     *ethpb.Checkpoint
+	finalizedCheckpt     *ethpb.Checkpoint
+	checkPointLock       sync.RWMutex
+	prevFinalizedCheckpt *ethpb.Checkpoint
+	checkpointState      *cache.CheckpointStateCache
+	checkpointStateLock  sync.Mutex
+	seenAtts             map[[32]byte]bool
+	seenAttsLock         sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -53,7 +53,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		cancel:          cancel,
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
-		attsQueue:       make(map[[32]byte]*ethpb.Attestation),
 		seenAtts:        make(map[[32]byte]bool),
 	}
 }
@@ -80,8 +79,11 @@ func (s *Store) GenesisStore(
 	justifiedCheckpoint *ethpb.Checkpoint,
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
+	s.checkPointLock.Lock()
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+	s.checkPointLock.Unlock()
 
 	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if err != nil {
@@ -89,7 +91,7 @@ func (s *Store) GenesisStore(
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: s.justifiedCheckpt,
+		Checkpoint: s.JustifiedCheckpt(),
 		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
@@ -222,22 +224,22 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 		// if a block has one child, then we don't have to lookup anything to
 		// know that this child will be the best child.
-		head = children[0]
+		head = children[0][:]
 		if len(children) > 1 {
 			highest, err := s.latestAttestingBalance(ctx, head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get latest balance")
 			}
 			for _, child := range children[1:] {
-				balance, err := s.latestAttestingBalance(ctx, child)
+				balance, err := s.latestAttestingBalance(ctx, child[:])
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get latest balance")
 				}
 				// When there's a tie, it's broken lexicographically to favor the higher one.
 				if balance > highest ||
-					balance == highest && bytes.Compare(child, head) > 0 {
+					balance == highest && bytes.Compare(child[:], head) > 0 {
 					highest = balance
-					head = child
+					head = child[:]
 				}
 			}
 		}
@@ -246,10 +248,14 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 // JustifiedCheckpt returns the latest justified check point from fork choice store.
 func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
+	s.checkPointLock.RLock()
+	defer s.checkPointLock.RUnlock()
 	return proto.Clone(s.justifiedCheckpt).(*ethpb.Checkpoint)
 }
 
 // FinalizedCheckpt returns the latest finalized check point from fork choice store.
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
+	s.checkPointLock.RLock()
+	defer s.checkPointLock.RUnlock()
 	return proto.Clone(s.finalizedCheckpt).(*ethpb.Checkpoint)
 }

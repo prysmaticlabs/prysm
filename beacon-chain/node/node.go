@@ -15,8 +15,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -34,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -59,6 +58,7 @@ type BeaconNode struct {
 	stop         chan struct{} // Channel to wait for termination notifications.
 	db           db.Database
 	depositCache *depositcache.DepositCache
+	stateFeed    *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -73,18 +73,19 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
-	featureconfig.ConfigureBeaconFeatures(ctx)
+	featureconfig.ConfigureBeaconChain(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:       ctx,
+		services:  registry,
+		stop:      make(chan struct{}),
+		stateFeed: new(event.Feed),
 	}
 
-	// Use custom config values if the --no-custom-config flag is set.
+	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		if featureconfig.FeatureConfig().MinimalConfig {
+		if featureconfig.Get().MinimalConfig {
 			log.WithField(
 				"config", "minimal-spec",
 			).Info("Using custom chain parameters")
@@ -150,6 +151,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	return beacon, nil
 }
 
+// StateFeed implements statefeed.Notifier.
+func (b *BeaconNode) StateFeed() *event.Feed {
+	return b.stateFeed
+}
+
 // Start the BeaconNode and kicks off every registered service.
 func (b *BeaconNode) Start() {
 	b.lock.Lock()
@@ -200,17 +206,19 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+
 	d, err := db.NewDB(dbPath)
 	if err != nil {
 		return err
 	}
-	if b.ctx.GlobalBool(cmd.ClearDB.Name) {
-		d, err = confirmDelete(d, dbPath)
+	if clearDB || forceClearDB {
+		d, err = confirmDelete(d, dbPath, forceClearDB)
 		if err != nil {
 			return err
 		}
 	}
-
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
@@ -277,6 +285,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -309,30 +318,14 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	httpRPCClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	httpClient := ethclient.NewClient(httpRPCClient)
-
-	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(flags.Web3ProviderFlag.Name))
-	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
-	}
-	powClient := ethclient.NewClient(rpcClient)
-
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		ETH1Endpoint:    cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
+		HTTPEndPoint:    cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
-		Client:          httpClient,
-		Reader:          powClient,
-		Logger:          powClient,
-		HTTPLogger:      httpClient,
-		BlockFetcher:    httpClient,
-		ContractBackend: httpClient,
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
+		StateNotifier:   b,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
@@ -371,11 +364,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:          b.db,
-		P2P:         b.fetchP2P(ctx),
-		Operations:  operationService,
-		Chain:       chainService,
-		InitialSync: initSync,
+		DB:            b.db,
+		P2P:           b.fetchP2P(ctx),
+		Operations:    operationService,
+		Chain:         chainService,
+		InitialSync:   initSync,
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(rs)
@@ -389,8 +383,10 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		Chain: chainService,
-		P2P:   b.fetchP2P(ctx),
+		DB:            b.db,
+		Chain:         chainService,
+		P2P:           b.fetchP2P(ctx),
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -449,7 +445,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
-		StateFeedListener:     chainService,
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
@@ -459,6 +454,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		StateNotifier:         b,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -478,7 +474,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	}
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/heads", Handler: c.HeadsHandler})
 
-	if featureconfig.FeatureConfig().EnableBackupWebhook {
+	if featureconfig.Get().EnableBackupWebhook {
 		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
 	}
 
@@ -496,7 +492,7 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	gatewayPort := ctx.GlobalInt(flags.GRPCGatewayPort.Name)
 	if gatewayPort > 0 {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
-		gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}
 	return nil
@@ -531,8 +527,9 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		return err
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:        b.db,
-		NewHeadNotifier: chainService,
+		BeaconDB:      b.db,
+		HeadFetcher:   chainService,
+		StateNotifier: b,
 	})
 	return b.services.RegisterService(svc)
 }

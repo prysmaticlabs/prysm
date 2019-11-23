@@ -9,10 +9,10 @@ The process for implementing new features using this package is as follows:
 	4. Place any "previous" behavior in the `else` statement.
 	5. Ensure any tests using the new feature fail if the flag isn't enabled.
 	5a. Use the following to enable your flag for tests:
-	cfg := &featureconfig.FeatureFlagConfig{
+	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
-	featureconfig.InitFeatureConfig(cfg)
+	featureconfig.Init(cfg)
 */
 package featureconfig
 
@@ -23,48 +23,55 @@ import (
 
 var log = logrus.WithField("prefix", "flags")
 
-// FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
-type FeatureFlagConfig struct {
-	NoGenesisDelay           bool // NoGenesisDelay when processing a chain start genesis event.
+// Flags is a struct to represent which features the client will perform on runtime.
+type Flags struct {
+	GenesisDelay             bool // GenesisDelay when processing a chain start genesis event.
 	MinimalConfig            bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	SkipBLSVerify            bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup
+	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
 
 	// Cache toggles.
-	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache          bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache    bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
+	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
+	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
+	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
+	EnableActiveIndicesCache bool // EnableActiveIndicesCache.
+	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
-var featureConfig *FeatureFlagConfig
+var featureConfig *Flags
 
-// FeatureConfig retrieves feature config.
-func FeatureConfig() *FeatureFlagConfig {
+// Get retrieves feature config.
+func Get() *Flags {
 	if featureConfig == nil {
-		return &FeatureFlagConfig{}
+		return &Flags{}
 	}
 	return featureConfig
 }
 
-// InitFeatureConfig sets the global config equal to the config that is passed in.
-func InitFeatureConfig(c *FeatureFlagConfig) {
+// Init sets the global config equal to the config that is passed in.
+func Init(c *Flags) {
 	featureConfig = c
 }
 
-// ConfigureBeaconFeatures sets the global config based
+// ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
-func ConfigureBeaconFeatures(ctx *cli.Context) {
-	cfg := &FeatureFlagConfig{}
+func ConfigureBeaconChain(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(NoGenesisDelayFlag.Name) {
+	if ctx.GlobalBool(GenesisDelayFlag.Name) {
 		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
-		cfg.NoGenesisDelay = true
+		cfg.GenesisDelay = true
 	}
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -98,16 +105,45 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 		log.Warn("Enabled BLS pubkey cache.")
 		cfg.EnableBLSPubkeyCache = true
 	}
-	InitFeatureConfig(cfg)
+	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
+		log.Warn("Enabled shuffled index cache.")
+		cfg.EnableShuffledIndexCache = true
+	}
+	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+		log.Warn("Enabled skip slots cache.")
+		cfg.EnableSkipSlotsCache = true
+	}
+	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
+		log.Warn("Enabled committee cache.")
+		cfg.EnableCommitteeCache = true
+	}
+	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
+		log.Warn("Enabled active indices cache.")
+		cfg.EnableActiveIndicesCache = true
+	}
+	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
+		log.Warn("Enabled active count cache.")
+		cfg.EnableActiveCountCache = true
+	}
+	Init(cfg)
 }
 
-// ConfigureValidatorFeatures sets the global config based
+// ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
-func ConfigureValidatorFeatures(ctx *cli.Context) {
-	cfg := &FeatureFlagConfig{}
+func ConfigureValidator(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	InitFeatureConfig(cfg)
+	Init(cfg)
+}
+
+func complainOnDeprecatedFlags(ctx *cli.Context) {
+	for _, f := range deprecatedFlags {
+		if ctx.IsSet(f.GetName()) {
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.GetName())
+		}
+	}
 }

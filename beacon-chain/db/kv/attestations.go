@@ -11,26 +11,35 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
-// Attestation retrieval by attestation data root.
-func (k *Store) Attestation(ctx context.Context, attDataRoot [32]byte) (*ethpb.Attestation, error) {
+// AttestationsByDataRoot returns any (aggregated) attestations matching this data root.
+func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
-	var att *ethpb.Attestation
+	var atts []*ethpb.Attestation
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
 			return nil
 		}
-		att = &ethpb.Attestation{}
-		return proto.Unmarshal(enc, att)
+		ac := &dbpb.AttestationContainer{}
+		if err := proto.Unmarshal(enc, ac); err != nil {
+			return err
+		}
+		atts = ac.ToAttestations()
+		return nil
 	})
-	return att, err
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+	}
+	return atts, err
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
@@ -60,11 +69,11 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			att := &ethpb.Attestation{}
-			if err := proto.Unmarshal(encoded, att); err != nil {
+			ac := &dbpb.AttestationContainer{}
+			if err := proto.Unmarshal(encoded, ac); err != nil {
 				return err
 			}
-			atts = append(atts, att)
+			atts = append(atts, ac.ToAttestations()...)
 		}
 		return nil
 	})
@@ -95,11 +104,11 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		if enc == nil {
 			return nil
 		}
-		att := &ethpb.Attestation{}
-		if err := proto.Unmarshal(enc, att); err != nil {
+		ac := &dbpb.AttestationContainer{}
+		if err := proto.Unmarshal(enc, ac); err != nil {
 			return err
 		}
-		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+		indicesByBucket := createAttestationIndicesFromData(ac.Data, tx)
 		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -135,22 +144,49 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+
+	// Aggregation bits are required to store attestations within the attestation container. Missing
+	// this field may cause silent failures or unexpected results.
+	if att.AggregationBits == nil {
+		err := errors.New("attestation has nil aggregation bitlist")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	err := k.db.Batch(func(tx *bolt.Tx) error {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
 		}
-		enc, err := proto.Marshal(att)
+
+		bkt := tx.Bucket(attestationsBucket)
+		ac := &dbpb.AttestationContainer{
+			Data: att.Data,
+		}
+		existingEnc := bkt.Get(attDataRoot[:])
+		if existingEnc != nil {
+			if err := proto.Unmarshal(existingEnc, ac); err != nil {
+				return err
+			}
+		}
+
+		ac.InsertAttestation(att)
+
+		enc, err := proto.Marshal(ac)
 		if err != nil {
 			return err
 		}
-		bkt := tx.Bucket(attestationsBucket)
+
 		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
 	})
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+	}
+	return err
 }
 
 // SaveAttestations via batch updates to the db.

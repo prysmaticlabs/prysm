@@ -52,7 +52,6 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot+uint64(slotsCount))
 			if err != nil {
 				t.Fatal(err)
@@ -60,8 +59,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 
 			if !proto.Equal(postState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
-				t.Log(diff)
-				t.Fatal("Post state does not match expected")
+				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}
 		})
 	}

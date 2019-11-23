@@ -13,6 +13,7 @@ type fakeValidator struct {
 	DoneCalled                       bool
 	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
+	WaitForSyncCalled                bool
 	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
@@ -21,7 +22,7 @@ type fakeValidator struct {
 	UpdateAssignmentsRet             error
 	RoleAtCalled                     bool
 	RoleAtArg1                       uint64
-	RoleAtRet                        pb.ValidatorRole
+	RolesAtRet                       []pb.ValidatorRole
 	AttestToBlockHeadCalled          bool
 	AttestToBlockHeadArg1            uint64
 	ProposeBlockCalled               bool
@@ -42,6 +43,11 @@ func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 
 func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled = true
+	return nil
+}
+
+func (fv *fakeValidator) WaitForSync(_ context.Context) error {
+	fv.WaitForSyncCalled = true
 	return nil
 }
 
@@ -71,20 +77,22 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[string]pb.ValidatorRole)
-	vr["a"] = fv.RoleAtRet
-	return vr
+	vr := make(map[[48]byte][]pb.ValidatorRole)
+	vr[[48]byte{1}] = fv.RolesAtRet
+	return vr, nil
 }
 
-func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, idx string) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, idx string) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
+
+func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}

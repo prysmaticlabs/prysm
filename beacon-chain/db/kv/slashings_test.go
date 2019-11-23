@@ -56,17 +56,13 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 		Attestation_1: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: make([]byte, 32),
-				Crosslink: &ethpb.Crosslink{
-					Shard: 5,
-				},
+				Slot:            5,
 			},
 		},
 		Attestation_2: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: make([]byte, 32),
-				Crosslink: &ethpb.Crosslink{
-					Shard: 7,
-				},
+				Slot:            7,
 			},
 		},
 	}

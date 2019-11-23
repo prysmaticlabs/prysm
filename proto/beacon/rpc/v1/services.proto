@@ -5,37 +5,6 @@ package ethereum.beacon.rpc.v1;
 import "google/protobuf/empty.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
-import "google/api/annotations.proto";
-import "protoc-gen-swagger/options/annotations.proto";
-
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
-	info: {
-		title: "Prysm";
-		version: "0.0.0";
-		contact: {
-			name: "Prysmatic Labs";
-			url: "https://prysmaticlabs.com";
-			email: "team@prysmaticlabs.com";
-		};
-		license: {
-			name: "GNU General Public License v3.0";
-			url: "https://github.com/prysmaticlabs/prysm/blob/master/LICENSE.md";
-		};
-        description: "JSON RPC services provided by Prysm."
-	};
-    external_docs: {
-        url: "https://github.com/prysmaticlabs/prysm";
-        description : "Prysm Github";
-    };
-    host: "api.prylabs.net",
-	schemes: HTTPS;
-	consumes: "application/json";
-	consumes: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-	produces: "application/json";
-    produces: "application/grpc-web-text";
-    consumes: "application/grpc-web-json";
-};
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
@@ -45,6 +14,10 @@ service AttesterService {
 service ProposerService {
   rpc RequestBlock(BlockRequest) returns (ethereum.eth.v1alpha1.BeaconBlock);
   rpc ProposeBlock(ethereum.eth.v1alpha1.BeaconBlock) returns (ProposeResponse);
+}
+
+service AggregatorService {
+  rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
 }
 
 service ValidatorService {
@@ -72,10 +45,21 @@ message AttestationRequest {
   bytes public_key = 1;
   bytes poc_bit = 2;
   uint64 slot = 3;
-  uint64 shard = 4;
+  uint64 committee_index = 4;
 }
 
 message AttestResponse {
+  bytes root = 1;
+}
+
+message AggregationRequest {
+  uint64 slot = 1;
+  uint64 committee_index = 2;
+  bytes public_key = 3;
+  bytes slot_signature = 4;
+}
+
+message AggregationResponse {
   bytes root = 1;
 }
 
@@ -119,10 +103,11 @@ message ChainStartResponse {
   uint64 genesis_time = 2;
 }
 
- enum ValidatorRole {
+enum ValidatorRole {
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
+     AGGREGATOR = 3;
 }
 
 message ValidatorIndexRequest {
@@ -142,9 +127,9 @@ message AssignmentResponse {
   repeated ValidatorAssignment validator_assignment = 1;
   message ValidatorAssignment {
     repeated uint64 committee = 1;
-    uint64 shard = 2;
-    uint64 slot = 3;
-    bool is_proposer = 4;
+    uint64 committee_index = 2;
+    uint64 attester_slot = 3;
+    uint64 proposer_slot = 4;
     bytes public_key = 5;
     ValidatorStatus status = 6;
   }

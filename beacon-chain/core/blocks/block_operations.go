@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "blocks")
@@ -96,7 +98,7 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 	voteCount := uint64(0)
 	var eth1DataHash [32]byte
 	var err error
-	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+	if featureconfig.Get().EnableEth1DataVoteCache {
 		eth1DataHash, err = hashutil.HashProto(data)
 		if err != nil {
 			return false, errors.Wrap(err, "could not hash eth1data")
@@ -117,7 +119,7 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 		voteCount++
 	}
 
-	if featureconfig.FeatureConfig().EnableEth1DataVoteCache {
+	if featureconfig.Get().EnableEth1DataVoteCache {
 		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
 			Eth1DataHash: eth1DataHash,
 			VoteCount:    voteCount,
@@ -159,7 +161,7 @@ func ProcessBlockHeader(
 ) (*pb.BeaconState, error) {
 	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process block header")
+		return nil, err
 	}
 
 	idx, err := helpers.BeaconProposerIndex(beaconState)
@@ -318,8 +320,8 @@ func ProcessRandaoNoVerify(
 //    Process ``ProposerSlashing`` operation.
 //    """
 //    proposer = state.validator_registry[proposer_slashing.proposer_index]
-//    # Verify that the epoch is the same
-//    assert slot_to_epoch(proposer_slashing.header_1.slot) == slot_to_epoch(proposer_slashing.header_2.slot)
+//    # Verify slots match
+//    assert proposer_slashing.header_1.slot == proposer_slashing.header_2.slot
 //    # But the headers are different
 //    assert proposer_slashing.header_1 != proposer_slashing.header_2
 //    # Check proposer is slashable
@@ -330,10 +332,7 @@ func ProcessRandaoNoVerify(
 //        assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
-func ProcessProposerSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessProposerSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if int(slashing.ProposerIndex) >= len(beaconState.Validators) {
@@ -357,12 +356,10 @@ func VerifyProposerSlashing(
 	beaconState *pb.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
-	headerEpoch1 := helpers.SlotToEpoch(slashing.Header_1.Slot)
-	headerEpoch2 := helpers.SlotToEpoch(slashing.Header_2.Slot)
 	proposer := beaconState.Validators[slashing.ProposerIndex]
 
-	if headerEpoch1 != headerEpoch2 {
-		return fmt.Errorf("mismatched header epochs, received %d == %d", headerEpoch1, headerEpoch2)
+	if slashing.Header_1.Slot != slashing.Header_2.Slot {
+		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Slot, slashing.Header_2.Slot)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
 		return errors.New("expected slashing headers to differ")
@@ -371,7 +368,7 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState.Fork, headerEpoch1, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork, helpers.StartSlot(slashing.Header_1.Slot), params.BeaconConfig().DomainBeaconProposer)
 	headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 	for _, header := range headers {
 		if err := verifySigningRoot(header, proposer.PublicKey, header.Signature, domain); err != nil {
@@ -404,12 +401,9 @@ func VerifyProposerSlashing(
 //            slash_validator(state, index)
 //            slashed_any = True
 //    assert slashed_any
-func ProcessAttesterSlashings(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttesterSlashings(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := VerifyAttesterSlashing(beaconState, slashing); err != nil {
+		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
@@ -437,7 +431,7 @@ func ProcessAttesterSlashings(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState *pb.BeaconState, slashing *ethpb.AttesterSlashing) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -445,10 +439,10 @@ func VerifyAttesterSlashing(beaconState *pb.BeaconState, slashing *ethpb.Atteste
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att1); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att1); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
-	if err := VerifyIndexedAttestation(beaconState, att2); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, att2); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
 	return nil
@@ -484,13 +478,10 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 // ProcessAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
-func ProcessAttestations(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestations(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestation(beaconState, attestation)
+		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -500,13 +491,10 @@ func ProcessAttestations(
 
 // ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
-func ProcessAttestationsNoVerify(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -518,64 +506,45 @@ func ProcessAttestationsNoVerify(
 //
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//    """
-//    Process ``Attestation`` operation.
-//    """
 //    data = attestation.data
-//    assert data.crosslink.shard < SHARD_COUNT
+//    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
-//    attestation_slot = get_attestation_data_slot(state, data)
-//    assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
-//
-//    committee = get_crosslink_committee(state, data.target.epoch, data.crosslink.shard)
+//    committee = get_beacon_committee(state, data.slot, data.index)
 //    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
-//        aggregation_bitfield=attestation.aggregation_bitfield,
-//        inclusion_delay=state.slot - attestation_slot,
+//        aggregation_bits=attestation.aggregation_bits,
+//        inclusion_delay=state.slot - data.slot,
 //        proposer_index=get_beacon_proposer_index(state),
 //    )
 //
-//    if data.target_epoch == get_current_epoch(state):
-//      assert data.source == state.current_justified_checkpoint
-//      parent_crosslink = state.current_crosslinks[data.crosslink.shard]
-//      state.current_epoch_attestations.append(pending_attestation)
+//    if data.target.epoch == get_current_epoch(state):
+//        assert data.source == state.current_justified_checkpoint
+//        state.current_epoch_attestations.append(pending_attestation)
 //    else:
-//      assert data.source == state.previous_justified_checkpoint
-//      parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
-//      state.previous_epoch_attestations.append(pending_attestation)
-//
-//    # Check crosslink against expected parent crosslink
-//    assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
-//    assert data.crosslink.start_epoch == parent_crosslink.end_epoch
-//    assert data.crosslink.end_epoch == min(data.target.epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
-//    assert data.crosslink.data_root == Bytes32()  # [to be removed in phase 1]
+//        assert data.source == state.previous_justified_checkpoint
+//        state.previous_epoch_attestations.append(pending_attestation)
 //
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-func ProcessAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerify(beaconState, att)
+func ProcessAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, VerifyAttestation(beaconState, att)
+	return beaconState, VerifyAttestation(ctx, beaconState, att)
 }
 
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
-func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
+	defer span.End()
+
 	data := att.Data
-
-	if data.Crosslink.Shard > params.BeaconConfig().ShardCount {
-		return nil, fmt.Errorf(
-			"expected crosslink shard %d to be less than SHARD_COUNT %d",
-			data.Crosslink.Shard,
-			params.BeaconConfig().ShardCount,
-		)
-	}
-
 	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
 		return nil, fmt.Errorf(
 			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -585,16 +554,13 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		)
 	}
 
-	attestationSlot, err := helpers.AttestationDataSlot(beaconState, data)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation slot")
-	}
-	minInclusionCheck := attestationSlot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
-	epochInclusionCheck := beaconState.Slot <= attestationSlot+params.BeaconConfig().SlotsPerEpoch
+	s := att.Data.Slot
+	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot
+	epochInclusionCheck := beaconState.Slot <= s+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
 		return nil, fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
-			attestationSlot,
+			s,
 			params.BeaconConfig().MinAttestationInclusionDelay,
 			beaconState.Slot,
 		)
@@ -603,7 +569,7 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 		return nil, fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
 			beaconState.Slot,
-			attestationSlot,
+			s,
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
@@ -619,34 +585,22 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 	pendingAtt := &pb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
-		InclusionDelay:  beaconState.Slot - attestationSlot,
+		InclusionDelay:  beaconState.Slot - s,
 		ProposerIndex:   proposerIndex,
 	}
 
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
-	var parentCrosslink *ethpb.Crosslink
 	if data.Target.Epoch == helpers.CurrentEpoch(beaconState) {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.CurrentEpoch(beaconState)
-		crosslinkShard := data.Crosslink.Shard
-		if int(crosslinkShard) >= len(beaconState.CurrentCrosslinks) {
-			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
-		}
-
-		parentCrosslink = beaconState.CurrentCrosslinks[crosslinkShard]
 		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations, pendingAtt)
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint.Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint.Root
 		ffgTargetEpoch = helpers.PrevEpoch(beaconState)
-		crosslinkShard := data.Crosslink.Shard
-		if int(crosslinkShard) >= len(beaconState.PreviousCrosslinks) {
-			return nil, fmt.Errorf("invalid shard given in attestation: %d", crosslinkShard)
-		}
-		parentCrosslink = beaconState.PreviousCrosslinks[crosslinkShard]
 		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations, pendingAtt)
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
@@ -658,34 +612,7 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 	if data.Target.Epoch != ffgTargetEpoch {
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
-	endEpoch := parentCrosslink.EndEpoch + params.BeaconConfig().MaxEpochsPerCrosslink
-	if data.Target.Epoch < endEpoch {
-		endEpoch = data.Target.Epoch
-	}
-	if data.Crosslink.StartEpoch != parentCrosslink.EndEpoch {
-		return nil, fmt.Errorf("expected crosslink start epoch %d, received %d",
-			parentCrosslink.EndEpoch, data.Crosslink.StartEpoch)
-	}
-	if data.Crosslink.EndEpoch != endEpoch {
-		return nil, fmt.Errorf("expected crosslink end epoch %d, received %d",
-			endEpoch, data.Crosslink.EndEpoch)
-	}
-	crosslinkParentRoot, err := ssz.HashTreeRoot(parentCrosslink)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash parent crosslink")
-	}
-	if !bytes.Equal(data.Crosslink.ParentRoot, crosslinkParentRoot[:]) {
-		return nil, fmt.Errorf(
-			"mismatched parent crosslink root, expected %#x, received %#x",
-			crosslinkParentRoot,
-			data.Crosslink.ParentRoot,
-		)
-	}
 
-	// To be removed in Phase 1
-	if !bytes.Equal(data.Crosslink.DataRoot, params.BeaconConfig().ZeroHash[:]) {
-		return nil, fmt.Errorf("expected data root %#x == ZERO_HASH", data.Crosslink.DataRoot)
-	}
 	return beaconState, nil
 }
 
@@ -707,11 +634,15 @@ func ProcessAttestationNoVerify(beaconState *pb.BeaconState, att *ethpb.Attestat
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
+	defer span.End()
+
 	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
 	}
+
 	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
 	if err != nil {
 		return nil, err
@@ -782,7 +713,10 @@ func ConvertToIndexed(state *pb.BeaconState, attestation *ethpb.Attestation) (*e
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+	defer span.End()
+
 	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
 	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
@@ -817,7 +751,7 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
-	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainAttestation)
+	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkeys []*bls.PublicKey
 	if len(custodyBit0Indices) > 0 {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)
@@ -881,12 +815,12 @@ func VerifyIndexedAttestation(beaconState *pb.BeaconState, indexedAtt *ethpb.Ind
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	indexedAtt, err := ConvertToIndexed(beaconState, att)
+func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
+	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
-	return VerifyIndexedAttestation(beaconState, indexedAtt)
+	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
 // ProcessDeposits is one of the operations performed on each processed
@@ -896,10 +830,7 @@ func VerifyAttestation(beaconState *pb.BeaconState, att *ethpb.Attestation) erro
 // Spec pseudocode definition:
 //   For each deposit in block.body.deposits:
 //     process_deposit(state, deposit)
-func ProcessDeposits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
 
@@ -917,47 +848,45 @@ func ProcessDeposits(
 // into the registry as a new validator or balance change.
 //
 // Spec pseudocode definition:
-//   def process_deposit(state: BeaconState, deposit: Deposit) -> None:
-//     """
-//     Process an Eth1 deposit, registering a validator or increasing its balance.
-//     """
-//     # Verify the Merkle branch
-//     assert verify_merkle_branch(
-//         leaf=hash_tree_root(deposit.data),
-//         proof=deposit.proof,
-//         depth=DEPOSIT_CONTRACT_TREE_DEPTH,
-//         index=deposit.index,
-//         root=state.latest_eth1_data.deposit_root,
-//     )
+// def process_deposit(state: BeaconState, deposit: Deposit) -> None:
+//    # Verify the Merkle branch
+//    assert is_valid_merkle_branch(
+//        leaf=hash_tree_root(deposit.data),
+//        branch=deposit.proof,
+//        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the `List` length mix-in
+//        index=state.eth1_deposit_index,
+//        root=state.eth1_data.deposit_root,
+//    )
 //
-//     # Deposits must be processed in order
-//     assert deposit.index == state.deposit_index
-//     state.deposit_index += 1
+//    # Deposits must be processed in order
+//    state.eth1_deposit_index += 1
 //
-//     pubkey = deposit.data.pubkey
-//     amount = deposit.data.amount
-//     validator_pubkeys = [v.pubkey for v in state.validator_registry]
-//     if pubkey not in validator_pubkeys:
-//         # Verify the deposit signature (proof of possession).
-//         # Invalid signatures are allowed by the deposit contract, and hence included on-chain, but must not be processed.
-//         if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature%d, get_domain(state, DOMAIN_DEPOSIT)):
-//             return
+//    pubkey = deposit.data.pubkey
+//    amount = deposit.data.amount
+//    validator_pubkeys = [v.pubkey for v in state.validators]
+//    if pubkey not in validator_pubkeys:
+//        # Verify the deposit signature (proof of possession) for new validators.
+//        # Note: The deposit contract does not check signatures.
+//        # Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `compute_domain`.
+//        domain = compute_domain(DOMAIN_DEPOSIT)
+//        if not bls_verify(pubkey, signing_root(deposit.data), deposit.data.signature, domain):
+//            return
 //
-//         # Add validator and balance entries
-//         state.validator_registry.append(Validator(
-//             pubkey=pubkey,
-//             withdrawal_credentials=deposit.data.withdrawal_credentials,
-//             activation_eligibility_epoch=FAR_FUTURE_EPOCH,
-//             activation_epoch=FAR_FUTURE_EPOCH,
-//             exit_epoch=FAR_FUTURE_EPOCH,
-//             withdrawable_epoch=FAR_FUTURE_EPOCH,
-//             effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//         ))
-//         state.balances.append(amount)
-//     else:
-//         # Increase balance by deposit amount
-//         index = validator_pubkeys.index(pubkey)
-//         increase_balance(state, index, amount)
+//        # Add validator and balance entries
+//        state.validators.append(Validator(
+//            pubkey=pubkey,
+//            withdrawal_credentials=deposit.data.withdrawal_credentials,
+//            activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//            activation_epoch=FAR_FUTURE_EPOCH,
+//            exit_epoch=FAR_FUTURE_EPOCH,
+//            withdrawable_epoch=FAR_FUTURE_EPOCH,
+//            effective_balance=min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE),
+//        ))
+//        state.balances.append(amount)
+//    else:
+//        # Increase balance by deposit amount
+//        index = ValidatorIndex(validator_pubkeys.index(pubkey))
+//        increase_balance(state, index, amount)
 func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
@@ -967,7 +896,7 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
 	if !ok {
-		domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainDeposit)
+		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
@@ -1040,10 +969,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit) error {
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
-func ProcessVoluntaryExits(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
+func ProcessVoluntaryExits(ctx context.Context, beaconState *pb.BeaconState, body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
 	var err error
 	exits := body.VoluntaryExits
 
@@ -1126,130 +1052,6 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
 		return errors.Wrap(err, "could not verify voluntary exit signature")
-	}
-	return nil
-}
-
-// ProcessTransfers is one of the operations performed
-// on each processed beacon block to determine transfers between beacon chain balances.
-//
-// Spec pseudocode definition:
-//   def process_transfer(state: BeaconState, transfer: Transfer) -> None:
-//    """
-//    Process ``Transfer`` operation.
-//    """
-//    # Verify the balance the covers amount and fee (with overflow protection)
-//	  assert state.balances[transfer.sender] >= max(transfer.amount + transfer.fee, transfer.amount, transfer.fee)
-//    # A transfer is valid in only one slot
-//    assert state.slot == transfer.slot
-//    # SenderIndex must satisfy at least one of the following conditions in the parenthesis:
-//    assert (
-//		  # * Has not been activated
-//        state.validator_registry[transfer.sender].activation_eligibility_epoch == FAR_FUTURE_EPOCH or
-//        # * Is withdrawable
-//        get_current_epoch(state) >= state.validator_registry[transfer.sender].withdrawable_epoch or
-//        # * Balance after transfer is more than the effective balance threshold
-//        transfer.amount + transfer.fee + MAX_EFFECTIVE_BALANCE <= state.balances[transfer.sender]
-//    )
-//    # Verify that the pubkey is valid
-//    assert (
-//        state.validator_registry[transfer.sender].withdrawal_credentials ==
-//        int_to_bytes(BLS_WITHDRAWAL_PREFIX, length=1) + hash(transfer.pubkey)[1:]
-//    )
-//    # Verify that the signature is valid
-//    assert bls_verify(transfer.pubkey, signing_root(transfer), transfer.signature, get_domain(state, DOMAIN_TRANSFER))
-//    # Process the transfer
-//    decrease_balance(state, transfer.sender, transfer.amount + transfer.fee)
-//    increase_balance(state, transfer.recipient, transfer.amount)
-//    increase_balance(state, get_beacon_proposer_index(state), transfer.fee)
-//    # Verify balances are not dust
-//    assert not (0 < state.balances[transfer.sender] < MIN_DEPOSIT_AMOUNT)
-//    assert not (0 < state.balances[transfer.recipient] < MIN_DEPOSIT_AMOUNT)
-func ProcessTransfers(
-	beaconState *pb.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*pb.BeaconState, error) {
-	transfers := body.Transfers
-
-	for idx, transfer := range transfers {
-		if err := verifyTransfer(beaconState, transfer); err != nil {
-			return nil, errors.Wrapf(err, "could not verify transfer %d", idx)
-		}
-		// Process the transfer between accounts.
-		beaconState = helpers.DecreaseBalance(beaconState, transfer.SenderIndex, transfer.Amount+transfer.Fee)
-		beaconState = helpers.IncreaseBalance(beaconState, transfer.RecipientIndex, transfer.Amount)
-		proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not determine beacon proposer index")
-		}
-		beaconState = helpers.IncreaseBalance(beaconState, proposerIndex, transfer.Fee)
-
-		// Finally, we verify balances will not go below the mininum.
-		if beaconState.Balances[transfer.SenderIndex] < params.BeaconConfig().MinDepositAmount &&
-			0 < beaconState.Balances[transfer.SenderIndex] {
-			return nil, fmt.Errorf(
-				"sender balance below critical level: %v",
-				beaconState.Balances[transfer.SenderIndex],
-			)
-		}
-		if beaconState.Balances[transfer.RecipientIndex] < params.BeaconConfig().MinDepositAmount &&
-			0 < beaconState.Balances[transfer.RecipientIndex] {
-			return nil, fmt.Errorf(
-				"recipient balance below critical level: %v",
-				beaconState.Balances[transfer.RecipientIndex],
-			)
-		}
-	}
-	return beaconState, nil
-}
-
-func verifyTransfer(beaconState *pb.BeaconState, transfer *ethpb.Transfer) error {
-	if transfer.SenderIndex > uint64(len(beaconState.Validators)) {
-		return errors.New("transfer sender index out of bounds in validator registry")
-	}
-
-	maxVal := transfer.Fee
-	if transfer.Amount > maxVal {
-		maxVal = transfer.Amount
-	}
-	if transfer.Amount+transfer.Fee > maxVal {
-		maxVal = transfer.Amount + transfer.Fee
-	}
-	sender := beaconState.Validators[transfer.SenderIndex]
-	senderBalance := beaconState.Balances[transfer.SenderIndex]
-	// Verify the balance the covers amount and fee (with overflow protection).
-	if senderBalance < maxVal {
-		return fmt.Errorf("expected sender balance %d >= %d", senderBalance, maxVal)
-	}
-	// A transfer is valid in only one slot.
-	if beaconState.Slot != transfer.Slot {
-		return fmt.Errorf("expected beacon state slot %d == transfer slot %d", beaconState.Slot, transfer.Slot)
-	}
-
-	// Sender must be not yet eligible for activation, withdrawn, or transfer balance over MAX_EFFECTIVE_BALANCE.
-	senderNotActivationEligible := sender.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
-	senderNotWithdrawn := helpers.CurrentEpoch(beaconState) >= sender.WithdrawableEpoch
-	underMaxTransfer := transfer.Amount+transfer.Fee+params.BeaconConfig().MaxEffectiveBalance <= senderBalance
-
-	if !(senderNotActivationEligible || senderNotWithdrawn || underMaxTransfer) {
-		return fmt.Errorf(
-			"expected activation eligiblity: false or withdrawn: false or over max transfer: false, received %v %v %v",
-			senderNotActivationEligible,
-			senderNotWithdrawn,
-			underMaxTransfer,
-		)
-	}
-	// Verify that the pubkey is valid.
-	buf := []byte{params.BeaconConfig().BLSWithdrawalPrefixByte}
-	hashed := hashutil.Hash(transfer.SenderWithdrawalPublicKey)
-	buf = append(buf, hashed[:][1:]...)
-	if !bytes.Equal(sender.WithdrawalCredentials, buf) {
-		return fmt.Errorf("invalid public key, expected %v, received %v", buf, sender.WithdrawalCredentials)
-	}
-
-	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainTransfer)
-	if err := verifySigningRoot(transfer, transfer.SenderWithdrawalPublicKey, transfer.Signature, domain); err != nil {
-		return errors.Wrap(err, "could not verify transfer signature")
 	}
 	return nil
 }

@@ -27,11 +27,8 @@ message BeaconState {
   repeated ethereum.eth.v1alpha1.Validator validators = 4001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
   repeated uint64 balances = 4002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
-  // Shuffling [5001-6000]
-  uint64 start_shard = 5001;
-  repeated bytes randao_mixes = 5002 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
-  repeated bytes active_index_roots = 5003 [(gogoproto.moretags) = "ssz-size:\"active_index_roots.size\""];
-  repeated bytes compact_committees_roots = 5004 [(gogoproto.moretags) = "ssz-size:\"compact_committees_roots.size\""];
+  // Randomness [5001-6000]
+  repeated bytes randao_mixes = 5001 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
@@ -40,16 +37,12 @@ message BeaconState {
   repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
   repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
 
-  // Crosslinks [8001-9000]
-  repeated ethereum.eth.v1alpha1.Crosslink previous_crosslinks = 8001 [(gogoproto.moretags) = "ssz-size:\"previous_crosslinks.size\""];
-  repeated ethereum.eth.v1alpha1.Crosslink current_crosslinks = 8002 [(gogoproto.moretags) = "ssz-size:\"current_crosslinks.size\""];
-
-  // Finality [9001-10000]
+  // Finality [8001-9000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
-  bytes justification_bits = 9001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
-  ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 9002;
-  ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 9003;
-  ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 9004;
+  bytes justification_bits = 8001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+  ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
+  ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
+  ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
 }
 
 message Fork {
@@ -61,7 +54,7 @@ message Fork {
 message PendingAttestation {
   // Bitfield representation of validator indices that have voted exactly
   // the same vote and have been aggregated into this attestation.
-  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"4096\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   ethereum.eth.v1alpha1.AttestationData data = 2;
   // The difference of when attestation gets created and get included on chain.
   uint64 inclusion_delay = 3;
@@ -86,7 +79,7 @@ message ValidatorLatestVote {
 
 message AttestationDataAndCustodyBit {
   ethereum.eth.v1alpha1.AttestationData data = 1;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of beacon data
   bool custody_bit = 2;
 }
 
@@ -95,9 +88,11 @@ message HistoricalBatch {
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
 }
 
-message CompactCommittee {
-  // The list of the validator public keys in the committee.
-  repeated bytes pubkeys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\" ssz-max:\"4096\""];
-  // The list of the validator indices in the committee.
-  repeated uint64 compact_validators = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
+message AggregateAndProof {
+  // index is the aggregator's index
+  uint64 index = 1;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  // aggregate is the constructed aggregated attestation
+  ethereum.eth.v1alpha1.Attestation aggregate = 3;
 }

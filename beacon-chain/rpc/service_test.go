@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -21,15 +22,17 @@ func init() {
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
+	chainService := &mock.ChainService{}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
 		CertFlag:            "alice.crt",
 		KeyFlag:             "alice.key",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &mock.ChainService{},
-		AttestationReceiver: &mock.ChainService{},
-		HeadFetcher:         &mock.ChainService{},
-		StateFeedListener:   &mock.ChainService{},
+		BlockReceiver:       chainService,
+		AttestationReceiver: chainService,
+		HeadFetcher:         chainService,
+		POWChainService:     &mockPOW.POWChain{},
+		StateNotifier:       chainService.StateNotifier(),
 	})
 
 	rpcService.Start()
@@ -38,29 +41,6 @@ func TestLifecycle_OK(t *testing.T) {
 
 	rpcService.Stop()
 
-}
-
-func TestRPC_BadEndpoint(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	rpcService := NewService(context.Background(), &Config{
-		Port:                "ralph merkle!!!",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &mock.ChainService{},
-		AttestationReceiver: &mock.ChainService{},
-		HeadFetcher:         &mock.ChainService{},
-		StateFeedListener:   &mock.ChainService{},
-	})
-
-	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
-
-	rpcService.Start()
-
-	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
-
-	rpcService.Stop()
 }
 
 func TestStatus_CredentialError(t *testing.T) {
@@ -74,13 +54,15 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
+	chainService := &mock.ChainService{}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &mock.ChainService{},
-		AttestationReceiver: &mock.ChainService{},
-		HeadFetcher:         &mock.ChainService{},
-		StateFeedListener:   &mock.ChainService{},
+		BlockReceiver:       chainService,
+		AttestationReceiver: chainService,
+		HeadFetcher:         chainService,
+		POWChainService:     &mockPOW.POWChain{},
+		StateNotifier:       chainService.StateNotifier(),
 	})
 
 	rpcService.Start()

@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/karlseguin/ccache"
+	bls12 "github.com/kilic/bls12-381"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
-	bls12 "github.com/kilic/bls12-381"
 )
 
 var pubkeyCache = ccache.New(ccache.Configure())
@@ -62,11 +61,11 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 
 // PublicKeyFromBytes creates a BLS public key from a  LittleEndian byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
 	cv := pubkeyCache.Get(string(pub))
-	if cv != nil && cv.Value() != nil && featureconfig.FeatureConfig().EnableBLSPubkeyCache {
+	if cv != nil && cv.Value() != nil && featureconfig.Get().EnableBLSPubkeyCache {
 		return cv.Value().(*PublicKey).Copy(), nil
 	}
 	b := bytesutil.ToBytes48(pub)
@@ -82,7 +81,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (*Signature, error) {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
 	s, err := bls12.NewG2(nil).FromCompressed(sig)
@@ -101,7 +100,7 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client.
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
 	g2 := bls12.NewG2(nil)
@@ -134,7 +133,7 @@ func (p *PublicKey) Copy() *PublicKey {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return p
 	}
 	bls12.NewG1(nil).Add(p.p, p.p, p2.p)
@@ -143,7 +142,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
 	b := [8]byte{}
@@ -167,7 +166,7 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
 	size := len(pubKeys)
@@ -197,7 +196,7 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
 	if len(pubKeys) == 0 {
@@ -237,7 +236,7 @@ func NewAggregatePubkey() *PublicKey {
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return sigs[0]
 	}
 	aggregated := NewAggregateSignature()
@@ -254,7 +253,7 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
-	if featureconfig.FeatureConfig().SkipBLSVerify {
+	if featureconfig.Get().SkipBLSVerify {
 		return make([]byte, 96)
 	}
 	return bls12.NewG2(nil).ToCompressed(s.s)
@@ -275,6 +274,18 @@ func Domain(domainType []byte, forkVersion []byte) uint64 {
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
 	return bytesutil.FromBytes8(b)
+}
+
+// ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
+// array as the fork version.
+//
+// def compute_domain(domain_type: DomainType, fork_version: Version=Version()) -> Domain:
+//    """
+//    Return the domain for the ``domain_type`` and ``fork_version``.
+//    """
+//    return Domain(domain_type + fork_version)
+func ComputeDomain(domainType []byte) uint64 {
+	return Domain(domainType, []byte{0, 0, 0, 0})
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

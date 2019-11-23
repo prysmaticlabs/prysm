@@ -67,13 +67,6 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 							Epoch: 5,
 							Root:  someRoot[:],
 						},
-						Crosslink: &ethpb.Crosslink{
-							Shard:      3,
-							ParentRoot: someRoot[:],
-							StartEpoch: 3,
-							EndEpoch:   4,
-							DataRoot:   someRoot[:],
-						},
 					},
 				},
 				Attestation_2: &ethpb.IndexedAttestation{
@@ -86,13 +79,6 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 						Target: &ethpb.Checkpoint{
 							Epoch: 5,
 							Root:  someRoot[:],
-						},
-						Crosslink: &ethpb.Crosslink{
-							Shard:      3,
-							ParentRoot: someRoot[:],
-							StartEpoch: 3,
-							EndEpoch:   4,
-							DataRoot:   someRoot[:],
 						},
 					},
 				},
@@ -118,9 +104,8 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	ctx := context.Background()
 	someSeed := [32]byte{1, 2, 3}
 	info := &ethpb.ArchivedCommitteeInfo{
-		Seed:           someSeed[:],
-		StartShard:     10,
-		CommitteeCount: 4096,
+		ProposerSeed: someSeed[:],
+		AttesterSeed: someSeed[:],
 	}
 	epoch := uint64(10)
 	if err := db.SaveArchivedCommitteeInfo(ctx, epoch, info); err != nil {

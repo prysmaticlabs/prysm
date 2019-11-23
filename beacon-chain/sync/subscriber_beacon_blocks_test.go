@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -39,7 +40,7 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Received a block older than finalized checkpoint, 1 < 64")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Received a block older than finalized checkpoint, 1 < %d", params.BeaconConfig().SlotsPerEpoch))
 
 	hook.Reset()
 	b.Slot = params.BeaconConfig().SlotsPerEpoch

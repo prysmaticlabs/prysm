@@ -29,7 +29,7 @@ func (s *Service) processDeposit(
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
-		domain := bls.Domain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().GenesisForkVersion)
+		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		sig, err := bls.SignatureFromBytes(deposit.Data.Signature)
 		if err != nil {
 			return errors.Wrap(err, "could not convert bytes to signature")

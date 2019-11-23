@@ -51,7 +51,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
-	s := r.chain.HeadState()
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return false, err
+	}
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < slashSlot {
 		if ctx.Err() != nil {
@@ -66,7 +69,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		}
 	}
 
-	if err := blocks.VerifyAttesterSlashing(s, slashing); err != nil {
+	if err := blocks.VerifyAttesterSlashing(ctx, s, slashing); err != nil {
 		seenAttesterSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
 		return false, errors.Wrap(err, "Received invalid attester slashing")
 	}

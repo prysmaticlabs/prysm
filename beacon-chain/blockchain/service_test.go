@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -32,10 +33,6 @@ import (
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-// Ensure Service implements interfaces.
-var _ = ChainFeeds(&Service{})
-var _ = NewHeadNotifier(&Service{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -54,8 +51,8 @@ func (s *store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	return nil
 }
 
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) (uint64, error) {
-	return 0, nil
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+	return nil
 }
 
 func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
@@ -70,6 +67,18 @@ func (s *store) Head(ctx context.Context) ([]byte, error) {
 	return s.headRoot, nil
 }
 
+type mockBeaconNode struct {
+	stateFeed *event.Feed
+}
+
+// StateFeed mocks the same method in the beacon node.
+func (mbn *mockBeaconNode) StateFeed() *event.Feed {
+	if mbn.stateFeed == nil {
+		mbn.stateFeed = new(event.Feed)
+	}
+	return mbn.stateFeed
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
@@ -80,8 +89,20 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return nil
 }
 
-func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
-	return nil
+func (ms *mockOperationService) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
+func (ms *mockOperationService) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
+func (ms *mockOperationService) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
+	return nil, nil
+}
+
+func (ms *mockOperationService) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	return nil, nil
 }
 
 type mockClient struct{}
@@ -199,13 +220,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
-	client := &mockClient{}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
-		Endpoint:        endpoint,
+		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
-		Reader:          client,
-		Client:          client,
-		Logger:          client,
 	})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
@@ -218,6 +235,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    &mockOperationService{},
 		P2p:               &mockBroadcaster{},
+		StateNotifier:     &mockBeaconNode{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -237,20 +255,36 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db)
 
-	// Test the start function.
-	genesisChan := make(chan time.Time, 0)
-	sub := chainService.stateInitializedFeed.Subscribe(genesisChan)
-	defer sub.Unsubscribe()
+	// Listen for state events.
+	stateSubChannel := make(chan *statefeed.Event, 1)
+	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
+
+	// Test the chain start state notifier.
+	genesisTime := time.Unix(0, 0)
 	chainService.Start()
-	chainService.chainStartChan <- time.Unix(0, 0)
-	genesisTime := <-genesisChan
-	if genesisTime != time.Unix(0, 0) {
-		t.Errorf(
-			"Expected genesis time to equal chainstart time (%v), received %v",
-			time.Unix(0, 0),
-			genesisTime,
-		)
+	event := &statefeed.Event{
+		Type: statefeed.ChainStarted,
+		Data: &statefeed.ChainStartedData{
+			StartTime: genesisTime,
+		},
 	}
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 1; sent == 1; {
+		sent = chainService.stateNotifier.StateFeed().Send(event)
+		if sent == 1 {
+			// Flush our local subscriber.
+			<-stateSubChannel
+		}
+	}
+
+	// Now wait for notification the state is ready.
+	for stateInitialized := false; stateInitialized == false; {
+		recv := <-stateSubChannel
+		if recv.Type == statefeed.StateInitialized {
+			stateInitialized = true
+		}
+	}
+	stateSub.Unsubscribe()
 
 	beaconState, err := db.HeadState(context.Background())
 	if err != nil {
@@ -338,8 +372,8 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		}
 	}
 
-	if bc.HeadState() == nil {
-		t.Error("Head state can't be nil after initialize beacon chain")
+	if _, err := bc.HeadState(ctx); err != nil {
+		t.Error(err)
 	}
 	if bc.HeadBlock() == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
@@ -354,17 +388,32 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
+	genesis := b.NewGenesisBlock([]byte{})
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Fatal(err)
+	}
+
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot}
+	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
 	headRoot, _ := ssz.SigningRoot(headBlock)
+	if err := db.SaveState(ctx, headState, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, headBlock); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
 		Epoch: helpers.SlotToEpoch(finalizedSlot),
 		Root:  headRoot[:],
 	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
@@ -377,8 +426,12 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !reflect.DeepEqual(c.HeadBlock(), headBlock) {
 		t.Error("head block incorrect")
 	}
-	if !reflect.DeepEqual(c.HeadState(), headState) {
-		t.Error("head block incorrect")
+	s, err := c.HeadState(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, headState) {
+		t.Error("head state incorrect")
 	}
 	if headBlock.Slot != c.HeadSlot() {
 		t.Error("head slot incorrect")

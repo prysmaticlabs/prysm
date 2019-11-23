@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 )
@@ -123,10 +124,10 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
-func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byte, error) {
+func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoots")
 	defer span.End()
-	blockRoots := make([][]byte, 0)
+	blockRoots := make([][32]byte, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
 		// If no filter criteria are specified, return an error.
 		if f == nil {
@@ -168,7 +169,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][]byt
 			}
 		}
 		for i := 0; i < len(keys); i++ {
-			blockRoots = append(blockRoots, keys[i])
+			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
@@ -253,11 +254,14 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		return nil
 	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
+			return nil
+		}
 		enc, err := proto.Marshal(block)
 		if err != nil {
 			return err
 		}
-		bkt := tx.Bucket(blocksBucket)
 		indicesByBucket := createBlockIndicesFromBlock(block)
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")

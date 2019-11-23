@@ -1,18 +1,51 @@
 package mathutil
 
-import "math"
+import (
+	"math"
+)
+
+// Common square root values.
+var squareRootTable = map[uint64]uint64{
+	4:       2,
+	16:      4,
+	64:      8,
+	256:     16,
+	1024:    32,
+	4096:    64,
+	16384:   128,
+	65536:   256,
+	262144:  512,
+	1048576: 1024,
+	4194304: 2048,
+}
 
 // IntegerSquareRoot defines a function that returns the
-// largest possible integer root of a number.
+// largest possible integer root of a number using a divide and conquer
+// binary search approach:
+//
+// inspiration: https://www.geeksforgeeks.org/square-root-of-an-integer
 func IntegerSquareRoot(n uint64) uint64 {
-	x := n
-	y := (x + 1) / 2
-
-	for y < x {
-		x = y
-		y = (x + n/x) / 2
+	if v, ok := squareRootTable[n]; ok {
+		return v
 	}
-	return x
+
+	x := uint64(0)
+	y := uint64(1 << 32)
+	for {
+		if y <= 1+x {
+			return x
+		}
+		sqt := x + ((y - x) >> 1)
+		sq := sqt * sqt
+		if sq == n {
+			return sqt
+		}
+		if sq > n {
+			y = sqt
+		} else {
+			x = sqt
+		}
+	}
 }
 
 // CeilDiv8 divides the input number by 8

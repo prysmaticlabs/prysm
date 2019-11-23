@@ -53,10 +53,6 @@ message BeaconBlockBody {
 
     // At most MAX_VOLUNTARY_EXITS.
     repeated VoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
-
-    // At most MAX_TRANSFERS.
-    // Note: this is always empty for phase 0.
-    repeated Transfer transfers = 9 [(gogoproto.moretags) = "ssz-max:\"0\""];
 }
 
 // Proposer slashings are proofs that a slashable offense has been committed by
@@ -117,30 +113,6 @@ message VoluntaryExit {
     bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
-// A beacon chain transfer is a ETH currency transfer between two validators.
-message Transfer {
-    // Validator index of the sender.
-    uint64 sender_index = 1 [(gogoproto.moretags) = "spec-name:\"sender\""];
-
-    // Validator index of the recipient.
-    uint64 recipient_index = 2 [(gogoproto.moretags) = "spec-name:\"recipient\""];
-
-    // Amount in gwei sent to the recipient.
-    uint64 amount = 3;
-
-    // Fee in gwei for the block proposer to include this transfer.
-    uint64 fee = 4;
-
-    // Slot at which transfer must be processed. This is used for replay protection.
-    uint64 slot = 5;
-
-    // 48 byte sender's withdrawal public key.
-    bytes sender_withdrawal_public_key = 6 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
-
-    // 96 byte signature from the sender's withdrawal key.
-    bytes signature = 7 [(gogoproto.moretags) = "ssz-size:\"96\""];
-}
-
 // Eth1Data represents references to the Ethereum 1.x deposit contract.
 message Eth1Data {
     // The 32 byte deposit tree root for the last deposit included in this
@@ -177,8 +149,8 @@ message BeaconBlockHeader {
 }
 
 message IndexedAttestation {
-    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"4096\""];
-    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"4096\""];
+    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
+    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"2048\""];
 
     AttestationData data = 3;
 
