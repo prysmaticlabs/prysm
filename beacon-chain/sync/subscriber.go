@@ -50,6 +50,7 @@ func (r *RegularSync) registerSubscribers() {
 					data := event.Data.(*statefeed.StateInitializedData)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					if data.StartTime.After(roughtime.Now()) {
+						stateSub.Unsubscribe()
 						time.Sleep(roughtime.Until(data.StartTime))
 					}
 					r.chainStarted = true
