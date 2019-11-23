@@ -5,7 +5,6 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,7 +53,7 @@ type Server struct {
 func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 	activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
-		return err
+		return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
 	}
 	res := &pb.ValidatorActivationResponse{
 		Statuses: validatorStatuses,
@@ -63,7 +62,7 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 		return stream.Send(res)
 	}
 	if err := stream.Send(res); err != nil {
-		return err
+		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
 
 	for {
@@ -71,7 +70,7 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 		case <-time.After(6 * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
-				return err
+				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
 			}
 			res := &pb.ValidatorActivationResponse{
 				Statuses: validatorStatuses,
@@ -80,12 +79,12 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 				return stream.Send(res)
 			}
 			if err := stream.Send(res); err != nil {
-				return err
+				return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 			}
 		case <-stream.Context().Done():
-			return errors.New("stream context closed, exiting gorutine")
+			return status.Error(codes.Canceled, "Stream context canceled")
 		case <-vs.Ctx.Done():
-			return errors.New("rpc context closed, exiting goroutine")
+			return status.Error(codes.Canceled, "RPC context canceled")
 		}
 	}
 }
@@ -94,10 +93,10 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
 	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve validator index: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
 	}
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "could not find validator index for public key %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
 	return &pb.ValidatorIndexResponse{Index: index}, nil
@@ -109,12 +108,16 @@ func (vs *Server) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
 	var err error
-	headState := vs.HeadFetcher.HeadState()
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if req.Slot > headState.Slot {
 		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 		}
 	}
 
@@ -132,12 +135,12 @@ func (vs *Server) ValidatorPerformance(
 
 	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve active validator count")
+		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
 	}
 
 	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve active balance")
+		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
 	}
 
 	avgBalance := float32(totalActiveBalance / activeCount)
@@ -158,16 +161,16 @@ func (vs *Server) ExitedValidators(
 
 	_, statuses, err := vs.multipleValidatorStatus(ctx, req.PublicKeys)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not retrieve validator statuses: %v", err)
 	}
 
 	exitedKeys := make([][]byte, 0)
-	for _, status := range statuses {
-		s := status.Status.Status
+	for _, st := range statuses {
+		s := st.Status.Status
 		if s == pb.ValidatorStatus_EXITED ||
 			s == pb.ValidatorStatus_EXITED_SLASHED ||
 			s == pb.ValidatorStatus_INITIATED_EXIT {
-			exitedKeys = append(exitedKeys, status.PublicKey)
+			exitedKeys = append(exitedKeys, st.PublicKey)
 		}
 	}
 
@@ -200,7 +203,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorService_WaitForChainStartServer) error {
 	head, err := vs.BeaconDB.HeadState(context.Background())
 	if err != nil {
-		return err
+		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if head != nil {
 		res := &pb.ChainStartResponse{
@@ -222,9 +225,9 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorServic
 			}
 			return stream.Send(res)
 		case <-sub.Err():
-			return errors.New("subscriber closed, exiting goroutine")
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():
-			return errors.New("rpc context closed, exiting goroutine")
+			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
 }

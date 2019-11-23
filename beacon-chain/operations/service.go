@@ -18,6 +18,7 @@ import (
 // service.
 type OperationFeeds interface {
 	IncomingProcessedBlockFeed() *event.Feed
+	Pool
 }
 
 // Service represents a service that handles the internal
@@ -31,7 +32,7 @@ type Service struct {
 	error                      error
 	attestationPool            map[[32]byte]*dbpb.AttestationContainer
 	recentAttestationBitlist   *recentAttestationMultiMap
-	attestationPoolLock        sync.Mutex
+	attestationPoolLock        sync.RWMutex
 	attestationLockCache       *ccache.Cache
 }
 

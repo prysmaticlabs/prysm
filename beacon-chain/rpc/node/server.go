@@ -36,12 +36,12 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.Sy
 func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not retrieve contract address from db: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve contract address from db: %v", err)
 	}
 	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
 	gt, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not convert genesis time to proto: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
 	return &ethpb.Genesis{
 		GenesisTime:            gt,

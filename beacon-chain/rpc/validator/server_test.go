@@ -105,7 +105,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
-		want := "context closed"
+		want := "context canceled"
 		if err := vs.WaitForActivation(req, mockChainStream); !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
@@ -148,11 +148,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				PublicKey:       pubKey1,
-			},
-			{
-				ActivationEpoch: 0,
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKey2,
 			},
 		},
 	}
@@ -249,7 +244,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "context closed") {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine

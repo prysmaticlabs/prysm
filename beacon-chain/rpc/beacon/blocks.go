@@ -2,8 +2,11 @@ package beacon
 
 import (
 	"context"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,7 +26,7 @@ func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 
@@ -34,64 +37,108 @@ func (bs *Server) ListBlocks(
 
 		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
 		}
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: make([]*ethpb.BeaconBlock, 0), TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
+		}
+
+		returnedBlks := blks[start:end]
+		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
+		for i, b := range returnedBlks {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return nil, err
+			}
+			containers[i] = &ethpb.BeaconBlockContainer{
+				Block:     b,
+				BlockRoot: root[:],
+			}
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        blks[start:end],
-			TotalSize:     int32(numBlks),
-			NextPageToken: nextPageToken,
+			BlockContainers: containers,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Root:
 		blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve block: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
-
 		if blk == nil {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
+		}
+		root, err := ssz.SigningRoot(blk)
+		if err != nil {
+			return nil, err
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:    []*ethpb.BeaconBlock{blk},
+			BlockContainers: []*ethpb.BeaconBlockContainer{{
+				Block:     blk,
+				BlockRoot: root[:]},
+			},
 			TotalSize: 1,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
 		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not retrieve blocks for slot %d: %v", q.Slot, err)
+			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
 
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{Blocks: []*ethpb.BeaconBlock{}, TotalSize: 0}, nil
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
 		}
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not paginate blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
+		}
+
+		returnedBlks := blks[start:end]
+		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
+		for i, b := range returnedBlks {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return nil, err
+			}
+			containers[i] = &ethpb.BeaconBlockContainer{
+				Block:     b,
+				BlockRoot: root[:],
+			}
 		}
 
 		return &ethpb.ListBlocksResponse{
-			Blocks:        blks[start:end],
-			TotalSize:     int32(numBlks),
-			NextPageToken: nextPageToken,
+			BlockContainers: containers,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 	}
 
-	return nil, status.Errorf(codes.InvalidArgument, "must satisfy one of the filter requirement")
+	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from
@@ -100,18 +147,50 @@ func (bs *Server) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	finalizedCheckpoint := bs.HeadFetcher.HeadState().FinalizedCheckpoint
-	justifiedCheckpoint := bs.HeadFetcher.HeadState().CurrentJustifiedCheckpoint
-	prevJustifiedCheckpoint := bs.HeadFetcher.HeadState().PreviousJustifiedCheckpoint
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	headBlock := bs.HeadFetcher.HeadBlock()
+	headBlockRoot, err := ssz.SigningRoot(headBlock)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
+	}
+
+	finalizedCheckpoint := headState.FinalizedCheckpoint
+	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get finalized block")
+	}
+	finalizedBlockSlot := b.Slot
+
+	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
+	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get justified block")
+	}
+	justifiedBlockSlot := b.Slot
+
+	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
+	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+	if err != nil || b == nil {
+		return nil, status.Error(codes.Internal, "Could not get prev justified block")
+	}
+	prevJustifiedBlockSlot := b.Slot
 
 	return &ethpb.ChainHead{
-		BlockRoot:                  bs.HeadFetcher.HeadRoot(),
-		BlockSlot:                  bs.HeadFetcher.HeadSlot(),
+		HeadBlockSlot:              headBlock.Slot,
+		HeadBlockEpoch:             helpers.SlotToEpoch(headBlock.Slot),
+		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		FinalizedSlot:              finalizedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		FinalizedBlockSlot:         finalizedBlockSlot,
+		FinalizedEpoch:             finalizedCheckpoint.Epoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		JustifiedSlot:              justifiedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		JustifiedBlockSlot:         justifiedBlockSlot,
+		JustifiedEpoch:             justifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      prevJustifiedCheckpoint.Epoch * params.BeaconConfig().SlotsPerEpoch,
+		PreviousJustifiedSlot:      prevJustifiedBlockSlot,
+		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 	}, nil
 }

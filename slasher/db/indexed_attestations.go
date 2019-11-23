@@ -35,9 +35,9 @@ func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDT
 // IndexedAttestation accepts a epoch and validator index and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist.
-func (db *Store) IndexedAttestation(sourceEpoch uint64, targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
+func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
 	var iAtt []*ethpb.IndexedAttestation
-	key := append(bytesutil.Bytes8(sourceEpoch), bytesutil.Bytes8(targetEpoch)...)
+	key := bytesutil.Bytes8(targetEpoch)
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 		enc := bucket.Get(key)
@@ -49,7 +49,7 @@ func (db *Store) IndexedAttestation(sourceEpoch uint64, targetEpoch uint64, vali
 			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
 			if i < len(a.Indices) && a.Indices[i] == validatorID {
 				iaBucket := tx.Bucket(historicIndexedAttestationsBucket)
-				key := encodeEpochSig(sourceEpoch, targetEpoch, a.Signature)
+				key := encodeEpochSig(targetEpoch, a.Signature)
 				enc = iaBucket.Get(key)
 				if len(enc) == 0 {
 					continue
@@ -67,9 +67,35 @@ func (db *Store) IndexedAttestation(sourceEpoch uint64, targetEpoch uint64, vali
 	return iAtt, err
 }
 
+// DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	var slashIdxAtt []*ethpb.IndexedAttestation
+	for _, at := range idxAttestations {
+		root, err := ssz.HashTreeRoot(at.Data)
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(root[:], dataRoot) {
+			slashIdxAtt = append(slashIdxAtt, at)
+		}
+	}
+	var as []*ethpb.AttesterSlashing
+	for _, ia := range slashIdxAtt {
+		as = append(as, &ethpb.AttesterSlashing{
+			Attestation_1: origAtt,
+			Attestation_2: ia,
+		})
+	}
+	return as, nil
+}
+
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
-func (db *Store) HasIndexedAttestation(sourceEpoch uint64, targetEpoch uint64, validatorID uint64) bool {
-	key := append(bytesutil.Bytes8(sourceEpoch), bytesutil.Bytes8(targetEpoch)...)
+func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) bool {
+	key := bytesutil.Bytes8(targetEpoch)
 	var hasAttestation bool
 	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
@@ -95,7 +121,7 @@ func (db *Store) HasIndexedAttestation(sourceEpoch uint64, targetEpoch uint64, v
 
 // SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
 func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error {
-	key := encodeEpochSig(idxAttestation.Data.Source.Epoch, idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
+	key := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
 	enc, err := proto.Marshal(idxAttestation)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
@@ -135,7 +161,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
-	key := append(bytesutil.Bytes8(idxAttestation.Data.Source.Epoch), bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)...)
+	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
 
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
@@ -156,7 +182,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 
 // DeleteIndexedAttestation deletes a indexed attestation using the slot and its root as keys in their respective buckets.
 func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error {
-	key := encodeEpochSig(idxAttestation.Data.Source.Epoch, idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
+	key := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		enc := bucket.Get(key)
@@ -179,7 +205,7 @@ func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
-	key := append(bytesutil.Bytes8(idxAttestation.Data.Source.Epoch), bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)...)
+	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
 	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)

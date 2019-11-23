@@ -71,24 +71,24 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 
 	parentRoot, err := ssz.SigningRoot(parent)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get parent block signing root")
+		return nil, status.Errorf(codes.Internal, "Could not get parent block signing root: %v", err)
 	}
 
 	eth1Data, err := ps.eth1Data(ctx, req.Slot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ETH1 data")
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
 
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := ps.deposits(ctx, eth1Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get eth1 deposits")
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts, err := ps.Pool.AttestationPool(ctx, req.Slot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get pending attestations")
+		return nil, status.Errorf(codes.Internal, "Could not get pending attestations: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -118,7 +118,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 	stateRoot, err = ps.computeStateRoot(ctx, blk)
 	if err != nil {
 		interop.WriteBlockToDisk(blk, true /*failed*/)
-		return nil, errors.Wrap(err, "could not get compute state root")
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
 
@@ -130,12 +130,12 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash block")
+		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 	if err := ps.BlockReceiver.ReceiveBlock(ctx, blk); err != nil {
-		return nil, errors.Wrap(err, "could not process beacon block")
+		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
 	return &pb.ProposeResponse{BlockRoot: root[:]}, nil
@@ -149,11 +149,11 @@ func (ps *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pb
 //  - This is the eth1block to use for the block proposal.
 func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	if ps.MockEth1Votes {
-		return ps.mockETH1DataVote(slot)
+		return ps.mockETH1DataVote(ctx, slot)
 	}
 
 	if !ps.Eth1InfoFetcher.IsConnectedToETH1() {
-		return ps.randomETH1DataVote()
+		return ps.randomETH1DataVote(ctx)
 	}
 
 	eth1VotingPeriodStartTime, _ := ps.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -168,7 +168,7 @@ func (ps *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	return ps.defaultEth1DataResponse(ctx, blockNumber)
 }
 
-func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
+func (ps *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
 		"ETH1 Data votes are now mocked.")
 	// If a mock eth1 data votes is specified, we use the following for the
@@ -181,7 +181,10 @@ func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-	headState := ps.HeadFetcher.HeadState()
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
 	if err != nil {
 		return nil, err
@@ -195,10 +198,13 @@ func (ps *Server) mockETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
 	}, nil
 }
 
-func (ps *Server) randomETH1DataVote() (*ethpb.Eth1Data, error) {
+func (ps *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
 	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
 		"ETH1 Data votes are now random.")
-	headState := ps.HeadFetcher.HeadState()
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
 	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
@@ -242,8 +248,11 @@ func (ps *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	}
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState := ps.HeadFetcher.HeadState()
-	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, headState, currentVote)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +283,7 @@ func (ps *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*depositcache.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+		if uint64(dep.Index) >= headState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

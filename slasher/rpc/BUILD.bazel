@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "detect_update_min_max_span.go",
         "server.go",
-        "update_min_max_span.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
@@ -16,6 +16,7 @@ go_library(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
     ],
@@ -24,8 +25,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "detect_update_min_max_span_test.go",
         "server_test.go",
-        "update_min_max_span_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -33,5 +34,27 @@ go_test(
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
+)
+
+# gazelle:exclude detect_update_min_max_span_bench_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "medium",
+    srcs = ["detect_update_min_max_span_bench_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+        "//slasher/db:go_default_library",
     ],
 )

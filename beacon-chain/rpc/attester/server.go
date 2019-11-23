@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -45,18 +44,19 @@ type Server struct {
 func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to hash tree root attestation")
+		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
+	}
+
+	// Broadcast the new attestation to the network.
+	if err := as.P2p.Broadcast(ctx, att); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := as.AttReceiver.ReceiveAttestation(ctx, att); err != nil {
-			log.WithError(err).Error("could not receive attestation in chain service")
-			return
-		}
 		if err := as.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
-			log.WithError(err).Error("could not handle attestation in operations service")
+			log.WithError(err).Error("Could not handle attestation in operations service")
 			return
 		}
 	}()
@@ -80,9 +80,8 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 
 	res, err := as.AttestationCache.Get(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 	}
-
 	if res != nil {
 		return res, nil
 	}
@@ -91,15 +90,14 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 		if err == cache.ErrAlreadyInProgress {
 			res, err := as.AttestationCache.Get(ctx, req)
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 			}
-
 			if res == nil {
-				return nil, errors.New("a request was in progress and resolved to nil")
+				return nil, status.Error(codes.DataLoss, "A request was in progress and resolved to nil")
 			}
 			return res, nil
 		}
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not mark attestation as in-progress: %v", err)
 	}
 	defer func() {
 		if err := as.AttestationCache.MarkNotInProgress(req); err != nil {
@@ -107,28 +105,15 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 		}
 	}()
 
-	headState := as.HeadFetcher.HeadState()
+	headState, err := as.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
+	}
 	headRoot := as.HeadFetcher.HeadRoot()
-
-	// Safe guard against head state is nil in chain service. This should not happen.
-	if headState == nil {
-		headState, err = as.BeaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Safe guard against head state is nil in chain service. This should not happen.
-	if headState == nil {
-		headState, err = as.BeaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not process slots up to %d", req.Slot)
+		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
@@ -139,7 +124,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get target block for slot %d", epochStartSlot)
+			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
 		}
 	}
 
@@ -155,7 +140,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 	}
 
 	if err := as.AttestationCache.Put(ctx, req, res); err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not store attestation data in cache: %v", err)
 	}
 
 	return res, nil

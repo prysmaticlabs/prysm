@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"sort"
+	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -33,7 +34,7 @@ func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "requested page size %d can not be greater than max size %d",
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, params.BeaconConfig().MaxPageSize)
 	}
 	var atts []*ethpb.Attestation
@@ -42,38 +43,48 @@ func (bs *Server) ListAttestations(
 	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_SourceEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_SourceRoot:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_TargetEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	case *ethpb.ListAttestationsRequest_TargetRoot:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	default:
-		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
 	numAttestations := len(atts)
 
+	// If there are no attestations, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 attestations below would result in an error.
+	if numAttestations == 0 {
+		return &ethpb.ListAttestationsResponse{
+			Attestations:  make([]*ethpb.Attestation, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not paginate attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
 	return &ethpb.ListAttestationsResponse{
 		Attestations:  atts[start:end],
@@ -96,7 +107,7 @@ func (bs *Server) AttestationPool(
 ) (*ethpb.AttestationPoolResponse, error) {
 	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not fetch attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 	}
 	return &ethpb.AttestationPoolResponse{
 		Attestations: atts,

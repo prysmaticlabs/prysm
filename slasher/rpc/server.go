@@ -3,10 +3,10 @@ package rpc
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -23,9 +23,41 @@ type Server struct {
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
-func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Attestation) (*ethpb.AttesterSlashing, error) {
-	//TODO(3133): implement attestation validation after attestation store will be merged.
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*ethpb.AttesterSlashingResponse, error) {
+	//TODO(#3133): add signature validation
+	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
+		return nil, err
+	}
+	tEpoch := req.Data.Target.Epoch
+	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
+	root, err := ssz.HashTreeRoot(req.Data)
+	if err != nil {
+		return nil, err
+	}
+	atsSlashinngRes := &ethpb.AttesterSlashingResponse{}
+	for _, idx := range indices {
+		atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
+		if err != nil {
+			return nil, err
+		}
+		if atts != nil && len(atts) > 0 {
+			atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
+		}
+	}
+
+	for _, idx := range indices {
+		atts, err := ss.DetectSurroundVotes(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, idx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range atts {
+			atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, &ethpb.AttesterSlashing{
+				Attestation_1: req,
+				Attestation_2: ia,
+			})
+		}
+	}
+	return atsSlashinngRes, nil
 }
 
 // IsSlashableBlock returns a proposer slashing if the block header submitted is
@@ -65,4 +97,41 @@ func (ss *Server) SlashableProposals(req *types.Empty, server ethpb.Slasher_Slas
 func (ss *Server) SlashableAttestations(req *types.Empty, server ethpb.Slasher_SlashableAttestationsServer) error {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
 	return status.Error(codes.Unimplemented, "not implemented")
+}
+
+// DetectSurroundVotes is a method used to return the attestation that were detected
+// by min max surround detection method.
+func (ss *Server) DetectSurroundVotes(ctx context.Context, source uint64, target uint64, validatorIdx uint64) ([]*ethpb.IndexedAttestation, error) {
+	minTargetEpoch, err := ss.DetectAndUpdateMinEpochSpan(ctx, source, target, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	maxTargetEpoch, err := ss.DetectAndUpdateMaxEpochSpan(ctx, source, target, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	var idxAtts []*ethpb.IndexedAttestation
+	if minTargetEpoch > 0 {
+		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range attestations {
+			if ia.Data.Source.Epoch > source && ia.Data.Target.Epoch < target {
+				idxAtts = append(idxAtts, ia)
+			}
+		}
+	}
+	if maxTargetEpoch > 0 {
+		attestations, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range attestations {
+			if ia.Data.Source.Epoch < source && ia.Data.Target.Epoch > target {
+				idxAtts = append(idxAtts, ia)
+			}
+		}
+	}
+	return idxAtts, nil
 }
