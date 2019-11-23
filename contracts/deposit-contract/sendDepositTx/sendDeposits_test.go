@@ -17,15 +17,14 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
-
 func generateValidatorKeys(count uint64) map[string]*prysmKeyStore.Key {
-    validatorKeys := make(map[string]*prysmKeyStore.Key)
+	validatorKeys := make(map[string]*prysmKeyStore.Key)
 	for i := uint64(0); i < count; i++ {
 		validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
 		if err != nil {
@@ -43,7 +42,7 @@ func init() {
 
 func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
 	numberOfDeposits, numberOfValidators uint64) []*ethpb.Deposit {
-	
+
 	deposits := make([]*ethpb.Deposit, 0, numberOfValidators)
 	depositAmountInGwei := testAcc.TxOpts.Value.Uint64()
 
@@ -51,7 +50,7 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys ma
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
 
 	for _, validatorKey := range validatorKeys {
-		 
+
 		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 		if err != nil {
 			t.Fatalf("Could not generate deposit input data: %v", err)
@@ -67,8 +66,8 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys ma
 			}
 
 			testAcc.Backend.Commit()
-			
-			//lgos do not show up in console 
+
+			//lgos do not show up in console
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
 			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddrStr, validatorKey.PublicKey.Marshal())
@@ -80,7 +79,6 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys ma
 }
 
 func TestEndtoEndDeposits(t *testing.T) {
-	log = logrus.WithField("prefix", "main")
 	testutil.ResetCache()
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -90,7 +88,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 	testAcc.Backend.Commit()
 
 	// 256 validators - each validator makes one deposit for simplicity
-	
+
 	numberOfValidators := uint64(2)
 	validatorKeys := generateValidatorKeys(numberOfValidators)
 
@@ -125,7 +123,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to unpack logs %v", err)
 		}
-		
+
 		if binary.LittleEndian.Uint64(index) != uint64(i) {
 			t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 		}
@@ -141,21 +139,24 @@ func TestEndtoEndDeposits(t *testing.T) {
 		if !bytes.Equal(withCreds, deposits[j].Data.WithdrawalCredentials) {
 			t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v, i: %d", withCreds, i)
 		}
-        // if i == 4
-		if  i == int(numberOfDeposits) - 1 {
+		// if i == 4
+		if i == int(numberOfDeposits)-1 {
 			j++
 		}
 	}
-	
-	encodedDeposits := make([][]byte, len(deposits))
-	for i := 0; i < len(encodedDeposits); i++ {
+
+	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
+	for i := 0; i < int(numberOfValidators); i++ {
+
 		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}
-		encodedDeposits[i] = hashedDeposit[:]
+		for j := 0; j < int(numberOfDeposits); j++ {
+			encodedDeposits[i*int(numberOfDeposits)+j] = hashedDeposit[:]
+		}
 	}
-	
+
 	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate trie: %v", err)
@@ -163,7 +164,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	root := depositTrie.Root()
 
-	for  i, encodedDeposit := range encodedDeposits {
+	for i, encodedDeposit := range encodedDeposits {
 		proof, err := depositTrie.MerkleProof(i)
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
@@ -171,34 +172,13 @@ func TestEndtoEndDeposits(t *testing.T) {
 		if ok := trieutil.VerifyMerkleProof(
 			root[:],
 			encodedDeposit,
-			len(deposits)-1,
+			i,
 			proof,
 		); !ok {
 			t.Fatalf(
-				"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, len(deposits)-1: %d, i : %d",
-				root[:], encodedDeposit, len(deposits)-1, i)
+				"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d",
+				root[:], encodedDeposit, i)
 		}
 
 	}
 }
-// 	var root [32]byte
-// 	deposits, root = testutil.GenerateDepositProof(t, deposits)
-
-// 	//verify merkle proof for each deposit
-// 	for  i, deposit := range deposits {
-// 		leaf, err := ssz.HashTreeRoot(deposit.Data)
-// 		if err != nil {
-// 			t.Fatalf("Unable tree hash deposit data: %v", err)
-// 		}
-// 		if ok := trieutil.VerifyMerkleProof(
-// 			root[:],
-// 			leaf[:],
-// 			len(deposits)-1,
-// 			deposit.Proof,
-// 		); !ok {
-// 			t.Fatalf(
-// 				"Unable verify deposit merkle branch of deposit root for root: %#x, leaf: %#x, eth1Data.DepositCount-1: %d, i : %d",
-// 				root[:], leaf[:], len(deposits)-1 , i)
-// 		}
-// 	}
- //}
