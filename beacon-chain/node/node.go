@@ -74,7 +74,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	featureconfig.ConfigureBeaconChain(ctx)
-	flags.ConfigureArchiveFlags(ctx)
+	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
