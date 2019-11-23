@@ -61,7 +61,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	if !sig.Verify(signedData, publicKey, domain) {
-		return fmt.Errorf("signature did not verify")
+		return fmt.Errorf("signature did not verify: %v", fmt.Sprintf("%#x", bytesutil.Trunc(sig)))
 	}
 	return nil
 }
@@ -177,7 +177,8 @@ func ProcessBlockHeader(
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
-		return nil, errors.Wrap(err, "could not verify block signature")
+		sig := fmt.Sprintf("%#x", bytesutil.Trunc(block.Signature))
+		return nil, errors.Wrapf(err, "could not verify block signature %v", sig)
 	}
 
 	return beaconState, nil
@@ -808,7 +809,8 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 	hasVotes := len(custodyBit0Indices) > 0 || len(custodyBit1Indices) > 0
 
 	if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
-		return fmt.Errorf("attestation aggregation signature did not verify")
+		return fmt.Errorf("attestation aggregation signature did not verify %v",
+			fmt.Sprintf("%#x", bytesutil.Trunc(indexedAtt.Signature)))
 	}
 	return nil
 }
@@ -1051,7 +1053,8 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	}
 	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-		return errors.Wrap(err, "could not verify voluntary exit signature")
+		sig := fmt.Sprintf("%#x", bytesutil.Trunc(exit.Signature))
+		return errors.Wrapf(err, "could not verify voluntary exit signature %v", sig)
 	}
 	return nil
 }

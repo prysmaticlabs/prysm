@@ -77,6 +77,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
+		"signature":       fmt.Sprintf("%#x", bytesutil.Trunc(b.Signature)),
 	}).Info("Submitted new block")
 }
 
