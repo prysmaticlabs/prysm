@@ -20,11 +20,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -60,7 +60,6 @@ type Reader interface {
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	ChainStartFeed() *event.Feed
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -115,7 +114,7 @@ type Service struct {
 	eth1Endpoint            string
 	httpEndpoint            string
 	depositContractAddress  common.Address
-	chainStartFeed          *event.Feed
+	stateNotifier           statefeed.Notifier
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
@@ -152,6 +151,7 @@ type Web3ServiceConfig struct {
 	DepositContract common.Address
 	BeaconDB        db.Database
 	DepositCache    *depositcache.DepositCache
+	StateNotifier   statefeed.Notifier
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -180,7 +180,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		blockHash:               common.BytesToHash([]byte{}),
 		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
-		chainStartFeed:          new(event.Feed),
+		stateNotifier:           config.StateNotifier,
 		depositTrie:             depositTrie,
 		chainStartDeposits:      make([]*ethpb.Deposit, 0),
 		beaconDB:                config.BeaconDB,
@@ -209,12 +209,6 @@ func (s *Service) Stop() error {
 		defer close(s.headerChan)
 	}
 	return nil
-}
-
-// ChainStartFeed returns a feed that is written to
-// whenever the deposit contract fires a ChainStart log.
-func (s *Service) ChainStartFeed() *event.Feed {
-	return s.chainStartFeed
 }
 
 // ChainStartDeposits returns a slice of validator deposit data processed

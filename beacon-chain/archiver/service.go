@@ -131,14 +131,13 @@ func (s *Service) archiveBalances(ctx context.Context, headState *pb.BeaconState
 }
 
 func (s *Service) run(ctx context.Context) {
-	subChannel := make(chan *statefeed.Event, 1)
-	sub := s.stateNotifier.StateFeed().Subscribe(subChannel)
-	defer sub.Unsubscribe()
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-subChannel:
-			switch event.Type {
-			case statefeed.BlockProcessed:
+		case event := <-stateChannel:
+			if event.Type == statefeed.BlockProcessed {
 				data := event.Data.(*statefeed.BlockProcessedData)
 				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockRoot)).Debug("Received block processed event")
 				headState, err := s.headFetcher.HeadState(ctx)
@@ -179,8 +178,8 @@ func (s *Service) run(ctx context.Context) {
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
-		case err := <-sub.Err():
-			log.WithError(err).Error("Subscription to new chain head notifier failed")
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state feed notifier failed")
 			return
 		}
 	}
