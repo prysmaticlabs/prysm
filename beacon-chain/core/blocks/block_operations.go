@@ -61,7 +61,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	if !sig.Verify(signedData, publicKey, domain) {
-		return fmt.Errorf("signature did not verify: %v", fmt.Sprintf("%#x", bytesutil.Trunc(sig)))
+		return fmt.Errorf("signature did not verify: %v", fmt.Sprintf("%#x", bytesutil.Trunc(signature)))
 	}
 	return nil
 }
