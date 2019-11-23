@@ -50,9 +50,13 @@ func (r *RegularSync) registerSubscribers() {
 					data := event.Data.(*statefeed.StateInitializedData)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					if data.StartTime.After(roughtime.Now()) {
-						time.Sleep(roughtime.Until(data.StartTime))
+						go func() {
+							time.Sleep(roughtime.Until(data.StartTime))
+							r.chainStarted = true
+						}()
+					} else {
+						r.chainStarted = true
 					}
-					r.chainStarted = true
 				}
 			case <-r.ctx.Done():
 				log.Debug("Context closed, exiting goroutine")

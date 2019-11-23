@@ -88,6 +88,7 @@ func (s *InitialSync) Start() {
 				return
 			}
 		}
+		stateSub.Unsubscribe()
 	} else {
 		genesis = time.Unix(int64(headState.GenesisTime), 0)
 	}
