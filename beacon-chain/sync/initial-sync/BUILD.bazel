@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/statefeed:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/sync:go_default_library",
