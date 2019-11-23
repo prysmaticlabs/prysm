@@ -68,11 +68,6 @@ var (
 		Name:  "enable-bls-pubkey-cache",
 		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
 	}
-	// Scatter scatters sequential processes to  multiple cores
-	pruneFinalizedStatesFlag = cli.BoolFlag{
-		Name:  "prune-finalized-states",
-		Usage: "Delete old states from the database after reaching new finalized checkpoint",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
@@ -99,6 +94,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedPruneFinalizedStatesFlag = cli.BoolFlag{
+		Name:   "prune-finalized-states",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedScatterFlag = cli.BoolFlag{
 		Name:   "scatter",
 		Usage:  deprecatedUsage,
@@ -110,6 +110,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
+	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
 }
 
@@ -134,6 +135,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableCommitteeCacheFlag,
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
-	pruneFinalizedStatesFlag,
 	enableSkipSlotsCache,
 }...)

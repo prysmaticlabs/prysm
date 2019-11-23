@@ -3,12 +3,15 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -34,6 +37,11 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		log.Errorf("Could not sign slot: %v", err)
 		return
 	}
+
+	// As specified in spec, an aggregator should wait until two thirds of the way through slot
+	// to broadcast the best aggregate to the global aggregate channel.
+	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
+	v.waitToSlotTwoThirds(ctx, slot)
 
 	res, err := v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
 		Slot:           slot,
@@ -69,4 +77,19 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 
 	sig := v.keys[pubKey].SecretKey.Sign(slotRoot[:], domain.SignatureDomain)
 	return sig.Marshal(), nil
+}
+
+// waitToSlotTwoThirds waits until two third through the current slot period
+// such that any attestations from this slot have time to reach the beacon node
+// before creating the aggregated attestation.
+func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
+	defer span.End()
+
+	twoThird := params.BeaconConfig().SecondsPerSlot * 2 / 3
+	delay := time.Duration(twoThird) * time.Second
+
+	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	finalTime := startTime.Add(delay)
+	time.Sleep(roughtime.Until(finalTime))
 }
