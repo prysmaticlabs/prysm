@@ -292,6 +292,8 @@ func (s *Store) updateCheckpoints(ctx context.Context, postState *pb.BeaconState
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint
+		cacheFinalizedEpoch.Set(float64(s.finalizedCheckpt.Epoch))
+		cacheFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.finalizedCheckpt.Root)))
 	}
 	return nil
 }
