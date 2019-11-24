@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -21,7 +22,7 @@ type Server struct {
 	ChainStartFetcher   powchain.ChainStartFetcher
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
-	StateFeedListener   blockchain.ChainFeeds
+	StateNotifier       statefeed.Notifier
 	Pool                operations.Pool
 	IncomingAttestation chan *ethpb.Attestation
 	CanonicalStateChan  chan *pbp2p.BeaconState
