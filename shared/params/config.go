@@ -120,7 +120,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 65536,
+	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 1578009600,
 	TargetAggregatorsPerCommittee:  16,
 
