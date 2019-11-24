@@ -493,14 +493,12 @@ func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(8)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{},
 			Target: &ethpb.Checkpoint{},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	r, _ := ssz.HashTreeRoot(att.Data)
@@ -525,14 +523,12 @@ func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(8)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{},
 			Target: &ethpb.Checkpoint{},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	r, _ := ssz.HashTreeRoot(att.Data)
