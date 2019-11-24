@@ -1134,11 +1134,11 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: epoch + 1,
+			State: &pbp2p.BeaconState{
+				Slot: helpers.StartSlot(epoch + 1),
+				FinalizedCheckpoint: &ethpb.Checkpoint{
+					Epoch: epoch + 1,
+				},
 			},
 		},
 	}
