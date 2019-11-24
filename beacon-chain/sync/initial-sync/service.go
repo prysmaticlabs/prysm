@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -21,7 +22,6 @@ var _ = shared.Service(&InitialSync{})
 type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
-	blockchain.ChainFeeds
 }
 
 const (
@@ -31,27 +31,32 @@ const (
 
 // Config to set up the initial sync service.
 type Config struct {
-	P2P   p2p.P2P
-	DB    db.Database
-	Chain blockchainService
+	P2P           p2p.P2P
+	DB            db.Database
+	Chain         blockchainService
+	StateNotifier statefeed.Notifier
 }
 
 // InitialSync service.
 type InitialSync struct {
-	chain        blockchainService
-	p2p          p2p.P2P
-	db           db.Database
-	synced       bool
-	chainStarted bool
+	ctx           context.Context
+	chain         blockchainService
+	p2p           p2p.P2P
+	db            db.Database
+	synced        bool
+	chainStarted  bool
+	stateNotifier statefeed.Notifier
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
 	return &InitialSync{
-		chain: cfg.Chain,
-		p2p:   cfg.P2P,
-		db:    cfg.DB,
+		ctx:           context.Background(),
+		chain:         cfg.Chain,
+		p2p:           cfg.P2P,
+		db:            cfg.DB,
+		stateNotifier: cfg.StateNotifier,
 	}
 }
 
@@ -59,18 +64,32 @@ func NewInitialSync(cfg *Config) *InitialSync {
 func (s *InitialSync) Start() {
 	var genesis time.Time
 
-	// Wait for state to be initialized, if not already.
-	ch := make(chan time.Time)
-	sub := s.chain.StateInitializedFeed().Subscribe(ch)
-	defer sub.Unsubscribe()
-	if _, err := s.chain.HeadState(context.TODO()); err != nil {
-		// Wait until chain start.
-		genesis = <-ch
-	} else {
-		headState, err := s.chain.HeadState(context.TODO())
-		if err != nil {
-			panic(err)
+	headState, err := s.chain.HeadState(s.ctx)
+	if headState == nil || err != nil {
+		// Wait for state to be initialized.
+		stateChannel := make(chan *statefeed.Event, 1)
+		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+		defer stateSub.Unsubscribe()
+		genesisSet := false
+		for !genesisSet {
+			select {
+			case event := <-stateChannel:
+				if event.Type == statefeed.StateInitialized {
+					data := event.Data.(*statefeed.StateInitializedData)
+					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+					genesis = data.StartTime
+					genesisSet = true
+				}
+			case <-s.ctx.Done():
+				log.Debug("Context closed, exiting goroutine")
+				return
+			case err := <-stateSub.Err():
+				log.WithError(err).Error("Subscription to state notifier failed")
+				return
+			}
 		}
+		stateSub.Unsubscribe()
+	} else {
 		genesis = time.Unix(int64(headState.GenesisTime), 0)
 	}
 

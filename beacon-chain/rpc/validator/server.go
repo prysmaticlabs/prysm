@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -43,8 +44,7 @@ type Server struct {
 	ChainStartFetcher  powchain.ChainStartFetcher
 	Eth1InfoFetcher    powchain.ChainInfoFetcher
 	SyncChecker        sync.Checker
-	StateFeedListener  blockchain.ChainFeeds
-	ChainStartChan     chan time.Time
+	StateNotifier      statefeed.Notifier
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -213,18 +213,23 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorServic
 		return stream.Send(res)
 	}
 
-	sub := vs.StateFeedListener.StateInitializedFeed().Subscribe(vs.ChainStartChan)
-	defer sub.Unsubscribe()
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case chainStartTime := <-vs.ChainStartChan:
-			log.Info("Sending genesis time notification to connected validator clients")
-			res := &pb.ChainStartResponse{
-				Started:     true,
-				GenesisTime: uint64(chainStartTime.Unix()),
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				data := event.Data.(*statefeed.ChainStartedData)
+				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
+				log.Info("Sending genesis time notification to connected validator clients")
+				res := &pb.ChainStartResponse{
+					Started:     true,
+					GenesisTime: uint64(data.StartTime.Unix()),
+				}
+				return stream.Send(res)
 			}
-			return stream.Send(res)
-		case <-sub.Err():
+		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
