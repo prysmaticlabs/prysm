@@ -29,7 +29,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		return nil, err
 	}
 	tEpoch := req.Data.Target.Epoch
-	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
+	indices := req.AttestingIndices
 	root, err := ssz.HashTreeRoot(req.Data)
 	if err != nil {
 		return nil, err
