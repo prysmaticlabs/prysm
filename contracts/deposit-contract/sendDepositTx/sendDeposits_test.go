@@ -3,9 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -16,51 +14,48 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
-func generateValidatorKeys(count uint64) map[string]*prysmKeyStore.Key {
-	validatorKeys := make(map[string]*prysmKeyStore.Key)
-	for i := uint64(0); i < count; i++ {
-		validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
-		if err != nil {
-			log.Errorf("Could not generate random key: %v", err)
-		}
-		validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
-	}
-	return validatorKeys
-}
-
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 }
 
-func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys map[string]*prysmKeyStore.Key,
+// sendDeposits sends deposits to deposit contract
+func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 	numberOfDeposits, numberOfValidators uint64) []*ethpb.Deposit {
 
 	deposits := make([]*ethpb.Deposit, 0, numberOfValidators)
-	depositAmountInGwei := testAcc.TxOpts.Value.Uint64()
-
 	depositDelay := int64(1)
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
 
-	for _, validatorKey := range validatorKeys {
+	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0, numberOfValidators)
+	if err != nil {
+		t.Fatalf("Unable to generate keys: %v", err)
+	}
 
-		data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
-		if err != nil {
-			t.Fatalf("Could not generate deposit input data: %v", err)
-		}
+	depositData, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	if err != nil {
+		t.Fatalf("Unable to generate deposit data from keys: %v", err)
+	}
+
+	for i, data := range depositData {
+		dataRoot := [32]byte{}
+		copy(dataRoot[:], depositDataRoots[i])
+
+		pubKey := pubKeys[i]
+
 		deposits = append(deposits, &ethpb.Deposit{
 			Data: data,
 		})
 
-		for i := uint64(0); i < numberOfDeposits; i++ {
-			tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature)
+		for j := uint64(0); j < numberOfDeposits; j++ {
+			tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
 			if err != nil {
 				t.Fatalf("unable to send transaction to contract: %v", err)
 			}
@@ -70,7 +65,7 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount, validatorKeys ma
 			//lgos do not show up in console
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddrStr, validatorKey.PublicKey.Marshal())
+			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", j, depositContractAddrStr, pubKey.Marshal())
 
 			time.Sleep(time.Duration(depositDelay) * time.Second)
 		}
@@ -87,23 +82,19 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	// 256 validators - each validator makes one deposit for simplicity
-
-	numberOfValidators := uint64(2)
-	validatorKeys := generateValidatorKeys(numberOfValidators)
-
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
+	numberOfValidators := uint64(2)
 	numberOfDeposits := uint64(5)
-	deposits := sendDeposits(t, testAcc, validatorKeys, numberOfDeposits, numberOfValidators)
+	deposits := sendDeposits(t, testAcc, numberOfDeposits, numberOfValidators)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			testAcc.ContractAddr,
 		},
 	}
-	//fetch logs
+
 	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
@@ -116,7 +107,6 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("No sufficient number of logs")
 	}
 
-	//validate deposit data
 	j := 0
 	for i, log := range logs {
 		loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(log.Data)
@@ -139,7 +129,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		if !bytes.Equal(withCreds, deposits[j].Data.WithdrawalCredentials) {
 			t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v, i: %d", withCreds, i)
 		}
-		// if i == 4
+
 		if i == int(numberOfDeposits)-1 {
 			j++
 		}
@@ -179,6 +169,5 @@ func TestEndtoEndDeposits(t *testing.T) {
 				"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d",
 				root[:], encodedDeposit, i)
 		}
-
 	}
 }
