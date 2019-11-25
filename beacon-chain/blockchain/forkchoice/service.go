@@ -43,7 +43,7 @@ type Store struct {
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
-	voteLock             sync.Mutex
+	voteLock             sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -169,8 +169,8 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	}
 
 	balances := uint64(0)
-	s.voteLock.Lock()
-	defer s.voteLock.Unlock()
+	s.voteLock.RLock()
+	defer s.voteLock.RUnlock()
 	for _, i := range activeIndices {
 		vote, ok := s.latestVoteMap[i]
 		if !ok {
