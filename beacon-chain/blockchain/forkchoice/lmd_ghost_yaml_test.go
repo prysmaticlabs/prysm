@@ -78,6 +78,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 		}
 
+		store := NewForkChoiceService(ctx, db)
+
 		// Assign validator votes to the blocks as weights.
 		count := 0
 		for blk, votes := range test.Weights {
@@ -87,14 +89,11 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 			max := count + votes
 			for i := count; i < max; i++ {
-				if err := db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: blksRoot[slot]}); err != nil {
-					t.Fatal(err)
-				}
+				store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: blksRoot[slot]}
 				count++
 			}
 		}
 
-		store := NewForkChoiceService(ctx, db)
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
