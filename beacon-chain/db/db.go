@@ -41,11 +41,6 @@ type Database interface {
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
-	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
-	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
-	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
-	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*pb.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error

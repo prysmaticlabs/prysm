@@ -50,17 +50,11 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		switch {
 		case i < 256:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
-				b.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[1]}
 		case i > 768:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
-				b.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[7]}
 		default:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[8]}); err != nil {
-				b.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[8]}
 		}
 	}
 
@@ -110,9 +104,7 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 	// Spread out the votes evenly for all the leaf nodes. 8 to 15
 	nodeIndex := 8
 	for i := 0; i < len(validators); i++ {
-		if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[nodeIndex]}); err != nil {
-			b.Fatal(err)
-		}
+		store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[nodeIndex]}
 		if i%155 == 0 {
 			nodeIndex++
 		}
@@ -163,9 +155,7 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 
 	// All validators vote on the same head
 	for i := 0; i < len(validators); i++ {
-		if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[len(roots)-1]}); err != nil {
-			b.Fatal(err)
-		}
+		store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[len(roots)-1]}
 	}
 
 	b.ResetTimer()
