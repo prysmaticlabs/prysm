@@ -15,17 +15,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
-
-func init() {
-	fc := featureconfig.Get()
-	fc.PruneFinalizedStates = true
-	featureconfig.Init(fc)
-}
 
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
@@ -166,10 +159,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, i := range attestedIndices {
-		v, err := store.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			t.Fatal(err)
-		}
+		v := store.latestVoteMap[i]
 		if !reflect.DeepEqual(v.Root, r[:]) {
 			t.Error("Attested roots don't match")
 		}

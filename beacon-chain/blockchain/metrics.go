@@ -47,10 +47,22 @@ var (
 		Name: "processed_attestation_counter",
 		Help: "The # of processed attestation with pubsub and fork choice, this ususally means attestations from rpc",
 	})
+	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "head_finalized_epoch",
+		Help: "Last finalized epoch of the head state",
+	})
+	headFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "head_finalized_root",
+		Help: "Last finalized root of the head state",
+	})
 )
 
 func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(s.HeadSlot()))
 	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(s.HeadRoot())))
+	if s.headState != nil {
+		headFinalizedEpoch.Set(float64(s.headState.FinalizedCheckpoint.Epoch))
+		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.headState.FinalizedCheckpoint.Root)))
+	}
 }
