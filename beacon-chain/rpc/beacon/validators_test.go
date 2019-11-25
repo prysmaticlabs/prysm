@@ -1248,7 +1248,7 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 	}
 }
 
-func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1288,11 +1288,7 @@ func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch,
-		},
-	})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
