@@ -121,8 +121,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	})
 	log.Debug("Updated latest votes")
 
-	s.updateJustifiedCheckpoint()
-
 	return nil
 }
 

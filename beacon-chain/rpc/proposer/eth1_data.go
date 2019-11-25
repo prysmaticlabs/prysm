@@ -3,8 +3,8 @@ package proposer
 import (
 	"context"
 	"math/big"
-	"time"
 	"math/rand"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -38,17 +38,20 @@ func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data
 	}
 	if ps.MockEth1Votes {
 		log.Warn("INTEROP: Using mocked ETH1 data vote for block.")
-		return ps.mockInteropETH1DataVote(slot)
+		return ps.mockInteropETH1DataVote(ctx, slot)
 	}
 	if !ps.Eth1InfoFetcher.IsConnectedToETH1() {
 		log.Warn("Not connected to eth1, serving random ETH1 data vote.")
-		return ps.randomETH1DataVote()
+		return ps.randomETH1DataVote(ctx)
 	}
 
 	// Determine the timestamp of the start of the voting period.
-	headState := ps.HeadFetcher.HeadState()
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	votingPeriodStartSlot := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-	timestamp := time.Unix(int64(headState.GenesisTime), 0 /*ns*/).Add(time.Duration(votingPeriodStartSlot * params.BeaconConfig().SecondsPerSlot) * time.Second)
+	timestamp := time.Unix(int64(headState.GenesisTime), 0 /*ns*/).Add(time.Duration(votingPeriodStartSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	// Determine the eth1 block for that timestamp.
 	blockNumber, err := ps.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, uint64(timestamp.Unix()))
@@ -72,9 +75,9 @@ func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data
 	// Sanity check: if our computed deposit count is less than headState.Eth1DepositIndex then
 	// this proposal will fail processing.
 	if depositCount < headState.Eth1DepositIndex {
-		log.Warnf("Computed a lower deposit count (%d) than the eth1 deposit index in the " +
+		log.Warnf("Computed a lower deposit count (%d) than the eth1 deposit index in the "+
 			"head state (%d). Using a random ETH1 data vote.", depositCount, headState.Eth1DepositIndex)
-		return ps.randomETH1DataVote()
+		return ps.randomETH1DataVote(ctx)
 	}
 
 	return &ethpb.Eth1Data{
@@ -93,9 +96,12 @@ func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data
 //   DepositCount = state.eth1_deposit_index,
 //   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 // )
-func (ps *Server) mockInteropETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) {
+func (ps *Server) mockInteropETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
-	headState := ps.HeadFetcher.HeadState()
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
 	if err != nil {
 		return nil, err
@@ -109,8 +115,11 @@ func (ps *Server) mockInteropETH1DataVote(slot uint64) (*ethpb.Eth1Data, error) 
 	}, nil
 }
 
-func (ps *Server) randomETH1DataVote() (*ethpb.Eth1Data, error) {
-	headState := ps.HeadFetcher.HeadState()
+func (ps *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
 	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
