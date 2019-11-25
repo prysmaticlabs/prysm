@@ -299,6 +299,8 @@ func GenerateAttestations(
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
 	if slot > bState.Slot {
+		// Going back a slot here so there's no inclusion delay issues.
+		slot--
 		generateHeadState = true
 	}
 
