@@ -263,3 +263,47 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 		t.Error("Did not receive wanted error")
 	}
 }
+
+func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	s := NewForkChoiceService(ctx, db)
+	d := &ethpb.AttestationData{}
+	if err := s.verifyBeaconBlock(ctx, d); !strings.Contains(err.Error(), "beacon block  does not exist") {
+		t.Error("Did not receive the wanted error")
+	}
+}
+
+func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	s := NewForkChoiceService(ctx, db)
+	b := &ethpb.BeaconBlock{Slot: 2}
+	s.db.SaveBlock(ctx, b)
+	r, _ := ssz.SigningRoot(b)
+	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
+
+	if err := s.verifyBeaconBlock(ctx, d); !strings.Contains(err.Error(), "could not process attestation for future block") {
+		t.Error("Did not receive the wanted error")
+	}
+}
+
+func TestVerifyBeaconBlock_OK(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	s := NewForkChoiceService(ctx, db)
+	b := &ethpb.BeaconBlock{Slot: 2}
+	s.db.SaveBlock(ctx, b)
+	r, _ := ssz.SigningRoot(b)
+	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
+
+	if err := s.verifyBeaconBlock(ctx, d); err != nil {
+		t.Error("Did not receive the wanted error")
+	}
+}
