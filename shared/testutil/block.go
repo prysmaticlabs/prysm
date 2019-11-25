@@ -38,6 +38,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		MaxAttestations:      params.BeaconConfig().MaxAttestations,
 		MaxDeposits:          params.BeaconConfig().MaxDeposits,
 		MaxVoluntaryExits:    params.BeaconConfig().MaxVoluntaryExits,
+		Signatures:           true,
 	}
 }
 
