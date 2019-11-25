@@ -88,6 +88,8 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	deposits, _, privs := SetupInitialDeposits(t, 32)
 
 	eth1Data := GenerateEth1Data(t, deposits)
@@ -112,6 +114,8 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	deposits, _, privs := SetupInitialDeposits(t, 32)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
@@ -135,6 +139,8 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	helpers.ClearAllCaches()
 	deposits, _, privs := SetupInitialDeposits(t, 256)
 
@@ -152,8 +158,8 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(beaconState.CurrentEpochAttestations) != 2 {
-		t.Fatal("expected 2 attestations to be saved to the beacon state")
+	if len(beaconState.CurrentEpochAttestations) != 4 {
+		t.Fatal("expected 4 attestations to be saved to the beacon state")
 	}
 }
 

@@ -33,5 +33,5 @@ go_binary(
     name = "benchmark_files",
     testonly = True,
     embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
