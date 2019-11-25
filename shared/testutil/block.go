@@ -305,7 +305,6 @@ func GenerateAttestations(
 	var err error
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
-	epochStartSlot := helpers.StartSlot(currentEpoch)
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot {
 		headState := proto.Clone(bState).(*pb.BeaconState)
@@ -317,16 +316,9 @@ func GenerateAttestations(
 		if err != nil {
 			t.Fatal(err)
 		}
-		if slot == epochStartSlot {
-			targetRoot, err = helpers.BlockRoot(headState, currentEpoch)
-			if err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			targetRoot, err = helpers.BlockRoot(bState, currentEpoch)
-			if err != nil {
-				t.Fatal(err)
-			}
+		targetRoot, err = helpers.BlockRoot(headState, currentEpoch)
+		if err != nil {
+			t.Fatal(err)
 		}
 	} else {
 		headRoot, err = helpers.BlockRootAtSlot(bState, slot)
