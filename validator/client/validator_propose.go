@@ -71,13 +71,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
+	log.WithField("signature", fmt.Sprintf("%#x", b.Signature)).Debug("block signature")
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-		"signature":       fmt.Sprintf("%#x", bytesutil.Trunc(b.Signature)),
 	}).Info("Submitted new block")
 }
 
