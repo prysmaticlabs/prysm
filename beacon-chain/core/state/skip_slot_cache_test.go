@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -15,6 +16,7 @@ import (
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
+	helpers.ClearAllCaches()
 	deps, _, privs := testutil.SetupInitialDeposits(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	bState, err := state.GenesisBeaconState(deps, uint64(time.Now().Unix()), testutil.GenerateEth1Data(t, deps))
 	if err != nil {
