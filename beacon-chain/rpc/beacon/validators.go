@@ -371,7 +371,7 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         requestedEpoch,
-			Finalized:     true,
+			Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 			Participation: participation,
 		}, nil
 	} else if requestedEpoch > currentEpoch {
