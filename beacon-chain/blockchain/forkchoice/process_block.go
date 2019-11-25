@@ -297,17 +297,14 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgt.Epoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgt.Epoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
 			}
 		}
 	}
